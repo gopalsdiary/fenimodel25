@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result Processing System - 2025 (fmhs.edu.bd)/</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Add security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+    <div class="header">
+        <h1>Feni Model High School</h1>
+        <p>Half Yearly Examination Report Card-2025</p>
+    </div>
+
+    <div class="container">
+      
+        <input type="text" id="searchBox" class="search-box" placeholder="Search by Name, Roll, IID, or Mobile" oninput="filterStudentList()">
+        
+        <!-- New filter options -->
+        <select id="classFilter" class="search-box" onchange="filterStudentList()">
+            <option value="">All Classes</option>
+            <!-- Add class options dynamically -->
+        </select>
+        <select id="shiftFilter" class="search-box" onchange="filterStudentList()">
+            <option value="">All Shifts</option>
+            <!-- Add shift options dynamically -->
+        </select>
+        
+        <div id="studentList" class="student-list"></div>
+        <div id="marksheet" style="display: none;">
+            <div class="marksheet" id="marksheetContent"></div>
+            <button class="back-btn" style="margin-top: 0.5rem;" onclick="showStudentList()">← Back to List</button>
+        </div>
+    </div>
+    <script>
+
+const check_android_web_ios_ID = '10zFu-vb_5Grk-tdwLmslTOrEzBtWyD958tkODji1fho';
+const exam_annual = 'exam_publish';
+const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}/export?format=csv&sheet=${exam_annual}`;
+
+let students = [];
+let headers = [];
+let SUBJECT_MAP = {};
+let authenticatedStudents = new Set();
+
+async function loadData() {
+    try {
+        const response = await fetch(skip);
+        const csvData = await response.text();
+        const rows = csvData.split('\n').filter(row => row.trim() !== '');
+
+        // Process headers
+        headers = rows[0].split(',').map(h => h.trim().replace(/"/g, '')); // Remove quotes
+
+        // Dynamically generate SUBJECT_MAP
+        generateSubjectMap(headers);
+
+        // Process student data
+        students = rows.slice(1).map(row => {
+            const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Complex CSV split
+            const student = {};
+            headers.forEach((header, index) => {
+                const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+            });
+            return student;
+        });
+
+        renderStudentList();
+        renderClassAndShiftOptions();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('ডেটা লোড করতে সমস্যা হয়েছে!');
+    }
+}
+
+function generateSubjectMap(headers) {
+    const subjects = new Set();
+    headers.forEach(header => {
+        const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+        if (match) {
+            subjects.add(match[1]);
+        }
+    });
+
+    subjects.forEach(subject => {
+        SUBJECT_MAP[subject] = {
+            WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
+            CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+            Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
+            Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
+            GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
+        };
+    });
+}
+
+function renderStudentList() {
+    const container = document.getElementById('studentList');
+    container.innerHTML = '';
+
+    const initialStudents = students.slice(0, 201); // Show first 201 students initially
+
+    initialStudents.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.innerHTML = `
+            <h3>${student.name || 'N/A'}</h3>
+            <p>Roll: ${student.roll || 'N/A'}</p>
+            <p>IID: ${student.iid || 'N/A'}</p>
+        `;
+        card.onclick = () => showMarksheet(student);
+        container.appendChild(card);
+    });
+
+    const comment = document.createElement('p');
+    comment.textContent = 'দ্রুত কাজ করার জন্য , রোল/নাম লিখে খুঁজুন এবং মোবাইল নাম্বার (শেষ ৭টি সংখ্যা) দিয়ে ফলাফল দেখুন।';
+    comment.style.textAlign = 'center';
+    comment.style.marginTop = '1rem';
+    container.appendChild(comment);
+}
+
+function filterStudentList() {
+    const query = document.getElementById('searchBox').value.toLowerCase();
+    const classFilter = document.getElementById('classFilter').value;
+    const shiftFilter = document.getElementById('shiftFilter').value;
+
+    const filteredStudents = students.filter(student => {
+        const matchesQuery = (student.name && student.name.toLowerCase().includes(query)) ||
+                             (student.roll && student.roll.toLowerCase().includes(query)) ||
+                             (student.iid && student.iid.toLowerCase().includes(query)) ||
+                             (student.mobile && student.mobile.toLowerCase().includes(query));
+        const matchesClass = !classFilter || student.class === classFilter;
+        const matchesShift = !shiftFilter || student.shift === shiftFilter;
+
+        return matchesQuery && matchesClass && matchesShift;
+    });
+
+    renderFilteredStudentList(filteredStudents);
+}
+
+function renderFilteredStudentList(filteredStudents) {
+    const container = document.getElementById('studentList');
+    container.innerHTML = '';
+
+    filteredStudents.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.innerHTML = `
+            <h3>${student.name || 'N/A'}</h3>
+            <p>Roll: ${student.roll || 'N/A'}</p>
+            <p>IID: ${student.iid || 'N/A'}</p>
+        `;
+        card.onclick = () => showMarksheet(student);
+        container.appendChild(card);
+    });
+}
+
+function renderClassAndShiftOptions() {
+    const classSet = new Set(students.map(student => student.class).filter(Boolean));
+    const shiftSet = new Set(students.map(student => student.shift).filter(Boolean));
+
+    const classFilter = document.getElementById('classFilter');
+    classSet.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls;
+        option.textContent = cls;
+        classFilter.appendChild(option);
+    });
+
+    const shiftFilter = document.getElementById('shiftFilter');
+    shiftSet.forEach(shift => {
+        const option = document.createElement('option');
+        option.value = shift;
+        option.textContent = shift;
+        shiftFilter.appendChild(option);
+    });
+}
+
+function showMarksheet(student) {
+    // Redirect to detailed result page with IID parameter
+    const iid = student.iid || 'unknown';
+    window.location.href = `detailsresult.html?IID=${encodeURIComponent(iid)}`;
+}
+
+function showStudentList() {
+    document.getElementById('searchBox').style.display = 'block';
+    document.getElementById('classFilter').style.display = 'block';
+    document.getElementById('shiftFilter').style.display = 'block';
+    document.getElementById('studentList').style.display = 'block';
+    document.getElementById('marksheet').style.display = 'none';
+}
+
+// Initialize
+loadData();
+
+    </script>
+</body>
+</html>

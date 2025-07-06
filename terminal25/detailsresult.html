@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Result - Feni Model High School</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Add security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    
+    <style>
+        .qr-code-bottom {
+            display: block;
+        }
+        
+        .qr-code-bottom img {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #333;
+            padding: 3px;
+            background: white;
+        }
+        
+        @media print {
+            .back-btn, .print-btn {
+                display: none !important;
+            }
+            
+            /* Hide the old print QR code */
+            #marksheet .qr-code-print {
+                display: none !important;
+            }
+            
+            /* Show the bottom QR code in print with increased size */
+            .qr-code-bottom {
+                display: block !important;
+            }
+            
+            .qr-code-bottom img {
+                width: 180px;
+                height: 180px;
+            }
+        }
+        
+        .loading, .error {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            color: #d32f2f;
+        }
+        
+        .print-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .print-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+    <div class="header">
+        <h1>Feni Model High School</h1>
+        <p class="report-title">Half Yearly Examination Report Card-2025</p>
+    </div>
+
+    <div class="container">
+        <div id="marksheet" class="marksheet">
+            <!-- QR code for print view only -->
+            <div class="qr-code-print" id="qrCodePrint" style="display: none;"></div>
+            
+            <div id="marksheetContent">
+                <!-- Content will be dynamically loaded here -->
+                <div class="loading">Loading student details...</div>
+            </div>
+            <button class="back-btn" onclick="goBack()">← Back to List</button>
+            <button class="print-btn" onclick="printResult()">🖨️ Print Result</button>
+        </div>
+    </div>
+
+    <script>
+        // Disable developer tools
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'C') || 
+                (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+            }
+        });
+
+        // Data loading variables
+        const check_android_web_ios_ID = '10zFu-vb_5Grk-tdwLmslTOrEzBtWyD958tkODji1fho';
+        const exam_annual = 'exam_publish';
+        const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}/export?format=csv&sheet=${exam_annual}`;
+
+        let students = [];
+        let headers = [];
+        let SUBJECT_MAP = {};
+
+        // Get IID from URL parameter
+        function getIIDFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('IID');
+        }
+
+        async function loadData() {
+            const targetIID = getIIDFromURL();
+            
+            if (!targetIID || targetIID === 'unknown') {
+                document.getElementById('marksheetContent').innerHTML = `
+                    <div class="error">
+                        <p>No student ID specified or invalid ID.</p>
+                        <p><a href="index.html">Return to student list</a></p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                console.log('Loading data for IID:', targetIID);
+                const response = await fetch(skip);
+                const csvData = await response.text();
+                const rows = csvData.split('\n').filter(row => row.trim() !== '');
+
+                // Process headers
+                headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+                // Dynamically generate SUBJECT_MAP
+                generateSubjectMap(headers);
+
+                // Process student data
+                students = rows.slice(1).map(row => {
+                    const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const student = {};
+                    headers.forEach((header, index) => {
+                        const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                        student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                    });
+                    return student;
+                });
+
+                console.log('Total students loaded:', students.length);
+                console.log('Looking for IID:', targetIID);
+
+                // Find student by IID
+                const student = students.find(s => s.iid === targetIID);
+                
+                if (student) {
+                    console.log('Student found:', student.name);
+                    displayStudentDetails(student);
+                    // Generate QR code for this specific student
+                    generateQRCode(student.iid);
+                } else {
+                    console.log('Student not found with IID:', targetIID);
+                    document.getElementById('marksheetContent').innerHTML = `
+                        <div class="error">
+                            <p>Student with IID "${targetIID}" not found.</p>
+                            <p><a href="index.html">Return to student list</a></p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('marksheetContent').innerHTML = `
+                    <div class="error">
+                        <p>Error loading student data. Please try again.</p>
+                        <p><a href="index.html">Return to student list</a></p>
+                    </div>
+                `;
+            }
+        }
+
+        function generateSubjectMap(headers) {
+            const subjects = new Set();
+            headers.forEach(header => {
+                const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+                if (match) {
+                    subjects.add(match[1]);
+                }
+            });
+
+            subjects.forEach(subject => {
+                SUBJECT_MAP[subject] = {
+                    WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
+                    CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+                    Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
+                    Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
+                    GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
+                };
+            });
+        }
+
+        function displayStudentDetails(student) {
+            const container = document.getElementById('marksheetContent');
+            container.innerHTML = `
+                <p class="report-title">Annual Examination Report Card-2024</p>
+                <h2>${student.name}</h2>
+                <p>Father's Name: ${student.fathers_name || 'N/A'}</p>
+                <p>Roll: ${student.roll} | Class: ${student.class || 'N/A'} | Shift: ${student.shift || 'N/A'}</p>
+                <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>WRITTEN</th>
+                            <th>CA</th>
+                            <th>Practical</th>
+                            <th>Total</th>
+                            <th>GPA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
+                            const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                            const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                            const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                            const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                            const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                            
+                            return `
+                            <tr>
+                                <td>${subject.replace(/\*/g, '')}</td>
+                                <td>${student[cleanWRITTEN] || '-'}</td>
+                                <td>${student[cleanCA] || '-'}</td>
+                                <td>${student[cleanPractical] || '-'}</td>
+                                <td>${student[cleanTotal] || '-'}</td>
+                                <td>${student[cleanGPA] || '-'}</td>
+                            </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+
+                <div class="highlight-box">
+                    ${student.gpa ? `<div class="highlight-item"><p>GPA</p><p>${student.gpa}</p></div>` : ''}
+                    ${student.remark ? `<div class="highlight-item"><p>Remark</p><p>${student.remark}</p></div>` : ''}
+                    ${student.ranking ? `<div class="highlight-item"><p>Rank :</p><p>${student.ranking}</p></div>` : ''}
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+                    <div style="flex: 1; padding-right: 20px;">
+                        <p style="margin-top: 20px; font-weight: bold;">
+                    ${student.total_mark ? `Total Marks: ${student.total_mark} | ` : ''}
+                    ${student.average ? `Average Mark: ${student.average} | ` : ''}
+                    ${student.absent ? `Absent subject: ${student.absent}` : ''}
+                </p>
+                        <p style="margin-top: 5px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            নির্দেশনা :
+                        </p>
+                        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            নতুন শিক্ষাবর্ষে জানুয়ারির ১ম সপ্তাহে নতুন শ্রেণিতে ভর্তি হয়ে নতুন বই সংগ্রহ করতে হবে।
+                            ভর্তির সময় মার্কশীটের ফটোকপি অবশ্যই আনতে হবে।  
+                        </p>
+                        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            গ্রহনযোগ্য কারন উল্লেখ করে প্রয়োজনীয় ক্ষেত্রে অগ্রিম ছুটি নিতে হবে। পূর্বানুমতি ছাড়া এক 
+                            টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
+                        </p>
+                        <p style="margin-top: 10px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            Verify this result from <a href="https://fenimodel.glide.page" target="_blank">fenimodel.glide.page</a> or scan the QR code.
+                        </p>
+                    </div>
+                    <div class="qr-code-bottom" id="qrCodeBottom" style="flex-shrink: 0; text-align: center;">
+                        <!-- QR code will be placed here -->
+                    </div>
+                </div>
+            `;
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+        
+        function printResult() {
+            // Hide buttons before printing
+            const backBtn = document.querySelector('.back-btn');
+            const printBtn = document.querySelector('.print-btn');
+            
+            if (backBtn) backBtn.style.display = 'none';
+            if (printBtn) printBtn.style.display = 'none';
+            
+            // Print the page
+            window.print();
+            
+            // Show buttons again after printing dialog is closed
+            setTimeout(() => {
+                if (backBtn) backBtn.style.display = 'inline-block';
+                if (printBtn) printBtn.style.display = 'inline-block';
+            }, 500);
+        }
+
+        // Generate QR Code
+        function generateQRCode(studentIID = null) {
+            try {
+                // Get the current IID if not provided
+                const currentIID = studentIID || getIIDFromURL();
+                
+                // Create QR code for the current student's result page
+                const qr = qrcode(0, 'M');
+                const currentURL = window.location.origin + window.location.pathname;
+                const qrURL = `${currentURL}?IID=${currentIID}`;
+                qr.addData(qrURL);
+                qr.make();
+                
+                // Create image element from QR code
+                const qrImage = qr.createImgTag(4);
+                
+                // Add QR code to bottom container (for both screen and print view)
+                const bottomQRContainer = document.getElementById('qrCodeBottom');
+                if (bottomQRContainer) {
+                    bottomQRContainer.innerHTML = qrImage;
+                    
+                    // Add a small caption below the QR code for bottom
+                    const bottomCaption = document.createElement('div');
+                    bottomCaption.style.fontSize = '8pt';
+                    bottomCaption.style.textAlign = 'center';
+                    bottomCaption.style.marginTop = '3px';
+                    bottomCaption.innerText = 'Scan for verify';
+                    bottomQRContainer.appendChild(bottomCaption);
+                }
+            } catch (error) {
+                console.error('QR Code generation failed:', error);
+            }
+        }
+        
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
