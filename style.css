@@ -172,15 +172,15 @@ th {
     #marksheet {
         position: absolute;
         left: 0;
-        top: 0;
+        top: -10px;
         width: 100%;
-        padding: 20px;
+        padding: 5px;
         box-sizing: border-box;
     }
     #marksheet::before {
         content: url('pad.png');
         display: block;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
         max-width: 100%;
         height: auto;
         width: 100%;
