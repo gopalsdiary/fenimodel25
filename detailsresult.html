@@ -14,20 +14,15 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     
     <style>
-        .qr-code-container {
-            display: block; /* Show by default */
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-align: center;
-            z-index: 100;
+        .qr-code-bottom {
+            display: block;
         }
         
-        .qr-code-container img {
-            width: 125px;
-            height: 125px;
-            border: 1px solid #ddd;
-            padding: 5px;
+        .qr-code-bottom img {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #333;
+            padding: 3px;
             background: white;
         }
         
@@ -36,31 +31,19 @@
                 display: none !important;
             }
             
-            /* Hide the header QR code in print */
-            .header .qr-code-container {
+            /* Hide the old print QR code */
+            #marksheet .qr-code-print {
                 display: none !important;
             }
             
-            /* Position QR code in the marksheet area under pad.png */
-            #marksheet {
-                position: relative;
-            }
-            
-            #marksheet .qr-code-print {
+            /* Show the bottom QR code in print with increased size */
+            .qr-code-bottom {
                 display: block !important;
-                position: absolute;
-                top: 60px; /* Position under the pad.png image */
-                right: 20px;
-                text-align: center;
-                z-index: 1000;
             }
             
-            #marksheet .qr-code-print img {
-                width: 100px;
-                height: 100px;
-                border: 1px solid #333;
-                padding: 3px;
-                background: white;
+            .qr-code-bottom img {
+                width: 180px;
+                height: 180px;
             }
         }
         
@@ -93,8 +76,6 @@
     <div class="header">
         <h1>Feni Model High School</h1>
         <p class="report-title">Annual Examination Report Card-2024</p>
-        <!-- QR code container -->
-        <div class="qr-code-container" id="qrCode"></div>
     </div>
 
     <div class="container">
@@ -273,26 +254,32 @@
                     ${student.ranking ? `<div class="highlight-item"><p>Rank :</p><p>${student.ranking}</p></div>` : ''}
                 </div>
 
-                <p style="margin-top: 20px; font-weight: bold;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+                    <div style="flex: 1; padding-right: 20px;">
+                        <p style="margin-top: 20px; font-weight: bold;">
                     ${student.total_mark ? `Total Marks: ${student.total_mark} | ` : ''}
                     ${student.average ? `Average Mark: ${student.average} | ` : ''}
                     ${student.absent ? `Absent subject: ${student.absent}` : ''}
                 </p>
-
-                <p style="margin-top: 5px; font-weight: regular; text-align: left; font-size: 0.8em;">
-                    নির্দেশনা :
-                </p>
-                <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
-                    নতুন শিক্ষাবর্ষে জানুয়ারির ১ম সপ্তাহে নতুন শ্রেণিতে ভর্তি হয়ে নতুন বই সংগ্রহ করতে হবে।
-                    ভর্তির সময় মার্কশীটের ফটোকপি অবশ্যই আনতে হবে।  
-                </p>
-                <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
-                    গ্রহনযোগ্য কারন উল্লেখ করে প্রয়োজনীয় ক্ষেত্রে অগ্রিম ছুটি নিতে হবে। পূর্বানুমতি ছাড়া এক 
-                    টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
-                </p>
-                <p style="margin-top: 10px; font-weight: regular; text-align: left; font-size: 0.8em;">
-                    Verify this result from <a href="https://fenimodel.glide.page" target="_blank">fenimodel.glide.page</a> or scan the QR code.
-                </p>
+                        <p style="margin-top: 5px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            নির্দেশনা :
+                        </p>
+                        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            নতুন শিক্ষাবর্ষে জানুয়ারির ১ম সপ্তাহে নতুন শ্রেণিতে ভর্তি হয়ে নতুন বই সংগ্রহ করতে হবে।
+                            ভর্তির সময় মার্কশীটের ফটোকপি অবশ্যই আনতে হবে।  
+                        </p>
+                        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            গ্রহনযোগ্য কারন উল্লেখ করে প্রয়োজনীয় ক্ষেত্রে অগ্রিম ছুটি নিতে হবে। পূর্বানুমতি ছাড়া এক 
+                            টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
+                        </p>
+                        <p style="margin-top: 10px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            Verify this result from <a href="https://fenimodel.glide.page" target="_blank">fenimodel.glide.page</a> or scan the QR code.
+                        </p>
+                    </div>
+                    <div class="qr-code-bottom" id="qrCodeBottom" style="flex-shrink: 0; text-align: center;">
+                        <!-- QR code will be placed here -->
+                    </div>
+                </div>
             `;
         }
 
@@ -308,22 +295,13 @@
             if (backBtn) backBtn.style.display = 'none';
             if (printBtn) printBtn.style.display = 'none';
             
-            // Hide header QR code and show print QR code for printing
-            const headerQRContainer = document.querySelector('.header .qr-code-container');
-            const printQRContainer = document.querySelector('#qrCodePrint');
-            
-            if (headerQRContainer) headerQRContainer.style.display = 'none';
-            if (printQRContainer) printQRContainer.style.display = 'block';
-            
             // Print the page
             window.print();
             
-            // Show buttons again and restore QR code visibility after printing dialog is closed
+            // Show buttons again after printing dialog is closed
             setTimeout(() => {
                 if (backBtn) backBtn.style.display = 'inline-block';
                 if (printBtn) printBtn.style.display = 'inline-block';
-                if (headerQRContainer) headerQRContainer.style.display = 'block';
-                if (printQRContainer) printQRContainer.style.display = 'none';
             }, 500);
         }
 
@@ -343,32 +321,18 @@
                 // Create image element from QR code
                 const qrImage = qr.createImgTag(4);
                 
-                // Add QR code to header container (for screen view)
-                const headerQRContainer = document.getElementById('qrCode');
-                if (headerQRContainer) {
-                    headerQRContainer.innerHTML = qrImage;
+                // Add QR code to bottom container (for both screen and print view)
+                const bottomQRContainer = document.getElementById('qrCodeBottom');
+                if (bottomQRContainer) {
+                    bottomQRContainer.innerHTML = qrImage;
                     
-                    // Add a small caption below the QR code
-                    const caption = document.createElement('div');
-                    caption.style.fontSize = '8pt';
-                    caption.style.textAlign = 'center';
-                    caption.style.marginTop = '5px';
-                    caption.innerText = 'Scan for result';
-                    headerQRContainer.appendChild(caption);
-                }
-                
-                // Add QR code to print container (for print view)
-                const printQRContainer = document.getElementById('qrCodePrint');
-                if (printQRContainer) {
-                    printQRContainer.innerHTML = qrImage;
-                    
-                    // Add a small caption below the QR code for print
-                    const printCaption = document.createElement('div');
-                    printCaption.style.fontSize = '8pt';
-                    printCaption.style.textAlign = 'center';
-                    printCaption.style.marginTop = '3px';
-                    printCaption.innerText = 'Scan for result';
-                    printQRContainer.appendChild(printCaption);
+                    // Add a small caption below the QR code for bottom
+                    const bottomCaption = document.createElement('div');
+                    bottomCaption.style.fontSize = '8pt';
+                    bottomCaption.style.textAlign = 'center';
+                    bottomCaption.style.marginTop = '3px';
+                    bottomCaption.innerText = 'Scan for result';
+                    bottomQRContainer.appendChild(bottomCaption);
                 }
             } catch (error) {
                 console.error('QR Code generation failed:', error);
