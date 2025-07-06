@@ -1,0 +1,204 @@
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #f8f9fa;
+}
+
+.header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 0.75rem; /* Reduced by 50% */
+    text-align: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.header h1 {
+    font-size: 1.5rem; /* Adjust font size */
+}
+
+.header p {
+    font-size: 0.875rem; /* Adjust font size */
+}
+
+.container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 0 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.student-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+.student-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.student-card:hover {
+    transform: translateY(-3px);
+}
+
+.marksheet {
+    background: white;
+    border-radius: 8px;
+    padding: 1.6rem; /* Reduced by 20% */
+    margin-top: 0.8rem; /* Reduced by 20% */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1.5rem;
+}
+
+th, td {
+    padding: 9.6px; /* Reduced by 20% */
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #3498db;
+    color: white;
+}
+
+.back-btn {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 16px; /* Reduced by 20% */
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 0.8rem; /* Reduced by 20% */
+}
+
+.highlight {
+    background-color: #f1f8ff;
+    font-weight: bold;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.search-box {
+    margin-bottom: 1rem;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.highlight-box {
+    background-color: #f1f8ff;
+    font-weight: bold;
+    padding: 12px; /* Reduced by 20% */
+    border-radius: 8px;
+    margin-top: 16px; /* Reduced by 20% */
+    display: flex;
+    justify-content: space-between;
+}
+
+.highlight-item {
+    flex: 1;
+    margin: 0 8px; /* Reduced by 20% */
+    text-align: center;
+}
+
+.highlight-item p {
+    margin: 4px 0; /* Reduced by 20% */
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 0 8px; /* Reduced by 20% */
+    }
+
+    .student-card {
+        padding: 0.8rem; /* Reduced by 20% */
+    }
+
+    .marksheet {
+        padding: 1.2rem; /* Reduced by 20% */
+    }
+
+    th, td {
+        padding: 6.4px; /* Reduced by 20% */
+    }
+
+    .back-btn {
+        padding: 6.4px 12.8px; /* Reduced by 20% */
+    }
+
+    .highlight {
+        padding: 8px; /* Reduced by 20% */
+    }
+
+    .highlight-box {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .highlight-item {
+        margin: 8px 0; /* Reduced by 20% */
+    }
+}
+
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    #marksheet, #marksheet * {
+        visibility: visible;
+    }
+    #marksheet {
+        position: absolute;
+        left: 0;
+        top: 0px;
+        width: 100%;
+        padding: 0px;
+        margin: 0px;
+        box-sizing: border-box;
+    }
+    #marksheet::before {
+        content: url('pad.png');
+        display: block;
+        margin: 0px;
+        padding: 0px;
+        max-width: 100%;
+        height: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+.report-title {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+/* reCAPTCHA styles */
+.g-recaptcha {
+    margin: 1rem auto;
+    display: flex;
+    justify-content: center;
+}
