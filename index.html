@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-widt    comment.textContent = 'দ্রুত কাজ করার জন্য , রোল/নাম লিখে খুঁজুন এবং ফলাফল দেখার জন্য কার্ডে ক্লিক করুন।';, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Result Processing System - 2025 (fmhs.edu.bd)/</title>
     <link rel="stylesheet" href="style.css">
     <!-- Add security headers -->
@@ -38,9 +38,6 @@
         </div>
     </div>
     <script>
-
-
-
 
 const check_android_web_ios_ID = '10zFu-vb_5Grk-tdwLmslTOrEzBtWyD958tkODji1fho';
 const exam_annual = 'exam_publish';
@@ -78,7 +75,7 @@ async function loadData() {
         renderClassAndShiftOptions();
     } catch (error) {
         console.error('Error:', error);
-        alert('ডেটা লোড করতে সমস্যা হয়েছে!');
+        alert('ডেটা লোড করতে সমস্যা হয়েছে!');
     }
 }
 
@@ -106,7 +103,7 @@ function renderStudentList() {
     const container = document.getElementById('studentList');
     container.innerHTML = '';
 
-    const initialStudents = students.slice(0, 201); // Show first 21 students initially
+    const initialStudents = students.slice(0, 201); // Show first 201 students initially
 
     initialStudents.forEach(student => {
         const card = document.createElement('div');
@@ -121,14 +118,11 @@ function renderStudentList() {
     });
 
     const comment = document.createElement('p');
-    comment.textContent = 'দ্রুত কাজ করার জন্য , রোল/নাম লিখে খুঁজুন এবং মোবাইল নাম্বার (শেষ ৭টি সংখ্যা) দিয়ে ফলাফল দেখুন।';
+    comment.textContent = 'দ্রুত কাজ করার জন্য , রোল/নাম লিখে খুঁজুন এবং মোবাইল নাম্বার (শেষ ৭টি সংখ্যা) দিয়ে ফলাফল দেখুন।';
     comment.style.textAlign = 'center';
     comment.style.marginTop = '1rem';
     container.appendChild(comment);
 }
-
-
-// Password section removed - direct access to results enabled
 
 function filterStudentList() {
     const query = document.getElementById('searchBox').value.toLowerCase();
@@ -188,79 +182,9 @@ function renderClassAndShiftOptions() {
 }
 
 function showMarksheet(student) {
-    // Authentication check removed - direct access to results enabled
-    document.getElementById('searchBox').style.display = 'none';
-    document.getElementById('classFilter').style.display = 'none';
-    document.getElementById('shiftFilter').style.display = 'none';
-    document.getElementById('studentList').style.display = 'none';
-    document.getElementById('marksheet').style.display = 'block';
-
-    const content = document.getElementById('marksheetContent');
-    content.innerHTML = `
-    <p class="report-title">Annual Examination Report Card-2024</p>
-        <h2>${student.name}</h2>
-        <p>Father's Name: ${student.fathers_name || 'N/A'}</p>
-        <p>Roll: ${student.roll} | Class: ${student.class || 'N/A'} | Shift: ${student.shift || 'N/A'}</p>
-        <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}</p>
-        
-        <table>
-            <thead>
-                <tr>
-                    <th>Subject</th>
-                    <th>WRITTEN</th>
-                    <th>CA</th>
-                    <th>Practical</th>
-                    <th>Total</th>
-                    <th>GPA</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
-                    const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                    const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                    const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                    const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                    const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                    
-                    return `
-                    <tr>
-                        <td>${subject.replace(/\*/g, '')}</td>
-                        <td>${student[cleanWRITTEN] || '-'}</td>
-                        <td>${student[cleanCA] || '-'}</td>
-                        <td>${student[cleanPractical] || '-'}</td>
-                        <td>${student[cleanTotal] || '-'}</td>
-                        <td>${student[cleanGPA] || '-'}</td>
-                    </tr>
-                    `;
-                }).join('')}
-            </tbody>
-        </table>
-
-        <div class="highlight-box">
-            ${student.gpa ? `<div class="highlight-item"><p>GPA</p><p>${student.gpa}</p></div>` : ''}
-            ${student.remark ? `<div class="highlight-item"><p>Remark</p><p>${student.remark}</p></div>` : ''}
-             ${student.ranking ? `<div class="highlight-item"><p>Rank :</p><p>${student.ranking}</p></div>` : ''}
-        </div>
-
-        <p style="margin-top: 20px; font-weight: bold;">
-            ${student.total_mark ? `Total Marks: ${student.total_mark} | ` : ''}
-            ${student.average ? `Average Mark: ${student.average} | ` : ''}
-            ${student.absent ? `Absent subject: ${student.absent}` : ''}
-        </p>
-
-        <p style="margin-top: 5px; font-weight: regular; text-align: left; font-size: 0.8em;">
-            নির্দেশনা :
-        </p>
-        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
-            নতুন শিক্ষাবর্ষে জানুয়ারির ১ম সপ্তাহে নতুন শ্রেণিতে ভর্তি হয়ে নতুন বই সংগ্রহ করতে হবে।
-ভর্তির সময় মার্কশীটের ফটোকপি অবশ্যই আনতে হবে।  
-        </p>
-        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
-            গ্রহনযোগ্য কারন উল্লেখ করে প্রয়োজনীয় ক্ষেত্রে অগ্রিম ছুটি নিতে হবে। পূর্বানুমতি ছাড়া এক 
-টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
-        </p>
-
-                    `;
+    // Redirect to detailed result page with IID parameter
+    const iid = student.iid || 'unknown';
+    window.location.href = `detailsresult.html?IID=${encodeURIComponent(iid)}`;
 }
 
 function showStudentList() {
@@ -269,7 +193,6 @@ function showStudentList() {
     document.getElementById('shiftFilter').style.display = 'block';
     document.getElementById('studentList').style.display = 'block';
     document.getElementById('marksheet').style.display = 'none';
-    
 }
 
 // Initialize
