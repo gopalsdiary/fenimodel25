@@ -45,6 +45,13 @@
                 width: 180px;
                 height: 180px;
             }
+            
+            /* Center align pad.png when printing */
+            #marksheet::before {
+                text-align: center;
+                display: block;
+                margin: 0 auto;
+            }
         }
         
         .loading, .error {
@@ -69,6 +76,162 @@
         
         .print-btn:hover {
             background-color: #0b7dda;
+        }
+        
+        /* Report title styling */
+        .report-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #d32f2f;
+            text-align: center;
+            margin: 15px 0;
+            text-decoration: underline;
+        }
+        
+        /* Colorful table styling */
+        table {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 2px solid #000000;
+            border-collapse: collapse;
+            table-layout: fixed;
+            width: 100%;
+        }
+        
+        /* Equal column widths */
+        table th:nth-child(1), table td:nth-child(1) {
+            width: 25%;
+        }
+        
+        table th:nth-child(2), table td:nth-child(2),
+        table th:nth-child(3), table td:nth-child(3),
+        table th:nth-child(4), table td:nth-child(4),
+        table th:nth-child(5), table td:nth-child(5),
+        table th:nth-child(6), table td:nth-child(6) {
+            width: 15%;
+        }
+        
+        table th {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            border: none;
+            padding: 12px 8px;
+        }
+        
+        table th:first-child {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        
+        table td {
+            border: 1px solid #e0e0e0;
+            padding: 10px 8px;
+            background: #ffffff;
+            transition: all 0.3s ease;
+        }
+        
+        table td:first-child {
+            background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+            font-weight: bold;
+            color: #1976D2;
+            border-left: 4px solid #2196F3;
+        }
+        
+        /* Row-specific styling */
+        table tr:nth-child(odd) td {
+            background: #ffffff;
+        }
+        
+        table tr:nth-child(odd) td:first-child {
+            background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+        }
+        
+        table tr:nth-child(even) td {
+            background: rgba(255, 255, 0, 0.1);
+        }
+        
+        table tr:nth-child(even) td:first-child {
+            background: linear-gradient(135deg, #fffde7, #fff9c4);
+        }
+        
+        table tr:hover td {
+            background: linear-gradient(135deg, #fff3e0, #ffeaa7);
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+        
+        table tr:hover td:first-child {
+            background: linear-gradient(135deg, #e1f5fe, #b3e5fc);
+            border-left-color: #0277BD;
+        }
+        
+        /* Subject-specific colors */
+        table tr:nth-child(1) td { border-left-color: #f44336; }
+        table tr:nth-child(2) td { border-left-color: #e91e63; }
+        table tr:nth-child(3) td { border-left-color: #9c27b0; }
+        table tr:nth-child(4) td { border-left-color: #673ab7; }
+        table tr:nth-child(5) td { border-left-color: #3f51b5; }
+        table tr:nth-child(6) td { border-left-color: #2196f3; }
+        table tr:nth-child(7) td { border-left-color: #03a9f4; }
+        table tr:nth-child(8) td { border-left-color: #00bcd4; }
+        table tr:nth-child(9) td { border-left-color: #009688; }
+        table tr:nth-child(10) td { border-left-color: #4caf50; }
+        table tr:nth-child(11) td { border-left-color: #8bc34a; }
+        table tr:nth-child(12) td { border-left-color: #cddc39; }
+        table tr:nth-child(13) td { border-left-color: #ffeb3b; }
+        table tr:nth-child(14) td { border-left-color: #ffc107; }
+        table tr:nth-child(15) td { border-left-color: #ff9800; }
+        
+        /* Mobile responsive table - horizontal scroll only */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 10px 0;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }
+            
+            table {
+                min-width: 600px;
+                border-collapse: collapse;
+                border-radius: 10px;
+            }
+            
+            table th,
+            table td {
+                min-width: 80px;
+                padding: 8px;
+                text-align: center;
+                white-space: nowrap;
+            }
+            
+            table th:first-child,
+            table td:first-child {
+                min-width: 120px;
+                position: sticky;
+                left: 0;
+                z-index: 2;
+            }
+            
+            table th {
+                position: sticky;
+                top: 0;
+                z-index: 3;
+            }
+            
+            table th:first-child {
+                z-index: 4;
+            }
+            
+            /* Maintain hover effects on mobile */
+            table tr:hover td {
+                transform: none;
+                box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+            }
         }
     </style>
 </head>
@@ -215,38 +378,40 @@
                 <p>Roll: ${student.roll} | Class: ${student.class || 'N/A'} | Shift: ${student.shift || 'N/A'}</p>
                 <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}</p>
                 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>WRITTEN</th>
-                            <th>CA</th>
-                            <th>Practical</th>
-                            <th>Total</th>
-                            <th>GPA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
-                            const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                            const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                            const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                            const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                            const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                            
-                            return `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
                             <tr>
-                                <td>${subject.replace(/\*/g, '')}</td>
-                                <td>${student[cleanWRITTEN] || '-'}</td>
-                                <td>${student[cleanCA] || '-'}</td>
-                                <td>${student[cleanPractical] || '-'}</td>
-                                <td>${student[cleanTotal] || '-'}</td>
-                                <td>${student[cleanGPA] || '-'}</td>
+                                <th>Subject</th>
+                                <th>WRITTEN</th>
+                                <th>CA</th>
+                                <th>Practical</th>
+                                <th>Total</th>
+                                <th>GPA</th>
                             </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
+                                const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                
+                                return `
+                                <tr>
+                                    <td>${subject.replace(/\*/g, '')}</td>
+                                    <td>${student[cleanWRITTEN] || '-'}</td>
+                                    <td>${student[cleanCA] || '-'}</td>
+                                    <td>${student[cleanPractical] || '-'}</td>
+                                    <td>${student[cleanTotal] || '-'}</td>
+                                    <td>${student[cleanGPA] || '-'}</td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
 
                 <div class="highlight-box">
                     ${student.gpa ? `<div class="highlight-item"><p>GPA</p><p>${student.gpa}</p></div>` : ''}
@@ -273,7 +438,7 @@
                             টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
                         </p>
                         <p style="margin-top: 10px; font-weight: regular; text-align: left; font-size: 0.8em;">
-                            Verify this result from <a href="https://fenimodel.glide.page" target="_blank">fenimodel.glide.page</a> or scan the QR code.
+                            Verify this result by scanning the QR code.
                         </p>
                     </div>
                     <div class="qr-code-bottom" id="qrCodeBottom" style="flex-shrink: 0; text-align: center;">
