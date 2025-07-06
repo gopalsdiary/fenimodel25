@@ -108,6 +108,96 @@
         .header {
             text-align: center;
         }
+        
+        .password-section {
+            display: block;
+            text-align: center;
+            margin: 2rem auto;
+            max-width: 400px;
+            padding: 2rem;
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+        }
+        
+        .exam-section {
+            display: none;
+        }
+        
+        .password-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin: 1rem 0;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .password-input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .password-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+        
+        .password-btn:hover {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        
+        .password-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+        
+        .logout-container {
+            text-align: right;
+            margin-bottom: 2rem;
+        }
+        
+        .logout-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        .logout-btn:hover {
+            background: linear-gradient(135deg, #c0392b, #e74c3c);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+        }
     </style>
 </head>
 <body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
@@ -117,19 +207,40 @@
     </div>
 
     <div class="container">
-        <div class="welcome-text">
-            <h2>Welcome to Result Portal</h2>
-            <p>Select the examination type to view results</p>
+        <!-- Password Section -->
+        <div class="password-section" id="passwordSection">
+            <h2 class="password-title">🔐 Access Required</h2>
+            <p>Please enter the password to access examination results</p>
+            <input type="password" 
+                   id="passwordInput" 
+                   class="password-input" 
+                   placeholder="Enter password..." 
+                   onkeypress="handlePasswordKeyPress(event)">
+            <br>
+            <button class="password-btn" onclick="checkPassword()">Access Results</button>
+            <div class="error-message" id="errorMessage">Incorrect password. Please try again.</div>
         </div>
         
-        <div class="exam-buttons">
-            <a href="ann24/index.html" class="exam-btn annual-btn">
-                📊 Annual Examination 2024
-            </a>
+        <!-- Exam Selection Section (Hidden initially) -->
+        <div class="exam-section" id="examSection">
+            <div class="logout-container">
+                <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+            </div>
             
-            <a href="terminal/index.html" class="exam-btn">
-                📋 Terminal Examination 2024
-            </a>
+            <div class="welcome-text">
+                <h2>Welcome to Result Portal</h2>
+                <p>Select the examination type to view results</p>
+            </div>
+            
+            <div class="exam-buttons">
+                <a href="ann24/index.html" class="exam-btn annual-btn">
+                    📊 Annual Examination 2024
+                </a>
+                
+                <a href="terminal/index.html" class="exam-btn">
+                    📋 Terminal Examination 2025
+                </a>
+            </div>
         </div>
     </div>
 
@@ -143,6 +254,128 @@
                 e.preventDefault();
             }
         });
+        
+        // Password functionality
+        const correctPassword = "1";
+        const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+        
+        function checkPassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const errorMessage = document.getElementById('errorMessage');
+            const passwordSection = document.getElementById('passwordSection');
+            const examSection = document.getElementById('examSection');
+            
+            if (passwordInput.value === correctPassword) {
+                // Correct password - show exam selection
+                passwordSection.style.display = 'none';
+                examSection.style.display = 'block';
+                errorMessage.style.display = 'none';
+                
+                // Store authentication with timestamp
+                const loginTime = new Date().getTime();
+                sessionStorage.setItem('authenticated', 'true');
+                sessionStorage.setItem('loginTime', loginTime.toString());
+                
+                // Start session timeout
+                startSessionTimeout();
+            } else {
+                // Wrong password - show error
+                errorMessage.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
+                
+                // Add shake animation
+                passwordInput.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    passwordInput.style.animation = '';
+                }, 500);
+            }
+        }
+        
+        function handlePasswordKeyPress(event) {
+            if (event.key === 'Enter') {
+                checkPassword();
+            }
+        }
+        
+        function isSessionValid() {
+            const authenticated = sessionStorage.getItem('authenticated');
+            const loginTime = sessionStorage.getItem('loginTime');
+            
+            if (authenticated !== 'true' || !loginTime) {
+                return false;
+            }
+            
+            const currentTime = new Date().getTime();
+            const sessionAge = currentTime - parseInt(loginTime);
+            
+            return sessionAge < SESSION_DURATION;
+        }
+        
+        function logout() {
+            // Clear session data
+            sessionStorage.removeItem('authenticated');
+            sessionStorage.removeItem('loginTime');
+            
+            // Show password section and hide exam section
+            document.getElementById('passwordSection').style.display = 'block';
+            document.getElementById('examSection').style.display = 'none';
+            
+            // Clear password input and focus
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+            
+            // Clear any session timeout
+            if (window.sessionTimeoutId) {
+                clearTimeout(window.sessionTimeoutId);
+            }
+        }
+        
+        function startSessionTimeout() {
+            // Clear any existing timeout
+            if (window.sessionTimeoutId) {
+                clearTimeout(window.sessionTimeoutId);
+            }
+            
+            // Set new timeout
+            window.sessionTimeoutId = setTimeout(() => {
+                alert('Your session has expired. Please log in again.');
+                logout();
+            }, SESSION_DURATION);
+        }
+        
+        function checkSessionValidity() {
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                if (isSessionValid()) {
+                    // Session is still valid - show exam section and restart timeout
+                    document.getElementById('passwordSection').style.display = 'none';
+                    document.getElementById('examSection').style.display = 'block';
+                    startSessionTimeout();
+                } else {
+                    // Session has expired - logout
+                    logout();
+                }
+            }
+        }
+        
+        // Check if user is already authenticated
+        window.onload = function() {
+            checkSessionValidity();
+        };
+        
+        // Check session validity periodically (every minute)
+        setInterval(checkSessionValidity, 60000);
+        
+        // Add shake animation for wrong password
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>
