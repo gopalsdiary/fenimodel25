@@ -15,7 +15,7 @@
     
     <style>
         .qr-code-container {
-            display: none; /* Hide by default in screen view */
+            display: block; /* Show by default */
             position: absolute;
             top: 20px;
             right: 20px;
@@ -36,17 +36,31 @@
                 display: none !important;
             }
             
-            .qr-code-container {
-                display: block !important; /* Show in print view */
-                position: absolute;
-                top: 20px;
-                right: 20px;
-                text-align: center;
+            /* Hide the header QR code in print */
+            .header .qr-code-container {
+                display: none !important;
             }
             
-            .qr-code-container img {
+            /* Position QR code in the marksheet area under pad.png */
+            #marksheet {
+                position: relative;
+            }
+            
+            #marksheet .qr-code-print {
+                display: block !important;
+                position: absolute;
+                top: 120px; /* Position under the pad.png image */
+                right: 20px;
+                text-align: center;
+                z-index: 1000;
+            }
+            
+            #marksheet .qr-code-print img {
                 width: 80px;
                 height: 80px;
+                border: 1px solid #333;
+                padding: 3px;
+                background: white;
             }
         }
         
@@ -85,6 +99,9 @@
 
     <div class="container">
         <div id="marksheet" class="marksheet">
+            <!-- QR code for print view only -->
+            <div class="qr-code-print" id="qrCodePrint" style="display: none;"></div>
+            
             <div id="marksheetContent">
                 <!-- Content will be dynamically loaded here -->
                 <div class="loading">Loading student details...</div>
@@ -165,6 +182,8 @@
                 if (student) {
                     console.log('Student found:', student.name);
                     displayStudentDetails(student);
+                    // Generate QR code for this specific student
+                    generateQRCode(student.iid);
                 } else {
                     console.log('Student not found with IID:', targetIID);
                     document.getElementById('marksheetContent').innerHTML = `
@@ -289,55 +308,73 @@
             if (backBtn) backBtn.style.display = 'none';
             if (printBtn) printBtn.style.display = 'none';
             
-            // Ensure QR code is visible for printing
-            const qrCodeContainer = document.querySelector('.qr-code-container');
-            if (qrCodeContainer) {
-                qrCodeContainer.style.display = 'block';
-            }
+            // Hide header QR code and show print QR code for printing
+            const headerQRContainer = document.querySelector('.header .qr-code-container');
+            const printQRContainer = document.querySelector('#qrCodePrint');
+            
+            if (headerQRContainer) headerQRContainer.style.display = 'none';
+            if (printQRContainer) printQRContainer.style.display = 'block';
             
             // Print the page
             window.print();
             
-            // Show buttons again after printing dialog is closed
+            // Show buttons again and restore QR code visibility after printing dialog is closed
             setTimeout(() => {
                 if (backBtn) backBtn.style.display = 'inline-block';
                 if (printBtn) printBtn.style.display = 'inline-block';
-                // Reset QR code visibility for screen view
-                if (qrCodeContainer) {
-                    qrCodeContainer.style.display = 'none';
-                }
+                if (headerQRContainer) headerQRContainer.style.display = 'block';
+                if (printQRContainer) printQRContainer.style.display = 'none';
             }, 500);
         }
 
         // Generate QR Code
-        function generateQRCode() {
+        function generateQRCode(studentIID = null) {
             try {
-                // Create QR code for fenimodel.glide.page
+                // Get the current IID if not provided
+                const currentIID = studentIID || getIIDFromURL();
+                
+                // Create QR code for the current student's result page
                 const qr = qrcode(0, 'M');
-                qr.addData('https://fenimodel.glide.page');
+                const currentURL = window.location.origin + window.location.pathname;
+                const qrURL = `${currentURL}?IID=${currentIID}`;
+                qr.addData(qrURL);
                 qr.make();
                 
                 // Create image element from QR code
                 const qrImage = qr.createImgTag(4);
                 
-                // Add QR code to container
-                document.getElementById('qrCode').innerHTML = qrImage;
+                // Add QR code to header container (for screen view)
+                const headerQRContainer = document.getElementById('qrCode');
+                if (headerQRContainer) {
+                    headerQRContainer.innerHTML = qrImage;
+                    
+                    // Add a small caption below the QR code
+                    const caption = document.createElement('div');
+                    caption.style.fontSize = '8pt';
+                    caption.style.textAlign = 'center';
+                    caption.style.marginTop = '5px';
+                    caption.innerText = 'Scan for result';
+                    headerQRContainer.appendChild(caption);
+                }
                 
-                // Add a small caption below the QR code
-                const caption = document.createElement('div');
-                caption.style.fontSize = '8pt';
-                caption.style.textAlign = 'center';
-                caption.style.marginTop = '5px';
-                caption.innerText = 'Scan to verify';
-                document.getElementById('qrCode').appendChild(caption);
+                // Add QR code to print container (for print view)
+                const printQRContainer = document.getElementById('qrCodePrint');
+                if (printQRContainer) {
+                    printQRContainer.innerHTML = qrImage;
+                    
+                    // Add a small caption below the QR code for print
+                    const printCaption = document.createElement('div');
+                    printCaption.style.fontSize = '8pt';
+                    printCaption.style.textAlign = 'center';
+                    printCaption.style.marginTop = '3px';
+                    printCaption.innerText = 'Scan for result';
+                    printQRContainer.appendChild(printCaption);
+                }
             } catch (error) {
                 console.error('QR Code generation failed:', error);
             }
         }
         
-        // Generate QR code when page loads
-        window.addEventListener('load', generateQRCode);
-
         // Initialize
         loadData();
     </script>
