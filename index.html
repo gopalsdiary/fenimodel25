@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result Processing System - 2025 (fmhs.edu.bd)/</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Add security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+    <div class="header">
+        <h1>Feni Model High School</h1>
+        <p>Annual Examination Report Card-2024</p>
+    </div>
+
+    <div class="container">
+      
+        <input type="text" id="searchBox" class="search-box" placeholder="Search by Name, Roll, IID, or Mobile" oninput="filterStudentList()">
+        
+        <!-- New filter options -->
+        <select id="classFilter" class="search-box" onchange="filterStudentList()">
+            <option value="">All Classes</option>
+            <!-- Add class options dynamically -->
+        </select>
+        <select id="shiftFilter" class="search-box" onchange="filterStudentList()">
+            <option value="">All Shifts</option>
+            <!-- Add shift options dynamically -->
+        </select>
+        
+        <div id="studentList" class="student-list"></div>
+        <div id="marksheet" style="display: none;">
+            <div class="marksheet" id="marksheetContent"></div>
+            <button class="back-btn" style="margin-top: 0.5rem;" onclick="showStudentList()">← Back to List</button>
+        </div>
+    </div>
+    <script>
+            // Disable developer tools
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')) {
+        e.preventDefault();
+    }
+});
+
+
+
+const check_android_web_ios_ID = '10zFu-vb_5Grk-tdwLmslTOrEzBtWyD958tkODji1fho';
+const exam_annual = 'exam_publish';
+const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}/export?format=csv&sheet=${exam_annual}`;
+
+let students = [];
+let headers = [];
+let SUBJECT_MAP = {};
+let authenticatedStudents = new Set();
+
+async function loadData() {
+    try {
+        const response = await fetch(skip);
+        const csvData = await response.text();
+        const rows = csvData.split('\n').filter(row => row.trim() !== '');
+
+        // Process headers
+        headers = rows[0].split(',').map(h => h.trim().replace(/"/g, '')); // Remove quotes
+
+        // Dynamically generate SUBJECT_MAP
+        generateSubjectMap(headers);
+
+        // Process student data
+        students = rows.slice(1).map(row => {
+            const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Complex CSV split
+            const student = {};
+            headers.forEach((header, index) => {
+                const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+            });
+            return student;
+        });
+
+        renderStudentList();
+        renderClassAndShiftOptions();
+    } catch (error) {
+        console.error('Error:', error);
+        alert('ডেটা লোড করতে সমস্যা হয়েছে!');
+    }
+}
+
+function generateSubjectMap(headers) {
+    const subjects = new Set();
+    headers.forEach(header => {
+        const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+        if (match) {
+            subjects.add(match[1]);
+        }
+    });
+
+    subjects.forEach(subject => {
+        SUBJECT_MAP[subject] = {
+            WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
+            CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+            Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
+            Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
+            GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
+        };
+    });
+}
+
+function renderStudentList() {
+    const container = document.getElementById('studentList');
+    container.innerHTML = '';
+
+    const initialStudents = students.slice(0, 201); // Show first 21 students initially
+
+    initialStudents.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.innerHTML = `
+            <h3>${student.name || 'N/A'}</h3>
+            <p>Roll: ${student.roll || 'N/A'}</p>
+            <p>IID: ${student.iid || 'N/A'}</p>
+        `;
+        card.onclick = () => promptPassword(student);
+        container.appendChild(card);
+    });
+
+    const comment = document.createElement('p');
+    comment.textContent = 'দ্রুত কাজ করার জন্য , রোল/নাম লিখে খুঁজুন এবং মোবাইল নাম্বার (শেষ ৭টি সংখ্যা) দিয়ে ফলাফল দেখুন।';
+    comment.style.textAlign = 'center';
+    comment.style.marginTop = '1rem';
+    container.appendChild(comment);
+}
+
+
+
+    const password = prompt("Please enter student mobile number (last 7 digit) to view the result:");
+    if (password === student.password || password === student.defaultpassword) {
+        authenticatedStudents.add(student.iid);
+        showMarksheet(student);
+    } else {
+        alert("Incorrect password!");
+    }
+
+
+function filterStudentList() {
+    const query = document.getElementById('searchBox').value.toLowerCase();
+    const classFilter = document.getElementById('classFilter').value;
+    const shiftFilter = document.getElementById('shiftFilter').value;
+
+    const filteredStudents = students.filter(student => {
+        const matchesQuery = (student.name && student.name.toLowerCase().includes(query)) ||
+                             (student.roll && student.roll.toLowerCase().includes(query)) ||
+                             (student.iid && student.iid.toLowerCase().includes(query)) ||
+                             (student.mobile && student.mobile.toLowerCase().includes(query));
+        const matchesClass = !classFilter || student.class === classFilter;
+        const matchesShift = !shiftFilter || student.shift === shiftFilter;
+
+        return matchesQuery && matchesClass && matchesShift;
+    });
+
+    renderFilteredStudentList(filteredStudents);
+}
+
+function renderFilteredStudentList(filteredStudents) {
+    const container = document.getElementById('studentList');
+    container.innerHTML = '';
+
+    filteredStudents.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.innerHTML = `
+            <h3>${student.name || 'N/A'}</h3>
+            <p>Roll: ${student.roll || 'N/A'}</p>
+            <p>IID: ${student.iid || 'N/A'}</p>
+        `;
+        card.onclick = () => promptPassword(student);
+        container.appendChild(card);
+    });
+}
+
+function renderClassAndShiftOptions() {
+    const classSet = new Set(students.map(student => student.class).filter(Boolean));
+    const shiftSet = new Set(students.map(student => student.shift).filter(Boolean));
+
+    const classFilter = document.getElementById('classFilter');
+    classSet.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls;
+        option.textContent = cls;
+        classFilter.appendChild(option);
+    });
+
+    const shiftFilter = document.getElementById('shiftFilter');
+    shiftSet.forEach(shift => {
+        const option = document.createElement('option');
+        option.value = shift;
+        option.textContent = shift;
+        shiftFilter.appendChild(option);
+    });
+}
+
+function showMarksheet(student) {
+    if (!authenticatedStudents.has(student.iid)) {
+        alert("You must enter the correct password to view the result.");
+        return;
+    }
+
+    document.getElementById('searchBox').style.display = 'none';
+    document.getElementById('classFilter').style.display = 'none';
+    document.getElementById('shiftFilter').style.display = 'none';
+    document.getElementById('studentList').style.display = 'none';
+    document.getElementById('marksheet').style.display = 'block';
+
+    const content = document.getElementById('marksheetContent');
+    content.innerHTML = `
+    <p class="report-title">Annual Examination Report Card-2024</p>
+        <h2>${student.name}</h2>
+        <p>Father's Name: ${student.fathers_name || 'N/A'}</p>
+        <p>Roll: ${student.roll} | Class: ${student.class || 'N/A'} | Shift: ${student.shift || 'N/A'}</p>
+        <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>WRITTEN</th>
+                    <th>CA</th>
+                    <th>Practical</th>
+                    <th>Total</th>
+                    <th>GPA</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
+                    const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                    const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                    const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                    const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                    const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                    
+                    return `
+                    <tr>
+                        <td>${subject.replace(/\*/g, '')}</td>
+                        <td>${student[cleanWRITTEN] || '-'}</td>
+                        <td>${student[cleanCA] || '-'}</td>
+                        <td>${student[cleanPractical] || '-'}</td>
+                        <td>${student[cleanTotal] || '-'}</td>
+                        <td>${student[cleanGPA] || '-'}</td>
+                    </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+
+        <div class="highlight-box">
+            ${student.gpa ? `<div class="highlight-item"><p>GPA</p><p>${student.gpa}</p></div>` : ''}
+            ${student.remark ? `<div class="highlight-item"><p>Remark</p><p>${student.remark}</p></div>` : ''}
+             ${student.ranking ? `<div class="highlight-item"><p>Rank :</p><p>${student.ranking}</p></div>` : ''}
+        </div>
+
+        <p style="margin-top: 20px; font-weight: bold;">
+            ${student.total_mark ? `Total Marks: ${student.total_mark} | ` : ''}
+            ${student.average ? `Average Mark: ${student.average} | ` : ''}
+            ${student.absent ? `Absent subject: ${student.absent}` : ''}
+        </p>
+
+        <p style="margin-top: 5px; font-weight: regular; text-align: left; font-size: 0.8em;">
+            নির্দেশনা :
+        </p>
+        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+            নতুন শিক্ষাবর্ষে জানুয়ারির ১ম সপ্তাহে নতুন শ্রেণিতে ভর্তি হয়ে নতুন বই সংগ্রহ করতে হবে।
+ভর্তির সময় মার্কশীটের ফটোকপি অবশ্যই আনতে হবে।  
+        </p>
+        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+            গ্রহনযোগ্য কারন উল্লেখ করে প্রয়োজনীয় ক্ষেত্রে অগ্রিম ছুটি নিতে হবে। পূর্বানুমতি ছাড়া এক 
+টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
+        </p>
+
+                    `;
+}
+
+function showStudentList() {
+    document.getElementById('searchBox').style.display = 'block';
+    document.getElementById('classFilter').style.display = 'block';
+    document.getElementById('shiftFilter').style.display = 'block';
+    document.getElementById('studentList').style.display = 'block';
+    document.getElementById('marksheet').style.display = 'none';
+    
+}
+
+// Initialize
+loadData();
+
+    </script>
+</body>
+</html>
