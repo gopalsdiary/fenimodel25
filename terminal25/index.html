@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result Processing System - 2025 (fmhs.edu.bd)/</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Add security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+    <div class="header">
+        <h1>Feni Model High School</h1>
+        <p>Half Yearly Examination Report Card-2025</p>
+    </div>
+
+    <div class="container">
+      
+        <input type="text" id="searchBox" class="search-box" placeholder="Search by Name, Roll, IID, or Mobile" oninput="filterStudentList()">
+        
+        <!-- New filter options -->
+        <select id="classFilter" class="search-box" onchange="filterStudentList()">
+            <option value="">All Classes</option>
+            <!-- Add class options dynamically -->
+        </select>
+        <select id="shiftFilter" class="search-box" onchange="filterStudentList()">
+            <option value="">All Shifts</option>
+            <!-- Add shift options dynamically -->
+        </select>
+        
+        <div id="studentList" class="student-list"></div>
+        <div id="dataCount" class="data-count" style="text-align: center; margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px; color: #666;">
+            <p id="countText">Loading student data...</p>
+        </div>
+        <div id="marksheet" style="display: none;">
+            <div class="marksheet" id="marksheetContent"></div>
+            <button class="back-btn" style="margin-top: 0.5rem;" onclick="showStudentList()">← Back to List</button>
+        </div>
+    </div>
+    <script>
+
+const csvFiles = ['result1.csv', 'result2.csv', 'result3.csv', 'result4.csv'];
+
+let students = [];
+let headers = [];
+let SUBJECT_MAP = {};
+let authenticatedStudents = new Set();
+
+async function loadData() {
+    try {
+        // Load data from all CSV files
+        const allStudents = [];
+        let allHeaders = [];
+        
+        for (const csvFile of csvFiles) {
+            try {
+                const response = await fetch(csvFile);
+                if (!response.ok) {
+                    console.warn(`Could not load ${csvFile}: ${response.status}`);
+                    continue;
+                }
+                
+                const csvData = await response.text();
+                const rows = csvData.split('\n').filter(row => row.trim() !== '');
+                
+                if (rows.length === 0) continue;
+                
+                // Process headers (use the first file's headers)
+                if (allHeaders.length === 0) {
+                    allHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                }
+                
+                // Skip header row and process student data
+                const fileStudents = rows.slice(2).map(row => { // Skip first two rows (headers)
+                    const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const student = {};
+                    allHeaders.forEach((header, index) => {
+                        const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                        student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                    });
+                    return student;
+                });
+                
+                allStudents.push(...fileStudents);
+                console.log(`Loaded ${fileStudents.length} students from ${csvFile}`);
+                
+            } catch (fileError) {
+                console.warn(`Error loading ${csvFile}:`, fileError);
+            }
+        }
+        
+        // Set global variables
+        headers = allHeaders;
+        students = allStudents;
+
+        if (students.length === 0) {
+            document.getElementById('countText').innerHTML = `
+                <strong style="color: #d32f2f;">No student data found</strong><br>
+                <small>Please check if CSV files exist and contain valid data</small>
+            `;
+            return;
+        }
+
+        // Dynamically generate SUBJECT_MAP
+        generateSubjectMap(headers);
+
+        console.log('Total students loaded:', students.length);
+        renderStudentList();
+        renderClassAndShiftOptions();
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('countText').innerHTML = `
+            <strong style="color: #d32f2f;">Error loading data</strong><br>
+            <small>Please check console for more details</small>
+        `;
+        alert('ডেটা লোড করতে সমস্যা হয়েছে!');
+    }
+}
+
+function generateSubjectMap(headers) {
+    const subjects = new Set();
+    headers.forEach(header => {
+        const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+        if (match) {
+            subjects.add(match[1]);
+        }
+    });
+
+    subjects.forEach(subject => {
+        SUBJECT_MAP[subject] = {
+            WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
+            CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+            Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
+            Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
+            GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
+        };
+    });
+}
+
+function renderStudentList() {
+    const container = document.getElementById('studentList');
+    container.innerHTML = '';
+
+    const initialStudents = students.slice(0, 201); // Show first 201 students initially
+
+    initialStudents.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.innerHTML = `
+            <h3>${student.name || 'N/A'}</h3>
+            <div class="student-info">
+                <p>Roll: ${student.roll || 'N/A'}</p>
+                <p>IID: ${student.iid || 'N/A'}</p>
+                <p>Class: ${student.class || 'N/A'}</p>
+            </div>
+            <div class="student-action">View Result →</div>
+        `;
+        card.onclick = () => showMarksheet(student);
+        container.appendChild(card);
+    });
+
+    const comment = document.createElement('p');
+    comment.textContent = 'দ্রুত কাজ করার জন্য , রোল/নাম লিখে খুঁজুন এবং মোবাইল নাম্বার (শেষ ৭টি সংখ্যা) দিয়ে ফলাফল দেখুন।';
+    comment.style.textAlign = 'center';
+    comment.style.marginTop = '1rem';
+    container.appendChild(comment);
+    
+    // Update data count
+    updateDataCount(initialStudents.length, students.length);
+}
+
+function filterStudentList() {
+    const query = document.getElementById('searchBox').value.toLowerCase();
+    const classFilter = document.getElementById('classFilter').value;
+    const shiftFilter = document.getElementById('shiftFilter').value;
+
+    const filteredStudents = students.filter(student => {
+        const matchesQuery = (student.name && student.name.toLowerCase().includes(query)) ||
+                             (student.roll && student.roll.toLowerCase().includes(query)) ||
+                             (student.iid && student.iid.toLowerCase().includes(query)) ||
+                             (student.mobile && student.mobile.toLowerCase().includes(query));
+        const matchesClass = !classFilter || student.class === classFilter;
+        const matchesShift = !shiftFilter || student.shift === shiftFilter;
+
+        return matchesQuery && matchesClass && matchesShift;
+    });
+
+    renderFilteredStudentList(filteredStudents);
+}
+
+function renderFilteredStudentList(filteredStudents) {
+    const container = document.getElementById('studentList');
+    container.innerHTML = '';
+
+    filteredStudents.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.innerHTML = `
+            <h3>${student.name || 'N/A'}</h3>
+            <div class="student-info">
+                <p>Roll: ${student.roll || 'N/A'}</p>
+                <p>IID: ${student.iid || 'N/A'}</p>
+                <p>Class: ${student.class || 'N/A'}</p>
+            </div>
+            <div class="student-action">View Result →</div>
+        `;
+        card.onclick = () => showMarksheet(student);
+        container.appendChild(card);
+    });
+    
+    // Update data count for filtered results
+    updateDataCount(filteredStudents.length, students.length);
+}
+
+function renderClassAndShiftOptions() {
+    const classSet = new Set(students.map(student => student.class).filter(Boolean));
+    const shiftSet = new Set(students.map(student => student.shift).filter(Boolean));
+
+    const classFilter = document.getElementById('classFilter');
+    classSet.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls;
+        option.textContent = cls;
+        classFilter.appendChild(option);
+    });
+
+    const shiftFilter = document.getElementById('shiftFilter');
+    shiftSet.forEach(shift => {
+        const option = document.createElement('option');
+        option.value = shift;
+        option.textContent = shift;
+        shiftFilter.appendChild(option);
+    });
+}
+
+function showMarksheet(student) {
+    // Redirect to detailed result page with IID parameter
+    const iid = student.iid || 'unknown';
+    window.location.href = `detailsresult.html?IID=${encodeURIComponent(iid)}`;
+}
+
+function showStudentList() {
+    document.getElementById('searchBox').style.display = 'block';
+    document.getElementById('classFilter').style.display = 'block';
+    document.getElementById('shiftFilter').style.display = 'block';
+    document.getElementById('studentList').style.display = 'block';
+    document.getElementById('marksheet').style.display = 'none';
+}
+
+function updateDataCount(displayedCount, totalCount) {
+    const countElement = document.getElementById('countText');
+    if (countElement) {
+        if (displayedCount === totalCount) {
+            countElement.innerHTML = `
+                <strong>Total Students: ${totalCount}</strong><br>
+                <small>Displaying all ${displayedCount} students</small>
+            `;
+        } else {
+            countElement.innerHTML = `
+                <strong>Showing: ${displayedCount} of ${totalCount} students</strong><br>
+                <small>Use search or filters to narrow down results</small>
+            `;
+        }
+    }
+}
+
+// Initialize
+loadData();
+
+    </script>
+</body>
+</html>
