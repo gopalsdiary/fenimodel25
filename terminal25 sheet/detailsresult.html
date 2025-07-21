@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Result - Feni Model High School</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Add security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    
+    <style>
+        .qr-code-bottom {
+            display: block;
+        }
+        
+        .qr-code-bottom img {
+            width: 150px;
+            height: 150px;
+            border: 1px solid #333;
+            padding: 3px;
+            background: white;
+        }
+        
+        @media print {
+            .back-btn, .print-btn {
+                display: none !important;
+            }
+            
+            /* Hide the old print QR code */
+            #marksheet .qr-code-print {
+                display: none !important;
+            }
+            
+            /* Show the bottom QR code in print with increased size */
+            .qr-code-bottom {
+                display: block !important;
+            }
+            
+            .qr-code-bottom img {
+                width: 180px;
+                height: 180px;
+            }
+            
+            /* Center align pad.png when printing */
+            #marksheet::before {
+                text-align: center;
+                display: block;
+                margin: 0 auto;
+            }
+        }
+        
+        .loading, .error {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            color: #d32f2f;
+        }
+        
+        .print-btn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .print-btn:hover {
+            background-color: #0b7dda;
+        }
+        
+        /* Report title styling */
+        .report-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #d32f2f;
+            text-align: center;
+            margin: 15px 0;
+            text-decoration: underline;
+        }
+        
+        /* Colorful table styling */
+        table {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            border: 2px solid #000000;
+            border-collapse: collapse;
+            table-layout: fixed;
+            width: 100%;
+        }
+        
+        /* Equal column widths */
+        table th:nth-child(1), table td:nth-child(1) {
+            width: 25%;
+        }
+        
+        table th:nth-child(2), table td:nth-child(2),
+        table th:nth-child(3), table td:nth-child(3),
+        table th:nth-child(4), table td:nth-child(4),
+        table th:nth-child(5), table td:nth-child(5),
+        table th:nth-child(6), table td:nth-child(6) {
+            width: 15%;
+        }
+        
+        table th {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            border: none;
+            padding: 12px 8px;
+        }
+        
+        table th:first-child {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+        }
+        
+        table td {
+            border: 1px solid #e0e0e0;
+            padding: 10px 8px;
+            background: #ffffff;
+            transition: all 0.3s ease;
+        }
+        
+        table td:first-child {
+            background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+            font-weight: bold;
+            color: #1976D2;
+            border-left: 4px solid #2196F3;
+        }
+        
+        /* Row-specific styling */
+        table tr:nth-child(odd) td {
+            background: #ffffff;
+        }
+        
+        table tr:nth-child(odd) td:first-child {
+            background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
+        }
+        
+        table tr:nth-child(even) td {
+            background: rgba(255, 255, 0, 0.1);
+        }
+        
+        table tr:nth-child(even) td:first-child {
+            background: linear-gradient(135deg, #fffde7, #fff9c4);
+        }
+        
+        table tr:hover td {
+            background: linear-gradient(135deg, #fff3e0, #ffeaa7);
+            transform: scale(1.02);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
+        }
+        
+        table tr:hover td:first-child {
+            background: linear-gradient(135deg, #e1f5fe, #b3e5fc);
+            border-left-color: #0277BD;
+        }
+        
+        /* Subject-specific colors */
+        table tr:nth-child(1) td { border-left-color: #f44336; }
+        table tr:nth-child(2) td { border-left-color: #e91e63; }
+        table tr:nth-child(3) td { border-left-color: #9c27b0; }
+        table tr:nth-child(4) td { border-left-color: #673ab7; }
+        table tr:nth-child(5) td { border-left-color: #3f51b5; }
+        table tr:nth-child(6) td { border-left-color: #2196f3; }
+        table tr:nth-child(7) td { border-left-color: #03a9f4; }
+        table tr:nth-child(8) td { border-left-color: #00bcd4; }
+        table tr:nth-child(9) td { border-left-color: #009688; }
+        table tr:nth-child(10) td { border-left-color: #4caf50; }
+        table tr:nth-child(11) td { border-left-color: #8bc34a; }
+        table tr:nth-child(12) td { border-left-color: #cddc39; }
+        table tr:nth-child(13) td { border-left-color: #ffeb3b; }
+        table tr:nth-child(14) td { border-left-color: #ffc107; }
+        table tr:nth-child(15) td { border-left-color: #ff9800; }
+        
+        /* Mobile responsive table - horizontal scroll only */
+        @media (max-width: 768px) {
+            .table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 10px 0;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }
+            
+            table {
+                min-width: 600px;
+                border-collapse: collapse;
+                border-radius: 10px;
+            }
+            
+            table th,
+            table td {
+                min-width: 80px;
+                padding: 8px;
+                text-align: center;
+                white-space: nowrap;
+            }
+            
+            table th:first-child,
+            table td:first-child {
+                min-width: 120px;
+                position: sticky;
+                left: 0;
+                z-index: 2;
+            }
+            
+            table th {
+                position: sticky;
+                top: 0;
+                z-index: 3;
+            }
+            
+            table th:first-child {
+                z-index: 4;
+            }
+            
+            /* Maintain hover effects on mobile */
+            table tr:hover td {
+                transform: none;
+                box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+            }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+    <div class="header">
+        <h1>Feni Model High School</h1>
+        <p class="report-title">Annual Examination Report Card-2024</p>
+    </div>
+
+    <div class="container">
+        <div id="marksheet" class="marksheet">
+            <!-- QR code for print view only -->
+            <div class="qr-code-print" id="qrCodePrint" style="display: none;"></div>
+            
+            <div id="marksheetContent">
+                <!-- Content will be dynamically loaded here -->
+                <div class="loading">Loading student details...</div>
+            </div>
+           
+            <button class="print-btn" onclick="printResult()">🖨️ Print Result</button>
+        </div>
+    </div>
+
+    <script>
+        // Disable developer tools
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'C') || 
+                (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+            }
+        });
+
+        // Data loading variables
+        const csvFiles = ['result1.csv', 'result2.csv', 'result3.csv', 'result4.csv'];
+
+        let students = [];
+        let headers = [];
+        let SUBJECT_MAP = {};
+
+        // Get IID from URL parameter
+        function getIIDFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('IID');
+        }
+
+        async function loadData() {
+            const targetIID = getIIDFromURL();
+            
+            if (!targetIID || targetIID === 'unknown') {
+                document.getElementById('marksheetContent').innerHTML = `
+                    <div class="error">
+                        <p>No student ID specified or invalid ID.</p>
+                        <p><a href="index.html">Return to student list</a></p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                console.log('Loading data for IID:', targetIID);
+                
+                // Load data from all CSV files
+                const allStudents = [];
+                let allHeaders = [];
+                
+                for (const csvFile of csvFiles) {
+                    try {
+                        const response = await fetch(csvFile);
+                        if (!response.ok) {
+                            console.warn(`Could not load ${csvFile}: ${response.status}`);
+                            continue;
+                        }
+                        
+                        const csvData = await response.text();
+                        const rows = csvData.split('\n').filter(row => row.trim() !== '');
+                        
+                        if (rows.length === 0) continue;
+                        
+                        // Process headers (use the first file's headers)
+                        if (allHeaders.length === 0) {
+                            allHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                        }
+                        
+                        // Skip header row and process student data
+                        const fileStudents = rows.slice(2).map(row => { // Skip first two rows (headers)
+                            const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                            const student = {};
+                            allHeaders.forEach((header, index) => {
+                                const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                            });
+                            return student;
+                        });
+                        
+                        allStudents.push(...fileStudents);
+                        console.log(`Loaded ${fileStudents.length} students from ${csvFile}`);
+                        
+                    } catch (fileError) {
+                        console.warn(`Error loading ${csvFile}:`, fileError);
+                    }
+                }
+                
+                // Set global variables
+                headers = allHeaders;
+                students = allStudents;
+
+                // Dynamically generate SUBJECT_MAP
+                generateSubjectMap(headers);
+
+                console.log('Total students loaded:', students.length);
+                console.log('Looking for IID:', targetIID);
+
+                // Find student by IID
+                const student = students.find(s => s.iid === targetIID);
+                
+                if (student) {
+                    console.log('Student found:', student.name);
+                    displayStudentDetails(student);
+                    // Generate QR code for this specific student
+                    generateQRCode(student.iid);
+                } else {
+                    console.log('Student not found with IID:', targetIID);
+                    document.getElementById('marksheetContent').innerHTML = `
+                        <div class="error">
+                            <p>Student with IID "${targetIID}" not found.</p>
+                            <p>Available students: ${students.length}</p>
+                            <p><a href="index.html">Return to student list</a></p>
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('marksheetContent').innerHTML = `
+                    <div class="error">
+                        <p>Error loading student data. Please try again.</p>
+                        <p>Error details: ${error.message}</p>
+                        <p><a href="index.html">Return to student list</a></p>
+                    </div>
+                `;
+            }
+        }
+
+        function generateSubjectMap(headers) {
+            const subjects = new Set();
+            headers.forEach(header => {
+                const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+                if (match) {
+                    subjects.add(match[1]);
+                }
+            });
+
+            subjects.forEach(subject => {
+                SUBJECT_MAP[subject] = {
+                    WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
+                    CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+                    Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
+                    Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
+                    GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
+                };
+            });
+        }
+
+        function displayStudentDetails(student) {
+            const container = document.getElementById('marksheetContent');
+            container.innerHTML = `
+                <p class="report-title">Half Yearly Examination Report Card-2025</p>
+                <h2>${student.name}</h2>
+                <p>Father's Name: ${student.fathers_name || 'N/A'}</p>
+                <p>Roll: ${student.roll} | Class: ${student.class || 'N/A'} | Shift: ${student.shift || 'N/A'}</p>
+                <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}</p>
+                
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>WRITTEN</th>
+                                <th>CA</th>
+                                <th>Practical</th>
+                                <th>Total</th>
+                                <th>GPA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
+                                const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                
+                                return `
+                                <tr>
+                                    <td>${subject.replace(/\*/g, '')}</td>
+                                    <td>${student[cleanWRITTEN] || '-'}</td>
+                                    <td>${student[cleanCA] || '-'}</td>
+                                    <td>${student[cleanPractical] || '-'}</td>
+                                    <td>${student[cleanTotal] || '-'}</td>
+                                    <td>${student[cleanGPA] || '-'}</td>
+                                </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="highlight-box">
+                    ${student.gpa ? `<div class="highlight-item"><p>GPA</p><p>${student.gpa}</p></div>` : ''}
+                    ${student.remark ? `<div class="highlight-item"><p>Remark</p><p>${student.remark}</p></div>` : ''}
+                    ${student.ranking ? `<div class="highlight-item"><p>Rank :</p><p>${student.ranking}</p></div>` : ''}
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
+                    <div style="flex: 1; padding-right: 20px;">
+                        <p style="margin-top: 20px; font-weight: bold;">
+                    ${student.total_mark ? `Total Marks: ${student.total_mark} | ` : ''}
+                    ${student.average ? `Average Mark: ${student.average} | ` : ''}
+                    ${student.absent ? `Absent subject: ${student.absent}` : ''}
+                </p>
+                        <p style="margin-top: 5px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            নির্দেশনা :
+                        </p>
+                        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            নতুন শিক্ষাবর্ষে জানুয়ারির ১ম সপ্তাহে নতুন শ্রেণিতে ভর্তি হয়ে নতুন বই সংগ্রহ করতে হবে।
+                            ভর্তির সময় মার্কশীটের ফটোকপি অবশ্যই আনতে হবে।  
+                        </p>
+                        <p style="margin-top: 0px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            গ্রহনযোগ্য কারন উল্লেখ করে প্রয়োজনীয় ক্ষেত্রে অগ্রিম ছুটি নিতে হবে। পূর্বানুমতি ছাড়া এক 
+                            টানা ১০ দিন ক্লাসে অনুপস্থিত থাকলে হাজিরা বহিতে নাম কাটা যাবে।
+                        </p>
+                        <p style="margin-top: 10px; font-weight: regular; text-align: left; font-size: 0.8em;">
+                            Verify this result by scanning the QR code.
+                        </p>
+                    </div>
+                    <div class="qr-code-bottom" id="qrCodeBottom" style="flex-shrink: 0; text-align: center;">
+                        <!-- QR code will be placed here -->
+                    </div>
+                </div>
+            `;
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+        
+        function printResult() {
+            // Hide buttons before printing
+            const backBtn = document.querySelector('.back-btn');
+            const printBtn = document.querySelector('.print-btn');
+            
+            if (backBtn) backBtn.style.display = 'none';
+            if (printBtn) printBtn.style.display = 'none';
+            
+            // Print the page
+            window.print();
+            
+            // Show buttons again after printing dialog is closed
+            setTimeout(() => {
+                if (backBtn) backBtn.style.display = 'inline-block';
+                if (printBtn) printBtn.style.display = 'inline-block';
+            }, 500);
+        }
+
+        // Generate QR Code
+        function generateQRCode(studentIID = null) {
+            try {
+                // Get the current IID if not provided
+                const currentIID = studentIID || getIIDFromURL();
+                
+                // Create QR code for the current student's result page
+                const qr = qrcode(0, 'M');
+                const currentURL = window.location.origin + window.location.pathname;
+                const qrURL = `${currentURL}?IID=${currentIID}`;
+                qr.addData(qrURL);
+                qr.make();
+                
+                // Create image element from QR code
+                const qrImage = qr.createImgTag(4);
+                
+                // Add QR code to bottom container (for both screen and print view)
+                const bottomQRContainer = document.getElementById('qrCodeBottom');
+                if (bottomQRContainer) {
+                    bottomQRContainer.innerHTML = qrImage;
+                    
+                    // Add a small caption below the QR code for bottom
+                    const bottomCaption = document.createElement('div');
+                    bottomCaption.style.fontSize = '8pt';
+                    bottomCaption.style.textAlign = 'center';
+                    bottomCaption.style.marginTop = '3px';
+                    bottomCaption.innerText = 'Scan for verify';
+                    bottomQRContainer.appendChild(bottomCaption);
+                }
+            } catch (error) {
+                console.error('QR Code generation failed:', error);
+            }
+        }
+        
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
