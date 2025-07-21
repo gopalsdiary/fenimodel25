@@ -266,7 +266,7 @@
             }
         });
 
-const check_android_web_ios_ID = '10zFu-vb_5Grk-tdwLmslTOrEzBtWyD958tkODji1fho';
+const check_android_web_ios_ID = '1dvP_5tEMWMwLo8TFYuLuvgzTxf0FMLNCKQo3P-fT4Dc';
 const exam_annual = 'exam_publish';
 const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}/export?format=csv&sheet=${exam_annual}`;
 
@@ -296,53 +296,35 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
             try {
                 console.log('Loading data for IID:', targetIID);
                 
-                // Load data from all CSV files
-                const allStudents = [];
-                let allHeaders = [];
-                
-                for (const csvFile of csvFiles) {
-                    try {
-                        const response = await fetch(csvFile);
-                        if (!response.ok) {
-                            console.warn(`Could not load ${csvFile}: ${response.status}`);
-                            continue;
-                        }
-                        
-                        const csvData = await response.text();
-                        const rows = csvData.split('\n').filter(row => row.trim() !== '');
-                        
-                        if (rows.length === 0) continue;
-                        
-                        // Process headers (use the first file's headers)
-                        if (allHeaders.length === 0) {
-                            allHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                        }
-                        
-                        // Skip header row and process student data
-                        const fileStudents = rows.slice(2).map(row => { // Skip first two rows (headers)
-                            const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                            const student = {};
-                            allHeaders.forEach((header, index) => {
-                                const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
-                                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
-                            });
-                            return student;
-                        });
-                        
-                        allStudents.push(...fileStudents);
-                        console.log(`Loaded ${fileStudents.length} students from ${csvFile}`);
-                        
-                    } catch (fileError) {
-                        console.warn(`Error loading ${csvFile}:`, fileError);
-                    }
+                // Load data from Google Sheets
+                const response = await fetch(skip);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                // Set global variables
-                headers = allHeaders;
-                students = allStudents;
+                const csvData = await response.text();
+                const rows = csvData.split('\n').filter(row => row.trim() !== '');
+                
+                if (rows.length === 0) {
+                    throw new Error('No data found in the Google Sheet');
+                }
+                
+                // Process headers
+                headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
 
                 // Dynamically generate SUBJECT_MAP
                 generateSubjectMap(headers);
+
+                // Process student data (skip header row)
+                students = rows.slice(1).map(row => {
+                    const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    const student = {};
+                    headers.forEach((header, index) => {
+                        const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                        student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                    });
+                    return student;
+                });
 
                 console.log('Total students loaded:', students.length);
                 console.log('Looking for IID:', targetIID);
@@ -367,10 +349,10 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
                 }
 
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error loading data from Google Sheets:', error);
                 document.getElementById('marksheetContent').innerHTML = `
                     <div class="error">
-                        <p>Error loading student data. Please try again.</p>
+                        <p>Error loading student data from Google Sheets. Please try again.</p>
                         <p>Error details: ${error.message}</p>
                         <p><a href="index.html">Return to student list</a></p>
                     </div>
@@ -381,7 +363,7 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
         function generateSubjectMap(headers) {
             const subjects = new Set();
             headers.forEach(header => {
-                const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+                const match = header.match(/^(.*?)(_WRITTEN|_MCQ|_Practical|_Total|_GPA)$/);
                 if (match) {
                     subjects.add(match[1]);
                 }
@@ -390,7 +372,7 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
             subjects.forEach(subject => {
                 SUBJECT_MAP[subject] = {
                     WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
-                    CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+                    MCQ: headers.find(h => h.includes(`${subject}_MCQ`)) || '',
                     Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
                     Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
                     GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
@@ -413,7 +395,7 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
                             <tr>
                                 <th>Subject</th>
                                 <th>WRITTEN</th>
-                                <th>CA</th>
+                                <th>MCQ</th>
                                 <th>Practical</th>
                                 <th>Total</th>
                                 <th>GPA</th>
@@ -422,7 +404,7 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
                         <tbody>
                             ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
                                 const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanMCQ = cols.MCQ.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
@@ -431,7 +413,7 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
                                 <tr>
                                     <td>${subject.replace(/\*/g, '')}</td>
                                     <td>${student[cleanWRITTEN] || '-'}</td>
-                                    <td>${student[cleanCA] || '-'}</td>
+                                    <td>${student[cleanMCQ] || '-'}</td>
                                     <td>${student[cleanPractical] || '-'}</td>
                                     <td>${student[cleanTotal] || '-'}</td>
                                     <td>${student[cleanGPA] || '-'}</td>

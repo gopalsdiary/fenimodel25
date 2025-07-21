@@ -42,7 +42,7 @@
     </div>
     <script>
 
-const check_android_web_ios_ID = '10zFu-vb_5Grk-tdwLmslTOrEzBtWyD958tkODji1fho';
+const check_android_web_ios_ID = '1dvP_5tEMWMwLo8TFYuLuvgzTxf0FMLNCKQo3P-fT4Dc';
 const exam_annual = 'exam_publish';
 const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}/export?format=csv&sheet=${exam_annual}`;
 
@@ -53,55 +53,40 @@ let authenticatedStudents = new Set();
 
 async function loadData() {
     try {
-        // Load data from all CSV files
-        const allStudents = [];
-        let allHeaders = [];
-        
-        for (const csvFile of csvFiles) {
-            try {
-                const response = await fetch(csvFile);
-                if (!response.ok) {
-                    console.warn(`Could not load ${csvFile}: ${response.status}`);
-                    continue;
-                }
-                
-                const csvData = await response.text();
-                const rows = csvData.split('\n').filter(row => row.trim() !== '');
-                
-                if (rows.length === 0) continue;
-                
-                // Process headers (use the first file's headers)
-                if (allHeaders.length === 0) {
-                    allHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                }
-                
-                // Skip header row and process student data
-                const fileStudents = rows.slice(2).map(row => { // Skip first two rows (headers)
-                    const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                    const student = {};
-                    allHeaders.forEach((header, index) => {
-                        const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
-                        student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
-                    });
-                    return student;
-                });
-                
-                allStudents.push(...fileStudents);
-                console.log(`Loaded ${fileStudents.length} students from ${csvFile}`);
-                
-            } catch (fileError) {
-                console.warn(`Error loading ${csvFile}:`, fileError);
-            }
+        // Load data from Google Sheets
+        console.log('Loading data from Google Sheets...');
+        const response = await fetch(skip);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        // Set global variables
-        headers = allHeaders;
-        students = allStudents;
+        const csvData = await response.text();
+        const rows = csvData.split('\n').filter(row => row.trim() !== '');
+        
+        if (rows.length === 0) {
+            throw new Error('No data found in the Google Sheet');
+        }
+        
+        // Process headers
+        headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        // Process student data (skip header row)
+        students = rows.slice(1).map(row => {
+            const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            const student = {};
+            headers.forEach((header, index) => {
+                const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
+                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+            });
+            return student;
+        });
+        
+        console.log(`Loaded ${students.length} students from Google Sheets`);
 
         if (students.length === 0) {
             document.getElementById('countText').innerHTML = `
                 <strong style="color: #d32f2f;">No student data found</strong><br>
-                <small>Please check if CSV files exist and contain valid data</small>
+                <small>Please check if Google Sheets data is available</small>
             `;
             return;
         }
@@ -113,19 +98,19 @@ async function loadData() {
         renderStudentList();
         renderClassAndShiftOptions();
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading data from Google Sheets:', error);
         document.getElementById('countText').innerHTML = `
-            <strong style="color: #d32f2f;">Error loading data</strong><br>
-            <small>Please check console for more details</small>
+            <strong style="color: #d32f2f;">Error loading data from Google Sheets</strong><br>
+            <small>Please check console for more details: ${error.message}</small>
         `;
-        alert('ডেটা লোড করতে সমস্যা হয়েছে!');
+        alert('গুগল শীট থেকে ডেটা লোড করতে সমস্যা হয়েছে!');
     }
 }
 
 function generateSubjectMap(headers) {
     const subjects = new Set();
     headers.forEach(header => {
-        const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+        const match = header.match(/^(.*?)(_WRITTEN|_MCQ|_Practical|_Total|_GPA)$/);
         if (match) {
             subjects.add(match[1]);
         }
@@ -134,7 +119,7 @@ function generateSubjectMap(headers) {
     subjects.forEach(subject => {
         SUBJECT_MAP[subject] = {
             WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
-            CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+            MCQ: headers.find(h => h.includes(`${subject}_MCQ`)) || '',
             Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
             Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
             GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
