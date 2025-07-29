@@ -408,7 +408,7 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
                         <thead>
                             <tr>
                                 <th>Subject</th>
-                                <th>WRITTEN</th>
+                                <th>CQ</th>
                                 <th>MCQ</th>
                                 <th>Practical</th>
                                 <th>Total</th>
@@ -423,17 +423,32 @@ const skip = `https://docs.google.com/spreadsheets/d/${check_android_web_ios_ID}
                                 const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 
+                                // Check if subject has any marks/data
+                                const writtenMark = student[cleanWRITTEN] || '';
+                                const mcqMark = student[cleanMCQ] || '';
+                                const practicalMark = student[cleanPractical] || '';
+                                const totalMark = student[cleanTotal] || '';
+                                const gpaMark = student[cleanGPA] || '';
+                                
+                                // Only show subject if it has at least one mark (not empty, not '-', not just whitespace)
+                                const hasAnyMark = [writtenMark, mcqMark, practicalMark, totalMark, gpaMark]
+                                    .some(mark => mark && mark.trim() !== '' && mark.trim() !== '-');
+                                
+                                if (!hasAnyMark) {
+                                    return ''; // Don't render this subject row
+                                }
+                                
                                 return `
                                 <tr>
                                     <td>${subject.replace(/\*/g, '')}</td>
-                                    <td>${student[cleanWRITTEN] || '-'}</td>
-                                    <td>${student[cleanMCQ] || '-'}</td>
-                                    <td>${student[cleanPractical] || '-'}</td>
-                                    <td>${student[cleanTotal] || '-'}</td>
-                                    <td>${student[cleanGPA] || '-'}</td>
+                                    <td>${writtenMark || '-'}</td>
+                                    <td>${mcqMark || '-'}</td>
+                                    <td>${practicalMark || '-'}</td>
+                                    <td>${totalMark || '-'}</td>
+                                    <td>${gpaMark || '-'}</td>
                                 </tr>
                                 `;
-                            }).join('')}
+                            }).filter(row => row !== '').join('')}
                         </tbody>
                     </table>
                 </div>
