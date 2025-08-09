@@ -64,7 +64,7 @@
             .tag.green { background:#059669; }
             footer { margin:3rem 0 1.5rem; text-align:center; font-size:.6rem; color:var(--text-soft); }
             .note { margin:2rem 0 0; font-size:.7rem; color:var(--text-soft); text-align:center; }
-            .pulse { position:absolute; inset:0; background:radial-gradient(circle at 25% 15%,rgba(14,165,233,.25),transparent 70%); mix-blend-mode:overlay; animation:pulse 8s linear infinite; opacity:.4; }
+            .pulse { position:absolute; inset:0; background:radial-gradient(circle at 25% 15%,rgba(14,165,233,.25),transparent 70%); mix-blend-mode:overlay; animation:pulse 8s linear infinite; opacity:.4; pointer-events:none; }
             @keyframes pulse { 0% { transform:scale(1); opacity:.45;} 50% { transform:scale(1.15); opacity:.25;} 100% { transform:scale(1); opacity:.45;} }
             @media (max-width:640px){ .gate-card { padding:1.8rem 1.4rem 2.1rem; } .grid { --min:220px; } }
             /* Emphasize group headings */
@@ -148,7 +148,7 @@
                     <div class="grid" role="list" aria-label="2024 Examination Modules">
                         <a role="listitem" href="ann24/index.html" class="card-link year-2024" aria-label="Annual Examination 2024 (Another School)">
                             <span class="tag alt">2024</span>
-                            <span class="card-icon">�</span>
+                            <span class="card-icon">📊</span>
                             <span class="card-title">Annual Examination 2024</span>
                             <span class="card-desc">External / collaborating institution dataset.</span>
                         </a>
