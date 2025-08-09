@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All Certificates</title>
+  <style>
+    :root {
+      --box-left: 5%;
+      --box-right: 6%;
+      --box-top: 40%;
+      --box-bottom: 22%;
+      --qr-size: 80px;
+      --qr-bottom: 74%;
+      --qr-right: 81%;
+    }
+    body { margin:0; font-family: 'Times New Roman', Times, serif; background:#f6f7f9; color:#111; }
+    header { position:sticky; top:0; background:#fff; padding:.85rem 1rem; border-bottom:1px solid #e5e7eb; z-index:20; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; }
+    h1 { font-size:1rem; margin:0 0 .3rem; }
+    .btn { display:inline-block; padding:.45rem .9rem; font-size:.7rem; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; border:1px solid #d0d7de; background:#fff; color:#111; border-radius:6px; cursor:pointer; text-decoration:none; }
+    .btn:hover { background:#f2f4f7; }
+    .list-info { font-size:.65rem; color:#555; }
+    main { padding:1rem; }
+    .cert { page-break-after:always; margin:0 auto 1.2rem; width:600px; position:relative; }
+    .img-wrap { position:relative; width:600px; }
+    .img-wrap img { width:100%; height:auto; display:block; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.08); border:1px solid #e5e7eb; background:#fff; }
+    .overlay { position:absolute; inset: var(--box-top) var(--box-right) var(--box-bottom) var(--box-left); pointer-events:none; }
+    .overlay-text { font-size: clamp(5.544px, 0.7392vw, 9.856px); line-height:1.55; color:#111; white-space:pre-line; text-align:justify; font-family:'Lucida Calligraphy','Lucida Handwriting','Brush Script MT','Segoe Script','Times New Roman',serif; letter-spacing:.25px; position:relative; }
+    .overlay-text .emph { font-size:110%; }
+    .info-box { position:absolute; top:10%; right:6%; text-align:right; font-size:8px; line-height:1.25; font-family:'Lucida Calligraphy','Lucida Handwriting','Brush Script MT','Segoe Script','Times New Roman',serif; font-weight:600; white-space:pre-line; }
+  /* QR adjustments for full visibility */
+  .qr-wrap { position:absolute; bottom: var(--qr-bottom); right: var(--qr-right); width: var(--qr-size); display:flex; flex-direction:column; align-items:center; z-index:6; overflow:visible; }
+  .qr-wrap img { width:var(--qr-size); height:var(--qr-size); display:block; background:#fff; padding:2px; border:1px solid rgba(0,0,0,.15); border-radius:4px; box-sizing:content-box; }
+  .qr-meta { font-size:6.16px; line-height:1.2; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.25px; text-align:center; width:100%; }
+  .qr-meta strong { font-size:7.4px; letter-spacing:.3px; }
+    #status { font-size:.65rem; }
+    @media print { header { display:none; } body { background:#fff; } .cert { margin:0 auto; } .img-wrap img { box-shadow:none; border:none; border-radius:0; } }
+    @media (prefers-color-scheme: dark) { body { background:#0b1020; color:#e5e7eb; } header { background:#111729; border-color:#263148; } .overlay-text { color:#e5e7eb; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>All Certificates <span id="status"></span></h1>
+      <div class="list-info" id="meta"></div>
+    </div>
+    <div style="display:flex; gap:.5rem; align-items:center;">
+  <button class="btn" onclick="window.print()">Print All</button>
+  <button id="downloadAllBtn" class="btn" type="button">Download PDF</button>
+      <a class="btn" href="./test_list.html">Back to List</a>
+    </div>
+  </header>
+  <main id="certContainer"></main>
+<script>
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRs5_mA_LQNl1Y5Fk776Pk5mZ9K9oJ4Hui6kJKWdFab-wGEdKx7XWf7boLItkUO7MC25nMvRf_P-AyR/pub?output=csv';
+const statusEl=document.getElementById('status');
+function norm(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+function normalizeFieldMap(fields){const m={};(fields||[]).forEach(f=>{if(!f)return;m[String(f).toLowerCase().trim()]=f;});return m;}
+function findHeader(fieldMap, aliases){const keys=Object.keys(fieldMap);for(const a of aliases){const t=norm(a);const k=keys.find(x=>norm(x)===t||norm(x).includes(t));if(k)return fieldMap[k];}return null;}
+function buildCsvKeyMap(fieldMap){const alias={name:['name','student name','studentname','full name','fullname'],father:['father','father name','fathers name','guardian','parent'],mother:['mother','mother name','mothers name'],roll:['roll','roll no','roll number','rollno','roll_no'],registrationnumber:['registration number','registration','reg no','regno','registration no','registrationno','registration'],dob:['dob','date of birth','birth date','dateofbirth'],iid:['iid','id','student id','studentid','student-id','sid','s id','s.i.d','school_iid','school iid','schoolid','school-id','sch_iid','sch iid','uniqueid','unique id','unique_id','studentcode','student code','student_code','stu_id','studid'],sl:['sl','serial','serial no','serial number','serialno','sl no','slno','sl.','s.l','s.l.'],date:['date','issue date','certificate date'],gender:['gender','sex'],group:['group','grp','subject group'],gpa:['gpa','grade point','gradepoint','result','g.p.a'],sscmonth:['sscmonth','exam month','ssc exam month','month','exammonth'],session:['session','academic session','sess','session year','exam session','year']};const csvMap={};for(const k of Object.keys(alias)){const h=findHeader(fieldMap,alias[k]);if(h)csvMap[k]=h;}return csvMap;}
+function getVal(row,map,key){const hdr=map[key];const v=hdr?row[hdr]:'';return v==null?'':String(v).trim();}
+function defaultDate(raw){if(raw)return raw;const d=new Date();return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear();}
+function buildRecord(row,map){return {name:getVal(row,map,'name'),father:getVal(row,map,'father'),mother:getVal(row,map,'mother'),roll:getVal(row,map,'roll'),registrationnumber:getVal(row,map,'registrationnumber'),dob:getVal(row,map,'dob'),iid:getVal(row,map,'iid'),sl:getVal(row,map,'sl'),date:defaultDate(getVal(row,map,'date')),gender:getVal(row,map,'gender'),group:getVal(row,map,'group'),gpa:getVal(row,map,'gpa'),sscmonth:getVal(row,map,'sscmonth'),session:getVal(row,map,'session')};}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function certificateParagraph(rec){const name=`<strong class=\"emph\"><u>${escHtml(rec.name)}</u></strong>`;const father=escHtml(rec.father);const mother=escHtml(rec.mother);const registration=escHtml(rec.registrationnumber);const roll=escHtml(rec.roll);const dob=escHtml(rec.dob);const group=escHtml(rec.group);const gpa=escHtml(rec.gpa);const sscmonth=escHtml(rec.sscmonth);const g=(rec.gender||'').toLowerCase();const rawG=(rec.gender||'');const isMale=/m/i.test(rawG)&&!/f/i.test(rawG);const isFem=/f/i.test(rawG);const child=isFem?'Daughter':isMale?'Son':'Son/Daughter';const he=isFem?'she':isMale?'he':'he / she';const heC=he.charAt(0).toUpperCase()+he.slice(1);const his=isFem?'her':isMale?'his':'his / her';const hisC=his.charAt(0).toUpperCase()+his.slice(1);const him=isFem?'her':isMale?'him':'him / her';const line1=`This is to certify that ${name} ${child} of ${father} and ${mother} duly passed the S.S.C Examination held in the month of ${sscmonth} under the Board of Intermediate and Secondary Education, Cumilla as a regular/irregular candidate in ${group} group and secured G.P.A ${gpa} on a scale of 5.00. ${hisC} S.S.C registration number is ${registration} & S.S.C roll is ${roll}.`;const line2=`<em>${hisC} date of birth is ${dob}. In so far as I know, ${he} bears a good moral character and did not take part in any activities subversive of the state or of the school during ${his} stay in the school.</em>`;const line3=`<em>I wish ${him} every success in life.</em>`;return [line1,line2,line3].join('<br/><br/>');}
+function buildInfoBox(rec){const lines=[];if(rec.roll)lines.push('Roll No : '+escHtml(rec.roll));if(rec.registrationnumber)lines.push('Reg. No : '+escHtml(rec.registrationnumber));if(rec.session)lines.push('Session: '+escHtml(rec.session));lines.push('Issue Date : '+escHtml(rec.date));return lines.join('<br>');}
+function buildSingle(rec){const div=document.createElement('div');div.className='cert';div.innerHTML=`<div class=\"img-wrap\"><img src=\"./testimonial.png\" alt=\"Certificate background\"/><div class=\"info-box\">${buildInfoBox(rec)}</div><div class=\"overlay\"><div class=\"overlay-text\">${certificateParagraph(rec)}</div></div><div class=\"qr-wrap\" title=\"Verify online\"><img alt=\"QR\" src=\"${qrImageUrl(rec)}\"/><div class=\"qr-meta\"><strong>SL No : ${(rec.sl?escHtml(rec.sl)+'\/2025':'')}</strong></div></div></div>`;return div;}
+function qrImageUrl(rec){const base=location.href.substring(0,location.href.lastIndexOf('/')+1)+'certificate_word.html';const url=new URL(base, location.href);if(rec.iid)url.searchParams.set('iid',rec.iid);if(rec.sl)url.searchParams.set('sl',rec.sl);return 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&data='+encodeURIComponent(url.toString());}
+function loadAll(){statusEl.textContent='Loading…';Papa.parse(CSV_URL,{download:true,header:true,skipEmptyLines:true,complete:(res)=>{try{const fieldMap=normalizeFieldMap(res.meta.fields);const csvMap=buildCsvKeyMap(fieldMap);const rows=res.data||[];const container=document.getElementById('certContainer');let count=0;for(const r of rows){const rec=buildRecord(r,csvMap);if(!rec.iid&&!rec.name)continue;container.appendChild(buildSingle(rec));count++;}statusEl.textContent='Ready ('+count+')';document.getElementById('meta').textContent='Total generated: '+count; if(!count) statusEl.textContent='No records';}catch(e){console.error(e);statusEl.textContent='Render failed';}},error:(err)=>{console.error(err);statusEl.textContent='Load failed';}});} 
+async function downloadAllPdf(){
+  const btn=document.getElementById('downloadAllBtn');
+  if(!btn) return;
+  const certs=[...document.querySelectorAll('.cert')];
+  if(!certs.length){ alert('No certificates loaded yet'); return; }
+  const BATCH_SIZE = 50; // fixed as per requirement
+  const total = certs.length;
+  const batches = Math.ceil(total / BATCH_SIZE);
+  btn.disabled = true; const originalText = btn.textContent; btn.textContent = 'Preparing...';
+  statusEl.textContent = 'Starting PDF export (0/'+total+')';
+  try {
+    const { jsPDF } = window.jspdf;
+    for(let b=0; b<batches; b++){
+      const start = b * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, total);
+      const slice = certs.slice(start, end);
+      let pdf = new jsPDF('landscape','pt','a4');
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      for(let i=0;i<slice.length;i++){
+        const globalIndex = start + i; // 0-based
+        const el = slice[i];
+        statusEl.textContent = 'Rendering ('+(globalIndex+1)+'/'+total+') batch '+(b+1)+'/'+batches;
+        const canvas = await html2canvas(el.querySelector('.img-wrap'), {scale:2, useCORS:true});
+        const imgData = canvas.toDataURL('image/png');
+        const imgW = pageW;
+        const imgH = canvas.height * (imgW / canvas.width);
+        const y = Math.max(0,(pageH - imgH)/2);
+        if(i>0) pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, y, imgW, imgH);
+        // Allow UI refresh
+        if((globalIndex+1) % 5 === 0) await new Promise(r=>setTimeout(r,10));
+      }
+      const batchLabel = (start+1)+'-'+end;
+      const fileName = 'certificates_'+batchLabel+'_'+Date.now()+'.pdf';
+      pdf.save(fileName);
+      // Small delay to ensure save dialog / download handling not overwhelmed
+      await new Promise(r=>setTimeout(r,80));
+    }
+    statusEl.textContent = 'PDF ready (total '+total+' in '+batches+' files)';
+  } catch(e){ console.error(e); statusEl.textContent='PDF failed'; alert('PDF generation failed'); }
+  finally { btn.disabled=false; btn.textContent=originalText; }
+}
+window.addEventListener('DOMContentLoaded',()=>{ loadAll(); document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPdf); });
+</script>
+</body>
+</html>
