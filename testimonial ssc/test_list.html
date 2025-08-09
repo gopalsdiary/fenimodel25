@@ -29,6 +29,9 @@
     .status { margin-left: .5rem; font-size: .9rem; }
     .error { color: #b91c1c; }
     .sep { color: #9ca3af; margin: 0 .25rem; }
+  /* PDF badge */
+  .pdf-badge { display:inline-block; background:#dc2626; color:#fff; font-size:.65rem; font-weight:600; padding:.35rem .6rem .4rem; border-radius:999px; text-decoration:none; letter-spacing:.5px; box-shadow:0 2px 4px rgba(0,0,0,.15); line-height:1; }
+  .pdf-badge:hover { background:#b91c1c; text-decoration:none; }
   #genAllBtn { background:#0d9488; }
   #genAllBtn:hover { background:#0f766e; }
   .cert-card { position:relative; padding:1rem; background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.08); font-size:.7rem; line-height:1.4; }
@@ -93,23 +96,25 @@
       const father=getVal(obj, headers,'father');
       const roll=getVal(obj, headers,'roll');
       const iid=getVal(obj, headers,'iid');
-      // Make name a link to certificate; include sl param if present for disambiguation
+      // Name link
       const nameLink=document.createElement('a');
       nameLink.className='link';
       nameLink.textContent=name||'(No Name)';
-  // Build certificate path relative to current folder to avoid 404 when not at site root
-  // Use simple relative path (same directory) to avoid 404 when served via live server
-  let hrefBase = 'certificate_word.html';
-      if(iid){
-        // Link only with IID as requested
-        nameLink.href = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
-      } else if(sl){
-        nameLink.href = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
-      } else {
-        nameLink.href = hrefBase;
-      }
+      const hrefBase='certificate_word.html';
+      let certHref = hrefBase;
+      if(iid) certHref = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
+      else if(sl) certHref = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
+      nameLink.href = certHref;
+      // PDF badge link (open in new tab; can be used by browser print to save as PDF)
+      const pdfLink=document.createElement('a');
+      pdfLink.className='pdf-badge';
+      pdfLink.textContent='PDF';
+      pdfLink.href=certHref + (certHref.includes('?') ? '&' : '?') + 'view=pdf';
+      pdfLink.target='_blank';
+      pdfLink.rel='noopener';
+      pdfLink.title='Open certificate (use browser Print to save as PDF)';
       const tr=document.createElement('tr');
-      createRow(tr,[sl,{element:nameLink},father,roll]);
+      createRow(tr,[sl,{element:nameLink},father,roll,{element:pdfLink}]);
       rows.push(tr);
     }
     return rows;
