@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transfer Certificate (Image)</title>
+  <style>
+    :root { 
+      color-scheme: light dark; 
+      /* Text block area (main paragraph) */
+      --box-left: 31%;
+      --box-right: 5%;
+      --box-top: 30%;
+      --box-bottom: 22%;
+      /* Serial/Date positions (percentages of the image box) */
+      --serial-top: 21%;
+      --serial-left: 38%;
+      --date-top: 21%;
+      --date-right: 3%;
+      /* Left panel box (percentages relative to image) */
+      --leftpanel-left: 4.5%;
+      --leftpanel-right: 74%;
+      --leftpanel-top: 22%;
+      --leftpanel-bottom: 8%;
+  /* QR code position & size */
+  --qr-size: 80px;
+  --qr-bottom: 12%;
+  --qr-right: 30%;
+    }
+    body { font-family: 'Times New Roman', Times, serif; margin: 0; background: #f6f7f9; color: #111; }
+  header { position: sticky; top: 0; background: white; padding: 1rem; border-bottom: 1px solid #e5e7eb; z-index: 10; }
+  .btn { display: inline-block; padding: .45rem .9rem; font-size: .8rem; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; border: 1px solid #d0d7de; background:#fff; color:#111; border-radius:6px; cursor:pointer; line-height:1.1; text-decoration:none; }
+  .btn:hover { background:#f2f4f7; }
+  .btn:active { background:#e5e7eb; }
+  @media (prefers-color-scheme: dark) { .btn { background:#1f2937; color:#e5e7eb; border-color:#374151; } .btn:hover { background:#2a3342; } .btn:active { background:#374151; } }
+  .action-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: .75rem; background: rgba(255,255,255,.9); padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); backdrop-filter: blur(6px); }
+  @media (prefers-color-scheme: dark) { .action-bar { background: rgba(17,23,41,.85); border-color:#263148; } }
+  /* QR code overlay */
+  .qr-wrap { position:absolute; bottom: var(--qr-bottom); right: var(--qr-right); width: var(--qr-size); background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; mix-blend-mode:multiply; }
+  .qr-wrap canvas, .qr-wrap img { width:100% !important; height:var(--qr-size) !important; image-rendering:pixelated; display:block; mix-blend-mode:multiply; }
+  .qr-caption { font-size:8px; line-height:1.1; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.3px; color:#000; mix-blend-mode:multiply; text-transform:uppercase; }
+  .qr-meta { font-size:7px; line-height:1.2; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.25px; color:#000; mix-blend-mode:multiply; text-align:center; width:100%; white-space:normal; overflow:visible; word-break:break-word; }
+  @media (prefers-color-scheme: dark) { .qr-meta { color:#ccc; } }
+  @media (prefers-color-scheme: dark) { .qr-caption { color:#ddd; } }
+  @media (prefers-color-scheme: dark) { .qr-wrap { filter: brightness(1.1); } }
+    h1 { margin: 0; font-size: 1.2rem; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    main { padding: 1rem; }
+    .layout { display: flex; gap: 2rem; align-items: flex-start; justify-content: center; }
+    .img-wrap { position: relative; width: 600px; min-width: 320px; max-width: 100vw; }
+    .img-wrap img { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); border: 1px solid #e5e7eb; }
+    .overlay { position: absolute; inset: var(--box-top) var(--box-right) var(--box-bottom) var(--box-left); display: block; }
+    .overlay-left { position: absolute; inset: var(--leftpanel-top) var(--leftpanel-right) var(--leftpanel-bottom) var(--leftpanel-left); overflow: hidden; }
+    .overlay-text { 
+      font-size: clamp(6.3px, 0.84vw, 11.2px); 
+      line-height: 1.55; 
+      color: #111; 
+      white-space: pre-line; 
+      text-align: justify;
+      text-justify: inter-word;
+      word-break: break-word; 
+      hyphens: auto; 
+    }
+    .overlay-text .emph { font-size: 110%; }
+  .left-text { font-size: clamp(7.2px, 0.855vw, 10.8px); line-height: 1.35; white-space: pre-line; color: #111; }
+  .left-text .hl { font-weight:700; text-decoration:underline; }
+    /* Serial and Date small overlays */
+    .field { position: absolute; font-size: clamp(9px, 1vw, 11px); line-height: 1; color: #111; }
+    .serial { top: var(--serial-top); left: var(--serial-left); text-align: left; }
+    .date { top: var(--date-top); right: var(--date-right); text-align: right; }
+
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; align-items: stretch; }
+      .img-wrap { max-width: 100vw; width: 100%; }
+    }
+    @media print {
+  @page { size: A4 landscape; margin: 8mm; }
+  html, body { background: #fff; width: 100%; height: 100%; }
+  header { display: none; }
+  .layout { flex-direction: column; align-items: stretch; }
+  /* Keep on-screen aspect & sizing for precise overlay alignment */
+  .img-wrap { width: 600px; max-width: 600px; margin: 0 auto; }
+  .img-wrap img { box-shadow: none; border: none; border-radius: 0; width: 100%; height: auto; }
+  .right-panel { display: none; }
+  .overlay-text, .field, .left-text { color: #000; }
+  /* Ensure overlays scale proportionally */
+  .img-wrap, .img-wrap * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0b1020; color: #e5e7eb; }
+      header, .right-panel { background: #111729; border-color: #263148; color: #e5e7eb; }
+      .muted { color: #9aa5b1; }
+      .overlay-text, .field, .left-text { color: #e5e7eb; }
+    }
+  </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script>
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQgl1Atq8imTVqFT0696qsx8yazfgbmm5siS7R6VLvuBbCA4BBvrZKGVdrmPRj6aPtNwAh7zJflG54_/pub?output=csv';
+  // v3: sessionStorage only, 1 minute TTL, parsed rows + fields
+  // Cache disabled: always fetch fresh data
+  const CSV_CACHE_KEY = null;
+  const CSV_CACHE_TTL_MS = 0;
+  const STORAGE = { getItem(){ return null; }, setItem(){} };
+
+    const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    function normalizeFieldMap(fields){ const m = {}; (fields||[]).forEach(f => { if (!f) return; m[String(f).toLowerCase().trim()] = f; }); return m; }
+    function findHeaderByAliases(fieldMap, aliases){ const keys = Object.keys(fieldMap); for (const a of aliases){ const t = norm(a); const k = keys.find(x => norm(x)===t || norm(x).includes(t)); if (k) return fieldMap[k]; } return null; }
+    function buildCsvKeyMap(fieldMap){
+      const alias = {
+        name: ['name','student name','studentname','full name','fullname'],
+        father: ['father','father name','fathers name','guardian','parent'],
+        mother: ['mother','mother name','mothers name'],
+        class: ['class','std','standard','grade','present class','presentclass'],
+        leftclass: ['leftclass','left class','last class','lastclass','left school','leftschool'],
+        leftschool: ['leftschool','left school','leftclass','left class'],
+        nextclass: ['nextclass','next class','promoted to','promotion class','promotionclass'],
+        roll: ['roll','roll no','roll number','rollno','roll_no'],
+        section: ['section','sec'],
+        registrationnumber: ['registration number','registration','reg no','regno','registration no','registrationno','registration'],
+        dob: ['dob','date of birth','birth date','dateofbirth'],
+        paidmonth: ['paidmonth','paid month','dues till','dues paid till','duestill'],
+        iid: ['iid','id'],
+        sl: ['sl','serial','serial no','serial number','serialno'],
+        date: ['date','issue date','certificate date'],
+        character: ['character','conduct','behavior','behaviour']
+  , issueby: ['issueby','issuedby','issued by','issued','issue by','issue-by','issuedbyname','issued name','issuedname']
+  , gender: ['gender','sex']
+      };
+      const csvMap = {};
+      for (const key of Object.keys(alias)){ const hdr = findHeaderByAliases(fieldMap, alias[key]); if (hdr) csvMap[key] = hdr; }
+      return csvMap;
+    }
+    function getVal(row, csvMap, key){ const hdr = csvMap[key]; const v = hdr ? row[hdr] : undefined; return v == null ? '' : String(v).trim(); }
+    function byParam(n){ return new URLSearchParams(location.search).get(n) || ''; }
+
+    function defaultDate(raw){ if (raw) return raw; const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); return `${dd}-${mm}-${yyyy}`; }
+
+    function buildRecord(row, csvMap){
+      return {
+        name: getVal(row, csvMap, 'name'),
+        father: getVal(row, csvMap, 'father'),
+        mother: getVal(row, csvMap, 'mother'),
+        class: getVal(row, csvMap, 'class'),
+        leftclass: getVal(row, csvMap, 'leftclass') || getVal(row, csvMap, 'leftschool'),
+        leftschool: getVal(row, csvMap, 'leftschool') || getVal(row, csvMap, 'leftclass'),
+        nextclass: getVal(row, csvMap, 'nextclass'),
+        roll: getVal(row, csvMap, 'roll'),
+        section: getVal(row, csvMap, 'section'),
+        registrationnumber: getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration'),
+        dob: getVal(row, csvMap, 'dob'),
+        paidmonth: getVal(row, csvMap, 'paidmonth'),
+        iid: getVal(row, csvMap, 'iid'),
+        sl: getVal(row, csvMap, 'sl'),
+        date: defaultDate(getVal(row, csvMap, 'date')),
+        character: getVal(row, csvMap, 'character'),
+  issueby: getVal(row, csvMap, 'issueby'),
+  gender: getVal(row, csvMap, 'gender'),
+      };
+    }
+
+    function buildCertificateText(r){
+  const g = (r.gender||'').toLowerCase();
+  const isFemale = /^(f|female|girl)/.test(g);
+  const childWord = isFemale ? 'daughter' : 'son';
+  const heShe = isFemale ? 'She' : 'He';
+  const hisHer = isFemale ? 'Her' : 'His';
+      return (
+`This is certify that ${r.name || ''} ${childWord} of ${r.father || ''} and ${r.mother || ''} student's of Feni Model High School. ${heShe} has left the school ${r.leftclass || ''}. ${heShe} was studying in class ${r.class || ''}, Roll: ${r.roll || ''}, Section: ${r.section || ''} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${r.nextclass || ''}.
+${hisHer} registration number is ${r.registrationnumber || ''} and date of birth is ${r.dob || ''}.
+${heShe} has paid the school dues till ${r.paidmonth || ''}.
+
+${hisHer} character is ¬${r.character || ''}.`
+      );
+    }
+
+    // Safe HTML for overlay with bolded name
+    function escHtml(s){
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function buildCertificateHtml(r){
+  const name = `<strong class="emph"><u>${escHtml(r.name)}</u></strong>`;
+      const father = escHtml(r.father);
+      const mother = escHtml(r.mother);
+      const leftclass = escHtml(r.leftclass);
+      const klass = escHtml(r.class);
+      const roll = escHtml(r.roll);
+      const section = escHtml(r.section);
+      const nextclass = escHtml(r.nextclass);
+      const registration = escHtml(r.registrationnumber);
+      const dob = escHtml(r.dob);
+      const paidmonth = escHtml(r.paidmonth);
+      const character = escHtml(r.character);
+      const issueby = escHtml(r.issueby);
+      const g = (r.gender||'').toLowerCase();
+      const isFemale = /^(f|female|girl)/.test(g);
+      const childWord = isFemale ? 'daughter' : 'son';
+      const heShe = isFemale ? 'She' : 'He';
+      const hisHer = isFemale ? 'Her' : 'His';
+
+  // Decorated versions for emphasis
+  const klassDecor = `<strong class="emph"><u>${klass}</u></strong>`;
+  const rollDecor = `<strong class="emph"><u>${roll}</u></strong>`;
+  const sectionDecor = `<strong class="emph"><u>${section}</u></strong>`;
+
+      const lines = [
+  `This is certify that ${name} ${childWord} of ${father} and ${mother} student's of Feni Model High School. ${heShe} has left the school ${leftclass}. ${heShe} was studying in class ${klassDecor}, Roll: ${rollDecor}, Section: ${sectionDecor} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${nextclass}.`,
+          '',
+        `${hisHer} registration number is ${registration} and date of birth is ${dob}.`,
+        
+        `${heShe} has paid the school dues till ${paidmonth}.`,
+        '',
+        `${hisHer} character is ¬${character}.`
+      ];
+      return lines.map(escHtml => escHtml).join('<br/>');
+    }
+
+    function buildLeftPanelText(r){
+      const highlight = new Set(['Name','Class','Section','Roll']);
+      const rows = [
+        ['SL', r.sl],
+        ['IID', r.iid],
+        ['Name', r.name],
+        ['Fathers Name', r.father],
+        ['Mothers Name', r.mother],
+        ['Class', r.class],
+        ['Section', r.section],
+        ['Roll', r.roll],
+        ['Registration', r.registrationnumber],
+        ['Date of Birth', r.dob],
+        ['Paid Month', r.paidmonth],
+        ['Character', r.character],
+        ['Next Class', r.nextclass],
+        ['Left School', r.leftschool],
+        ['Issued by', r.issueby],
+      ];
+      return rows.map(([k,v]) => {
+        const safeV = escHtml(v||'');
+        const decorated = highlight.has(k) && safeV ? `<span class="hl">${safeV}</span>` : safeV;
+        return `${k}: ${decorated}`;
+      }).join('<br/>');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      const iidParam = (params.get('iid')||'').trim();
+      const slParam = (params.get('sl')||'').trim();
+      const ukParam = (params.get('uk')||'').trim(); // format: iid_sl
+      const status = document.getElementById('status');
+      status.textContent = 'Loading…';
+      loadCsvData((results) => {
+        try {
+          const fieldMap = normalizeFieldMap(results.meta.fields);
+          const csvMap = buildCsvKeyMap(fieldMap);
+          const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'];
+          const slHeader = csvMap.sl || fieldMap['sl'] || fieldMap['serial'];
+          let candidates = results.data.slice();
+          // If uk present, split and narrow early
+          if(ukParam){
+            const [ukIid, ukSl] = ukParam.split('_');
+            candidates = candidates.filter(r => {
+              const riid = String(iidHeader ? r[iidHeader] : '').trim();
+              const rsl = String(slHeader ? r[slHeader] : '').trim();
+              return (ukIid?riid===ukIid:true) && (ukSl?rsl===ukSl:true);
+            });
+          }
+          if(iidParam){
+            candidates = candidates.filter(r => String(iidHeader ? r[iidHeader] : '').trim() === iidParam);
+          }
+            if(slParam){
+            candidates = candidates.filter(r => String(slHeader ? r[slHeader] : '').trim() === slParam);
+          }
+          // If still multiple, try roll+class params
+          if(candidates.length > 1){
+            const rollParam = (params.get('roll')||'').trim();
+            const classParam = (params.get('class')||params.get('cls')||'').trim();
+            const rollHeader = csvMap.roll || fieldMap['roll'];
+            const classHeader = csvMap.class || fieldMap['class'];
+            if(rollParam){ candidates = candidates.filter(r => String(rollHeader? r[rollHeader]: '').trim() === rollParam); }
+            if(classParam){ candidates = candidates.filter(r => String(classHeader? r[classHeader]: '').trim() === classParam); }
+          }
+          if(candidates.length === 0){ status.textContent = 'No record found'; status.classList.add('error'); return; }
+          if(candidates.length > 1){ status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; status.classList.add('warn'); }
+          const row = candidates[0];
+          const rec = buildRecord(row, csvMap);
+          // Unique key for QR & share
+          rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
+          renderRecord(rec);
+          status.textContent = 'Ready';
+        } catch(e){ console.error(e); status.textContent='Failed to render'; status.classList.add('error'); }
+      }, (err) => {
+        console.error(err);
+        status.textContent = 'Failed to load CSV';
+        status.classList.add('error');
+      });
+    });
+
+    function renderRecord(rec){
+      // If SL (serial) is missing/null/blank, abort and show warning instead of certificate
+      if(!rec.sl){
+        const statusWarn = document.getElementById('status');
+        if(statusWarn){ statusWarn.textContent = 'Missing SL (serial) – certificate not shown'; statusWarn.classList.add('error'); }
+        const mainEl = document.querySelector('main');
+        if(mainEl){
+          mainEl.innerHTML = '<div style="max-width:620px;margin:2rem auto;padding:1.25rem 1.1rem;border:1px solid #e5e7eb;border-radius:12px;background:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;box-shadow:0 4px 18px -4px rgba(0,0,0,.08);">'
+            + '<h2 style="margin:0 0 .75rem;font-size:1.05rem;">Serial (SL) Missing</h2>'
+            + '<p style="margin:.4rem 0 .8rem;font-size:.85rem;line-height:1.4;">The selected record does not contain a Serial (SL) value. Please make sure the sheet has an SL column filled for this IID / record, or include sl=... in the URL query.</p>'
+            + '<ul style="margin:.4rem 0 .9rem;padding-left:1.1rem;font-size:.78rem;line-height:1.35;">'
+            + '<li>Add/update the SL in the source database then reload or contact support.</li>'
+            + '<li>Or fill up fathers name and mothers name in database / pass both iid and sl parameters in the URL (e.g. ?iid=123&sl=5).</li>'
+            + '</ul>'
+            + '<a href="javascript:history.back()" style="display:inline-block;margin-top:.3rem;text-decoration:none;background:#2563eb;color:#fff;padding:.55rem .9rem;font-size:.7rem;font-weight:600;border-radius:6px;">Go Back</a>'
+            + '</div>';
+        }
+        const actionBar = document.querySelector('.action-bar'); if(actionBar){ actionBar.style.display='none'; }
+        return; // stop further rendering
+      }
+      const text = buildCertificateText(rec);
+      const html = buildCertificateHtml ? buildCertificateHtml(rec) : text.replace(/\n/g,'<br/>');
+      const imgText = document.getElementById('imgText'); if (imgText) imgText.innerHTML = html;
+      const serialEl = document.getElementById('serialVal'); if (serialEl) serialEl.textContent = rec.sl || '';
+      const dateEl = document.getElementById('dateVal'); if (dateEl) dateEl.textContent = rec.date || '';
+      const lp = document.getElementById('leftPanel'); if (lp) lp.innerHTML = buildLeftPanelText(rec);
+  const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = 'Student IID: ' + (rec.iid || '');
+  const qrIssued = document.getElementById('qrIssued'); if (qrIssued) qrIssued.textContent = 'Issued By: ' + (rec.issueby || '');
+      // Prepare a stable shareable QR URL with unique key
+      try {
+        const base = new URL(location.href.split('#')[0]);
+        if(rec.iid) base.searchParams.set('iid', rec.iid);
+        if(rec.sl) base.searchParams.set('sl', rec.sl);
+        if(rec.uk) base.searchParams.set('uk', rec.uk);
+        window.__QR_URL = base.toString();
+      } catch(_e) { window.__QR_URL = location.href.split('#')[0]; }
+      renderQr();
+    }
+
+    // Load CSV with caching + worker parsing (persisted via localStorage when available)
+    function loadCsvData(onSuccess, onError){
+      const now = Date.now();
+  // Always fresh download (cache disabled)
+      Papa.parse(CSV_URL, {
+        download:true, header:true, skipEmptyLines:true, worker:true, fastMode:true,
+        complete:(results)=>{
+          try {
+            onSuccess(results);
+          } catch(e){ onError(e); }
+        }, error:onError
+      });
+    }
+
+  function tryPersistParsed(){ /* disabled */ }
+
+    function renderQr(){
+      const box = document.getElementById('qrBox');
+      if(!box) return;
+      // Remove any old caption if present
+      const oldCap = document.getElementById('qrCaption'); if(oldCap) oldCap.remove();
+      const url = window.__QR_URL || location.href.split('#')[0];
+      const MAX_TRIES = 12; let tries = 0;
+      function attempt(){
+        if(!(window.QRCode)){ tries++; if(tries < MAX_TRIES) return setTimeout(attempt, 120); console.warn('QRCode lib not loaded, using fallback service'); return fallbackService(); }
+        box.innerHTML='';
+        try {
+          if(typeof window.QRCode.toCanvas === 'function'){
+            const canvas = document.createElement('canvas');
+            window.QRCode.toCanvas(canvas, url, { errorCorrectionLevel:'M', margin:1, scale:6, color:{ dark:'#000000', light:'#00000000' } }, err => {
+              if(err){ console.error('QR toCanvas error', err); return fallbackDataURL(); }
+              box.appendChild(canvas);
+            });
+          } else { fallbackDataURL(); }
+        } catch(e){ console.error('QR exception', e); fallbackService(); }
+      }
+      function fallbackDataURL(){
+        if(!(window.QRCode && typeof window.QRCode.toDataURL === 'function')) return fallbackService();
+        window.QRCode.toDataURL(url, { errorCorrectionLevel:'M', margin:1, scale:5, color:{ dark:'#000000', light:'#00000000' } }, (err, dataUrl) => {
+          if(err){ console.error('QR toDataURL error', err); return fallbackService(); }
+          box.innerHTML='';
+          const img = new Image(); img.alt='QR'; img.src=dataUrl; box.appendChild(img);
+        });
+      }
+      function fallbackService(){
+        box.innerHTML='';
+        const img = new Image();
+        img.alt='QR';
+        img.crossOrigin='anonymous';
+        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(url);
+        img.onload = ()=>{ tryMakeTransparent(img); };
+        img.onerror = ()=>{ box.textContent='QR failed'; };
+        box.appendChild(img);
+      }
+      function tryMakeTransparent(image){
+        try {
+          const c = document.createElement('canvas');
+          c.width = image.naturalWidth; c.height = image.naturalHeight;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(image,0,0);
+            const imgData = ctx.getImageData(0,0,c.width,c.height);
+            const d = imgData.data;
+            for(let i=0;i<d.length;i+=4){
+              if(d[i]>240 && d[i+1]>240 && d[i+2]>240){ d[i+3]=0; }
+            }
+            ctx.putImageData(imgData,0,0);
+            image.replaceWith(c);
+        } catch(e){ /* likely CORS block; ignore */ }
+      }
+      attempt();
+    }
+
+    async function downloadPdf(){
+      try {
+        const status = document.getElementById('status');
+        status.textContent = 'Preparing PDF…';
+        const target = document.querySelector('.img-wrap');
+        if(!target){ status.textContent='No content'; return; }
+        const canvas = await html2canvas(target, {scale:2, useCORS:true});
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('landscape','pt','a4');
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        // Fit width; center vertically
+        const imgW = pageW;
+        const imgH = canvas.height * (imgW / canvas.width);
+        const y = Math.max(0,(pageH - imgH)/2);
+        pdf.addImage(imgData, 'PNG', 0, y, imgW, imgH);
+        pdf.save('certificate_'+Date.now()+'.pdf');
+        status.textContent = 'Ready';
+      } catch(e){ console.error(e); const status = document.getElementById('status'); status.textContent='PDF failed'; }
+    }
+  </script>
+</head>
+<body>
+  <header>
+  <h1>Transfer Certificate (Image) <span id="status" class="muted"></span></h1>
+  <div style="margin-top:.5rem"></div>
+  </header>
+  <main>
+    <div class="layout">
+      <div class="img-wrap">
+        <img src="./testimonial.png" alt="Certificate background" />
+        <!-- Serial and Date fields overlayed near their labels on the template -->
+        <div class="field serial"><span id="serialVal"></span></div>
+        <div class="field date"><span id="dateVal"></span></div>
+        <!-- Left side details -->
+        <div class="overlay-left"><div id="leftPanel" class="left-text"></div></div>
+        <div class="overlay">
+          <div id="imgText" class="overlay-text"></div>
+        </div>
+        <!-- QR Code (current link) -->
+        <div class="qr-wrap" title="Verify online" aria-label="QR code with link">
+          <div id="qrBox" style="width:100%;height:var(--qr-size);"></div>
+          <div class="qr-caption">Scan for verify</div>
+          <div class="qr-meta" id="qrIID"></div>
+          <div class="qr-meta" id="qrIssued"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="action-bar no-print">
+    <button type="button" class="btn" onclick="window.print()">Print</button>
+    <button type="button" class="btn" onclick="downloadPdf()">Download PDF</button>
+  </div>
+</body>
+</html>

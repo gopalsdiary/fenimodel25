@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width,initial-scale=1" />
+	<title>Google Form</title>
+	<style>
+		* { box-sizing:border-box; }
+		html,body { height:100%; margin:0; }
+		body { display:flex; flex-direction:column; align-items:center; padding:1.2rem 1.2rem 2rem; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f1f5f9; }
+		.nav { width:100%; max-width:760px; display:flex; gap:.6rem; flex-wrap:wrap; margin:0 0 1rem; }
+		.nav a { text-decoration:none; background:#2563eb; color:#fff; padding:.55rem .95rem; font-size:.7rem; font-weight:600; border-radius:7px; letter-spacing:.4px; display:inline-block; }
+		.nav a:hover { background:#1d4ed8; }
+		.nav a.secondary { background:#64748b; }
+		.nav a.secondary:hover { background:#475569; }
+		.frame-wrap { width:100%; max-width:760px; display:flex; justify-content:center; }
+		iframe { width:100%; max-width:640px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; box-shadow:0 4px 18px -4px rgba(0,0,0,.12); }
+		@media (prefers-color-scheme: dark){
+			body { background:#0f172a; }
+			iframe { border-color:#334155; background:#111c30; }
+		}
+	</style>
+</head>
+	<body>
+		<nav class="nav" aria-label="Primary">
+			<a href="../index.html">Home</a>
+			<a class="secondary" href="test_list.html">TC List</a>
+		</nav>
+		<div class="frame-wrap" style="--scale:0.7;">
+			<div style="position:relative; width:640px; height:1867px; /* 2667 * 0.7 */ display:flex; justify-content:center;">
+				<iframe style="transform:scale(var(--scale)); transform-origin: top center; width:640px; height:2667px;" src="https://docs.google.com/forms/d/e/1FAIpQLSd_9v2bZ5uVI-FGOw1YdVDIT0wYLRDbMa1GDZyWpGsMTL9DQA/viewform?embedded=true" frameborder="0" marginheight="0" marginwidth="0" loading="lazy">Loading…</iframe>
+			</div>
+		</div>
+	</body>
+</html>
