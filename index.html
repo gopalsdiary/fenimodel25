@@ -3,257 +3,188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Result Processing System - Feni Model High School</title>
+    <title>Feni Model High School – Result & Document Portal</title>
     <link rel="stylesheet" href="style.css">
     <!-- Add security headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     
-    <style>
-        .exam-buttons {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2rem;
-            margin: 3rem auto;
-            max-width: 500px;
-            padding: 2rem;
-        }
-        
-        .exam-btn {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            border: none;
-            padding: 1.5rem 3rem;
-            border-radius: 10px;
-            font-size: 1.2rem;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-            min-width: 300px;
-            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .exam-btn:hover {
-            background: linear-gradient(135deg, #2980b9, #3498db);
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-        }
-        
-        .exam-btn:active {
-            transform: translateY(-1px);
-        }
-        
-        .annual-btn {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-        }
-        
-        .annual-btn:hover {
-            background: linear-gradient(135deg, #c0392b, #e74c3c);
-            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-        }
-        
-        .welcome-text {
-            text-align: center;
-            margin-bottom: 3rem;
-            color: #2c3e50;
-            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-            padding: 2.5rem;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border: 1px solid #dee2e6;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .welcome-text::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3498db, #e74c3c, #f39c12, #27ae60);
-            animation: gradientShift 3s ease-in-out infinite;
-        }
-        
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .welcome-text h2 {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #2c3e50, #3498db);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .welcome-text p {
-            font-size: 1.2rem;
-            color: #6c757d;
-            font-weight: 500;
-            margin: 0;
-            letter-spacing: 0.5px;
-        }
-        
-        .header {
-            text-align: center;
-        }
-        
-        .password-section {
-            display: block;
-            text-align: center;
-            margin: 2rem auto;
-            max-width: 400px;
-            padding: 2rem;
-            background: linear-gradient(135deg, #fff, #f8f9fa);
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-            border: 1px solid #dee2e6;
-        }
-        
-        .exam-section {
-            display: none;
-        }
-        
-        .password-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 1rem;
-            margin: 1rem 0;
-            transition: border-color 0.3s ease;
-            box-sizing: border-box;
-        }
-        
-        .password-input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-        
-        .password-btn {
-            background: linear-gradient(135deg, #27ae60, #2ecc71);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-        }
-        
-        .password-btn:hover {
-            background: linear-gradient(135deg, #2ecc71, #27ae60);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
-        }
-        
-        .error-message {
-            color: #e74c3c;
-            font-size: 0.9rem;
-            margin-top: 0.5rem;
-            display: none;
-        }
-        
-        .password-title {
-            font-size: 1.5rem;
-            color: #2c3e50;
-            margin-bottom: 1rem;
-            font-weight: 600;
-        }
-        
-        .logout-container {
-            text-align: right;
-            margin-bottom: 2rem;
-        }
-        
-        .logout-btn {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
-        }
-        
-        .logout-btn:hover {
-            background: linear-gradient(135deg, #c0392b, #e74c3c);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
-        }
-    </style>
+        <style>
+            :root {
+                --bg: #f5f7fb;
+                --bg-alt:#ffffff;
+                --text:#1f2d3d;
+                --text-soft:#546170;
+                --brand:#2563eb;
+                --brand-accent:#1d4ed8;
+                --danger:#dc2626;
+                --success:#15803d;
+                --radius:18px;
+                --border:#e2e8f0;
+                --shadow:0 6px 20px -2px rgba(0,0,0,.08),0 2px 6px -1px rgba(0,0,0,.04);
+            }
+            .dark {
+                --bg:#0d1117; --bg-alt:#161b22; --text:#e6edf3; --text-soft:#94a3b8; --border:#263445; --shadow:0 6px 24px -4px rgba(0,0,0,.6);
+            }
+            * { box-sizing:border-box; }
+            body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+            h1 { font-size:clamp(1.9rem,3vw,2.4rem); margin:.25rem 0 0; font-weight:700; letter-spacing:.5px; background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981); -webkit-background-clip:text; background-clip:text; color:transparent; }
+            header.site-head { position:relative; padding:1.3rem 1.25rem 1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+            .brand-badge { font-size:.7rem; letter-spacing:1px; padding:.35rem .6rem; border:1px solid var(--border); border-radius:999px; background:linear-gradient(120deg,var(--bg-alt),rgba(255,255,255,.4)); backdrop-filter:blur(6px); }
+            .mode-toggle { background:var(--bg-alt); border:1px solid var(--border); color:var(--text-soft); padding:.55rem .9rem; border-radius:10px; font-size:.75rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:.45rem; box-shadow:var(--shadow); transition:.35s; }
+            .mode-toggle:hover { color:var(--text); }
+            .container { width:100%; max-width:1150px; margin:0 auto; padding:0 1.2rem 3rem; }
+            .gate-card { margin:2.2rem auto 2.8rem; max-width:420px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); padding:2.25rem 2.1rem 2.4rem; box-shadow:var(--shadow); position:relative; overflow:hidden; }
+            .gate-card:before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 85% 15%,rgba(99,102,241,.15),transparent 60%); pointer-events:none; }
+            .gate-title { margin:0 0 .35rem; font-size:1.4rem; font-weight:600; display:flex; align-items:center; gap:.55rem; }
+            .gate-desc { margin:0 0 1.1rem; font-size:.85rem; color:var(--text-soft); }
+            .password-input { width:100%; padding:.9rem 1rem; font-size:.95rem; border:2px solid var(--border); border-radius:12px; background:var(--bg); transition:border-color .3s, background .3s; }
+            .password-input:focus { outline:none; border-color:var(--brand); background:var(--bg-alt); }
+            .pw-actions { display:flex; gap:.7rem; margin-top:.9rem; align-items:center; }
+            .password-btn { flex:1; background:linear-gradient(90deg,#10b981,#059669); border:none; color:#fff; font-weight:600; padding:.85rem 1.1rem; border-radius:12px; cursor:pointer; font-size:.9rem; letter-spacing:.5px; box-shadow:0 4px 14px -2px rgba(16,185,129,.4); transition:.35s; }
+            .password-btn:hover { filter:brightness(1.05); transform:translateY(-2px); }
+            .show-toggle { background:var(--bg-alt); border:1px solid var(--border); padding:.75rem 1rem; border-radius:12px; font-size:.7rem; font-weight:600; cursor:pointer; }
+            .error-message { display:none; margin-top:.65rem; font-size:.75rem; font-weight:600; color:var(--danger); letter-spacing:.4px; }
+            .exam-section { display:none; animation:fade .6s ease; }
+            @keyframes fade { from { opacity:0; transform:translateY(12px);} to { opacity:1; transform:translateY(0);} }
+            .logout-bar { display:flex; justify-content:flex-end; gap:.7rem; align-items:center; margin:1rem 0 1.5rem; }
+            .logout-btn { background:linear-gradient(90deg,#ef4444,#dc2626); color:#fff; border:none; padding:.6rem 1rem; border-radius:10px; cursor:pointer; font-size:.7rem; font-weight:600; letter-spacing:.5px; box-shadow:0 4px 14px -2px rgba(239,68,68,.4); transition:.3s; }
+            .logout-btn:hover { filter:brightness(1.05); }
+            .grid { --min:260px; display:grid; gap:1.4rem; grid-template-columns:repeat(auto-fit,minmax(var(--min),1fr)); margin-top:1.2rem; }
+            .card-link { position:relative; display:flex; flex-direction:column; gap:.75rem; padding:1.15rem 1.15rem 1.35rem; background:var(--bg-alt); border:1px solid var(--border); border-radius:20px; text-decoration:none; color:var(--text); box-shadow:var(--shadow); overflow:hidden; min-height:160px; }
+            .card-link:before { content:""; position:absolute; inset:0; background:linear-gradient(145deg,rgba(37,99,235,.08),transparent 55%); opacity:.9; pointer-events:none; transition:.5s; }
+            .card-link:hover:before { background:linear-gradient(145deg,rgba(37,99,235,.18),transparent 60%); }
+            .card-link:hover { transform:translateY(-4px); }
+            .card-icon { font-size:1.9rem; line-height:1; }
+            .card-title { font-size:1.05rem; font-weight:700; letter-spacing:.4px; }
+            .card-desc { font-size:.72rem; color:var(--text-soft); margin-top:-.35rem; line-height:1.25; }
+            .tag { position:absolute; top:.7rem; right:.7rem; font-size:.77rem; background:var(--brand); color:#fff; padding:.45rem .7rem .5rem; border-radius:999px; letter-spacing:.65px; font-weight:600; box-shadow:0 2px 6px rgba(0,0,0,.25); }
+            .tag.alt { background:#dc2626; }
+            .tag.green { background:#059669; }
+            footer { margin:3rem 0 1.5rem; text-align:center; font-size:.6rem; color:var(--text-soft); }
+            .note { margin:2rem 0 0; font-size:.7rem; color:var(--text-soft); text-align:center; }
+            .pulse { position:absolute; inset:0; background:radial-gradient(circle at 25% 15%,rgba(14,165,233,.25),transparent 70%); mix-blend-mode:overlay; animation:pulse 8s linear infinite; opacity:.4; }
+            @keyframes pulse { 0% { transform:scale(1); opacity:.45;} 50% { transform:scale(1.15); opacity:.25;} 100% { transform:scale(1); opacity:.45;} }
+            @media (max-width:640px){ .gate-card { padding:1.8rem 1.4rem 2.1rem; } .grid { --min:220px; } }
+            /* Emphasize group headings */
+            .year-head, .section-head { font-weight:800 !important; color:var(--text); letter-spacing:.9px; }
+            /* Colored group themes */
+            .year-group { position:relative; border:1px solid var(--border); border-radius:24px; padding:1.1rem 1.1rem 1.35rem; backdrop-filter:blur(3px); }
+            .year-group:before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:overlay; }
+            .group-2025 { background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05)); border-color:rgba(16,185,129,.35); }
+            .group-2024 { background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(99,102,241,.06)); border-color:rgba(99,102,241,.40); }
+            .group-docs { background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(245,158,11,.07)); border-color:rgba(245,158,11,.45); margin-top:2.2rem; }
+            .group-2025 .year-head span.line { background:linear-gradient(90deg,#10b981,transparent); }
+            .group-2024 .year-head span.line { background:linear-gradient(90deg,#6366f1,transparent); }
+            .group-docs .section-head span { background:linear-gradient(90deg,#f59e0b,transparent)!important; }
+            .group-2025 .card-link:before { background:linear-gradient(145deg,rgba(16,185,129,.25),transparent 60%); }
+            .group-2024 .card-link:before { background:linear-gradient(145deg,rgba(99,102,241,.28),transparent 55%); }
+            .group-docs .card-link:before { background:linear-gradient(145deg,rgba(245,158,11,.35),transparent 55%); }
+            .dark .group-2025 { background:linear-gradient(135deg,rgba(16,185,129,.3),rgba(16,185,129,.12)); border-color:rgba(16,185,129,.55); }
+            .dark .group-2024 { background:linear-gradient(135deg,rgba(99,102,241,.35),rgba(99,102,241,.14)); border-color:rgba(99,102,241,.6); }
+            .dark .group-docs { background:linear-gradient(135deg,rgba(245,158,11,.45),rgba(245,158,11,.16)); border-color:rgba(245,158,11,.6); }
+                /* Year specific card accents */
+                .card-link.year-2025 { border-color:rgba(16,185,129,.55); }
+                .card-link.year-2025:before { background:linear-gradient(145deg,rgba(16,185,129,.22),transparent 55%); }
+                .card-link.year-2025 .tag { background:#059669; }
+                .dark .card-link.year-2025 { border-color:rgba(16,185,129,.7); }
+                .card-link.year-2024 { border-color:rgba(99,102,241,.55); }
+                .card-link.year-2024:before { background:linear-gradient(145deg,rgba(99,102,241,.25),transparent 55%); }
+                .card-link.year-2024 .tag { background:#6366f1; }
+                .dark .card-link.year-2024 { border-color:rgba(99,102,241,.7); }
+                /* Future years template (copy & adjust color)
+                    .card-link.year-2026 { border-color:rgba(14,165,233,.55); }
+                    .card-link.year-2026 .tag { background:#0ea5e9; } */
+        </style>
 </head>
 <body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
-    <div class="header">
-        <h1>Feni Model High School</h1>
-        <p>Result Processing System </p>
-    </div>
+        <header class="site-head">
+            <div style="display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;">
+                <h1>Feni Model High School</h1>
+                <span class="brand-badge">RESULT · Testimonial - Transfer Certificate</span>
+            </div>
+            <button class="mode-toggle" id="modeToggle" aria-label="Toggle dark mode">🌙 Theme</button>
+        </header>
+        <div class="container">
+            <section id="passwordSection" class="gate-card" aria-labelledby="gateTitle">
+                <span class="pulse"></span>
+                <h2 id="gateTitle" class="gate-title">🔐 Secure Access</h2>
+                <p class="gate-desc">Enter the authorized passcode to open the examination & certificate modules.</p>
+                <input id="passwordInput" class="password-input" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Enter password" aria-describedby="errorMessage" onkeypress="handlePasswordKeyPress(event)">
+                <div class="pw-actions">
+                    <button class="password-btn" onclick="checkPassword()">Unlock Portal</button>
+                    <button type="button" class="show-toggle" id="togglePw" aria-pressed="false" onclick="togglePassword()">SHOW</button>
+                </div>
+                <div class="error-message" id="errorMessage" role="alert">Incorrect password. Please try again.</div>
+                <div style="margin-top:1.1rem; font-size:.6rem; color:var(--text-soft); letter-spacing:.5px;">Session auto‑expires after 15 minutes of inactivity.</div>
+            </section>
 
-    <div class="container">
-        <!-- Password Section -->
-        <div class="password-section" id="passwordSection">
-            <h2 class="password-title">🔐 Access Required</h2>
-            <p>Please enter the password to access examination results</p>
-            <input type="password" 
-                   id="passwordInput" 
-                   class="password-input" 
-                   placeholder="Enter password..." 
-                   onkeypress="handlePasswordKeyPress(event)">
-            <br>
-            <button class="password-btn" onclick="checkPassword()">Access Results</button>
-            <div class="error-message" id="errorMessage">Incorrect password. Please try again.</div>
+            <section id="examSection" class="exam-section" aria-labelledby="portalTitle">
+                <div class="logout-bar">
+                    <button class="mode-toggle" id="modeToggle2" onclick="toggleMode()" aria-label="Toggle dark mode (secondary)">🌓</button>
+                    <button class="logout-btn" onclick="logout()">LOGOUT</button>
+                </div>
+                <h2 id="portalTitle" style="margin:0 0 .25rem;font-size:1.55rem;letter-spacing:.5px;">Student Modules & Exam Modules</h2>
+                <p style="margin:.15rem 0 1.3rem;font-size:.82rem;color:var(--text-soft);max-width:680px;">Choose a module below grouped by academic year. Use a desktop computer for best printing accuracy. <strong style="color:var(--danger);">মোবাইল ফোন এড়িয়ে চলুন</strong>.</p>
+                <style>
+                    .year-group { margin:1.6rem 0 0; }
+                    .year-head { display:flex; align-items:center; gap:.65rem; font-size:1rem; font-weight:600; letter-spacing:.6px; color:var(--text-soft); text-transform:uppercase; margin:0 0 .75rem; }
+                    .year-head span.line { flex:0 0 42px; height:2px; background:linear-gradient(90deg,var(--brand),transparent); border-radius:2px; }
+                </style>
+                <div class="year-group" id="year-2025">
+                    <h3 class="year-head"><span class="line"></span> 2025 Examination</h3>
+                    <div class="grid" role="list" aria-label="2025 Examination Modules">
+                        <a role="listitem" href="terminal25 sheet/index.html" class="card-link year-2025" aria-label="Half Yearly Examination 2025">
+                            <span class="tag green">2025</span>
+                            <span class="card-icon">🧮</span>
+                            <span class="card-title">Half Yearly Examination 2025</span>
+                            <span class="card-desc">Mid‑session performance (open module).</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="year-group" id="year-2024">
+                    <h3 class="year-head"><span class="line"></span> 2024 Examination</h3>
+                    <div class="grid" role="list" aria-label="2024 Examination Modules">
+                        <a role="listitem" href="ann24/index.html" class="card-link year-2024" aria-label="Annual Examination 2024 (Another School)">
+                            <span class="tag alt">2024</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Annual Examination 2024</span>
+                            <span class="card-desc">External / collaborating institution dataset.</span>
+                        </a>
+                        <a role="listitem" href="ann24s/index.html" class="card-link year-2024" aria-label="Annual Examination 2024 (Feni Model)">
+                            <span class="tag">2024</span>
+                            <span class="card-icon">📋</span>
+                            <span class="card-title">Annual Examination 2024 (Feni Model)</span>
+                            <span class="card-desc">Official annual academic results archive.</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="year-group group-docs" id="group-docs">
+                    <h3 class="section-head" style="margin:0 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
+                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#f59e0b,transparent);"></span> Certificates & Testimonials
+                    </h3>
+                    <div class="grid subgrid" role="list" id="certGrid" style="--min:260px;">
+                                <a role="listitem" href="TC/test_list.html" class="card-link" aria-label="Transfer Certificate module">
+                                    <span class="tag">TC</span>
+                                    <span class="card-icon">📑</span>
+                                    <span class="card-title">Transfer Certificates</span>
+                                    <span class="card-desc">Lookup & verify issued transfer certificates.</span>
+                                </a>
+                                <a role="listitem" href="testimonial ssc/test_list.html" class="card-link" aria-label="SSC Testimonial module">
+                                    <span class="tag alt">SSC</span>
+                                    <span class="card-icon">🎓</span>
+                                    <span class="card-title">SSC Testimonials</span>
+                                    <span class="card-desc">Session‑wise testimonial verification list.</span>
+                                </a>
+                    </div>
+                </div>
+                <p class="note">© <span id="year"></span> Feni Model High School · Auto session timeout enabled · Unauthorized access prohibited.</p>
+            </section>
         </div>
-        
-        <!-- Exam Selection Section (Hidden initially) -->
-        <div class="exam-section" id="examSection">
-            <div class="logout-container">
-                <button class="logout-btn" onclick="logout()">🚪 Logout</button>
-            </div>
-            
-            <div class="welcome-text">
-                <h2>Welcome to Result Portal</h2>
-                <p>Select the examination type to view results</p>
-            </div>
-            
-            <div class="exam-buttons">
-                <a href="ann24/index.html" class="exam-btn annual-btn">
-                    📊 Annual Examination 2024 (Another School)
-                </a>
-                
-                <a href="ann24s/index.html" class="exam-btn">
-                    📋 Annual Examination 2024 (Feni Model)
-                </a>
-                <a href="terminal25 sheet/index.html" class="exam-btn annual-btn">
-                    📊 Half Yearly Examination 2025 (Feni Model no password)
-                </a>
-
-                <a href="TC/test_list.html" class="exam-btn">
-                    📊 Transfer Certificate
-                </a>
-                <a href="testimonial ssc/test_list.html" class="exam-btn annual-btn">
-                    📊 SSC Testimonial
-                </a>
-            </div>
-             <p>অবশ্যই কম্পিউটার ব্যবহার করুণ, <strong>মোবাইল ফোন নয়।</strong></p>
-        </div>
-    </div>
+        <footer>
+            Powered by Gopals 
+        </footer>
 
     <script>
         // Disable developer tools
@@ -267,8 +198,9 @@
         });
         
         // Password functionality
-        const correctPassword = "1";
-        const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const correctPassword = "1"; // TODO: move to server-side validation in production
+    const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
+    let lastActivityTime = null;
         
         function checkPassword() {
             const passwordInput = document.getElementById('passwordInput');
@@ -283,11 +215,12 @@
                 errorMessage.style.display = 'none';
                 
                 // Store authentication with timestamp
-                const loginTime = new Date().getTime();
+                const loginTime = Date.now();
                 sessionStorage.setItem('authenticated', 'true');
                 sessionStorage.setItem('loginTime', loginTime.toString());
-                
-                // Start session timeout
+                // Initialize activity time & start timeout
+                lastActivityTime = loginTime;
+                attachActivityListeners();
                 startSessionTimeout();
             } else {
                 // Wrong password - show error
@@ -323,10 +256,11 @@
             return sessionAge < SESSION_DURATION;
         }
         
-        function logout() {
+    function logout() {
             // Clear session data
             sessionStorage.removeItem('authenticated');
             sessionStorage.removeItem('loginTime');
+            lastActivityTime = null;
             
             // Show password section and hide exam section
             document.getElementById('passwordSection').style.display = 'block';
@@ -343,39 +277,75 @@
         }
         
         function startSessionTimeout() {
-            // Clear any existing timeout
-            if (window.sessionTimeoutId) {
-                clearTimeout(window.sessionTimeoutId);
+            if (window.sessionTimeoutId) clearTimeout(window.sessionTimeoutId);
+            const now = Date.now();
+            if(!lastActivityTime) lastActivityTime = now;
+            const remaining = (lastActivityTime + SESSION_DURATION) - now;
+            if (remaining <= 0) {
+                alert('Your session has expired. Please log in again.');
+                logout();
+                return;
             }
-            
-            // Set new timeout
             window.sessionTimeoutId = setTimeout(() => {
                 alert('Your session has expired. Please log in again.');
                 logout();
-            }, SESSION_DURATION);
+            }, remaining);
+        }
+
+        function recordActivity(){
+            if(sessionStorage.getItem('authenticated') !== 'true') return;
+            lastActivityTime = Date.now();
+            startSessionTimeout();
+        }
+        function attachActivityListeners(){
+            ['click','keydown','mousemove','scroll','touchstart'].forEach(evt=>{
+                window.addEventListener(evt, recordActivity, { passive:true });
+            });
         }
         
         function checkSessionValidity() {
             if (sessionStorage.getItem('authenticated') === 'true') {
                 if (isSessionValid()) {
-                    // Session is still valid - show exam section and restart timeout
                     document.getElementById('passwordSection').style.display = 'none';
                     document.getElementById('examSection').style.display = 'block';
-                    startSessionTimeout();
+                    // Do NOT restart timeout here to avoid perpetual extension; start/refresh only on activity
                 } else {
-                    // Session has expired - logout
                     logout();
                 }
             }
         }
         
-        // Check if user is already authenticated
-        window.onload = function() {
-            checkSessionValidity();
-        };
+                function togglePassword(){
+                    const input=document.getElementById('passwordInput');
+                    const btn=document.getElementById('togglePw');
+                    const visible=input.type==='text';
+                    input.type= visible ? 'password':'text';
+                    btn.textContent= visible ? 'SHOW':'HIDE';
+                    btn.setAttribute('aria-pressed', (!visible).toString());
+                }
+
+                // Theme toggle (persist)
+                function applyMode(m){ document.documentElement.classList.toggle('dark', m==='dark'); }
+                function toggleMode(){ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyMode(cur); }
+                document.getElementById('modeToggle').addEventListener('click',toggleMode);
+                // Secondary toggle if visible later
+                function initSecondaryToggle(){ const mt2=document.getElementById('modeToggle2'); if(mt2) mt2.onclick=toggleMode; }
+
+                // On load
+                window.onload = function() {
+                        const saved= localStorage.getItem('theme'); if(saved) applyMode(saved); else if(window.matchMedia('(prefers-color-scheme: dark)').matches) applyMode('dark');
+                        checkSessionValidity();
+                        if(sessionStorage.getItem('authenticated')==='true'){
+                            lastActivityTime = Date.now();
+                            attachActivityListeners();
+                            startSessionTimeout();
+                        }
+                        initSecondaryToggle();
+                        document.getElementById('year').textContent = new Date().getFullYear();
+                };
         
         // Check session validity periodically (every minute)
-        setInterval(checkSessionValidity, 60000);
+    setInterval(() => { checkSessionValidity(); }, 60000);
         
         // Add shake animation for wrong password
         const style = document.createElement('style');
@@ -386,7 +356,7 @@
                 20%, 40%, 60%, 80% { transform: translateX(5px); }
             }
         `;
-        document.head.appendChild(style);
+    document.head.appendChild(style);
     </script>
 </body>
 </html>
