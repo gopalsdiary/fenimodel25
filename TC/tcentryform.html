@@ -8,8 +8,8 @@
 		* { box-sizing:border-box; }
 		html,body { height:100%; margin:0; }
 		body { display:flex; flex-direction:column; align-items:center; padding:1.2rem 1.2rem 2rem; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:#f1f5f9; }
-		.nav { width:100%; max-width:760px; display:flex; gap:.6rem; flex-wrap:wrap; margin:0 0 1rem; }
-		.nav a { text-decoration:none; background:#2563eb; color:#fff; padding:.55rem .95rem; font-size:.7rem; font-weight:600; border-radius:7px; letter-spacing:.4px; display:inline-block; }
+		.nav { width:100%; max-width:760px; display:flex; gap:.6rem; flex-wrap:wrap; margin:0 0 1rem; justify-content:flex-end; }
+		.nav a { text-decoration:none; background:#2563eb; color:#fff; padding:.8rem 1.25rem; font-size:.85rem; font-weight:600; border-radius:9px; letter-spacing:.5px; display:inline-block; }
 		.nav a:hover { background:#1d4ed8; }
 		.nav a.secondary { background:#64748b; }
 		.nav a.secondary:hover { background:#475569; }
@@ -22,6 +22,9 @@
 	</style>
 </head>
 	<body>
+		<div style="width:100%;max-width:760px;margin:0 0 .85rem;padding:.75rem 1rem;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;font-size:.8rem;line-height:1.3;border-radius:10px;font-weight:600;box-shadow:0 2px 6px -2px rgba(0,0,0,.08);">
+			সাবধাণতা অবলম্বণ করুন, ভুল হলে সংশোধন করতে ডাটাবেস ম্যানেজারের সাথে যোগাযোগ করতে হবে, যা সময় সাপেক্ষ।
+		</div>
 		<nav class="nav" aria-label="Primary">
 			<a href="../index.html">Home</a>
 			<a class="secondary" href="test_list.html">TC List</a>
