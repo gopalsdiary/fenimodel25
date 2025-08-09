@@ -174,7 +174,15 @@ function filterStudentList() {
 
         return matchesQuery && matchesClass && matchesShift;
     });
-
+    // Sort by numeric roll (ascending) when filtering
+    filteredStudents.sort((a,b)=>{
+        const ra = parseInt((a.roll||'').replace(/[^0-9]/g,''),10);
+        const rb = parseInt((b.roll||'').replace(/[^0-9]/g,''),10);
+        if(isNaN(ra) && isNaN(rb)) return 0;
+        if(isNaN(ra)) return 1; // push non-numeric to bottom
+        if(isNaN(rb)) return -1;
+        return ra - rb;
+    });
     renderFilteredStudentList(filteredStudents);
 }
 
