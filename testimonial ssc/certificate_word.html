@@ -185,7 +185,7 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
     function buildCertificateHtml(r){
-      const name = `<strong class=\"emph\"><u>${escHtml(r.name)}</u></strong>`;
+  const name = `<strong class=\"emph\">${escHtml(r.name)}</strong>`;
       const father = escHtml(r.father);
       const mother = escHtml(r.mother);
   const registration = escHtml(r.registrationnumber);
