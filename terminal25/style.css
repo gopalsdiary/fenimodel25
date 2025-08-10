@@ -299,16 +299,7 @@ th {
         margin: 0px;
         box-sizing: border-box;
     }
-    #marksheet::before {
-        content: url('pad.png');
-        display: block;
-        margin: 0px;
-        padding: 0px;
-        max-width: 100%;
-        height: auto;
-        width: 100%;
-        box-sizing: border-box;
-    }
+    /* Removed pseudo-element that duplicated pad.png; pad image now handled via inline #padHeader shown only during print/PDF */
 }
 
 .report-title {

@@ -167,6 +167,13 @@
             background: linear-gradient(135deg, #e1f5fe, #b3e5fc);
             border-left-color: #0277BD;
         }
+
+        /* Center align score columns (WRITTEN, CA, Practical, Total, GPA) */
+        thead th:nth-child(n+2):nth-child(-n+6),
+        tbody td:nth-child(n+2):nth-child(-n+6){
+            text-align:center;
+        }
+        tbody td:first-child, thead th:first-child { text-align:left; }
         
         /* Subject-specific colors */
         table tr:nth-child(1) td { border-left-color: #f44336; }
@@ -236,10 +243,7 @@
     </style>
 </head>
 <body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
-    <div class="header">
-        <h1>Feni Model High School</h1>
-        <p class="report-title">Annual Examination Report Card-2024</p>
-    </div>
+    <!-- Header image (pad.png) and dynamic title will be injected within content -->
 
     <div class="container">
         <div id="marksheet" class="marksheet">
@@ -251,7 +255,10 @@
                 <div class="loading">Loading student details...</div>
             </div>
            
-            <button class="print-btn" onclick="printResult()">🖨️ Print Result</button>
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.75rem;justify-content:center;">
+                <button class="print-btn" onclick="printResult()">🖨️ Print Result</button>
+                <button id="downloadPdfBtn" class="print-btn" style="background:#4caf50;" onclick="downloadPdf()">⬇️ Download PDF</button>
+            </div>
         </div>
     </div>
 
@@ -400,6 +407,9 @@
         function displayStudentDetails(student) {
             const container = document.getElementById('marksheetContent');
             container.innerHTML = `
+                <div id="padHeader" class="pad-header" style="text-align:center;display:none;">
+                    <img src="pad.png" alt="Letterhead" style="max-width:100%;height:auto;display:block;margin:0 auto 6px;" />
+                </div>
                 <p class="report-title">Half Yearly Examination Report Card-2025</p>
                 <h2>${student.name}</h2>
                 <p>Father's Name: ${student.fathers_name || 'N/A'}</p>
@@ -481,21 +491,14 @@
         }
         
         function printResult() {
-            // Hide buttons before printing
-            const backBtn = document.querySelector('.back-btn');
-            const printBtn = document.querySelector('.print-btn');
-            
-            if (backBtn) backBtn.style.display = 'none';
-            if (printBtn) printBtn.style.display = 'none';
-            
-            // Print the page
+            // Temporarily show pad header then print; keep buttons hidden after as previous behavior
+            const pad = document.getElementById('padHeader');
+            if(pad) pad.style.display='block';
+            const actionBtns = document.querySelectorAll('.print-btn, .back-btn');
+            actionBtns.forEach(b=>{ b.style.display='none'; });
             window.print();
-            
-            // Show buttons again after printing dialog is closed
-            setTimeout(() => {
-                if (backBtn) backBtn.style.display = 'inline-block';
-                if (printBtn) printBtn.style.display = 'inline-block';
-            }, 500);
+            // After print dialog (cannot detect close reliably) leave pad visible in print output only; hide again on screen
+            setTimeout(()=>{ if(pad) pad.style.display='none'; },800);
         }
 
         // Generate QR Code
@@ -534,6 +537,72 @@
         
         // Initialize
         loadData();
+
+        // PDF libs (lazy injected if not already)
+        function ensurePdfLibs(){
+            return new Promise((resolve,reject)=>{
+                if(window.jspdf && window.html2canvas){ resolve(); return; }
+                let need=0,done=0,failed=false;
+                function ok(){ if(failed) return; done++; if(done===need) resolve(); }
+                function add(src){ need++; const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>{failed=true; reject(new Error('Failed to load '+src));}; document.head.appendChild(s); }
+                add('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+                add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+            });
+        }
+
+        async function downloadPdf(){
+            const btn=document.getElementById('downloadPdfBtn');
+            // Hide buttons (so they won't appear in PDF) and keep hidden after
+            const actionBtns = document.querySelectorAll('.print-btn, .back-btn');
+            actionBtns.forEach(b=>{ b.style.display='none'; });
+            // Show pad temporarily for capture
+            const pad = document.getElementById('padHeader');
+            const prevDisplay = pad ? pad.style.display : null;
+            if(pad) pad.style.display='block';
+            if(btn){ btn.disabled=true; }
+            try{
+                await ensurePdfLibs();
+                const target=document.getElementById('marksheet');
+                const prevScroll=window.scrollY;
+                window.scrollTo(0,0);
+                await new Promise(r=>setTimeout(r,40));
+                // Capture high-res snapshot
+                const canvas=await html2canvas(target,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+                const { jsPDF } = window.jspdf;
+                const pdf=new jsPDF('p','mm','a4');
+                const pageWidth=210, pageHeight=297, margin=10; // mm
+                const availW = pageWidth - margin*2;
+                const availH = pageHeight - margin*2;
+                // Original image size in px
+                const imgWpx = canvas.width;
+                const imgHpx = canvas.height;
+                // Convert px ratio to mm using width fit then scale
+                let scaledW = availW;
+                let scaledH = imgHpx * (scaledW / imgWpx);
+                if(scaledH > availH){
+                    const scale = availH / scaledH; // shrink further to fit height
+                    scaledH = availH;
+                    scaledW = scaledW * scale;
+                }
+                // Top align (no vertical centering) per requirement: pad.png stays at very top
+                const posX = margin + (availW - scaledW)/2; // still horizontally center
+                const posY = margin; // start right below top margin
+                // Load and place pad.png as background (full page)
+                // (Removed full-page background; pad.png now inline at top)
+                const imgData = canvas.toDataURL('image/jpeg',0.92);
+                pdf.addImage(imgData,'JPEG',posX,posY,scaledW,scaledH,'','FAST');
+                const fileName = 'Result_'+ (document.querySelector('#marksheetContent h2')?.textContent||'student') + '.pdf';
+                pdf.save(fileName.replace(/\s+/g,'_'));
+                window.scrollTo(0,prevScroll);
+            }catch(err){
+                alert('PDF তৈরি ব্যর্থ: '+err.message);
+                console.error(err);
+            }finally{
+                if(btn){ btn.disabled=false; }
+                // Hide pad again after capture
+                if(pad) pad.style.display= prevDisplay || 'none';
+            }
+        }
     </script>
 </body>
 </html>
