@@ -185,14 +185,14 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
     function buildCertificateHtml(r){
-  const name = `<strong class=\"emph\">${escHtml(r.name)}</strong>`;
-      const father = escHtml(r.father);
-      const mother = escHtml(r.mother);
-  const registration = escHtml(r.registrationnumber);
-  const roll = escHtml(r.roll);
-  const dob = escHtml(r.dob);
-  const group = escHtml(r.group);
-  const gpa = escHtml(r.gpa);
+    const name = `<strong class=\"emph\">${escHtml(r.name)}</strong>`;
+    const father = `<strong>${escHtml(r.father)}</strong>`;
+    const mother = `<strong>${escHtml(r.mother)}</strong>`;
+  const registration = `<strong>${escHtml(r.registrationnumber)}</strong>`;
+  const roll = `<strong>${escHtml(r.roll)}</strong>`;
+  const dob = `<strong>${escHtml(r.dob)}</strong>`;
+  const group = `<strong>${escHtml(r.group)}</strong>`;
+  const gpa = `<strong>${escHtml(r.gpa)}</strong>`;
   const sscmonth = escHtml(r.sscmonth);
       const g = (r.gender||'').toLowerCase();
       const isFemale = /^(f|female|girl)/.test(g);
