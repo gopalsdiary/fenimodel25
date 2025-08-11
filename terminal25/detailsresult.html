@@ -138,6 +138,10 @@
             font-weight: bold;
             color: #1976D2;
             border-left: 4px solid #2196F3;
+            /* Allow wrapping of long subject names */
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
         
         /* Row-specific styling */
@@ -222,6 +226,11 @@
                 position: sticky;
                 left: 0;
                 z-index: 2;
+                /* Override nowrap for subject column */
+                white-space: normal;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                text-align: left;
             }
             
             table th {

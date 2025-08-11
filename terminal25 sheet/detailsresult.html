@@ -153,6 +153,10 @@
             color: #1976D2;
             border-left: 4px solid #2196F3;
             text-align: left;
+            /* Allow wrapping for long subject names */
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: anywhere;
         }
         
         /* Row-specific styling */
@@ -230,6 +234,11 @@
                 position: sticky;
                 left: 0;
                 z-index: 2;
+                /* Re-enable wrapping for subject names in first column on small screens */
+                white-space: normal;
+                word-break: break-word;
+                overflow-wrap: anywhere;
+                text-align: left;
             }
             
             table th {
