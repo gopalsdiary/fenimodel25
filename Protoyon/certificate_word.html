@@ -8,20 +8,23 @@
     :root { 
       color-scheme: light dark; 
       /* Text block area (main paragraph) */
-      --box-left: 5%;
-      --box-right: 6%;
-      --box-top: 40%;
+      --box-left: 10%;
+      --box-right: 10%;
+      --box-top: 45%;
       --box-bottom: 22%;
+
       /* Serial/Date positions (percentages of the image box) */
-      --serial-top: 10%;
-      --serial-left: 60%;
+      --serial-top: 28%;
+      --serial-left: 20%;
+
       --date-top: 10%;
-      --date-right: 6%;
+      --date-right: 10%;
+
   /* QR code position & size */
   --qr-size: 80px;
-  --qr-bottom: 74%;
-  --qr-right: 81%;
-    }
+  --qr-bottom: 18%;
+  --qr-right: 77%;
+    } 
     body { font-family: 'Times New Roman', Times, serif; margin: 0; background: #f6f7f9; color: #111; }
   header { position: sticky; top: 0; background: white; padding: 1rem; border-bottom: 1px solid #e5e7eb; z-index: 10; }
   /* Original .8rem reduced by 12% => 0.704rem */
@@ -46,7 +49,8 @@
   h1 { margin: 0; font-size: 1.056rem; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     main { padding: 1rem; }
     .layout { display: flex; gap: 2rem; align-items: flex-start; justify-content: center; }
-    .img-wrap { position: relative; width: 600px; min-width: 320px; max-width: 100vw; }
+  /* Adjust width for portrait template (taller aspect) */
+  .img-wrap { position: relative; width: 620px; min-width: 320px; max-width: 100vw; }
     .img-wrap img { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); border: 1px solid #e5e7eb; }
   .overlay { position: absolute; inset: var(--box-top) var(--box-right) var(--box-bottom) var(--box-left); display: block; z-index: 2; pointer-events: none; }
     .overlay-text { 
@@ -70,14 +74,16 @@
   /* 9->7.92, 1vw->0.88vw, 11->9.68 */
   .field { position: absolute; font-size: clamp(7.92px, 0.88vw, 9.68px); line-height: 1; color: #111; }
   /* Replaced serial/date with consolidated info box */
-  .info-box { position:absolute; top: var(--serial-top); right: var(--date-right); text-align:right; font-size:8px; line-height:1.25; font-family: 'Lucida Calligraphy','Lucida Handwriting','Brush Script MT','Segoe Script','Times New Roman',serif; font-weight:600; white-space:pre-line; }
+  .info-box { position:absolute; top: var(--serial-top); left: var(--box-left); right: var(--date-right); text-align: initial; font-size:8px; line-height:1.25; font-family: 'Lucida Calligraphy','Lucida Handwriting','Brush Script MT','Segoe Script','Times New Roman',serif; font-weight:600; white-space:normal; }
+  .info-box .row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .info-box .left, .info-box .right { display:inline-block; }
 
     @media (max-width: 900px) {
       .layout { flex-direction: column; align-items: stretch; }
       .img-wrap { max-width: 100vw; width: 100%; }
     }
     @media print {
-  @page { size: A4 landscape; margin: 8mm; }
+  @page { size: A4 portrait; margin: 8mm; }
   html, body { background: #fff; width: 100%; height: 100%; }
   header { display: none; }
   .layout { flex-direction: column; align-items: stretch; }
@@ -378,16 +384,17 @@
   if(!imgText){ console.warn('Overlay text element #imgText not found'); }
   else if(!imgText.innerHTML){ console.warn('Overlay text element empty after render'); }
       const infoBox = document.getElementById('infoBox');
-      if(infoBox){
-        const lines = [];
-        if(rec.roll) lines.push('Roll No : '+ escHtml(rec.roll));
-        if(rec.registrationnumber) lines.push('Reg. No : '+ escHtml(rec.registrationnumber));
-        if(rec.session) lines.push('Session: '+ escHtml(rec.session));
-        lines.push('Issue Date : '+ escHtml(rec.date));
-        infoBox.innerHTML = lines.join('<br>');
-      }
-  // Left panel fully removed
-  const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = 'SL No : ' + (rec.sl ? rec.sl + '/2025' : '');
+        if(infoBox){
+          const slHtml = rec.sl ? ('SL No : ' + escHtml(rec.sl + '/2025')) : '';
+          const dateHtml = rec.date ? ('Issue Date : ' + escHtml(rec.date)) : '';
+          const firstRow = (slHtml || dateHtml)
+            ? `<div class="row"><span class="left">${slHtml}</span><span class="right">${dateHtml}</span></div>`
+            : '';
+          const sessionRow = rec.session ? `<div>Session: ${escHtml(rec.session)}</div>` : '';
+          infoBox.innerHTML = firstRow + sessionRow;
+        }
+    // Remove SL text from under QR (moved to info box)
+    const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = '';
   
       // Prepare a stable shareable QR URL with unique key
       try {
@@ -481,7 +488,7 @@
         const canvas = await html2canvas(target, {scale:2, useCORS:true});
         const imgData = canvas.toDataURL('image/png');
         const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF('landscape','pt','a4');
+  const pdf = new jsPDF('portrait','pt','a4');
         const pageW = pdf.internal.pageSize.getWidth();
         const pageH = pdf.internal.pageSize.getHeight();
         // Fit width; center vertically
@@ -503,7 +510,7 @@
   <main>
     <div class="layout">
       <div class="img-wrap">
-        <img src="./testimonial.png" alt="Certificate background" />
+  <img src="./pad_protoyan.png" alt="Certificate background" />
   <!-- Consolidated info box -->
   <div class="info-box" id="infoBox"></div>
   <!-- Left panel removed -->
