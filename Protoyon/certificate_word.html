@@ -4,6 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Transfer Certificate (Image)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Kalpurush Bangla font -->
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
   <style>
     :root { 
       color-scheme: light dark; 
@@ -15,10 +20,10 @@
 
       /* Serial/Date positions (percentages of the image box) */
       --serial-top: 28%;
-      --serial-left: 20%;
+      --serial-left: 15%;
 
       --date-top: 10%;
-      --date-right: 10%;
+      --date-right: 7%;
 
   /* QR code position & size */
   --qr-size: 80px;
@@ -32,7 +37,7 @@
   .btn:hover { background:#f2f4f7; }
   .btn:active { background:#e5e7eb; }
   @media (prefers-color-scheme: dark) { .btn { background:#1f2937; color:#e5e7eb; border-color:#374151; } .btn:hover { background:#2a3342; } .btn:active { background:#374151; } }
-  .action-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: .75rem; background: rgba(255,255,255,.9); padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12); backdrop-filter: blur(6px); }
+  .action-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: .75rem; background: rgba(255,255,255,.9); padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12), 0 8px 28px rgba(37,99,235,0.10); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   @media (prefers-color-scheme: dark) { .action-bar { background: rgba(17,23,41,.85); border-color:#263148; } }
   /* QR code overlay */
   .qr-wrap { position:absolute; bottom: var(--qr-bottom); right: var(--qr-right); width: var(--qr-size); background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; mix-blend-mode:multiply; }
@@ -54,18 +59,18 @@
     .img-wrap img { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); border: 1px solid #e5e7eb; }
   .overlay { position: absolute; inset: var(--box-top) var(--box-right) var(--box-bottom) var(--box-left); display: block; z-index: 2; pointer-events: none; }
     .overlay-text { 
-  /* Clamp reduced by 12%: 6.3->5.544, 0.84vw->0.7392vw, 11.2->9.856 */
-  font-size: clamp(5.544px, 0.7392vw, 9.856px); 
+  /* Increased body font size by ~40% */
+  font-size: clamp(7.762px, 1.035vw, 13.8px); 
       line-height: 1.55; 
       color: #111; 
       white-space: pre-line; 
       text-align: justify;
       text-justify: inter-word;
-      word-break: break-word; 
-      hyphens: auto; 
-  /* Applied decorative script font for certificate body */
-  font-family: 'Lucida Calligraphy','Lucida Handwriting','Brush Script MT','Segoe Script','Times New Roman',serif;
-  letter-spacing: .25px;
+    word-break: break-word; 
+    hyphens: auto; 
+  /* Prefer Kalpurush for Bangla text, with sensible fallbacks */
+  font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, 'Times New Roman', serif;
+  letter-spacing: .1px;
     z-index: 3;
     position: relative;
     }
@@ -74,7 +79,7 @@
   /* 9->7.92, 1vw->0.88vw, 11->9.68 */
   .field { position: absolute; font-size: clamp(7.92px, 0.88vw, 9.68px); line-height: 1; color: #111; }
   /* Replaced serial/date with consolidated info box */
-  .info-box { position:absolute; top: var(--serial-top); left: var(--box-left); right: var(--date-right); text-align: initial; font-size:8px; line-height:1.25; font-family: 'Lucida Calligraphy','Lucida Handwriting','Brush Script MT','Segoe Script','Times New Roman',serif; font-weight:600; white-space:normal; }
+  .info-box { position:absolute; top: var(--serial-top); left: var(--box-left); right: var(--date-right); text-align: initial; font-size:15.68px; line-height:1.25; font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, 'Times New Roman', serif; font-weight:600; white-space:normal; }
   .info-box .row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
   .info-box .left, .info-box .right { display:inline-block; }
 
@@ -131,13 +136,25 @@
   dob: ['dob','date of birth','birth date','dateofbirth'],
     iid: ['iid','id','student id','studentid','student-id','sid','s id','s.i.d','school_iid','school iid','schoolid','school-id','sch_iid','sch iid','uniqueid','unique id','unique_id','studentcode','student code','student_code','stu_id','studid'],
   sl: ['sl','serial','serial no','serial number','serialno','sl no','slno','sl.','s.l','s.l.'],
-  date: ['date','issue date','certificate date'],
+  issue_date: ['date','issue date','certificate date'],
   issueby: ['issueby','issuedby','issued by','issued','issue by','issue-by','issuedbyname','issued name','issuedname'],
   gender: ['gender','sex'],
   group: ['group','grp','subject group'],
   gpa: ['gpa','grade point','gradepoint','result','g.p.a'],
   sscmonth: ['sscmonth','exam month','ssc exam month','month','exammonth'],
-  session: ['session','academic session','sess','session year','exam session','year']
+  session: ['session','academic session','sess','session year','exam session','year'],
+  year: ['year','yr','exam year','passing year','issue year','issue_year','session_year','year of issue'],
+  // Bangla fields
+  name_bangla: ['name_bangla','name (bangla)','student name bangla','name bn','name_bn','bn_name','student_name_bangla'],
+  father_bangla: ['father_bangla','father (bangla)','father name bangla','bn_father','father_bn','fathers_name_bangla'],
+  mother_bangla: ['mother_bangla','mother (bangla)','mother name bangla','bn_mother','mother_bn','mothers_name_bangla'],
+  village_bangla: ['village_bangla','gram_bangla','village (bangla)','gram','gram bn','gram_bn'],
+  postoffice_bangla: ['postoffice_bangla','post office bangla','dakghor_bangla','dakghor bangla','postoffice (bangla)','dakghar_bangla'],
+  upazila_bangla: ['upazila_bangla','upazilla_bangla','upozila_bangla','upazila (bangla)','thana_bangla'],
+  zilla_bangla: ['zilla_bangla','district_bangla','zilla (bangla)','jila_bangla'],
+  class_bangla: ['class_bangla','class (bangla)','shreni_bangla','class_bn'],
+  shift_bangla: ['shift_bangla','section_bangla','shakha_bangla','section (bangla)','shift (bangla)'],
+  roll_bangla: ['roll_bangla','roll no bangla','roll_bn','roll (bangla)']
       };
       const csvMap = {};
       for (const key of Object.keys(alias)){ const hdr = findHeaderByAliases(fieldMap, alias[key]); if (hdr) csvMap[key] = hdr; }
@@ -157,33 +174,44 @@
         registrationnumber: getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration'),
         dob: getVal(row, csvMap, 'dob'),
         iid: getVal(row, csvMap, 'iid'),
-        sl: getVal(row, csvMap, 'sl'),
-        date: defaultDate(getVal(row, csvMap, 'date')),
+  sl: getVal(row, csvMap, 'sl'),
+  issue_date: getVal(row, csvMap, 'issue_date'),
+  year: getVal(row, csvMap, 'year'),
+  date: getVal(row, csvMap, 'issue_date') || defaultDate(''),
   issueby: getVal(row, csvMap, 'issueby'),
   gender: getVal(row, csvMap, 'gender'),
   group: getVal(row, csvMap, 'group'),
   gpa: getVal(row, csvMap, 'gpa'),
   sscmonth: getVal(row, csvMap, 'sscmonth'),
   session: getVal(row, csvMap, 'session'),
+  // Bangla fields
+  name_bangla: getVal(row, csvMap, 'name_bangla'),
+  father_bangla: getVal(row, csvMap, 'father_bangla'),
+  mother_bangla: getVal(row, csvMap, 'mother_bangla'),
+  village_bangla: getVal(row, csvMap, 'village_bangla'),
+  postoffice_bangla: getVal(row, csvMap, 'postoffice_bangla'),
+  upazila_bangla: getVal(row, csvMap, 'upazila_bangla'),
+  zilla_bangla: getVal(row, csvMap, 'zilla_bangla'),
+  class_bangla: getVal(row, csvMap, 'class_bangla'),
+  shift_bangla: getVal(row, csvMap, 'shift_bangla'),
+  roll_bangla: getVal(row, csvMap, 'roll_bangla'),
       };
     }
 
     function buildCertificateText(r){
-  const g = (r.gender||'').toLowerCase();
-  const isFemale = /^(f|female|girl)/.test(g);
-  const rawG = (r.gender||'');
-  const isMale = /m/i.test(rawG) && !/f/i.test(rawG); // if both letters appear prefer female first rule (F takes precedence)
-  const isFem = /f/i.test(rawG);
-  const childWord = isFem ? 'Daughter' : isMale ? 'Son' : 'Son/Daughter';
-  const he = isFem ? 'she' : isMale ? 'he' : 'he / she';
-  const He = he.charAt(0).toUpperCase()+he.slice(1);
-  const his = isFem ? 'her' : isMale ? 'his' : 'his / her';
-  const His = his.charAt(0).toUpperCase()+his.slice(1);
-  const him = isFem ? 'her' : isMale ? 'him' : 'him / her';
-  const line1 = `This is to certify that ${r.name||''} ${childWord} of ${r.father||''} and ${r.mother||''} duly passed the S.S.C Examination held in the month of ${r.sscmonth||''} under the Board of Intermediate and Secondary Education, Cumilla as a regular/irregular candidate in ${r.group||''} group and secured G.P.A ${r.gpa||''} on a scale of 5.00. ${His} S.S.C registration number is ${r.registrationnumber||''} & S.S.C roll is ${r.roll||''}.`;
-  const line2 = `${His} date of birth is ${r.dob||''}. In so far as I know, ${he} bears a good moral character and did not take part in any activities subversive of the state or of the school during ${his} stay in the school.`;
-  const line3 = `I wish ${him} every success in life.`;
-  return [line1, '', line2, '', line3].join('\n');
+      const name = r.name_bangla || r.name || '';
+      const father = r.father_bangla || r.father || '';
+      const mother = r.mother_bangla || r.mother || '';
+      const village = r.village_bangla || '';
+      const post = r.postoffice_bangla || '';
+      const upazila = r.upazila_bangla || '';
+      const zilla = r.zilla_bangla || '';
+      const cls = r.class_bangla || '';
+      const shift = r.shift_bangla || '';
+      const roll = r.roll_bangla || r.roll || '';
+      const line1 = `এই মর্মে প্রত্যয়ন করা যাইতেছে যে, ${name}, পিতা: ${father}, মাতা: ${mother}, গ্রাম- ${village}, ডাকঘর: ${post}, উপজেলা: ${upazila}, জেলা: ${zilla}, অত্র বিদ্যালয়ে ${cls} শ্রেণিতে ${shift} শাখায় অধ্যয়নরত। তাহার শ্রেণি রোল নং- ${roll}।`;
+      const line2 = `আমি তাহার সর্বাঙ্গীন সাফল্য ও উজ্জ্বল ভবিষ্যৎ কামনা করি।`;
+      return [line1, '', line2].join('\n');
     }
 
     // Safe HTML for overlay with bolded name
@@ -191,30 +219,19 @@
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
     function buildCertificateHtml(r){
-    const name = `<strong class=\"emph\">${escHtml(r.name)}</strong>`;
-    const father = `<strong>${escHtml(r.father)}</strong>`;
-    const mother = `<strong>${escHtml(r.mother)}</strong>`;
-  const registration = `<strong>${escHtml(r.registrationnumber)}</strong>`;
-  const roll = `<strong>${escHtml(r.roll)}</strong>`;
-  const dob = `<strong>${escHtml(r.dob)}</strong>`;
-  const group = `<strong>${escHtml(r.group)}</strong>`;
-  const gpa = `<strong>${escHtml(r.gpa)}</strong>`;
-  const sscmonth = escHtml(r.sscmonth);
-      const g = (r.gender||'').toLowerCase();
-      const isFemale = /^(f|female|girl)/.test(g);
-  const rawG = (r.gender||'');
-  const isMale = /m/i.test(rawG) && !/f/i.test(rawG);
-  const isFem = /f/i.test(rawG);
-  const childWord = isFem ? 'Daughter' : isMale ? 'Son' : 'Son/Daughter';
-  const he = isFem ? 'she' : isMale ? 'he' : 'he / she';
-  const He = he.charAt(0).toUpperCase()+he.slice(1);
-  const his = isFem ? 'her' : isMale ? 'his' : 'his / her';
-  const His = his.charAt(0).toUpperCase()+his.slice(1);
-  const him = isFem ? 'her' : isMale ? 'him' : 'him / her';
-  const line1 = `This is to certify that ${name} ${childWord} of ${father} and ${mother} duly passed the S.S.C Examination held in the month of ${sscmonth} under the Board of Intermediate and Secondary Education, Cumilla as a regular/irregular candidate in ${group} group and secured G.P.A ${gpa} on a scale of 5.00. ${His} S.S.C registration number is ${registration} & S.S.C roll is ${roll}.`;
-  const line2 = `<em>${His} date of birth is ${dob}. In so far as I know, ${he} bears a good moral character and did not take part in any activities subversive of the state or of the school during ${his} stay in the school.</em>`;
-  const line3 = `<em>I wish ${him} every success in life.</em>`;
-  return [line1,line2,line3].join('<br/><br/>');
+      const name = `<strong class=\"emph\">${escHtml(r.name_bangla || r.name)}</strong>`;
+      const father = `<strong>${escHtml(r.father_bangla || r.father)}</strong>`;
+      const mother = `<strong>${escHtml(r.mother_bangla || r.mother)}</strong>`;
+      const village = escHtml(r.village_bangla || '');
+      const post = escHtml(r.postoffice_bangla || '');
+      const upazila = escHtml(r.upazila_bangla || '');
+      const zilla = escHtml(r.zilla_bangla || '');
+  const cls = `<strong>${escHtml(r.class_bangla || '')}</strong>`;
+  const shift = `<strong>${escHtml(r.shift_bangla || '')}</strong>`;
+      const roll = `<strong>${escHtml(r.roll_bangla || r.roll || '')}</strong>`;
+      const line1 = `এই মর্মে প্রত্যয়ন করা যাইতেছে যে, ${name}, পিতা: ${father}, মাতা: ${mother}, গ্রাম- ${village}, ডাকঘর: ${post}, উপজেলা: ${upazila}, জেলা: ${zilla}, অত্র বিদ্যালয়ে ${cls} শ্রেণিতে ${shift} শাখায় অধ্যয়নরত। তাহার শ্রেণি রোল নং- ${roll}।`;
+      const line2 = `আমি তাহার সর্বাঙ্গীন সাফল্য ও উজ্জ্বল ভবিষ্যৎ কামনা করি।`;
+      return [line1, line2].join('<br/><br/>');
     }
 
 
@@ -385,13 +402,13 @@
   else if(!imgText.innerHTML){ console.warn('Overlay text element empty after render'); }
       const infoBox = document.getElementById('infoBox');
         if(infoBox){
-          const slHtml = rec.sl ? ('SL No : ' + escHtml(rec.sl + '/2025')) : '';
-          const dateHtml = rec.date ? ('Issue Date : ' + escHtml(rec.date)) : '';
+          const yr = rec.year || (rec.issue_date && (String(rec.issue_date).match(/\d{4}/)||[])[0]) || String(new Date().getFullYear());
+          const slHtml = rec.sl ? ('স্বারক নং - ' + escHtml(rec.sl + '/' + yr)) : '';
+          const dateHtml = rec.issue_date ? ('তারিখ : ' + escHtml(rec.issue_date) +'  ইং') : '';
           const firstRow = (slHtml || dateHtml)
             ? `<div class="row"><span class="left">${slHtml}</span><span class="right">${dateHtml}</span></div>`
             : '';
-          const sessionRow = rec.session ? `<div>Session: ${escHtml(rec.session)}</div>` : '';
-          infoBox.innerHTML = firstRow + sessionRow;
+          infoBox.innerHTML = firstRow;
         }
     // Remove SL text from under QR (moved to info box)
     const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = '';

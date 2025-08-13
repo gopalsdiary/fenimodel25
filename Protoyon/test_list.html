@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>প্রত্যয়ন তালিকা</title>
+  <title>প্রত্যয়ন তালিকা (বাংলা)</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <style>
     :root { color-scheme: light dark; }
@@ -58,10 +58,10 @@
       const norm = s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
       const want={
         sl:['sl','serial','serialno','serialnumber','serial_no'],
-        name:['name','studentname','fullname'],
-        father:['father','fathername','fathersname','father_s_name','fname'],
-        mother:['mother','mothername','mothersname','m_name'],
-        roll:['roll','rollno','rollnumber'],
+        name:['name_bangla','studentname','fullname'],
+        father:['father_bangla','fathername','fathersname','father_s_name','fname'],
+        mother:['mother_bangla','mothername','mothersname','m_name'],
+        roll:['roll_bangla','rollno','rollnumber'],
         iid:['iid','id','studentid','sid','uniqueid'],
         registrationnumber:['registrationnumber','registration number','registration','regno','reg no','reg_number'],
         dob:['dob','dateofbirth','birthdate','date of birth'],
@@ -240,7 +240,7 @@
 <body>
   <header>
     <div class="container">
-      <h1>প্রত্যয়ন তালিকা <span class="muted status" id="status"></span></h1>
+      <h1>প্রত্যয়ন তালিকা (বাংলা) <span class="muted status" id="status"></span></h1>
       <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted"> প্রত্যয়ন এন্ট্রিকরার পর প্রসেসিং এর জন্য ৫ মিনিট অপেক্ষা করুণ।</p>
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
