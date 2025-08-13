@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feni Model High School</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+         :root {
+            --bg: #f8f9fa;
+            --glass: rgba(255, 255, 255, 0.9);
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            --radius: 12px;
+            --accent: #4a90e2;
+            --font-size-small: 0.7rem;
+            --font-size-medium: 0.875rem;
+            --font-size-large: 1.05rem;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            min-height: 100vh;
+            padding: 1rem; /* Reduced padding for mobile */
+            font-size: var(--font-size-medium);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .nav {
+            backdrop-filter: blur(10px);
+            background: var(--glass);
+            padding: 1rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem; /* Reduced margin */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: var(--font-size-large);
+        }
+
+        .group-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius);
+            padding: 1rem; /* Reduced padding */
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem; /* Reduced margin */
+            text-align: center;
+        }
+
+        .group-card h3 {
+            margin-bottom: 0.5rem; /* Reduced margin */
+            font-size: var(--font-size-large);
+        }
+
+        .card-container {
+            display: flex;
+            flex-direction: column; /* Stack cards vertically on mobile */
+            gap: 1rem;
+            margin-top: 1rem; /* Reduced margin */
+        }
+
+        .card-button {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius);
+            padding: 0.75rem 1rem; /* Reduced padding */
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            font-size: var(--font-size-medium);
+            text-align: center;
+            text-decoration: none;
+            color: inherit;
+            width: 100%; /* Make buttons full width on mobile */
+            box-sizing: border-box; /* Include padding in width calculation */
+        }
+
+
+        /* Media Queries for Responsiveness */
+        @media (max-width: 768px) {
+            .card-container {
+                flex-direction: column; /* Stack cards vertically */
+            }
+            .container {
+                max-width: 95%; /* Make container almost full width */
+                padding: 0 1rem;
+            }
+            .card-button {
+                font-size: var(--font-size-small); /* Smaller font size */
+            }
+        }
+
+    </style>
+    <script>
+        const passwords = {};
+
+        async function loadPasswords() {
+            try {
+                const response = await fetch('password.csv');
+                if (!response.ok) {
+                    console.error('Failed to load password file:', response.status);
+                    alert('Error loading password data. Please contact administrator.');
+                    return;
+                }
+                
+                const data = await response.text();
+                const lines = data.split('\n');
+                lines.forEach(line => {
+                    const [fileName, password] = line.split(',');
+                    if (fileName && password) {
+                        passwords[fileName.trim()] = password.trim();
+                    }
+                });
+                console.log('Passwords loaded successfully');
+            } catch (error) {
+                console.error('Error loading passwords:', error);
+                alert('Error loading password data. Please contact administrator.');
+            }
+        }
+
+        function openFile(fileName) {
+            if (!passwords[fileName]) {
+                alert('Password not found for this file. Please contact administrator.');
+                return;
+            }
+            
+            const userPassword = prompt("Enter password for " + fileName + ":");
+            if (userPassword === passwords[fileName]) {
+                window.location.href = fileName;
+            } else {
+                alert("Incorrect password!");
+            }
+        }
+
+        window.onload = loadPasswords;
+    </script>
+
+</head>
+<body>
+    <div class="container">
+        <nav class="nav">
+            <h1>Feni Model High School</h1>
+                    </nav>
+        <nav2 class="text align-items-center blur nav bg-light">
+            <p>Student Data Management</p>
+        </nav2>
+        
+
+        <div class="group-card">
+            <h3>Class 6</h3>
+            <div class="card-container">
+                <button class="card-button" onclick="openFile('class6/6golap.html')">6 Golap</button>
+                <button class="card-button" onclick="openFile('class6/6shapla.html')">6 Shapla</button>
+                <button class="card-button" onclick="openFile('class6/6mor.html')">6 Morning</button>
+            </div>
+        </div>
+        <div class="group-card">
+            <h3>Class 7</h3>
+            <div class="card-container">
+                <button class="card-button" onclick="openFile('class7/7golap.html')">7 Golap</button>
+                <button class="card-button" onclick="openFile('class7/7shapla.html')">7 Shapla</button>
+                <button class="card-button" onclick="openFile('class7/7mor.html')">7 Morning</button>
+            </div>
+        </div>
+        <div class="group-card">
+            <h3>Class 8</h3>
+            <div class="card-container">
+                <button class="card-button" onclick="openFile('class8/8golap.html')">8 Golap</button>
+                <button class="card-button" onclick="openFile('class8/8shapla.html')">8 Shapla</button>
+                <button class="card-button" onclick="openFile('class8/8mor.html')">8 Morning</button>
+            </div>
+        </div>
+        <div class="group-card">
+            <h3>Class 9</h3>
+            <div class="card-container">
+                <button class="card-button" onclick="openFile('class9/9golap.html')">9 Golap</button>
+                <button class="card-button" onclick="openFile('class9/9shapla.html')">9 Shapla</button>
+                <button class="card-button" onclick="openFile('class9/9mor.html')">9 Morning</button>
+            </div>
+        </div>
+        <div class="group-card">
+            <h3>Class 10</h3>
+            <div class="card-container">
+                <button class="card-button" onclick="openFile('class10/10golap.html')">10 Golap</button>
+                <button class="card-button" onclick="openFile('class10/10shapla.html')">10 Shapla</button>
+                <button class="card-button" onclick="openFile('class10/10mor.html')">10 Morning</button>
+            </div>
+        </div>
+
+        
+</body>
+
+</html>
