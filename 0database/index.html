@@ -57,16 +57,43 @@
             box-shadow: var(--shadow);
             margin-bottom: 1rem; /* Reduced margin */
             text-align: center;
+            border-left: 6px solid transparent; /* will be colored per group */
         }
 
         .group-card h3 {
             margin-bottom: 0.5rem; /* Reduced margin */
-            font-size: var(--font-size-large);
+            font-size: calc(var(--font-size-large) * 1.5); /* Increased by 50% */
         }
 
+        /* Group-specific accents */
+        .group-6 { border-left-color: #2196F3; background: linear-gradient(90deg, rgba(33,150,243,0.08), rgba(255,255,255,0.8)); }
+        .group-6 h3 { color: #1976D2; }
+        .group-6 .card-button { border: 1px solid rgba(33,150,243,0.25); }
+        .group-6 .card-button:hover { background: rgba(33,150,243,0.10); }
+
+        .group-7 { border-left-color: #4CAF50; background: linear-gradient(90deg, rgba(76,175,80,0.08), rgba(255,255,255,0.8)); }
+        .group-7 h3 { color: #2E7D32; }
+        .group-7 .card-button { border: 1px solid rgba(76,175,80,0.25); }
+        .group-7 .card-button:hover { background: rgba(76,175,80,0.10); }
+
+        .group-8 { border-left-color: #9C27B0; background: linear-gradient(90deg, rgba(156,39,176,0.08), rgba(255,255,255,0.8)); }
+        .group-8 h3 { color: #6A1B9A; }
+        .group-8 .card-button { border: 1px solid rgba(156,39,176,0.25); }
+        .group-8 .card-button:hover { background: rgba(156,39,176,0.10); }
+
+        .group-9 { border-left-color: #FF9800; background: linear-gradient(90deg, rgba(255,152,0,0.10), rgba(255,255,255,0.8)); }
+        .group-9 h3 { color: #EF6C00; }
+        .group-9 .card-button { border: 1px solid rgba(255,152,0,0.30); }
+        .group-9 .card-button:hover { background: rgba(255,152,0,0.12); }
+
+        .group-10 { border-left-color: #E91E63; background: linear-gradient(90deg, rgba(233,30,99,0.08), rgba(255,255,255,0.8)); }
+        .group-10 h3 { color: #C2185B; }
+        .group-10 .card-button { border: 1px solid rgba(233,30,99,0.25); }
+        .group-10 .card-button:hover { background: rgba(233,30,99,0.10); }
+
         .card-container {
-            display: flex;
-            flex-direction: column; /* Stack cards vertically on mobile */
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* show three in one line */
             gap: 1rem;
             margin-top: 1rem; /* Reduced margin */
         }
@@ -77,22 +104,47 @@
             border-radius: var(--radius);
             padding: 0.75rem 1rem; /* Reduced padding */
             box-shadow: var(--shadow);
-            transition: transform 0.3s ease;
+            transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
             cursor: pointer;
             font-size: var(--font-size-medium);
             text-align: center;
             text-decoration: none;
-            color: inherit;
-            width: 100%; /* Make buttons full width on mobile */
-            box-sizing: border-box; /* Include padding in width calculation */
+            color: #fff; /* ensure contrast on colored buttons */
+            width: 100%;
+            box-sizing: border-box;
+            border: none;
+        }
+
+        /* Three distinct button colors per row */
+        .group-card .card-container .card-button:nth-child(1) {
+            background-color: #2196F3; /* Blue */
+        }
+        .group-card .card-container .card-button:nth-child(1):hover {
+            background-color: #1e88e5;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(33,150,243,0.3);
+        }
+        .group-card .card-container .card-button:nth-child(2) {
+            background-color: #4CAF50; /* Green */
+        }
+        .group-card .card-container .card-button:nth-child(2):hover {
+            background-color: #43a047;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(76,175,80,0.3);
+        }
+        .group-card .card-container .card-button:nth-child(3) {
+            background-color: #FF9800; /* Orange */
+        }
+        .group-card .card-container .card-button:nth-child(3):hover {
+            background-color: #fb8c00;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(255,152,0,0.35);
         }
 
 
         /* Media Queries for Responsiveness */
         @media (max-width: 768px) {
-            .card-container {
-                flex-direction: column; /* Stack cards vertically */
-            }
+            /* Keep three in one line as requested; reduce font size only */
             .container {
                 max-width: 95%; /* Make container almost full width */
                 padding: 0 1rem;
@@ -158,7 +210,7 @@
         </nav2>
         
 
-        <div class="group-card">
+    <div class="group-card group-6">
             <h3>Class 6</h3>
             <div class="card-container">
                 <button class="card-button" onclick="openFile('class6/6golap.html')">6 Golap</button>
@@ -166,7 +218,7 @@
                 <button class="card-button" onclick="openFile('class6/6mor.html')">6 Morning</button>
             </div>
         </div>
-        <div class="group-card">
+    <div class="group-card group-7">
             <h3>Class 7</h3>
             <div class="card-container">
                 <button class="card-button" onclick="openFile('class7/7golap.html')">7 Golap</button>
@@ -174,7 +226,7 @@
                 <button class="card-button" onclick="openFile('class7/7mor.html')">7 Morning</button>
             </div>
         </div>
-        <div class="group-card">
+    <div class="group-card group-8">
             <h3>Class 8</h3>
             <div class="card-container">
                 <button class="card-button" onclick="openFile('class8/8golap.html')">8 Golap</button>
@@ -182,7 +234,7 @@
                 <button class="card-button" onclick="openFile('class8/8mor.html')">8 Morning</button>
             </div>
         </div>
-        <div class="group-card">
+    <div class="group-card group-9">
             <h3>Class 9</h3>
             <div class="card-container">
                 <button class="card-button" onclick="openFile('class9/9golap.html')">9 Golap</button>
@@ -190,7 +242,7 @@
                 <button class="card-button" onclick="openFile('class9/9mor.html')">9 Morning</button>
             </div>
         </div>
-        <div class="group-card">
+    <div class="group-card group-10">
             <h3>Class 10</h3>
             <div class="card-container">
                 <button class="card-button" onclick="openFile('class10/10golap.html')">10 Golap</button>
