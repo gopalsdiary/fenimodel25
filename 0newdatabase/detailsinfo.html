@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="bn">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>বিস্তারিত তথ্য</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+	<style>
+		:root { color-scheme: light dark; }
+		body { margin:0; font-family:'Kalpurush','Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:#f6f7f9; color:#111; }
+		header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e5e7eb; z-index:10; }
+		.container { max-width:900px; margin:0 auto; padding:1rem; }
+		h1 { margin:.25rem 0; font-size:1.15rem; text-align:center; }
+		.toolbar { display:flex; gap:.6rem; align-items:center; justify-content:center; flex-wrap:wrap; margin:.4rem 0 .8rem; }
+		/* Admission form box styling */
+		.form-box { background:#fff; border:2px solid #0ea5e9; border-radius:14px; box-shadow:0 10px 30px rgba(2,132,199,.12); padding:1.1rem 1.2rem 1.25rem; }
+		.form-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin:0 0 .8rem; border-bottom:2px solid #e5e7eb; padding-bottom:.5rem; }
+		.form-title { margin:0; font-size:1.2rem; letter-spacing:.4px; }
+		.form-meta { margin:0; font-size:.82rem; color:#64748b; text-align:right; }
+		dl { display:grid; grid-template-columns: 240px 1fr; column-gap:1rem; row-gap:.5rem; margin:0; }
+		dt { font-weight:800; color:#374151; align-self:center; }
+		dt::after { content:' :'; font-weight:400; color:#9ca3af; }
+		dd { margin:0; color:#111; padding: .15rem 0 .35rem; border-bottom:1px dashed #cbd5e1; min-height:1.6rem; }
+		.actions { display:flex; gap:.6rem; justify-content:center; margin-top:1rem; }
+		.btn { display:inline-block; padding:.5rem .8rem; border:1px solid #d0d7de; border-radius:8px; background:#fff; text-decoration:none; color:#111; font-size:.85rem; cursor:pointer; }
+		.btn:hover { background:#f3f4f6; }
+		.muted { color:#6b7280; }
+		@media print {
+			@page { size:A4 portrait; margin:12mm; }
+			header { display:none; }
+			body { background:#fff; }
+			.container { max-width:100%; padding:0; }
+			.form-box { box-shadow:none; border-color:#000; }
+			.form-head { border-bottom-color:#000; }
+			dl { row-gap:.4rem; }
+			dd { border-bottom-color:#000; }
+		}
+		@media (prefers-color-scheme: dark){
+			body { background:#0b1020; color:#e5e7eb; }
+			header, .form-box { background:#111729; border-color:#075985; }
+			.form-head { border-bottom-color:#263148; }
+			dt { color:#cbd5e1; } dd { color:#e5e7eb; border-bottom-color:#334155; }
+			dt::after { color:#94a3b8; }
+			.btn { background:#111729; color:#e5e7eb; border-color:#263148; }
+			.btn:hover { background:#0f162a; }
+		}
+	</style>
+	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+	<script>
+		function byParam(n){ return new URLSearchParams(location.search).get(n) || ''; }
+		function csvUrl(id, sheet){
+			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+		}
+		function esc(s){ return String(s ?? ''); }
+		function normHeader(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
+		function findIidKey(fields){
+			const order = ['iid','id','studentid','sid'];
+			const map = new Map(fields.map(f=>[normHeader(f), f]));
+			for(const key of order){ if(map.has(key)) return map.get(key); }
+			return null;
+		}
+
+		async function init(){
+			const id = byParam('id');
+			const sheet = byParam('sheet');
+			const rowIdxParam = byParam('r');
+			const rowIdx = Number.isFinite(parseInt(rowIdxParam,10)) ? parseInt(rowIdxParam,10) : null;
+			const iidParam = byParam('iid');
+			const head = document.getElementById('head');
+			const status = document.getElementById('status');
+			const meta = document.getElementById('meta');
+			if(!id || !sheet){ status.textContent='Invalid link'; status.classList.add('muted'); return; }
+			head.textContent = 'বিস্তারিত তথ্য';
+			meta.textContent = `Sheet: ${sheet}`;
+			status.textContent = 'Loading…';
+			try{
+				const url = csvUrl(id, sheet);
+				const results = await new Promise((resolve,reject)=>{
+					Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
+				});
+				const rows = (results && results.data) ? results.data : [];
+				let row = null; let usedBy = '';
+				if(iidParam){
+					// Try to locate by iid
+					const fields = (results.meta && results.meta.fields) || Object.keys(rows[0]||{});
+					const iidKey = findIidKey(fields);
+					if(iidKey){
+						row = rows.find(r=> String(r[iidKey]??'').trim() === String(iidParam).trim());
+						if(row) usedBy = `IID: ${iidParam}`;
+					}
+				}
+				if(!row && rowIdx!=null){
+					if(rowIdx >=0 && rowIdx < rows.length){ row = rows[rowIdx]; usedBy = `Row: ${rowIdx+1}`; }
+				}
+				if(!row){ status.textContent='Record not found'; return; }
+				meta.textContent = `Sheet: ${sheet}` + (usedBy? ` · ${usedBy}`:'');
+
+						const fields = (results.meta && results.meta.fields) || Object.keys(row||{});
+						const dl = document.getElementById('dl');
+						let shown = 0;
+						function cleanLabel(name){
+							let s = String(name||'');
+							s = s.replace(/["']/g,'').trim();
+							s = s.replace(/^_+/, '');
+							s = s.replace(/[_\s]+/g,' ').trim();
+							return s;
+						}
+						fields.forEach(f=>{
+							const label = cleanLabel(f);
+							const isWeird = !label || /^\d+$/.test(label) || /^_?\d+$/.test(String(f||''));
+							const valRaw = row[f];
+							const val = esc(valRaw);
+							const valTrim = String(valRaw==null? '' : valRaw).trim();
+							if(isWeird && !valTrim) return; // skip empty weird columns
+							if(!valTrim) return; // hide empty values to reduce noise
+							const dt=document.createElement('dt'); dt.textContent = label || String(f||'');
+							const dd=document.createElement('dd'); dd.textContent = val;
+							dl.appendChild(dt); dl.appendChild(dd);
+							shown++;
+						});
+						if(shown===0){
+							const dt=document.createElement('dt'); dt.textContent='Info';
+							const dd=document.createElement('dd'); dd.textContent='No non-empty fields to display.';
+							dl.appendChild(dt); dl.appendChild(dd);
+						}
+				status.textContent = 'Ready';
+			}catch(e){
+				console.error(e); status.textContent='Failed to load';
+			}
+		}
+		window.addEventListener('DOMContentLoaded', init);
+	</script>
+</head>
+<body>
+	<header>
+		<div class="container">
+			<h1 id="head">বিস্তারিত তথ্য</h1>
+			<div class="toolbar">
+				<a class="btn" href="datalist.html">← Back to list</a>
+				<span id="status" class="muted"></span>
+			</div>
+		</div>
+	</header>
+	<main>
+		<div class="container">
+			<div class="form-box">
+				<div class="form-head">
+					<h2 class="form-title">ভর্তি ফরম</h2>
+					<p class="form-meta" id="meta"></p>
+				</div>
+				<dl id="dl"></dl>
+				<div class="actions no-print">
+					<button class="btn" onclick="window.print()">Print</button>
+				</div>
+			</div>
+		</div>
+	</main>
+</body>
+</html>

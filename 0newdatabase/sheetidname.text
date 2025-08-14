@@ -1,0 +1,30 @@
+
+let homeShowColumns = [4, 6, 5];
+
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '6_SHAPLA';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '6_GOLAP';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '6_MORNING';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '7_SHAPLA';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '7_GOLAP';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '7_MORNING';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '8_SHAPLA';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '8_GOLAP';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '8_MORNING';
