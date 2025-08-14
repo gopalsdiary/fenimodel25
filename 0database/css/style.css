@@ -7,6 +7,10 @@
     --font-size-small: 0.7rem; /* 30% smaller */
     --font-size-medium: 0.875rem; /* 30% smaller */
     --font-size-large: 1.05rem; /* 30% smaller */
+    /* Repeating shadow palette */
+    --shadow1: 0 8px 28px rgba(33,150,243,0.22), 0 2px 8px rgba(33,150,243,0.14);
+    --shadow2: 0 8px 28px rgba(76,175,80,0.22), 0 2px 8px rgba(76,175,80,0.14);
+    --shadow3: 0 8px 28px rgba(255,152,0,0.26), 0 2px 8px rgba(255,152,0,0.16);
 }
 
 * {
@@ -29,6 +33,7 @@ body {
 }
 
 .nav {
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     background: var(--glass);
     padding: 1rem;
@@ -79,6 +84,7 @@ body {
 
 .card {
     background: var(--glass);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: var(--radius);
     padding: 1.5rem;
@@ -105,6 +111,26 @@ body {
 
 .card:hover {
     transform: translateY(-5px);
+}
+
+/* 1-2-3 repeating color shadows for list cards */
+.card-grid > .card:nth-child(3n+1) {
+    box-shadow: var(--shadow1);
+    border-left: 5px solid rgba(33,150,243,0.45);
+}
+.card-grid > .card:nth-child(3n+2) {
+    box-shadow: var(--shadow2);
+    border-left: 5px solid rgba(76,175,80,0.45);
+}
+.card-grid > .card:nth-child(3n+3) {
+    box-shadow: var(--shadow3);
+    border-left: 5px solid rgba(255,152,0,0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-grid > .card:nth-child(3n+1) { border-left-color: rgba(33,150,243,0.65); }
+  .card-grid > .card:nth-child(3n+2) { border-left-color: rgba(76,175,80,0.65); }
+  .card-grid > .card:nth-child(3n+3) { border-left-color: rgba(255,152,0,0.75); }
 }
 
 .card img {
@@ -148,6 +174,7 @@ body {
 
 .detail-card {
     background: var(--glass);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: var(--radius);
     padding: 1rem;
@@ -259,6 +286,7 @@ body {
 
 .group-card {
     background: var(--glass);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-radius: var(--radius);
     padding: 1rem;
