@@ -51,6 +51,7 @@
   <button class="btn" onclick="window.print()">Print All</button>
   <button id="downloadAllBtn" class="btn" type="button">Download PDF</button>
       <a class="btn" href="./test_list.html">Back to List</a>
+  <div id="batchButtons" style="display:flex;flex-wrap:wrap;gap:.35rem;margin-left:.5rem;"></div>
     </div>
   </header>
   <main id="certContainer"></main>
@@ -70,6 +71,51 @@ function buildInfoBox(rec){const lines=[];if(rec.roll)lines.push('Roll No : '+es
 function buildSingle(rec){const div=document.createElement('div');div.className='cert';div.innerHTML=`<div class=\"img-wrap\"><img src=\"./testimonial.png\" alt=\"Certificate background\"/><div class=\"info-box\">${buildInfoBox(rec)}</div><div class=\"overlay\"><div class=\"overlay-text\">${certificateParagraph(rec)}</div></div><div class=\"qr-wrap\" title=\"Verify online\"><img alt=\"QR\" src=\"${qrImageUrl(rec)}\"/><div class=\"qr-meta\"><strong>SL No : ${(rec.sl?escHtml(rec.sl)+'\/2025':'')}</strong></div></div></div>`;return div;}
 function qrImageUrl(rec){const base=location.href.substring(0,location.href.lastIndexOf('/')+1)+'certificate_word.html';const url=new URL(base, location.href);if(rec.iid)url.searchParams.set('iid',rec.iid);if(rec.sl)url.searchParams.set('sl',rec.sl);return 'https://api.qrserver.com/v1/create-qr-code/?size=110x110&data='+encodeURIComponent(url.toString());}
 function loadAll(){statusEl.textContent='Loading…';Papa.parse(CSV_URL,{download:true,header:true,skipEmptyLines:true,complete:(res)=>{try{const fieldMap=normalizeFieldMap(res.meta.fields);const csvMap=buildCsvKeyMap(fieldMap);const rows=res.data||[];const container=document.getElementById('certContainer');let count=0;for(const r of rows){const rec=buildRecord(r,csvMap);if(!rec.iid&&!rec.name)continue;container.appendChild(buildSingle(rec));count++;}statusEl.textContent='Ready ('+count+')';document.getElementById('meta').textContent='Total generated: '+count; if(!count) statusEl.textContent='No records';}catch(e){console.error(e);statusEl.textContent='Render failed';}},error:(err)=>{console.error(err);statusEl.textContent='Load failed';}});} 
+/** Create per-batch download buttons (same batch size used in full download) */
+function buildBatchButtons(){
+  const BATCH_SIZE=50;
+  const certs=[...document.querySelectorAll('.cert')];
+  const total=certs.length; if(!total) return;
+  const batches=Math.ceil(total/BATCH_SIZE);
+  const wrap=document.getElementById('batchButtons');
+  wrap.innerHTML='';
+  for(let b=0;b<batches;b++){
+    const start=b*BATCH_SIZE;
+    const end=Math.min(start+BATCH_SIZE,total);
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className='btn';
+    btn.textContent='Batch '+(b+1)+' ('+(start+1)+'-'+end+')';
+    btn.addEventListener('click',()=>downloadBatchPdf(start,end,b+1,batches));
+    wrap.appendChild(btn);
+  }
+}
+async function downloadBatchPdf(start,end,label,batches){
+  const certs=[...document.querySelectorAll('.cert')];
+  const slice=certs.slice(start,end);
+  if(!slice.length){alert('Empty batch');return;}
+  const { jsPDF } = window.jspdf;
+  const statusPrev=statusEl.textContent;
+  statusEl.textContent='Rendering batch '+label+'...';
+  try {
+    let pdf=new jsPDF('landscape','pt','a4');
+    const pageW=pdf.internal.pageSize.getWidth();
+    const pageH=pdf.internal.pageSize.getHeight();
+    for(let i=0;i<slice.length;i++){
+      const el=slice[i];
+      statusEl.textContent='Rendering '+(i+1)+'/'+slice.length+' (batch '+label+')';
+      const canvas=await html2canvas(el.querySelector('.img-wrap'),{scale:2,useCORS:true});
+      const imgData=canvas.toDataURL('image/png');
+      const imgW=pageW; const imgH=canvas.height*(imgW/canvas.width); const y=Math.max(0,(pageH-imgH)/2);
+      if(i>0) pdf.addPage();
+      pdf.addImage(imgData,'PNG',0,y,imgW,imgH);
+      if((i+1)%5===0) await new Promise(r=>setTimeout(r,10));
+    }
+    const fileName='certificates_batch'+label+'_'+(start+1)+'-'+end+'_'+Date.now()+'.pdf';
+    pdf.save(fileName);
+    statusEl.textContent='Batch '+label+' saved ('+(start+1)+'-'+end+')';
+  }catch(e){console.error(e);statusEl.textContent='Batch '+label+' failed';alert('Batch PDF failed');}
+  finally { setTimeout(()=>{statusEl.textContent=statusPrev;},1200);} }
 async function downloadAllPdf(){
   const btn=document.getElementById('downloadAllBtn');
   if(!btn) return;
@@ -113,7 +159,7 @@ async function downloadAllPdf(){
   } catch(e){ console.error(e); statusEl.textContent='PDF failed'; alert('PDF generation failed'); }
   finally { btn.disabled=false; btn.textContent=originalText; }
 }
-window.addEventListener('DOMContentLoaded',()=>{ loadAll(); document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPdf); });
+window.addEventListener('DOMContentLoaded',()=>{ loadAll(); document.getElementById('downloadAllBtn').addEventListener('click', downloadAllPdf); const observer=new MutationObserver((m)=>{if(document.querySelectorAll('.cert').length){observer.disconnect();buildBatchButtons();}});observer.observe(document.getElementById('certContainer'),{childList:true}); });
 </script>
 </body>
 </html>

@@ -98,6 +98,16 @@
             margin-top: 1rem; /* Reduced margin */
         }
 
+        /* Center single button container */
+        .card-container.all-classes {
+            display: flex;
+            justify-content: center;
+        }
+        .card-container.all-classes .card-button {
+            width: auto; /* override 100% */
+            min-width: 160px;
+        }
+
         .card-button {
             background: var(--glass);
             backdrop-filter: blur(10px);
@@ -207,8 +217,16 @@
                     </nav>
         <nav2 class="text align-items-center blur nav bg-light">
             <p>Student Data Management</p>
+              <p> <br></p>
         </nav2>
         
+
+        <div class="group-card group-10">
+            <h3>All class (একসাথে)</h3>
+            <div class="card-container all-classes">
+                <a class="card-button" href="../0newdatabase/datalist.html">All Classes</a>
+            </div>
+        </div>
 
     <div class="group-card group-6">
             <h3>Class 6</h3>
