@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>All Data Fields — 0newdatabase</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+
+<style>
+:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --accent:#2196F3; }
+*{box-sizing:border-box}
+body{margin:0;font-family: 'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif;background:var(--bg);color:#111}
+.header{position:sticky;top:0;background:var(--card);border-bottom:1px solid #e5e7eb;z-index:10}
+.container{max-width:1200px;margin:0 auto;padding:1rem}
+h1{margin:.25rem 0;text-align:center}
+.toolbar{display:flex;gap:.75rem;align-items:center;justify-content:center;flex-wrap:wrap;margin:.5rem 0 1rem}
+input[type=search]{padding:.55rem .8rem;min-width:240px;border:1px solid #d1d5db;border-radius:10px}
+.select{padding:.5rem .7rem;border:1px solid #d1d5db;border-radius:10px;background:#fff}
+.muted{color:var(--muted);font-size:.9rem}
+.group{background:transparent;border:none;border-radius:0;padding:0;margin:1rem 0 0 0;box-shadow:none}
+/* full-bleed header band */
+.group h2{margin:0;font-size:1.05rem;text-align:left;padding:1rem 1rem;border-radius:0;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;width:100vw}
+/* ensure table content stays centered and constrained */
+.group .table-wrap{position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;width:100vw;padding:0.75rem 1rem}
+.group[data-class="6"] h2{background:linear-gradient(90deg,#2196F3,#64b5f6);color:#fff}
+.group[data-class="7"] h2{background:linear-gradient(90deg,#2e7d32,#66bb6a);color:#fff}
+.group[data-class="8"] h2{background:linear-gradient(90deg,#6a1b9a,#ab47bc);color:#fff}
+.group[data-class="9"] h2{background:linear-gradient(90deg,#ef6c00,#ffa726);color:#fff}
+.group[data-class="10"] h2{background:linear-gradient(90deg,#c2185b,#ec407a);color:#fff}
+/* Table (Google Sheets like) */
+.table-wrap{overflow:auto;border-radius:8px;border:1px solid #e8eef8;background:#fff}
+table.sheet-table{border-collapse:collapse;width:100%;min-width:720px}
+table.sheet-table thead th{position:sticky;top:0;background:linear-gradient(180deg,#f8fafc,#f1f5f9);padding:.55rem .7rem;text-align:left;border-bottom:2px solid #e6eef7}
+table.sheet-table th, table.sheet-table td{padding:.5rem .65rem;border-right:1px solid #f1f5f9;border-bottom:1px solid #f6f9fc}
+table.sheet-table tbody tr:hover{background:#fbfdff}
+table.sheet-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+table.sheet-table td:first-child{min-width:160px}
+/* small responsive tweak */
+@media (max-width:720px){ table.sheet-table td{max-width:160px} }
+@media (prefers-color-scheme:dark){ body{background:#071025;color:#e6eef8} .group{background:#07162a;border-color:#183047} .col-box{background:#071827;border-color:#123146} }
+.notice{font-size:.9rem;color:#444;text-align:center;margin-top:-6px}
+.summary-line{font-size:.95rem;color:#334155;margin:.5rem 0 0}
+@media (prefers-color-scheme:dark){ .summary-line{color:#cbd5e1} }
+/* Summary table (replaces class buttons) */
+.summary-wrap{max-width:1200px;margin:.25rem auto 0;overflow:auto}
+.summary-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e8eef8}
+.summary-table thead th{background:linear-gradient(180deg,#f8fafc,#f1f5f9);text-align:left;padding:.6rem .7rem;border-bottom:2px solid #e6eef7}
+.summary-table thead th.sortable{cursor:pointer;user-select:none}
+.summary-table thead th .arrow{margin-left:6px;color:#64748b;font-size:.85em}
+.summary-table td{padding:.55rem .7rem;border-bottom:1px solid #f1f5f9}
+.summary-table tfoot td{padding:.6rem .7rem;font-weight:600;background:#f8fafc;border-top:2px solid #e6eef7}
+.summary-table tr:hover{background:#fbfdff}
+.summary-table a{color:#0f172a;text-decoration:none}
+.summary-table a:hover{text-decoration:underline}
+</style>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<script>
+// reuse small helpers from datalist
+async function loadSheetList(){
+  const res = await fetch('sheetidname.text',{cache:'no-store'});
+  if(!res.ok) throw new Error('Failed to load sheetidname.text');
+  const txt = await res.text();
+  const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const pairs=[]; let curId=null;
+  const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];/i;
+  const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];/i;
+  for(const line of lines){
+    const im = idRe.exec(line); if(im){ curId = im[1]; continue; }
+    const nm = nameRe.exec(line); if(nm && curId){ pairs.push({id:curId,name:nm[1]}); curId=null; }
+  }
+  return pairs;
+}
+function csvUrl(id, sheet){ return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`; }
+function parseSheetMeta(name){ const m=String(name||'').trim().match(/^(\d{1,2})[\s_\-]?(.+)$/); if(!m) return {}; return { cls: m[1], shift: (m[2]||'').trim() }; }
+
+function slugify(s){
+  return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+}
+
+function addSheetButton(name, count, targetId){
+  // No-op now; replaced by summary table. Keep for backward safety.
+}
+
+// Build the summary table rows
+const summaryData = [];
+let summarySort = { key: 'name', dir: 'asc' };
+function addSummaryRow({ name, total, tc, existing, targetId }){
+  summaryData.push({ name, total, tc, existing, targetId });
+}
+function renderSummaryTableInto(host){
+  if(!host) return;
+  const table = document.createElement('table'); table.className='summary-table';
+  const thead = document.createElement('thead');
+  const trh = document.createElement('tr');
+  const cols = [
+    { key:'name', label:'Class name' },
+    { key:'total', label:'Total student' },
+    { key:'tc', label:'TC count' },
+    { key:'existing', label:'Existing Student count' },
+  ];
+  cols.forEach(col=>{
+    const th=document.createElement('th'); th.textContent=col.label; th.classList.add('sortable');
+    if(summarySort.key===col.key){ const arrow=document.createElement('span'); arrow.className='arrow'; arrow.textContent = summarySort.dir==='asc' ? '▲' : '▼'; th.appendChild(arrow); }
+    th.addEventListener('click', ()=>{
+      if(summarySort.key===col.key){ summarySort.dir = summarySort.dir==='asc' ? 'desc' : 'asc'; } else { summarySort.key=col.key; summarySort.dir='asc'; }
+      renderSummaryTable();
+    });
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  const data=[...summaryData].sort((a,b)=>{
+    const k=summarySort.key; const dir=summarySort.dir==='asc'?1:-1;
+    const av=a[k], bv=b[k];
+    if(typeof av==='number' && typeof bv==='number') return (av-bv)*dir;
+    return String(av).localeCompare(String(bv))*dir;
+  });
+  data.forEach(row=>{
+    const tr=document.createElement('tr');
+    const link=document.createElement('a'); link.href='#'; link.textContent=row.name; link.addEventListener('click', (e)=>{ e.preventDefault(); scrollToSection(row.targetId); });
+    const td0=document.createElement('td'); td0.appendChild(link); tr.appendChild(td0);
+    const td1=document.createElement('td'); td1.textContent=row.total; tr.appendChild(td1);
+    const td2=document.createElement('td'); td2.textContent=row.tc; tr.appendChild(td2);
+    const td3=document.createElement('td'); td3.textContent=row.existing; tr.appendChild(td3);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  // totals
+  const totals = data.reduce((acc,r)=>({
+    total: acc.total + (Number(r.total)||0),
+    tc: acc.tc + (Number(r.tc)||0),
+    existing: acc.existing + (Number(r.existing)||0)
+  }), { total:0, tc:0, existing:0 });
+  const tfoot=document.createElement('tfoot');
+  const trf=document.createElement('tr');
+  const tdLabel=document.createElement('td'); tdLabel.textContent='Total'; trf.appendChild(tdLabel);
+  const tdT=document.createElement('td'); tdT.textContent=totals.total; trf.appendChild(tdT);
+  const tdC=document.createElement('td'); tdC.textContent=totals.tc; trf.appendChild(tdC);
+  const tdE=document.createElement('td'); tdE.textContent=totals.existing; trf.appendChild(tdE);
+  tfoot.appendChild(trf); table.appendChild(tfoot);
+  host.innerHTML=''; host.appendChild(table);
+}
+function scrollToSection(targetId){
+  const el = document.getElementById(targetId); if(!el) return;
+  const header = document.querySelector('.header');
+  const offset = (header? header.offsetHeight: 0) + 8;
+  const top = el.getBoundingClientRect().top + window.scrollY - offset;
+  window.scrollTo({ top, behavior:'smooth' });
+}
+
+function renderSheet(container, name, fields, rows, meta, src){
+  const section = document.createElement('section'); section.className='group'; if(meta && meta.cls) section.dataset.class = meta.cls; section.id = slugify(name);
+  // Calculate TC count (from a column named exactly 'TC', case-insensitive)
+  const tcFieldIndex = fields.findIndex(f => String(f||'').trim().toLowerCase() === 'tc');
+  let tcCount = 0;
+  if(tcFieldIndex >= 0){
+    const key = fields[tcFieldIndex];
+    tcCount = rows.reduce((n,r)=>{
+      const v = (r && Object.prototype.hasOwnProperty.call(r,key)) ? r[key] : '';
+      return n + (String(v||'').trim().toLowerCase() === 'tc' ? 1 : 0);
+    },0);
+  }
+  const effectiveCount = rows.length - tcCount;
+  const h = document.createElement('h2'); h.textContent = name + '  '; const cspan=document.createElement('span'); cspan.className='count'; cspan.textContent = `student : ${effectiveCount}`; h.appendChild(cspan);
+  section.appendChild(h);
+  const wrap = document.createElement('div'); wrap.className='table-wrap';
+  const table = document.createElement('table'); table.className = 'sheet-table';
+  const thead = document.createElement('thead'); const trh = document.createElement('tr');
+  fields.forEach(f=>{ const th = document.createElement('th'); th.textContent = String(f||''); trh.appendChild(th); });
+  thead.appendChild(trh); table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  rows.forEach((r, rIdx)=>{
+    const tr = document.createElement('tr');
+    fields.forEach((f, fi)=>{
+      const td = document.createElement('td');
+      const val = (r && Object.prototype.hasOwnProperty.call(r,f)) ? r[f] : '';
+      // first column link to details page (if iid or fallback index)
+      if(fi === 0){
+        const a = document.createElement('a'); a.className='link'; a.textContent = val || '(open)';
+        let href = `detailsinfo.html?id=${encodeURIComponent(src.id)}&sheet=${encodeURIComponent(src.name)}`;
+        try{
+          const allFields = Object.keys(r||{});
+          const norm = k=>String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+          const pref = allFields.find(k=>['iid','id','studentid','sid'].includes(norm(k)));
+          const iidVal = pref ? r[pref] : '';
+          if(iidVal!=null && String(iidVal).trim()!=='') href += `&iid=${encodeURIComponent(String(iidVal))}`; else href += `&r=${rIdx}`;
+        }catch(_){ href += `&r=${rIdx}` }
+        a.href = href; a.style.color='inherit'; a.style.textDecoration='none'; td.appendChild(a);
+      } else {
+        td.textContent = val;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  // Summary line below table: Total - TC count = **
+  const sum = document.createElement('div'); sum.className='summary-line'; sum.textContent = `Total - TC count = ${effectiveCount}`;
+  wrap.appendChild(sum);
+  section.appendChild(wrap);
+  container.appendChild(section);
+  // record summary (for the top table)
+  addSummaryRow({ name, total: rows.length, tc: tcCount, existing: effectiveCount, targetId: section.id });
+}
+
+function filterAll(q){ const query=q.toLowerCase(); document.querySelectorAll('table.sheet-table tbody tr').forEach(tr=>{
+    const text = tr.textContent.toLowerCase(); tr.style.display = (!query || text.includes(query))? '' : 'none';
+  }); }
+
+async function init(){
+  const status = document.getElementById('status');
+  try{
+    status.textContent = 'Loading sheet list…';
+    const pairs = await loadSheetList(); if(!pairs.length){ status.textContent='No sheets defined'; return; }
+    status.textContent = `Found ${pairs.length} sheets. Fetching…`;
+    const host = document.getElementById('host');
+    let ok=0,fail=0;
+    for(const {id,name} of pairs){
+      try{
+        const url = csvUrl(id, name);
+        const results = await new Promise((res,rej)=>{ Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>res(r), error:e=>rej(e) }); });
+        const rows = (results && results.data)? results.data : [];
+        const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
+        renderSheet(host, name, fields, rows, parseSheetMeta(name), {id,name});
+        ok++;
+      }catch(e){ console.error('Fetch error', name, e); fail++; const err=document.createElement('section'); err.className='group'; const h=document.createElement('h2'); h.textContent = name+' (failed)'; err.appendChild(h); const pre=document.createElement('pre'); pre.textContent = String(e && e.message || e); err.appendChild(pre); host.appendChild(err); }
+      status.textContent = `Loaded ${ok}/${pairs.length}` + (fail? `, failed ${fail}` : '');
+    }
+  // After all groups rendered, draw the summary tables (top and bottom)
+  renderSummaryTableInto(document.getElementById('summaryHost'));
+  renderSummaryTableInto(document.getElementById('summaryBottomHost'));
+  status.classList.add('ok');
+  }catch(err){ console.error(err); status.textContent='Init failed'; status.classList.add('error'); }
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{ init(); const s=document.getElementById('search'); s.addEventListener('input', ()=>filterAll(s.value)); });
+</script>
+
+
+</head>
+<body>
+<header class="header">
+  <div class="container">
+    <h1>All Data Fields</h1>
+    <div class="toolbar">
+      <input id="search" type="search" placeholder="Search column name or value…" aria-label="Filter" />
+      <span id="status" class="muted"></span>
+    </div>
+  
+    <div class="notice">Click a class name in the summary to jump to its table. Counts exclude TC rows in "Existing".</div>
+  </div>
+</header>
+<div id="summaryHost" class="summary-wrap" aria-label="Summary"></div>
+<main class="container">
+  <div id="host"></div>
+  <div id="summaryBottomHost" class="summary-wrap" aria-label="Summary (bottom)"></div>
+</main>
+</body>
+
+</html>

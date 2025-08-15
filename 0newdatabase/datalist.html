@@ -9,7 +9,7 @@
 	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
 	<style>
 		:root { color-scheme: light dark; }
-		body { margin:0; font-family:,'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:#f6f7f9; color:#111; }
+		body { margin:0; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:#f6f7f9; color:#111; }
 		header { position:sticky; top:0; background:#fff; border-bottom:1px solid #e5e7eb; z-index:10; }
 		.container { max-width:1100px; margin:0 auto; padding:1rem; }
 		h1 { margin:.25rem 0; font-size:1.25rem; text-align:center; }
@@ -43,6 +43,12 @@
 		thead th { position:sticky; top:0; background:#f9fafb; border-bottom:1px solid #e5e7eb; text-align:left; padding:.6rem .7rem; font-size:.9rem; }
 		tbody td { border-top:1px solid #f1f5f9; padding:.55rem .7rem; font-size:.92rem; }
 		tbody tr:hover { background:#f9fafb; }
+
+		/* Simple button */
+		.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem .85rem;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#111;text-decoration:none;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+		.btn:hover{background:#f8fafc}
+		.btn-primary{background:#0ea5e9;border-color:#0284c7;color:#fff}
+		.btn-primary:hover{background:#0284c7}
 		.status { font-size:.85rem; }
 		.error { color:#b91c1c; }
 		.ok { color:#16a34a; }
@@ -54,7 +60,22 @@
 			tbody td { border-top-color:#1d2845; }
 			input[type="search"]{ background:#0f162a; color:#e5e7eb; border-color:#263148; }
 			.muted { color:#9aa5b1; }
+			.btn{background:#0f162a;color:#e5e7eb;border-color:#263148}
+			.btn:hover{background:#0c1424}
+			.btn-primary{background:#0ea5e9;border-color:#0284c7;color:#0b1020}
 		}
+
+		/* Summary table (class list like all_data_field.html) */
+		.summary-wrap{max-width:1100px;margin:.25rem auto 0;overflow:auto}
+		.summary-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e8eef8}
+		.summary-table thead th{background:linear-gradient(180deg,#f8fafc,#f1f5f9);text-align:left;padding:.6rem .7rem;border-bottom:2px solid #e6eef7}
+		.summary-table thead th.sortable{cursor:pointer;user-select:none}
+		.summary-table thead th .arrow{margin-left:6px;color:#64748b;font-size:.85em}
+		.summary-table td{padding:.55rem .7rem;border-bottom:1px solid #f1f5f9}
+		.summary-table tfoot td{padding:.6rem .7rem;font-weight:600;background:#f8fafc;border-top:2px solid #e6eef7}
+		.summary-table tr:hover{background:#fbfdff}
+		.summary-table a{color:#0f172a;text-decoration:none}
+		.summary-table a:hover{text-decoration:underline}
 	</style>
 		<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 	<script>
@@ -104,6 +125,49 @@
 			const map = new Map(fields.map(f=>[normHeader(f), f]));
 			for(const key of order){ if(map.has(key)) return map.get(key); }
 			return null;
+		}
+
+		// --- Summary helpers (same behavior as all_data_field.html) ---
+		function slugify(s){ return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+		function scrollToSection(targetId){
+			const el=document.getElementById(targetId); if(!el) return;
+			const header=document.querySelector('header');
+			const offset=(header? header.offsetHeight:0)+8;
+			const top=el.getBoundingClientRect().top+window.scrollY-offset;
+			window.scrollTo({ top, behavior:'smooth' });
+		}
+		const summaryData=[]; let summarySort={ key:'name', dir:'asc' };
+		function addSummaryRow({ name, total, tc, existing, targetId }){ summaryData.push({ name, total, tc, existing, targetId }); }
+		function renderSummaryTableInto(host){
+			if(!host) return; const table=document.createElement('table'); table.className='summary-table';
+			const thead=document.createElement('thead'); const trh=document.createElement('tr');
+			const cols=[
+				{ key:'name', label:'Class name' },
+				{ key:'total', label:'Total student' },
+				{ key:'tc', label:'TC count' },
+				{ key:'existing', label:'Existing Student count' },
+			];
+			cols.forEach(col=>{ const th=document.createElement('th'); th.textContent=col.label; th.classList.add('sortable');
+				if(summarySort.key===col.key){ const arrow=document.createElement('span'); arrow.className='arrow'; arrow.textContent=summarySort.dir==='asc'?'▲':'▼'; th.appendChild(arrow); }
+				th.addEventListener('click', ()=>{ if(summarySort.key===col.key){ summarySort.dir = summarySort.dir==='asc'?'desc':'asc'; } else { summarySort.key=col.key; summarySort.dir='asc'; } renderSummaryTable(); });
+				trh.appendChild(th);
+			}); thead.appendChild(trh); table.appendChild(thead);
+			const tbody=document.createElement('tbody');
+			const data=[...summaryData].sort((a,b)=>{ const k=summarySort.key; const dir=summarySort.dir==='asc'?1:-1; const av=a[k], bv=b[k]; if(typeof av==='number'&&typeof bv==='number') return (av-bv)*dir; return String(av).localeCompare(String(bv))*dir; });
+			data.forEach(row=>{ const tr=document.createElement('tr'); const link=document.createElement('a'); link.href='#'; link.textContent=row.name; link.addEventListener('click', e=>{ e.preventDefault(); scrollToSection(row.targetId); });
+				const td0=document.createElement('td'); td0.appendChild(link); tr.appendChild(td0);
+				['total','tc','existing'].forEach(k=>{ const td=document.createElement('td'); td.textContent=row[k]; tr.appendChild(td); });
+				tbody.appendChild(tr);
+			}); table.appendChild(tbody);
+			const totals=data.reduce((acc,r)=>({ total:acc.total+(+r.total||0), tc:acc.tc+(+r.tc||0), existing:acc.existing+(+r.existing||0) }), { total:0, tc:0, existing:0 });
+			const tfoot=document.createElement('tfoot'); const trf=document.createElement('tr');
+			['Total', totals.total, totals.tc, totals.existing].forEach((v,i)=>{ const td=document.createElement('td'); td.textContent=v; trf.appendChild(td); });
+			tfoot.appendChild(trf); table.appendChild(tfoot);
+			host.innerHTML=''; host.appendChild(table);
+		}
+		function renderSummaryTable(){
+			renderSummaryTableInto(document.getElementById('summaryHost'));
+			renderSummaryTableInto(document.getElementById('summaryBottomHost'));
 		}
 
 		function selectColumns(fields, cols){
@@ -222,7 +286,17 @@
 								const meta = parseSheetMeta(name);
 								if(meta.cls) classSet.add(meta.cls);
 								if(meta.shift) shiftSet.add(meta.shift.toLowerCase());
-								renderGroup(host, `${name}`, useFields, allRows, meta, { id, name });
+								// set an id for scroll target
+								const targetId = slugify(name);
+								// compute TC counts and existing count
+								const tcFieldIndex = fields.findIndex(f => String(f||'').trim().toLowerCase() === 'tc');
+								let tcCount = 0; if(tcFieldIndex>=0){ const key=fields[tcFieldIndex]; tcCount = allRows.reduce((n,r)=>{ const v=(r&&Object.prototype.hasOwnProperty.call(r,key))? r[key]:''; return n + (String(v||'').trim().toLowerCase()==='tc'?1:0); },0); }
+								const effective = allRows.length - tcCount;
+								// add to summary list
+								addSummaryRow({ name, total: allRows.length, tc: tcCount, existing: effective, targetId });
+								renderGroup(host, `${name}`, useFields, allRows, Object.assign({}, meta), { id, name });
+								// assign id to the last section created
+								const secs = host.querySelectorAll('.group'); if(secs.length){ secs[secs.length-1].id = targetId; }
 						ok++;
 					}catch(e){
 						console.error('Fetch error for', name, e);
@@ -240,6 +314,7 @@
 						// Populate filters after scanned all meta
 						populateFilters(classSet, shiftSet);
 						applyGroupFilters();
+						renderSummaryTable();
 				status.classList.add('ok');
 			}catch(err){
 				console.error(err);
@@ -264,6 +339,7 @@
 						<h1>শিক্ষার্থী খুজে পেতে Search করুণ</h1>
 
 					<div class="toolbar">
+						<a class="btn btn-primary" href="all_data_field.html" target="_blank" rel="noopener">All data table</a>
 						<select id="classFilter" aria-label="Class filter"></select>
 						<select id="shiftFilter" aria-label="Shift filter"></select>
 						<input id="search" type="search" placeholder="ফিল্টার… (Filter all)" aria-label="Filter" />
@@ -271,8 +347,10 @@
 			</div>
 		</div>
 	</header>
+  <div id="summaryHost" class="summary-wrap" aria-label="Summary"></div>
 	<main>
 		<div id="groups" class="container"></div>
+		<div id="summaryBottomHost" class="summary-wrap" aria-label="Summary (bottom)"></div>
 	</main>
 </body>
 </html>

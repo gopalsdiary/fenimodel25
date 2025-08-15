@@ -37,3 +37,12 @@ let sheetName = '9_GOLAP';
 
 let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
 let sheetName = '9_MORNING';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '10_SHAPLA';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '10_GOLAP';
+
+let sheetId = '1sXHffTidfkqje0fhZbt6mfT3OD2xl1LQO6XAZr0_zbE';
+let sheetName = '10_MORNING';
