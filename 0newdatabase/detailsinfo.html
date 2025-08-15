@@ -52,6 +52,15 @@
 		function csvUrl(id, sheet){
 			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
 		}
+		async function loadSheetList(){
+			const res = await fetch('sheetidname.text', {cache:'no-store'});
+			if(!res.ok) throw new Error('sheet list load fail');
+			const txt = await res.text();
+			const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+			const pairs=[]; let curId=null; const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?$/i; const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?$/i;
+			for(const line of lines){ const im=idRe.exec(line); if(im){ curId=im[1]; continue;} const nm=nameRe.exec(line); if(nm && curId){ pairs.push({id:curId,name:nm[1]}); curId=null; } }
+			return pairs;
+		}
 		function esc(s){ return String(s ?? ''); }
 		function normHeader(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
 		function findIidKey(fields){
@@ -61,73 +70,67 @@
 			return null;
 		}
 
+		async function findByIid(iid){
+			const pairs = await loadSheetList();
+			for(let idx=0; idx<pairs.length; idx++){
+				const {id,name} = pairs[idx];
+				try{
+					const results = await new Promise((resolve,reject)=>{ Papa.parse(csvUrl(id,name), {download:true,header:true,skipEmptyLines:true,complete:r=>resolve(r), error:e=>reject(e)}); });
+					const rows = (results && results.data) ? results.data : [];
+					const fields = (results.meta && results.meta.fields) || Object.keys(rows[0]||{});
+					const iidKey = findIidKey(fields);
+					if(!iidKey) continue;
+					const row = rows.find(r=> String(r[iidKey]??'').trim() === String(iid).trim());
+					if(row){ return { id, sheet:name, row, fields }; }
+				}catch(e){ /* ignore and continue */ }
+			}
+			return null;
+		}
+
 		async function init(){
-			const id = byParam('id');
-			const sheet = byParam('sheet');
+			const idParam = byParam('id');
+			const sheetParam = byParam('sheet');
 			const rowIdxParam = byParam('r');
 			const rowIdx = Number.isFinite(parseInt(rowIdxParam,10)) ? parseInt(rowIdxParam,10) : null;
 			const iidParam = byParam('iid');
 			const head = document.getElementById('head');
 			const status = document.getElementById('status');
 			const meta = document.getElementById('meta');
-			if(!id || !sheet){ status.textContent='Invalid link'; status.classList.add('muted'); return; }
 			head.textContent = 'বিস্তারিত তথ্য';
-			meta.textContent = `Sheet: ${sheet}`;
-			status.textContent = 'Loading…';
-			try{
-				const url = csvUrl(id, sheet);
-				const results = await new Promise((resolve,reject)=>{
-					Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
-				});
-				const rows = (results && results.data) ? results.data : [];
-				let row = null; let usedBy = '';
+			let id=idParam, sheet=sheetParam, row=null, fields=null, usedBy='';
+			if(!id || !sheet){
 				if(iidParam){
-					// Try to locate by iid
-					const fields = (results.meta && results.meta.fields) || Object.keys(rows[0]||{});
-					const iidKey = findIidKey(fields);
-					if(iidKey){
-						row = rows.find(r=> String(r[iidKey]??'').trim() === String(iidParam).trim());
-						if(row) usedBy = `IID: ${iidParam}`;
-					}
+					status.textContent='Searching sheets…';
+					const found = await findByIid(iidParam);
+					if(found){ id=found.id; sheet=found.sheet; row=found.row; fields=found.fields; usedBy = `IID: ${iidParam}`; history.replaceState(null,'',`?iid=${encodeURIComponent(iidParam)}`); }
+					else { status.textContent='Record not found'; return; }
+				}else{
+					status.textContent='Invalid link'; return;
 				}
-				if(!row && rowIdx!=null){
-					if(rowIdx >=0 && rowIdx < rows.length){ row = rows[rowIdx]; usedBy = `Row: ${rowIdx+1}`; }
-				}
-				if(!row){ status.textContent='Record not found'; return; }
-				meta.textContent = `Sheet: ${sheet}` + (usedBy? ` · ${usedBy}`:'');
-
-						const fields = (results.meta && results.meta.fields) || Object.keys(row||{});
-						const dl = document.getElementById('dl');
-						let shown = 0;
-						function cleanLabel(name){
-							let s = String(name||'');
-							s = s.replace(/["']/g,'').trim();
-							s = s.replace(/^_+/, '');
-							s = s.replace(/[_\s]+/g,' ').trim();
-							return s;
-						}
-						fields.forEach(f=>{
-							const label = cleanLabel(f);
-							const isWeird = !label || /^\d+$/.test(label) || /^_?\d+$/.test(String(f||''));
-							const valRaw = row[f];
-							const val = esc(valRaw);
-							const valTrim = String(valRaw==null? '' : valRaw).trim();
-							if(isWeird && !valTrim) return; // skip empty weird columns
-							if(!valTrim) return; // hide empty values to reduce noise
-							const dt=document.createElement('dt'); dt.textContent = label || String(f||'');
-							const dd=document.createElement('dd'); dd.textContent = val;
-							dl.appendChild(dt); dl.appendChild(dd);
-							shown++;
-						});
-						if(shown===0){
-							const dt=document.createElement('dt'); dt.textContent='Info';
-							const dd=document.createElement('dd'); dd.textContent='No non-empty fields to display.';
-							dl.appendChild(dt); dl.appendChild(dd);
-						}
-				status.textContent = 'Ready';
-			}catch(e){
-				console.error(e); status.textContent='Failed to load';
 			}
+			if(status.textContent==='') status.textContent='Loading…';
+			try{
+				if(!row){
+					const results = await new Promise((resolve,reject)=>{ Papa.parse(csvUrl(id,sheet), {download:true,header:true,skipEmptyLines:true,complete:r=>resolve(r), error:e=>reject(e)}); });
+					const rows = (results && results.data) ? results.data : [];
+					fields = (results.meta && results.meta.fields) || Object.keys(rows[0]||{});
+					if(iidParam){
+						const iidKey = findIidKey(fields);
+						if(iidKey){
+							row = rows.find(r=> String(r[iidKey]??'').trim() === String(iidParam).trim());
+							if(row) usedBy = `IID: ${iidParam}`;
+						}
+					}
+					if(!row && rowIdx!=null && rowIdx>=0 && rowIdx<rows.length){ row = rows[rowIdx]; usedBy = `Row: ${rowIdx+1}`; }
+					if(!row){ status.textContent='Record not found'; return; }
+				}
+				meta.textContent = `Sheet: ${sheet}` + (usedBy? ` · ${usedBy}`:'');
+				const dl = document.getElementById('dl');
+				let shown=0; function cleanLabel(name){ let s=String(name||''); s=s.replace(/["']/g,'').trim(); s=s.replace(/^_+/,''); s=s.replace(/[_\s]+/g,' ').trim(); return s; }
+				(fields||Object.keys(row||{})).forEach(f=>{ const label=cleanLabel(f); const isWeird=!label || /^\d+$/.test(label) || /^_?\d+$/.test(String(f||'')); const valRaw=row[f]; const val=esc(valRaw); const valTrim=String(valRaw==null?'' : valRaw).trim(); if(isWeird && !valTrim) return; if(!valTrim) return; const dt=document.createElement('dt'); dt.textContent=label||String(f||''); const dd=document.createElement('dd'); dd.textContent=val; dl.appendChild(dt); dl.appendChild(dd); shown++; });
+				if(shown===0){ const dt=document.createElement('dt'); dt.textContent='Info'; const dd=document.createElement('dd'); dd.textContent='No non-empty fields to display.'; dl.appendChild(dt); dl.appendChild(dd); }
+				status.textContent='Ready';
+			}catch(e){ console.error(e); status.textContent='Failed to load'; }
 		}
 		window.addEventListener('DOMContentLoaded', init);
 	</script>
