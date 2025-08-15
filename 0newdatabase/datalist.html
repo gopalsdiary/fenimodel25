@@ -19,6 +19,25 @@
 		.muted { color:#6b7280; font-size:.85rem; }
 		.group { background:#fff; border:1px solid #e5e7eb; border-radius:14px; padding:1rem; margin:1rem 0; box-shadow:0 8px 24px rgba(0,0,0,.06); }
 		.group h2 { margin:.1rem 0 .75rem; font-size:1.05rem; }
+		/* Enhanced class title styling */
+		.group h2 { text-align:center; font-size:1.365rem; font-weight:700; line-height:1.25; }
+		.group h2 .count { display:block; font-size:.55em; font-weight:400; margin-top:.2rem; color:#555; }
+		/* Colored class name bars */
+		.group h2 { background:#eef2f7; padding:.55rem .85rem; border-radius:10px; position:relative; }
+		.group[data-class="6"] h2 { background:linear-gradient(90deg,#2196F3,#64b5f6); color:#fff; }
+		.group[data-class="7"] h2 { background:linear-gradient(90deg,#2e7d32,#66bb6a); color:#fff; }
+		.group[data-class="8"] h2 { background:linear-gradient(90deg,#6a1b9a,#ab47bc); color:#fff; }
+		.group[data-class="9"] h2 { background:linear-gradient(90deg,#ef6c00,#ffa726); color:#fff; }
+		.group[data-class="10"] h2 { background:linear-gradient(90deg,#c2185b,#ec407a); color:#fff; }
+		.group h2 .count { color:rgba(255,255,255,0.85); }
+		@media (prefers-color-scheme: dark){
+			.group h2 { background:#1d2840; }
+			.group[data-class="6"] h2 { background:linear-gradient(90deg,#1565c0,#1e88e5); }
+			.group[data-class="7"] h2 { background:linear-gradient(90deg,#1b5e20,#2e7d32); }
+			.group[data-class="8"] h2 { background:linear-gradient(90deg,#4a148c,#6a1b9a); }
+			.group[data-class="9"] h2 { background:linear-gradient(90deg,#e65100,#ef6c00); }
+			.group[data-class="10"] h2 { background:linear-gradient(90deg,#880e4f,#ad1457); }
+		}
 		.table-wrap { overflow:auto; border-radius:10px; }
 		table { border-collapse:collapse; width:100%; min-width:720px; }
 		thead th { position:sticky; top:0; background:#f9fafb; border-bottom:1px solid #e5e7eb; text-align:left; padding:.6rem .7rem; font-size:.9rem; }
@@ -97,7 +116,7 @@
 				function renderGroup(container, title, fields, rows, meta, src){
 				const group = document.createElement('section'); group.className='group';
 				if(meta){ if(meta.cls) group.dataset.class = meta.cls; if(meta.shift) group.dataset.shift = meta.shift.toLowerCase(); }
-			const h = document.createElement('h2'); h.textContent = title; group.appendChild(h);
+				const h = document.createElement('h2'); h.innerHTML = `${title} <span class="count">(Total: ${rows.length})</span>`; group.appendChild(h);
 			const wrap = document.createElement('div'); wrap.className='table-wrap'; group.appendChild(wrap);
 			const table = document.createElement('table'); wrap.appendChild(table);
 			const thead = document.createElement('thead'); const trh=document.createElement('tr');
@@ -242,6 +261,8 @@
 	<header>
 		<div class="container">
 			<h1>ডাটা লিস্ট</h1>
+						<h1>শিক্ষার্থী খুজে পেতে Search করুণ</h1>
+
 					<div class="toolbar">
 						<select id="classFilter" aria-label="Class filter"></select>
 						<select id="shiftFilter" aria-label="Shift filter"></select>
