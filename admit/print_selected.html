@@ -23,7 +23,7 @@
 		.grid{ display:grid; grid-template-columns:repeat(2, max-content); gap:4mm }
 		/* Wrapper sized to scaled card footprint; .card remains true-size (210x115mm) */
 		.box{ width:38mm; height:22mm; /* placeholder; JS will set exact mm via inline style */ }
-		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center/cover no-repeat; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
+		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
 		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
 		.labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
 		/* Positions aligned with single-card page (may be slightly scaled visually) */
@@ -85,7 +85,8 @@
 				const rowH = (contentH - GAP*(ROWS-1)) / ROWS; // mm per row
 				const widthScale = colW / 210; // relative to 210mm true card width
 				const heightScale = rowH / 115; // relative to 115mm true card height
-				const SCALE = Math.min(widthScale, heightScale);
+				// Small safety margin to avoid clipping from rounding when rendering or exporting
+				const SCALE = Math.min(widthScale, heightScale) * 0.995;
 				const boxW = 210 * SCALE; // mm
 				const boxH = 115 * SCALE; // mm
 
