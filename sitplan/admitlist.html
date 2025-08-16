@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Admit List — Generate Cards</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+	<style>
+		:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --border:#e5e7eb; --primary:#0ea5e9; }
+		*{ box-sizing:border-box }
+		body{ margin:0; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:var(--bg); color:#111; }
+		header{ position:sticky; top:0; background:var(--card); border-bottom:1px solid var(--border); z-index:10 }
+		.container{ max-width:1200px; margin:0 auto; padding:1rem }
+		h1{ margin:.25rem 0; text-align:center }
+		.toolbar{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; justify-content:center; margin:.5rem 0 1rem }
+		select, input[type=search]{ padding:.5rem .7rem; border:1px solid #d1d5db; border-radius:10px; background:#fff }
+		.btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.55rem 1rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; color:#111; text-decoration:none; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.04); cursor:pointer }
+		.btn.primary{ background:var(--primary); border-color:#0284c7; color:#fff }
+		.btn:disabled{ opacity:.6; cursor:not-allowed }
+		.status{ color:var(--muted); font-size:.9rem }
+		table{ border-collapse:collapse; width:100%; background:#fff; border:1px solid #e8eef8 }
+		thead th{ position:sticky; top:0; background:linear-gradient(180deg,#f8fafc,#f1f5f9); text-align:left; padding:.6rem .7rem; border-bottom:2px solid #e6eef7 }
+		td{ padding:.55rem .7rem; border-top:1px solid #f1f5f9 }
+		tbody tr:hover{ background:#fbfdff }
+		.left-tools{ display:flex; gap:.5rem; align-items:center }
+		.footbar{ display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:1rem 0 }
+		.muted{ color:var(--muted) }
+		.btn.pdf{ background:#ef4444; border-color:#dc2626; color:#fff; padding:.35rem .7rem; border-radius:999px; font-size:.85rem }
+		.btn.pdf:hover{ background:#dc2626 }
+		/* Print area */
+		.print-area{ display:none }
+		@media print{
+			header, .controls, .list-area{ display:none !important }
+			body{ background:#fff }
+			.print-area{ display:block }
+			@page{ size:A4; margin:6mm }
+		}
+		.sheet{ width:210mm; margin:0 auto }
+		.print-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:4mm; padding:2mm }
+		.card{ position:relative; aspect-ratio: 210 / 115; background:#fff url('admit.png') center/cover no-repeat; overflow:hidden; border:1px solid #e5e7eb }
+		.card .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
+		/* Approximate placements (tweak if needed) */
+		.t.name{ left:10mm; top:40mm; font-size:4.8mm; letter-spacing:.3mm; text-transform:uppercase }
+		.t.class{ left:10mm; top:86mm; font-size:5mm }
+		.t.section{ left:76mm; top:86mm; font-size:5mm; text-transform:uppercase }
+		.t.roll{ left:10mm; top:102mm; font-size:5.5mm }
+		.t.exam{ left:60mm; top:52mm; font-weight:700; font-size:4.6mm }
+		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
+		.t.iid{ left:78mm; top:122mm; font-size:4mm }
+	/* QR/Barcode removed */
+	</style>
+
+
+	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+	<script>
+		// Load sheets (same approach as other pages), but sheet list is in 0newdatabase folder
+		async function loadSheetList(){
+			const res = await fetch('../0newdatabase/sheetidname.text', { cache:'no-store' });
+			if(!res.ok) throw new Error('Failed to load sheetidname.text');
+			const txt = await res.text();
+			const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+			const pairs=[]; let curId=null;
+			const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?/i;
+			const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?/i;
+			for(const line of lines){
+				const im=idRe.exec(line); if(im){ curId=im[1]; continue; }
+				const nm=nameRe.exec(line); if(nm && curId){ pairs.push({id:curId, name:nm[1]}); curId=null; }
+			}
+			return pairs;
+		}
+		function csvUrl(id, sheet){
+			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+		}
+		function parseSheetMeta(name){ const m=String(name||'').trim().match(/^(\d{1,2})[\s_\-]+(.+)$/); if(!m) return {cls:'', section:''}; return { cls:m[1], section:(m[2]||'').replace(/_/g,' ').trim() }; }
+		const norm = s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+		function pickKey(fields, candidates){ const map = new Map(fields.map(f=>[norm(f), f])); for(const k of candidates){ if(map.has(k)) return map.get(k); } return null; }
+		// Robust header guessing for name/father/roll (English + Bangla + fuzzy)
+		const normWide = s=>String(s||'').toLowerCase().replace(/[\s_\-()\u200b]+/g,'');
+		function guessField(fields, type){
+			const W = fields.map(f=>({ key:f, n:norm(f), w:normWide(f) }));
+			const dict = {
+				name: ['name','studentname','student','NAME EN','fullname','stuname','sname','nam','শিক্ষার্থীর নাম','শিক্ষার্থী নাম','শিক্ষার্থী','নাম','ছাত্রের নাম','ছাত্রীর নাম'],
+				father: ['father','fathersname','fathername','FATHER NAME EN','guardianname','parentname','পিতার নাম','বাবার নাম','অভিভাবক','অভিভাবকের নাম'],
+				roll: ['roll','rollno','rollnumber','CLASS ROLL','রোল','রোলনং','রোল নম্বর','ক্রমিক']
+			};
+			const hints = dict[type]||[];
+			for(const h of hints){ const hn=norm(h); const m=W.find(x=>x.n===hn); if(m) return m.key; }
+			for(const h of hints){ const hw=normWide(h); const m=W.find(x=>x.w.includes(hw)); if(m) return m.key; }
+			// last resort: analyze first values for textiness vs numeric
+			let best=null, bestScore=-1;
+			for(const f of fields){
+				const sample=(window.__lastRows__||[]).slice(0,20).map(r=>String(r[f]||'')).filter(Boolean);
+				const score = sample.reduce((acc,v)=>acc + (/\p{L}/u.test(v) && !/^\d+$/.test(v) ? 1:0), 0);
+				if(score>bestScore){ bestScore=score; best=f; }
+			}
+			return best || fields[0];
+		}
+
+		// Sheets metadata and current students list
+		let sheets = []; // {id,name,cls,section}
+		let allStudents = []; // {name,father,roll,cls,section,sheetId,sheetName,row,iid,_idx}
+		const classSet = new Set();
+		const sectionSet = new Set();
+		let filters = { cls:'', section:'' };
+		let exam = 'Half Yearly  Examination';
+		let year = '2025';
+
+		function updateStatus(msg){ document.getElementById('status').textContent = msg; }
+		function fillSelectOptions(id, values, placeholder){
+			const sel = document.getElementById(id); sel.innerHTML='';
+			const opt = document.createElement('option'); opt.value=''; opt.textContent=placeholder; sel.appendChild(opt);
+			[...values].sort((a,b)=>{ const na=+a, nb=+b; if(Number.isFinite(na)&&Number.isFinite(nb)) return na-nb; return String(a).localeCompare(String(b)); }).forEach(v=>{
+				const o=document.createElement('option'); o.value=String(v); o.textContent=String(v); sel.appendChild(o);
+			});
+		}
+
+		function renderTable(){
+			const tbody = document.querySelector('#list tbody');
+			tbody.innerHTML='';
+			const rows = allStudents.filter(s=>{
+				return (!filters.cls || s.cls===filters.cls) && (!filters.section || s.section.toLowerCase()===filters.section.toLowerCase());
+			});
+			document.getElementById('count').textContent = `${rows.length} students`;
+					rows.forEach((s, idx)=>{
+				const tr=document.createElement('tr');
+				const tdSel=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.className='row-check'; cb.dataset.index = s._idx; tdSel.appendChild(cb); tr.appendChild(tdSel);
+				const tdName=document.createElement('td'); tdName.textContent=s.name||''; tr.appendChild(tdName);
+				const tdFather=document.createElement('td'); tdFather.textContent=s.father||''; tr.appendChild(tdFather);
+				const tdClass=document.createElement('td'); tdClass.textContent=s.cls||''; tr.appendChild(tdClass);
+				const tdSection=document.createElement('td'); tdSection.textContent=s.section||''; tr.appendChild(tdSection);
+						const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
+								const tdPdf=document.createElement('td');
+								const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
+								const params = new URLSearchParams({
+									exam, year,
+									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||'')
+								});
+								btn.href = `print_admit.html?${params.toString()}`;
+								tdPdf.appendChild(btn); tr.appendChild(tdPdf);
+				tbody.appendChild(tr);
+			});
+			document.getElementById('selectAll').checked=false;
+		}
+
+		function getSelected(){
+			const set = new Set([...document.querySelectorAll('.row-check:checked')].map(el=>Number(el.dataset.index)));
+			return allStudents.filter(s=> set.has(s._idx) );
+		}
+
+			function renderPrint(students){
+			const wrap = document.getElementById('printArea');
+			wrap.innerHTML = '';
+			const sheet = document.createElement('div'); sheet.className='sheet';
+			const grid = document.createElement('div'); grid.className='print-grid'; sheet.appendChild(grid); wrap.appendChild(sheet);
+			students.forEach(s=>{
+				const card = document.createElement('div'); card.className='card';
+				const tn = document.createElement('div'); tn.className='t name'; tn.textContent = String(s.name||'').toUpperCase(); card.appendChild(tn);
+				const tc = document.createElement('div'); tc.className='t class'; tc.textContent = s.cls||''; card.appendChild(tc);
+				const ts = document.createElement('div'); ts.className='t section'; ts.textContent = s.section||''; card.appendChild(ts);
+				const tr = document.createElement('div'); tr.className='t roll'; tr.textContent = s.roll||''; card.appendChild(tr);
+				const te = document.createElement('div'); te.className='t exam'; te.textContent = exam; card.appendChild(te);
+				const ty = document.createElement('div'); ty.className='t year'; ty.textContent = year; card.appendChild(ty);
+					if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
+				grid.appendChild(card);
+			});
+			// QR removed
+		}
+
+			function printSingle(s){
+				renderPrint([s]);
+				// Printing is now manual; use the Print button or Ctrl+P
+			}
+
+			async function init(){
+				try{
+					updateStatus('Loading classes…');
+					const pairs = await loadSheetList(); if(!pairs.length){ updateStatus('No sheets'); return; }
+					sheets = pairs.map(({id,name})=>{ const m=parseSheetMeta(name); if(m.cls) classSet.add(m.cls); if(m.section){ sectionSet.add(m.section); } return { id, name, cls: m.cls||'', section: m.section||'' }; });
+					fillSelectOptions('classFilter', classSet, 'Class');
+					fillSelectOptions('sectionFilter', sectionSet, 'Section');
+					document.getElementById('count').textContent = 'Select Class & Section to load';
+					updateStatus('Waiting for filters');
+				}catch(err){ console.error(err); updateStatus('Init failed'); }
+			}
+
+			function updateSectionOptionsForClass(){
+				const cls = filters.cls;
+				if(!cls){ fillSelectOptions('sectionFilter', sectionSet, 'Section'); return; }
+				const set = new Set(sheets.filter(s=>s.cls===cls).map(s=>s.section));
+				fillSelectOptions('sectionFilter', set, 'Section');
+			}
+
+			async function loadForCurrentFilter(){
+				const { cls, section } = filters; if(!cls || !section){ return; }
+				updateStatus('Loading students…');
+				allStudents = []; let idx=0;
+				const targets = sheets.filter(s=> s.cls===cls && s.section.toLowerCase()===section.toLowerCase());
+				for(const t of targets){
+					try{
+						const url = csvUrl(t.id, t.name);
+						const res = await new Promise((resolve,reject)=>{ Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) }); });
+						const rows = (res && res.data) ? res.data : [];
+						window.__lastRows__ = rows; // for guessField sampling
+						const fields = (res && res.meta && res.meta.fields) ? res.meta.fields : Object.keys(rows[0]||{});
+						const nameKey = guessField(fields, 'name');
+						const fatherKey = guessField(fields, 'father');
+						const rollKey = guessField(fields, 'roll');
+						const iidKey = (function(){ const m=new Map(fields.map(f=>[norm(f),f])); const keys=['iid','studentid','sid','id']; for(const k of keys){ if(m.has(k)) return m.get(k);} return null; })();
+						rows.forEach((r,rowIdx)=>{
+							const s = {
+								_idx: idx++,
+								name: nameKey? r[nameKey] : (r[fields[0]]||''),
+								father: fatherKey? r[fatherKey] : '',
+								roll: rollKey? r[rollKey] : '',
+								iid: iidKey? r[iidKey] : '',
+								cls, section, sheetId:t.id, sheetName:t.name, row:rowIdx
+							};
+							allStudents.push(s);
+						});
+					}catch(e){ console.error('Fetch failed for', t.name, e); }
+				}
+				renderTable();
+				updateStatus('Ready');
+			}
+
+		window.addEventListener('DOMContentLoaded', ()=>{
+			init();
+			document.getElementById('classFilter').addEventListener('change', e=>{ filters.cls = e.target.value; updateSectionOptionsForClass(); allStudents = []; renderTable(); if(filters.cls && filters.section){ loadForCurrentFilter(); } });
+			document.getElementById('sectionFilter').addEventListener('change', e=>{ filters.section = e.target.value; allStudents = []; renderTable(); if(filters.cls && filters.section){ loadForCurrentFilter(); } });
+			document.getElementById('examSelect').addEventListener('change', e=>{ exam = e.target.value; });
+			document.getElementById('yearSelect').addEventListener('change', e=>{ year = e.target.value; });
+			document.getElementById('selectAll').addEventListener('change', e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked = e.target.checked; }); });
+			document.getElementById('generate').addEventListener('click', ()=>{
+				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
+				// Open bulk preview in a new tab and pass data via localStorage (shared across tabs)
+				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid })) };
+				const key = 'admit_bulk_' + Date.now();
+				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
+		window.open(`print_selected.html?key=${encodeURIComponent(key)}`, '_blank', 'noopener');
+			});
+					const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{
+						const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
+						renderPrint(sel);
+						// Printing is manual; use the Print button in the preview window
+					}); }
+		});
+	</script>
+</head>
+<body>
+	<header>
+		<div class="container">
+			<h1>Admit — Select and Generate</h1>
+			<div class="toolbar controls">
+				<div class="left-tools">
+					<label><input type="checkbox" id="selectAll"> Select all</label>
+				</div>
+				<select id="classFilter" aria-label="Class"></select>
+				<select id="sectionFilter" aria-label="Section"></select>
+				<select id="examSelect" aria-label="Exam">
+					<option>Half Yearly  Examination</option>
+					<option>Annual  Examination</option>
+					<option>Pre-Test  Examination</option>
+					<option>Test Examination</option>
+				</select>
+				<select id="yearSelect" aria-label="Year">
+					<option>2025</option>
+					<option>2026</option>
+				</select>
+				<div style="flex:1 1 auto"></div>
+				<button id="generate" class="btn primary">Generate selected</button>
+				<button id="pdfBtn" class="btn" title="Print to PDF">PDF</button>
+				<span id="status" class="status"></span>
+			</div>
+		</div>
+	</header>
+	<main class="container list-area">
+		<table id="list">
+			<thead>
+				<tr>
+					<th style="width:48px">Select</th>
+					<th>Name</th>
+					<th>Father</th>
+					<th>Class</th>
+					<th>Section</th>
+					<th>Roll</th>
+					<th>PDF</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		<div class="footbar">
+			<div class="muted" id="count">0 students</div>
+			<div class="muted">Tip: Use filters above, tick students, then Generate to print 10 per A4 (5×2).</div>
+		</div>
+	</main>
+	<div id="printArea" class="print-area"></div>
+</body>
+</html>

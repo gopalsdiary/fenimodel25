@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admit Card — Print</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+  <style>
+    :root{ --bg:#f6f7f9; }
+    *{ box-sizing:border-box }
+    body{ margin:0; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:var(--bg); color:#111 }
+    header{ position:sticky; top:0; background:#fff; border-bottom:1px solid #e5e7eb; z-index:10 }
+    .container{ max-width:980px; margin:0 auto; padding:1rem }
+    h1{ margin:.25rem 0; text-align:center; font-size:1.1rem }
+  .card-wrap{ display:flex; justify-content:center; padding:1rem }
+  /* Single-card preview: keep exact card ratio so mm positions match the template */
+  .card{ position:relative; width:min(210mm, 95vw); aspect-ratio: 210 / 115; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; border:1px solid #e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.08) }
+  .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
+  .labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
+  /* Positions tuned; adjust with query overrides if needed */
+  .t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:700; letter-spacing:.3mm; text-transform:uppercase }
+    .t.class{ left:10mm; top:74mm; font-size:5mm }
+    .t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
+    .t.iid{ left:76mm; top:90mm; font-size:5mm }
+  .t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:700 }
+  .t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:5.52mm }
+    .t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
+  /* QR/Barcode removed */
+    .actions{ display:flex; gap:.5rem; justify-content:center; padding:1rem }
+    .btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.5rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
+    .btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
+  @media print{ header,.actions{ display:none !important } body{ background:#fff } @page{ size:A4; margin:10mm } .card-wrap{ padding:0 } .card{ box-shadow:none; border:none } }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
+    function text(el, v){ el.textContent = v==null? '': String(v); }
+  function upper(s){ return String(s||'').toUpperCase(); }
+    function setPos(selector, prop, qname){
+      const v = q(qname, null); if(v===null || v==='') return;
+      const el = document.querySelector(selector); if(!el) return;
+      const num = Number(v); if(Number.isFinite(num)) el.style[prop] = num + 'mm';
+    }
+    function sanitizeFilename(s){ return String(s||'').replace(/[\\/:*?"<>|]+/g,'').trim().replace(/\s+/g,'_').slice(0,120) || 'Admit_Card'; }
+    function downloadPDF(){
+      if(typeof html2pdf === 'undefined'){ alert('PDF library not loaded. Please check your internet connection.'); return; }
+      const card = document.querySelector('.card');
+      const name = (document.querySelector('.t.name')?.textContent || '').trim();
+      const rollText = (document.querySelector('.t.roll')?.textContent || '').trim();
+      const roll = rollText.split(/\s+IID\b/i)[0].trim();
+      const examLine = (document.querySelector('.t.exam')?.textContent || '').trim();
+      const filename = sanitizeFilename(`Admit_${examLine}_${roll}_${name}`) + '.pdf';
+      const opt = {
+        margin:       0,
+        filename,
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: null },
+        jsPDF:        { unit: 'mm', format: [210,115], orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(card).save();
+    }
+  function render(){
+      const data = {
+        exam: q('exam',''),
+        year: q('year',''),
+        name: q('name',''),
+    father: q('father',''),
+        cls: q('cls', q('class','')),
+        section: q('section',''),
+        roll: q('roll',''),
+        iid: q('iid','')
+      };
+      // Background template switch (use bg=sample to compare with sample.jpg)
+      const bg = q('bg','admit');
+      const card = document.querySelector('.card');
+      if(bg && bg.toLowerCase().startsWith('sample')){ card.style.backgroundImage = "url('./sample.jpg')"; }
+      else{ card.style.backgroundImage = "url('./admit.png')"; }
+  document.querySelector('.t.exam').textContent = [data.exam, data.year].filter(Boolean).join(' - ');
+  const nameEl = document.querySelector('.t.name'); nameEl.classList.add('labelled'); nameEl.setAttribute('data-label','Name'); nameEl.textContent = upper(data.name);
+  const classEl = document.querySelector('.t.class'); classEl.classList.add('labelled'); classEl.setAttribute('data-label','Class'); classEl.textContent = data.cls;
+  const secEl = document.querySelector('.t.section'); secEl.classList.add('labelled'); secEl.setAttribute('data-label','Section'); secEl.textContent = upper(data.section);
+  const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.style.whiteSpace='pre';
+  rollEl.textContent = data.iid ? `${data.roll||''}                           IID : ${data.iid}` : `${data.roll||''}`;
+  const iidEl = document.querySelector('.t.iid'); iidEl.textContent='';
+  // Optional position overrides via query params (values in mm)
+  setPos('.t.name','left','name_left'); setPos('.t.name','top','name_top');
+  // father field removed
+  setPos('.t.class','left','class_left'); setPos('.t.class','top','class_top');
+  setPos('.t.section','left','section_left'); setPos('.t.section','top','section_top');
+  setPos('.t.roll','left','roll_left'); setPos('.t.roll','top','roll_top');
+  setPos('.t.exam','left','exam_left'); setPos('.t.exam','top','exam_top');
+  setPos('.t.year','left','year_left'); setPos('.t.year','top','year_top');
+  setPos('.t.iid','left','iid_left'); setPos('.t.iid','top','iid_top');
+  // QR removed
+    }
+    window.addEventListener('DOMContentLoaded', render);
+  </script>
+</head>
+<body>
+  <header>
+    <div class="container"><h1>Admit Card Preview</h1></div>
+  </header>
+  <div class="card-wrap">
+    <div class="card">
+      <div class="t exam"></div>
+      <div class="t year"></div>
+      <div class="t name"></div>
+      <div class="t class"></div>
+      <div class="t section"></div>
+      <div class="t roll"></div>
+      <div class="t iid"></div>
+    </div>
+  </div>
+  <div class="actions">
+  <button class="btn" onclick="window.print()">Print</button>
+  <button class="btn" onclick="downloadPDF()">Download PDF</button>
+  </div>
+  
+</body>
+</html>

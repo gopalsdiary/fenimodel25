@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Admit Cards — Selected (10 per page)</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+	<style>
+		:root{ --bg:#f6f7f9; --border:#e5e7eb }
+		*{ box-sizing:border-box }
+		body{ margin:0; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:var(--bg); color:#111 }
+		header{ position:sticky; top:0; background:#fff; border-bottom:1px solid var(--border); z-index:10 }
+		.container{ max-width:1100px; margin:0 auto; padding:1rem }
+		h1{ margin:.25rem 0; text-align:center; font-size:1.1rem }
+		.actions{ display:flex; gap:.5rem; justify-content:center; padding:.5rem 0 }
+		.btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.45rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
+		.btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
+
+		/* Print layout: A4 portrait, 5 columns x 2 rows = 10 cards */
+		.sheet{ width:210mm; margin:0 auto; padding:1.5mm; page-break-inside: avoid; break-inside: avoid-page }
+		.sheet + .sheet{ page-break-before: always; break-before: page }
+		.grid{ display:grid; grid-template-columns:repeat(2, max-content); gap:3.5mm }
+		/* Wrapper sized to scaled card footprint; .card remains true-size (210x115mm) */
+		.box{ width:38mm; height:22mm; /* placeholder; JS will set exact mm via inline style */ break-inside: avoid; page-break-inside: avoid; display:block }
+		.grid{ break-inside: avoid; page-break-inside: avoid }
+		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
+		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
+		.labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
+		/* Positions aligned with single-card page (may be slightly scaled visually) */
+		.t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:700; letter-spacing:.3mm; text-transform:uppercase }
+		.t.class{ left:10mm; top:74mm; font-size:5mm }
+		.t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
+		.t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:700; white-space:pre }
+		.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:5.52mm }
+		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
+		.t.iid{ left:76mm; top:90mm; font-size:5mm }
+
+		.sheets{ display:flex; flex-direction:column; gap:8mm; padding:8mm 0 }
+
+		@media print{
+			header,.actions{ display:none !important }
+			body{ background:#fff }
+			@page{ size:A4; margin:6mm }
+			.sheets{ gap:0; padding:0 }
+			.sheet{ page-break-inside:avoid; margin:0 auto }
+			.card{ border:none }
+		}
+	</style>
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script>
+		function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
+		function chunk(arr, size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
+		function upper(s){ return String(s||'').toUpperCase(); }
+
+			function loadPayload(){
+				const key = q('key',''); if(!key){ return null; }
+				try{
+					const raw = localStorage.getItem(key);
+					if(!raw) return null;
+					const data = JSON.parse(raw);
+					// Clean up so storage doesn't grow indefinitely
+					try{ localStorage.removeItem(key); }catch(_){}
+					return data;
+				}catch(e){ return null; }
+			}
+
+			function render(){
+			const payload = loadPayload();
+			const info = document.getElementById('info');
+			if(!payload || !Array.isArray(payload.students) || payload.students.length===0){
+				info.textContent = 'No data found. Please go back and select students again.';
+				return;
+			}
+			const exam = payload.exam||''; const year = payload.year||'';
+			info.textContent = `Rendering ${payload.students.length} admits — ${exam} ${year}`;
+
+			const sheetsWrap = document.getElementById('sheets');
+			sheetsWrap.innerHTML = '';
+				// Compute scale to fit 2 columns x 5 rows within A4 portrait content area
+				const PAGE_W = 210, PAGE_H = 297; // mm
+				const PAD = 1.5, GAP = 3.5, COLS = 2, ROWS = 5;
+				const contentW = PAGE_W - 2*PAD; // mm
+				const contentH = PAGE_H - 2*PAD; // mm
+				const colW = (contentW - GAP*(COLS-1)) / COLS; // mm per column
+				const rowH = (contentH - GAP*(ROWS-1)) / ROWS; // mm per row
+				const widthScale = colW / 210; // relative to 210mm true card width
+				const heightScale = rowH / 115; // relative to 115mm true card height
+				// Small safety margin to avoid clipping from rounding when rendering or exporting
+				const SCALE = Math.min(widthScale, heightScale) * 0.985;
+				const boxW = 210 * SCALE; // mm
+				const boxH = 115 * SCALE; // mm
+
+			const pages = chunk(payload.students, 10);
+					pages.forEach((page, pageIdx)=>{
+				const sheet = document.createElement('div'); sheet.className='sheet';
+				const grid = document.createElement('div'); grid.className='grid'; sheet.appendChild(grid);
+				page.forEach(s=>{
+						const box = document.createElement('div'); box.className='box'; box.style.width = boxW + 'mm'; box.style.height = boxH + 'mm';
+						const card = document.createElement('div'); card.className='card'; card.style.transform = `scale(${SCALE})`;
+							  const tExam = document.createElement('div'); tExam.className='t exam'; tExam.textContent = [exam, year].filter(Boolean).join(' - '); card.appendChild(tExam);
+							  const tYear = document.createElement('div'); tYear.className='t year'; tYear.textContent = ''; card.appendChild(tYear);
+							const tName = document.createElement('div'); tName.className='t name labelled'; tName.setAttribute('data-label','Name'); tName.textContent = upper(s.name||''); card.appendChild(tName);
+							const tClass = document.createElement('div'); tClass.className='t class labelled'; tClass.setAttribute('data-label','Class'); tClass.textContent = s.cls||''; card.appendChild(tClass);
+							const tSection = document.createElement('div'); tSection.className='t section labelled'; tSection.setAttribute('data-label','Section'); tSection.textContent = upper(s.section||''); card.appendChild(tSection);
+							const tRoll = document.createElement('div'); tRoll.className='t roll labelled'; tRoll.setAttribute('data-label','Roll'); tRoll.textContent = s.iid ? `${s.roll||''}                           IID : ${s.iid}` : `${s.roll||''}`; card.appendChild(tRoll);
+					const tIid = document.createElement('div'); tIid.className='t iid'; tIid.textContent = ''; card.appendChild(tIid);
+						box.appendChild(card);
+						grid.appendChild(box);
+				});
+						// Force a page break between sheets for PDF generation
+						if(pageIdx < pages.length-1){ sheet.style.pageBreakAfter = 'always'; }
+				sheetsWrap.appendChild(sheet);
+			});
+		}
+
+		window.addEventListener('DOMContentLoaded', ()=>{
+			render();
+					/* Print button removed */
+							const dl = document.getElementById('downloadBtn');
+							if(dl){ dl.addEventListener('click', async ()=>{
+								const infoText = (document.getElementById('info')?.textContent||'').trim();
+								const filename = (infoText? infoText.replace(/\s+/g,'_').slice(0,60)+'_': '') + 'Selected_Admit_Cards.pdf';
+								const sheets = Array.from(document.querySelectorAll('.sheet'));
+								if(!sheets.length){ alert('Nothing to export.'); return; }
+								const hasLibs = window.jspdf && window.html2canvas;
+								if(!hasLibs){ alert('PDF libraries not loaded. Please check internet connection.'); return; }
+								const { jsPDF } = window.jspdf;
+								const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+								for(let i=0;i<sheets.length;i++){
+									const sheet = sheets[i];
+									// Ensure no transforms interfere with measurements
+									const canvas = await window.html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+									const imgData = canvas.toDataURL('image/jpeg', 0.95);
+									// Fit image into A4 while preserving aspect
+									const pageW = 210, pageH = 297;
+									const imgWmm = pageW; // target full width
+									const imgHmm = canvas.height * imgWmm / canvas.width;
+									let x = 0, y = 0, w = imgWmm, h = imgHmm;
+									if(h > pageH){
+										const scale = pageH / h; w = w * scale; h = pageH; x = (pageW - w)/2; y = 0;
+									}else{
+										y = (pageH - h)/2; // center vertically
+									}
+									if(i>0) pdf.addPage('a4','portrait');
+									pdf.addImage(imgData, 'JPEG', x, y, w, h);
+								}
+								pdf.save(filename);
+							}); }
+		});
+	</script>
+	<script>
+		// Optional: support direct query-based render without sessionStorage (for manual tests)
+		// Example: print_selected.html?direct=1&exam=Half%20Yearly&year=2025&data=[{...}]
+	</script>
+	<noscript>Enable JavaScript to render the selected admit cards.</noscript>
+</head>
+<body>
+	<header>
+		<div class="container">
+			<h1>Selected Admit Cards (10 per A4)</h1>
+			<div class="actions">
+		<button id="downloadBtn" class="btn">Download PDF</button>
+				<button class="btn" onclick="history.back()">Back</button>
+			</div>
+			<div id="info" class="container" style="text-align:center; color:#6b7280; font-size:.95rem"></div>
+		</div>
+	</header>
+
+	<main class="sheets" id="sheets"></main>
+</body>
+</html>
+
