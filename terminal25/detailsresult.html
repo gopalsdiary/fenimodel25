@@ -396,7 +396,7 @@
         function generateSubjectMap(headers) {
             const subjects = new Set();
             headers.forEach(header => {
-                const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+                const match = header.match(/^(.*?)(_CQ|_MCQ|_Practical|_Total|_GPA)$/);
                 if (match) {
                     subjects.add(match[1]);
                 }
@@ -404,8 +404,8 @@
 
             subjects.forEach(subject => {
                 SUBJECT_MAP[subject] = {
-                    WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
-                    CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+                    CQ: headers.find(h => h.includes(`${subject}_CQ`)) || '',
+                    MCQ: headers.find(h => h.includes(`${subject}_MCQ`)) || '',
                     Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
                     Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
                     GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
@@ -430,8 +430,8 @@
                         <thead>
                             <tr>
                                 <th>Subject</th>
-                                <th>WRITTEN</th>
-                                <th>CA</th>
+                                <th>CQ</th>
+                                <th>MCQ</th>
                                 <th>Practical</th>
                                 <th>Total</th>
                                 <th>GPA</th>
@@ -439,8 +439,8 @@
                         </thead>
                         <tbody>
                             ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
-                                const cleanWRITTEN = cols.WRITTEN.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                const cleanCA = cols.CA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanCQ = cols.CQ.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
+                                const cleanMCQ = cols.MCQ.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
                                 const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
@@ -448,8 +448,8 @@
                                 return `
                                 <tr>
                                     <td>${subject.replace(/\*/g, '')}</td>
-                                    <td>${student[cleanWRITTEN] || '-'}</td>
-                                    <td>${student[cleanCA] || '-'}</td>
+                                    <td>${student[cleanCQ] || '-'}</td>
+                                    <td>${student[cleanMCQ] || '-'}</td>
                                     <td>${student[cleanPractical] || '-'}</td>
                                     <td>${student[cleanTotal] || '-'}</td>
                                     <td>${student[cleanGPA] || '-'}</td>
