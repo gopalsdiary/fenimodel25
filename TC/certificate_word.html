@@ -20,7 +20,7 @@
       /* Left panel box (percentages relative to image) */
       --leftpanel-left: 4.5%;
       --leftpanel-right: 74%;
-      --leftpanel-top: 22%;
+      --leftpanel-top: 18%;
       --leftpanel-bottom: 8%;
   /* QR code position & size */
   --qr-size: 80px;
@@ -110,9 +110,9 @@
     function findHeaderByAliases(fieldMap, aliases){ const keys = Object.keys(fieldMap); for (const a of aliases){ const t = norm(a); const k = keys.find(x => norm(x)===t || norm(x).includes(t)); if (k) return fieldMap[k]; } return null; }
     function buildCsvKeyMap(fieldMap){
       const alias = {
-        name: ['name','student name','studentname','full name','fullname'],
-        father: ['father','father name','fathers name','guardian','parent'],
-        mother: ['mother','mother name','mothers name'],
+        name: ['NAME EN'],
+        father: ['father','FATHER NAME EN','fathers name','guardian','parent'],
+        mother: ['mother','mother name','MOTHER NAME EN'],
         class: ['class','std','standard','grade','present class','presentclass'],
         leftclass: ['leftclass','left class','last class','lastclass','left school','leftschool'],
         leftschool: ['leftschool','left school','leftclass','left class'],
@@ -243,6 +243,64 @@ ${hisHer} character is ¬${r.character || ''}.`
       }).join('<br/>');
     }
 
+    // ---- Extra source: fetch name/father/mother from 0newdatabase/all_data_field sheets by IID ----
+    async function loadSheetPairsFrom0New(){
+      // Locate the helper list used by 0newdatabase/all_data_field.html
+      // certificate_word.html lives in /TC/, so go up one level
+      const url = '../0newdatabase/sheetidname.text';
+      const res = await fetch(url, { cache: 'no-store' });
+      if(!res.ok) throw new Error('sheetidname.text load failed');
+      const txt = await res.text();
+      const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+      const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];/i;
+      const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];/i;
+      const pairs=[]; let curId=null;
+      for(const line of lines){
+        const im=idRe.exec(line); if(im){ curId=im[1]; continue; }
+        const nm=nameRe.exec(line); if(nm && curId){ pairs.push({ id:curId, name:nm[1] }); curId=null; }
+      }
+      return pairs;
+    }
+    function sheetCsvUrl(id, sheet){
+      return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+    }
+    async function findRowInAllSheetsByIID(iid){
+      if(!iid) return null;
+      try{
+        const pairs = await loadSheetPairsFrom0New();
+        for(const {id,name} of pairs){
+          const url = sheetCsvUrl(id, name);
+          const results = await new Promise((resolve, reject)=>{
+            Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
+          });
+          const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys((results && results.data && results.data[0])||{});
+          const fieldMap = normalizeFieldMap(fields||[]);
+          const csvMap = buildCsvKeyMap(fieldMap);
+          const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'] || fieldMap['studentid'] || fieldMap['sid'] || fieldMap['uniqueid'];
+          const rows = (results && results.data) ? results.data : [];
+          const row = rows.find(r => String(iidHeader ? r[iidHeader] : '').trim() === String(iid).trim());
+          if(row){ return { row, csvMap }; }
+        }
+      } catch(e){ console.warn('0newdatabase lookup failed', e); }
+      return null;
+    }
+    async function augmentNameFrom0New(rec, iid){
+      try{
+        const found = await findRowInAllSheetsByIID(iid);
+        if(found){
+          const {row, csvMap} = found;
+          // Only overwrite if value exists in the source
+          const name = getVal(row, csvMap, 'name');
+          const father = getVal(row, csvMap, 'father');
+          const mother = getVal(row, csvMap, 'mother');
+          rec.name = name || rec.name;
+          rec.father = father || rec.father;
+          rec.mother = mother || rec.mother;
+        }
+      } catch(e){ console.warn('augmentNameFrom0New failed', e); }
+      return rec;
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       const params = new URLSearchParams(location.search);
       const iidParam = (params.get('iid')||'').trim();
@@ -251,45 +309,50 @@ ${hisHer} character is ¬${r.character || ''}.`
       const status = document.getElementById('status');
       status.textContent = 'Loading…';
       loadCsvData((results) => {
-        try {
-          const fieldMap = normalizeFieldMap(results.meta.fields);
-          const csvMap = buildCsvKeyMap(fieldMap);
-          const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'];
-          const slHeader = csvMap.sl || fieldMap['sl'] || fieldMap['serial'];
-          let candidates = results.data.slice();
-          // If uk present, split and narrow early
-          if(ukParam){
-            const [ukIid, ukSl] = ukParam.split('_');
-            candidates = candidates.filter(r => {
-              const riid = String(iidHeader ? r[iidHeader] : '').trim();
-              const rsl = String(slHeader ? r[slHeader] : '').trim();
-              return (ukIid?riid===ukIid:true) && (ukSl?rsl===ukSl:true);
-            });
-          }
-          if(iidParam){
-            candidates = candidates.filter(r => String(iidHeader ? r[iidHeader] : '').trim() === iidParam);
-          }
+        (async () => {
+          try {
+            const fieldMap = normalizeFieldMap(results.meta.fields);
+            const csvMap = buildCsvKeyMap(fieldMap);
+            const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'];
+            const slHeader = csvMap.sl || fieldMap['sl'] || fieldMap['serial'];
+            let candidates = results.data.slice();
+            // If uk present, split and narrow early
+            if(ukParam){
+              const [ukIid, ukSl] = ukParam.split('_');
+              candidates = candidates.filter(r => {
+                const riid = String(iidHeader ? r[iidHeader] : '').trim();
+                const rsl = String(slHeader ? r[slHeader] : '').trim();
+                return (ukIid?riid===ukIid:true) && (ukSl?rsl===ukSl:true);
+              });
+            }
+            if(iidParam){
+              candidates = candidates.filter(r => String(iidHeader ? r[iidHeader] : '').trim() === iidParam);
+            }
             if(slParam){
-            candidates = candidates.filter(r => String(slHeader ? r[slHeader] : '').trim() === slParam);
-          }
-          // If still multiple, try roll+class params
-          if(candidates.length > 1){
-            const rollParam = (params.get('roll')||'').trim();
-            const classParam = (params.get('class')||params.get('cls')||'').trim();
-            const rollHeader = csvMap.roll || fieldMap['roll'];
-            const classHeader = csvMap.class || fieldMap['class'];
-            if(rollParam){ candidates = candidates.filter(r => String(rollHeader? r[rollHeader]: '').trim() === rollParam); }
-            if(classParam){ candidates = candidates.filter(r => String(classHeader? r[classHeader]: '').trim() === classParam); }
-          }
-          if(candidates.length === 0){ status.textContent = 'No record found'; status.classList.add('error'); return; }
-          if(candidates.length > 1){ status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; status.classList.add('warn'); }
-          const row = candidates[0];
-          const rec = buildRecord(row, csvMap);
-          // Unique key for QR & share
-          rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
-          renderRecord(rec);
-          status.textContent = 'Ready';
-        } catch(e){ console.error(e); status.textContent='Failed to render'; status.classList.add('error'); }
+              candidates = candidates.filter(r => String(slHeader ? r[slHeader] : '').trim() === slParam);
+            }
+            // If still multiple, try roll+class params
+            if(candidates.length > 1){
+              const rollParam = (params.get('roll')||'').trim();
+              const classParam = (params.get('class')||params.get('cls')||'').trim();
+              const rollHeader = csvMap.roll || fieldMap['roll'];
+              const classHeader = csvMap.class || fieldMap['class'];
+              if(rollParam){ candidates = candidates.filter(r => String(rollHeader? r[rollHeader]: '').trim() === rollParam); }
+              if(classParam){ candidates = candidates.filter(r => String(classHeader? r[classHeader]: '').trim() === classParam); }
+            }
+            if(candidates.length === 0){ status.textContent = 'No record found'; status.classList.add('error'); return; }
+            if(candidates.length > 1){ status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; status.classList.add('warn'); }
+            const row = candidates[0];
+            let rec = buildRecord(row, csvMap);
+            // Unique key for QR & share
+            rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
+            // Enrich Name/Father/Mother from 0newdatabase by IID
+            status.textContent = 'Matching by IID…';
+            rec = await augmentNameFrom0New(rec, rec.iid || iidParam);
+            renderRecord(rec);
+            status.textContent = 'Ready';
+          } catch(e){ console.error(e); status.textContent='Failed to render'; status.classList.add('error'); }
+        })();
       }, (err) => {
         console.error(err);
         status.textContent = 'Failed to load CSV';
