@@ -18,11 +18,12 @@
 		.btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
 
 		/* Print layout: A4 portrait, 5 columns x 2 rows = 10 cards */
-		.sheet{ width:210mm; margin:0 auto; padding:2mm; page-break-inside: avoid; break-inside: avoid-page }
+		.sheet{ width:210mm; margin:0 auto; padding:1.5mm; page-break-inside: avoid; break-inside: avoid-page }
 		.sheet + .sheet{ page-break-before: always; break-before: page }
-		.grid{ display:grid; grid-template-columns:repeat(2, max-content); gap:4mm }
+		.grid{ display:grid; grid-template-columns:repeat(2, max-content); gap:3.5mm }
 		/* Wrapper sized to scaled card footprint; .card remains true-size (210x115mm) */
-		.box{ width:38mm; height:22mm; /* placeholder; JS will set exact mm via inline style */ }
+		.box{ width:38mm; height:22mm; /* placeholder; JS will set exact mm via inline style */ break-inside: avoid; page-break-inside: avoid; display:block }
+		.grid{ break-inside: avoid; page-break-inside: avoid }
 		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
 		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
 		.labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
@@ -46,7 +47,9 @@
 			.card{ border:none }
 		}
 	</style>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+				<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 	<script>
 		function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
 		function chunk(arr, size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
@@ -78,7 +81,7 @@
 			sheetsWrap.innerHTML = '';
 				// Compute scale to fit 2 columns x 5 rows within A4 portrait content area
 				const PAGE_W = 210, PAGE_H = 297; // mm
-				const PAD = 2, GAP = 4, COLS = 2, ROWS = 5;
+				const PAD = 1.5, GAP = 3.5, COLS = 2, ROWS = 5;
 				const contentW = PAGE_W - 2*PAD; // mm
 				const contentH = PAGE_H - 2*PAD; // mm
 				const colW = (contentW - GAP*(COLS-1)) / COLS; // mm per column
@@ -86,7 +89,7 @@
 				const widthScale = colW / 210; // relative to 210mm true card width
 				const heightScale = rowH / 115; // relative to 115mm true card height
 				// Small safety margin to avoid clipping from rounding when rendering or exporting
-				const SCALE = Math.min(widthScale, heightScale) * 0.995;
+				const SCALE = Math.min(widthScale, heightScale) * 0.985;
 				const boxW = 210 * SCALE; // mm
 				const boxH = 115 * SCALE; // mm
 
@@ -116,22 +119,36 @@
 		window.addEventListener('DOMContentLoaded', ()=>{
 			render();
 					document.getElementById('printBtn').addEventListener('click', ()=>window.print());
-					const dl = document.getElementById('downloadBtn');
-					if(dl){ dl.addEventListener('click', ()=>{
-						const el = document.getElementById('sheets');
-						if(typeof html2pdf === 'undefined'){ alert('PDF library not loaded. Check your internet connection.'); return; }
+							const dl = document.getElementById('downloadBtn');
+							if(dl){ dl.addEventListener('click', async ()=>{
 								const infoText = (document.getElementById('info')?.textContent||'').trim();
 								const filename = (infoText? infoText.replace(/\s+/g,'_').slice(0,60)+'_': '') + 'Selected_Admit_Cards.pdf';
-						const opt = {
-							margin:       0,
-							filename,
-							image:        { type: 'jpeg', quality: 0.95 },
-							html2canvas:  { scale: 2, useCORS: true, backgroundColor: null },
-							jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-									pagebreak:    { mode: ['css', 'legacy'], after: '.sheet' }
-						};
-						html2pdf().set(opt).from(el).save();
-					}); }
+								const sheets = Array.from(document.querySelectorAll('.sheet'));
+								if(!sheets.length){ alert('Nothing to export.'); return; }
+								const hasLibs = window.jspdf && window.html2canvas;
+								if(!hasLibs){ alert('PDF libraries not loaded. Please check internet connection.'); return; }
+								const { jsPDF } = window.jspdf;
+								const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+								for(let i=0;i<sheets.length;i++){
+									const sheet = sheets[i];
+									// Ensure no transforms interfere with measurements
+									const canvas = await window.html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+									const imgData = canvas.toDataURL('image/jpeg', 0.95);
+									// Fit image into A4 while preserving aspect
+									const pageW = 210, pageH = 297;
+									const imgWmm = pageW; // target full width
+									const imgHmm = canvas.height * imgWmm / canvas.width;
+									let x = 0, y = 0, w = imgWmm, h = imgHmm;
+									if(h > pageH){
+										const scale = pageH / h; w = w * scale; h = pageH; x = (pageW - w)/2; y = 0;
+									}else{
+										y = (pageH - h)/2; // center vertically
+									}
+									if(i>0) pdf.addPage('a4','portrait');
+									pdf.addImage(imgData, 'JPEG', x, y, w, h);
+								}
+								pdf.save(filename);
+							}); }
 		});
 	</script>
 	<script>
