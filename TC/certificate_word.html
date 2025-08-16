@@ -167,9 +167,10 @@
   const childWord = isFemale ? 'daughter' : 'son';
   const heShe = isFemale ? 'She' : 'He';
   const hisHer = isFemale ? 'Her' : 'His';
+  const regVal = (r.registrationnumber||'').trim() || '---';
       return (
 `This is certify that ${r.name || ''} ${childWord} of ${r.father || ''} and ${r.mother || ''} student's of Feni Model High School. ${heShe} has left the school ${r.leftclass || ''}. ${heShe} was studying in class ${r.class || ''}, Roll: ${r.roll || ''}, Section: ${r.section || ''} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${r.nextclass || ''}.
-${hisHer} registration number is ${r.registrationnumber || ''} and date of birth is ${r.dob || ''}.
+${hisHer} registration number is ${regVal} and date of birth is ${r.dob || ''}.
 ${heShe} has paid the school dues till ${r.paidmonth || ''}.
 
 ${hisHer} character is ¬${r.character || ''}.`
@@ -189,7 +190,7 @@ ${hisHer} character is ¬${r.character || ''}.`
       const roll = escHtml(r.roll);
       const section = escHtml(r.section);
       const nextclass = escHtml(r.nextclass);
-      const registration = escHtml(r.registrationnumber);
+  const registration = escHtml((r.registrationnumber||'').trim() || '---');
       const dob = escHtml(r.dob);
       const paidmonth = escHtml(r.paidmonth);
       const character = escHtml(r.character);
@@ -228,7 +229,7 @@ ${hisHer} character is ¬${r.character || ''}.`
         ['Class', r.class],
         ['Section', r.section],
         ['Roll', r.roll],
-        ['Registration', r.registrationnumber],
+  ['Registration', (r.registrationnumber||'').trim() || '---'],
         ['Date of Birth', r.dob],
         ['Paid Month', r.paidmonth],
         ['Character', r.character],
@@ -293,9 +294,11 @@ ${hisHer} character is ¬${r.character || ''}.`
           const name = getVal(row, csvMap, 'name');
           const father = getVal(row, csvMap, 'father');
           const mother = getVal(row, csvMap, 'mother');
+          const registrationnumber = getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration');
           rec.name = name || rec.name;
           rec.father = father || rec.father;
           rec.mother = mother || rec.mother;
+          rec.registrationnumber = registrationnumber || rec.registrationnumber;
         }
       } catch(e){ console.warn('augmentNameFrom0New failed', e); }
       return rec;
