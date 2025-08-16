@@ -19,22 +19,22 @@
   .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
   .labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
   /* Positions tuned; adjust with query overrides if needed */
-  .t.name{ left:10mm; top:68mm; font-size:4.8mm; letter-spacing:.3mm; text-transform:uppercase }
-  .t.father{ left:10mm; top:76mm; font-size:4.6mm }
-    .t.class{ left:10mm; top:86mm; font-size:5mm }
-    .t.section{ left:76mm; top:86mm; font-size:5mm; text-transform:uppercase }
-    .t.roll{ left:10mm; top:102mm; font-size:5.5mm }
-    .t.exam{ left:60mm; top:52mm; font-weight:700; font-size:4.6mm }
+  .t.name{ left:10mm; top:66mm; font-size:6.24mm; letter-spacing:.3mm; text-transform:uppercase }
+    .t.class{ left:10mm; top:82mm; font-size:5mm }
+    .t.section{ left:76mm; top:82mm; font-size:5mm; text-transform:uppercase }
+    .t.iid{ left:76mm; top:90mm; font-size:5mm }
+    .t.roll{ left:10mm; top:96mm; font-size:5.5mm }
+  .t.exam{ left:60mm; top:52mm; font-weight:700; font-size:5.52mm }
     .t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
-    .t.iid{ left:78mm; top:122mm; font-size:4mm }
-  .barcode{ position:absolute; left:70mm; bottom:12mm; width:60mm; height:14mm; display:flex; align-items:center; justify-content:center }
-    .barcode svg{ width:100%; height:100% }
+  /* Page QR (current URL) */
+  .qr-page{ position:fixed; top:6mm; right:6mm; width:22mm; height:22mm; z-index:20; background:#fff; border:1px solid #e5e7eb; border-radius:6px; display:flex; align-items:center; justify-content:center }
+  .qr-page canvas{ width:100%; height:100% }
     .actions{ display:flex; gap:.5rem; justify-content:center; padding:1rem }
     .btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.5rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
     .btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
   @media print{ header,.actions{ display:none !important } body{ background:#fff } @page{ size:A4; margin:10mm } .card-wrap{ padding:0 } .card{ box-shadow:none; border:none } }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script>
     function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
     function text(el, v){ el.textContent = v==null? '': String(v); }
@@ -44,12 +44,12 @@
       const el = document.querySelector(selector); if(!el) return;
       const num = Number(v); if(Number.isFinite(num)) el.style[prop] = num + 'mm';
     }
-    function render(){
+  function render(){
       const data = {
         exam: q('exam',''),
         year: q('year',''),
         name: q('name',''),
-        father: q('father',''),
+    father: q('father',''),
         cls: q('cls', q('class','')),
         section: q('section',''),
         roll: q('roll',''),
@@ -60,26 +60,24 @@
       const card = document.querySelector('.card');
       if(bg && bg.toLowerCase().startsWith('sample')){ card.style.backgroundImage = "url('./sample.jpg')"; }
       else{ card.style.backgroundImage = "url('./admit.png')"; }
-  document.querySelector('.t.exam').textContent = data.exam;
-  document.querySelector('.t.year').textContent = data.year;
+  document.querySelector('.t.exam').textContent = [data.exam, data.year].filter(Boolean).join(' - ');
   const nameEl = document.querySelector('.t.name'); nameEl.classList.add('labelled'); nameEl.setAttribute('data-label','Name'); nameEl.textContent = upper(data.name);
-      const faEl = document.createElement('div'); faEl.className='t father labelled'; faEl.setAttribute('data-label','Father'); faEl.textContent = data.father||''; card.appendChild(faEl);
   const classEl = document.querySelector('.t.class'); classEl.classList.add('labelled'); classEl.setAttribute('data-label','Class'); classEl.textContent = data.cls;
   const secEl = document.querySelector('.t.section'); secEl.classList.add('labelled'); secEl.setAttribute('data-label','Section'); secEl.textContent = upper(data.section);
-  const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.textContent = data.roll;
-  const iidEl = document.querySelector('.t.iid'); if(data.iid){ iidEl.classList.add('labelled'); iidEl.setAttribute('data-label','IID'); iidEl.textContent = data.iid; } else { iidEl.textContent=''; }
+  const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.style.whiteSpace='pre';
+  rollEl.textContent = data.iid ? `${data.roll||''}       IID : ${data.iid}` : `${data.roll||''}`;
+  const iidEl = document.querySelector('.t.iid'); iidEl.textContent='';
   // Optional position overrides via query params (values in mm)
   setPos('.t.name','left','name_left'); setPos('.t.name','top','name_top');
-      setPos('.t.father','left','father_left'); setPos('.t.father','top','father_top');
+  // father field removed
   setPos('.t.class','left','class_left'); setPos('.t.class','top','class_top');
   setPos('.t.section','left','section_left'); setPos('.t.section','top','section_top');
   setPos('.t.roll','left','roll_left'); setPos('.t.roll','top','roll_top');
   setPos('.t.exam','left','exam_left'); setPos('.t.exam','top','exam_top');
   setPos('.t.year','left','year_left'); setPos('.t.year','top','year_top');
   setPos('.t.iid','left','iid_left'); setPos('.t.iid','top','iid_top');
-  setPos('.barcode','left','barcode_left'); setPos('.barcode','bottom','barcode_bottom');
-      const svg = document.getElementById('bar');
-  try{ JsBarcode(svg, String(data.iid||data.roll||''), { format:'CODE128', displayValue:false, margin:0 }); }catch(_){ }
+      // Page QR of current link (top-right)
+      try{ const wrap=document.getElementById('pageQR'); if(wrap){ const c=document.createElement('canvas'); QRCode.toCanvas(c, location.href, { width:256, margin:0 }, err=>{ if(!err){ wrap.innerHTML=''; wrap.appendChild(c); } }); } }catch(_){ }
     }
     window.addEventListener('DOMContentLoaded', render);
   </script>
@@ -97,11 +95,11 @@
       <div class="t section"></div>
       <div class="t roll"></div>
       <div class="t iid"></div>
-      <svg id="bar" class="barcode" aria-hidden="true"></svg>
     </div>
   </div>
   <div class="actions">
     <button class="btn" onclick="window.print()">Print</button>
   </div>
+  <div id="pageQR" class="qr-page" title="Page QR"></div>
 </body>
 </html>

@@ -23,26 +23,51 @@
     .card{ position:relative; aspect-ratio: 210 / 115; background:#fff url('./admit.png') center/cover no-repeat; overflow:hidden; border:1px solid #e5e7eb }
     .card .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
     /* Use the same placements as list page */
-    .t.name{ left:10mm; top:68mm; font-size:4.8mm; letter-spacing:.3mm; text-transform:uppercase }
-    .t.class{ left:10mm; top:86mm; font-size:5mm }
-    .t.section{ left:76mm; top:86mm; font-size:5mm; text-transform:uppercase }
-    .t.roll{ left:10mm; top:102mm; font-size:5.5mm }
-    .t.exam{ left:60mm; top:52mm; font-weight:700; font-size:4.6mm }
+  .t.name{ left:10mm; top:66mm; font-size:6.24mm; letter-spacing:.3mm; text-transform:uppercase }
+  .t.class{ left:10mm; top:82mm; font-size:5mm }
+  .t.section{ left:76mm; top:82mm; font-size:5mm; text-transform:uppercase }
+  .t.roll{ left:10mm; top:96mm; font-size:5.5mm; white-space:pre }
+  .t.exam{ left:60mm; top:52mm; font-weight:700; font-size:5.52mm }
     .t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
     .t.iid{ left:78mm; top:122mm; font-size:4mm }
-  .barcode{ position:absolute; left:70mm; bottom:12mm; width:60mm; height:14mm; display:flex; align-items:center; justify-content:center }
-    .barcode svg{ width:100%; height:100% }
+  /* Page QR (current URL) */
+  .qr-page{ position:fixed; top:6mm; right:6mm; width:22mm; height:22mm; z-index:20; background:#fff; border:1px solid #e5e7eb; border-radius:6px; display:flex; align-items:center; justify-content:center }
+  .qr-page canvas{ width:100%; height:100% }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script>
     function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
     function chunk(arr, size){ const out=[]; for(let i=0;i<arr.length;i+=size){ out.push(arr.slice(i,i+size)); } return out; }
+    function makePageQR(){
+      const wrap=document.getElementById('pageQR'); if(!wrap) return;
+      const text=location.href;
+      const Q = window.QRCode || window.qrcode || null;
+      if(!Q){ wrap.title='QR library not loaded'; return; }
+      // Prefer toCanvas
+      if(typeof Q.toCanvas === 'function'){
+        const canvas=document.createElement('canvas');
+        Q.toCanvas(canvas, text, { width:256, margin:0 }, function(err){
+          if(!err){ wrap.innerHTML=''; wrap.appendChild(canvas); }
+          else if(typeof Q.toDataURL === 'function'){
+            Q.toDataURL(text, { width:256, margin:0 }, function(e,url){ if(!e){ const img=new Image(); img.src=url; wrap.innerHTML=''; wrap.appendChild(img);} });
+          }
+        });
+        return;
+      }
+      // Fallback to toDataURL
+      if(typeof Q.toDataURL === 'function'){
+        Q.toDataURL(text, { width:256, margin:0 }, function(e,url){ if(!e){ const img=new Image(); img.src=url; wrap.innerHTML=''; wrap.appendChild(img);} });
+        return;
+      }
+      // Fallback to constructor-style libs
+      try{ new Q(wrap, { text, width:256, height:256, correctLevel: Q.CorrectLevel ? Q.CorrectLevel.M : undefined }); }catch(_){ /* ignore */ }
+    }
     function render(){
       const key = q('key','');
-      if(!key){ document.getElementById('info').textContent = 'No data key provided.'; return; }
+      if(!key){ document.getElementById('info').textContent = 'No data key provided.'; makePageQR(); return; }
       const raw = sessionStorage.getItem(key);
-      if(!raw){ document.getElementById('info').textContent = 'No data found in this session. Please regenerate from the list.'; return; }
-      let payload; try{ payload = JSON.parse(raw); }catch(_){ document.getElementById('info').textContent='Invalid data.'; return; }
+      if(!raw){ document.getElementById('info').textContent = 'No data found in this session. Please regenerate from the list.'; makePageQR(); return; }
+      let payload; try{ payload = JSON.parse(raw); }catch(_){ document.getElementById('info').textContent='Invalid data.'; makePageQR(); return; }
       const { exam='', year='', students=[] } = payload||{};
       document.getElementById('subtitle').textContent = `${exam} — ${year}`;
       const pages = chunk(students, 10);
@@ -55,16 +80,16 @@
           const tn = document.createElement('div'); tn.className='t name'; tn.textContent = String(s.name||'').toUpperCase(); card.appendChild(tn);
           const tc = document.createElement('div'); tc.className='t class'; tc.textContent = s.cls||''; card.appendChild(tc);
           const ts = document.createElement('div'); ts.className='t section'; ts.textContent = String(s.section||'').toUpperCase(); card.appendChild(ts);
-          const tr = document.createElement('div'); tr.className='t roll'; tr.textContent = s.roll||''; card.appendChild(tr);
-          const te = document.createElement('div'); te.className='t exam'; te.textContent = exam; card.appendChild(te);
-          const ty = document.createElement('div'); ty.className='t year'; ty.textContent = year; card.appendChild(ty);
-          if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
-          const bar=document.createElementNS('http://www.w3.org/2000/svg','svg'); bar.classList.add('barcode'); card.appendChild(bar);
-          try{ JsBarcode(bar, String(s.iid||s.roll||''), { format:'CODE128', displayValue:false, margin:0 }); }catch(_){ }
+          const tr = document.createElement('div'); tr.className='t roll';
+          tr.textContent = s.iid ? `Roll : ${s.roll||''}       IID : ${s.iid}` : `Roll : ${s.roll||''}`;
+          card.appendChild(tr);
+          const te = document.createElement('div'); te.className='t exam'; te.textContent = [exam, year].filter(Boolean).join(' - '); card.appendChild(te);
           grid.appendChild(card);
         });
         root.appendChild(sheet);
       });
+  // Page QR of current link
+  makePageQR();
     }
     window.addEventListener('DOMContentLoaded', render);
   </script>
@@ -81,5 +106,6 @@
   <div class="actions">
     <button class="btn" onclick="window.print()">Print</button>
   </div>
+  <div id="pageQR" class="qr-page" title="Page QR"></div>
 </body>
 </html>
