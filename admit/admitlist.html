@@ -231,13 +231,13 @@
 			document.getElementById('examSelect').addEventListener('change', e=>{ exam = e.target.value; });
 			document.getElementById('yearSelect').addEventListener('change', e=>{ year = e.target.value; });
 			document.getElementById('selectAll').addEventListener('change', e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked = e.target.checked; }); });
-						document.getElementById('generate').addEventListener('click', ()=>{
+			document.getElementById('generate').addEventListener('click', ()=>{
 				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
-				// Open bulk preview in a new tab and pass data via sessionStorage
+				// Open bulk preview in a new tab and pass data via localStorage (shared across tabs)
 				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid })) };
 				const key = 'admit_bulk_' + Date.now();
-				try{ sessionStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
-				window.open(`print_bulk.html?key=${encodeURIComponent(key)}`, '_blank', 'noopener');
+				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
+		window.open(`print_selected.html?key=${encodeURIComponent(key)}`, '_blank', 'noopener');
 			});
 					const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{
 						const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
