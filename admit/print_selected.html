@@ -100,8 +100,8 @@
 				page.forEach(s=>{
 						const box = document.createElement('div'); box.className='box'; box.style.width = boxW + 'mm'; box.style.height = boxH + 'mm';
 						const card = document.createElement('div'); card.className='card'; card.style.transform = `scale(${SCALE})`;
-							const tExam = document.createElement('div'); tExam.className='t exam'; tExam.textContent = [exam, year].filter(Boolean).join(' - '); card.appendChild(tExam);
-					const tYear = document.createElement('div'); tYear.className='t year'; tYear.textContent = year; card.appendChild(tYear);
+							  const tExam = document.createElement('div'); tExam.className='t exam'; tExam.textContent = [exam, year].filter(Boolean).join(' - '); card.appendChild(tExam);
+							  const tYear = document.createElement('div'); tYear.className='t year'; tYear.textContent = ''; card.appendChild(tYear);
 							const tName = document.createElement('div'); tName.className='t name labelled'; tName.setAttribute('data-label','Name'); tName.textContent = upper(s.name||''); card.appendChild(tName);
 							const tClass = document.createElement('div'); tClass.className='t class labelled'; tClass.setAttribute('data-label','Class'); tClass.textContent = s.cls||''; card.appendChild(tClass);
 							const tSection = document.createElement('div'); tSection.className='t section labelled'; tSection.setAttribute('data-label','Section'); tSection.textContent = upper(s.section||''); card.appendChild(tSection);
