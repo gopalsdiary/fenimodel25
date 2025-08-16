@@ -35,6 +35,7 @@
   @media print{ header,.actions{ display:none !important } body{ background:#fff } @page{ size:A4; margin:10mm } .card-wrap{ padding:0 } .card{ box-shadow:none; border:none } }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
     function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
     function text(el, v){ el.textContent = v==null? '': String(v); }
@@ -67,6 +68,24 @@
       const v = q(qname, null); if(v===null || v==='') return;
       const el = document.querySelector(selector); if(!el) return;
       const num = Number(v); if(Number.isFinite(num)) el.style[prop] = num + 'mm';
+    }
+    function sanitizeFilename(s){ return String(s||'').replace(/[\\/:*?"<>|]+/g,'').trim().replace(/\s+/g,'_').slice(0,120) || 'Admit_Card'; }
+    function downloadPDF(){
+      if(typeof html2pdf === 'undefined'){ alert('PDF library not loaded. Please check your internet connection.'); return; }
+      const card = document.querySelector('.card');
+      const name = (document.querySelector('.t.name')?.textContent || '').trim();
+      const rollText = (document.querySelector('.t.roll')?.textContent || '').trim();
+      const roll = rollText.split(/\s+IID\b/i)[0].trim();
+      const examLine = (document.querySelector('.t.exam')?.textContent || '').trim();
+      const filename = sanitizeFilename(`Admit_${examLine}_${roll}_${name}`) + '.pdf';
+      const opt = {
+        margin:       0,
+        filename,
+        image:        { type: 'jpeg', quality: 0.95 },
+        html2canvas:  { scale: 2, useCORS: true, backgroundColor: null },
+        jsPDF:        { unit: 'mm', format: [210,115], orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(card).save();
     }
   function render(){
       const data = {
@@ -122,7 +141,8 @@
     </div>
   </div>
   <div class="actions">
-    <button class="btn" onclick="window.print()">Print</button>
+  <button class="btn" onclick="window.print()">Print</button>
+  <button class="btn" onclick="downloadPDF()">Download PDF</button>
   </div>
   <div id="pageQR" class="qr-page" title="Page QR"></div>
 </body>
