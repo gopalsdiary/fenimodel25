@@ -26,6 +26,8 @@
 		.left-tools{ display:flex; gap:.5rem; align-items:center }
 		.footbar{ display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:1rem 0 }
 		.muted{ color:var(--muted) }
+		.btn.pdf{ background:#ef4444; border-color:#dc2626; color:#fff; padding:.35rem .7rem; border-radius:999px; font-size:.85rem }
+		.btn.pdf:hover{ background:#dc2626 }
 		/* Print area */
 		.print-area{ display:none }
 		@media print{
@@ -46,8 +48,11 @@
 		.t.exam{ left:60mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.iid{ left:78mm; top:122mm; font-size:4mm }
+		.barcode{ position:absolute; left:70mm; bottom:7mm; width:60mm; height:16mm; display:flex; align-items:center; justify-content:center }
+		.barcode svg{ width:100%; height:100% }
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 	<script>
 		// Load sheets (same approach as other pages), but sheet list is in 0newdatabase folder
 		async function loadSheetList(){
@@ -117,14 +122,22 @@
 				return (!filters.cls || s.cls===filters.cls) && (!filters.section || s.section.toLowerCase()===filters.section.toLowerCase());
 			});
 			document.getElementById('count').textContent = `${rows.length} students`;
-			rows.forEach((s, idx)=>{
+					rows.forEach((s, idx)=>{
 				const tr=document.createElement('tr');
 				const tdSel=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.className='row-check'; cb.dataset.index = s._idx; tdSel.appendChild(cb); tr.appendChild(tdSel);
 				const tdName=document.createElement('td'); tdName.textContent=s.name||''; tr.appendChild(tdName);
 				const tdFather=document.createElement('td'); tdFather.textContent=s.father||''; tr.appendChild(tdFather);
 				const tdClass=document.createElement('td'); tdClass.textContent=s.cls||''; tr.appendChild(tdClass);
 				const tdSection=document.createElement('td'); tdSection.textContent=s.section||''; tr.appendChild(tdSection);
-				const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
+						const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
+								const tdPdf=document.createElement('td');
+								const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
+								const params = new URLSearchParams({
+									exam, year,
+									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||'') , auto: '1'
+								});
+								btn.href = `print_admit.html?${params.toString()}`;
+								tdPdf.appendChild(btn); tr.appendChild(tdPdf);
 				tbody.appendChild(tr);
 			});
 			document.getElementById('selectAll').checked=false;
@@ -135,7 +148,7 @@
 			return allStudents.filter(s=> set.has(s._idx) );
 		}
 
-		function renderPrint(students){
+			function renderPrint(students){
 			const wrap = document.getElementById('printArea');
 			wrap.innerHTML = '';
 			const sheet = document.createElement('div'); sheet.className='sheet';
@@ -148,10 +161,18 @@
 				const tr = document.createElement('div'); tr.className='t roll'; tr.textContent = s.roll||''; card.appendChild(tr);
 				const te = document.createElement('div'); te.className='t exam'; te.textContent = exam; card.appendChild(te);
 				const ty = document.createElement('div'); ty.className='t year'; ty.textContent = year; card.appendChild(ty);
-				if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
+					if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
+					// Barcode
+					const bar=document.createElementNS('http://www.w3.org/2000/svg','svg'); bar.classList.add('barcode'); card.appendChild(bar);
+					try{ JsBarcode(bar, String(s.iid||s.roll||''), { format:'CODE128', displayValue:false, margin:0 }); }catch(_){ /* ignore */ }
 				grid.appendChild(card);
 			});
 		}
+
+			function printSingle(s){
+				renderPrint([s]);
+				setTimeout(()=>window.print(), 150);
+			}
 
 			async function init(){
 				try{
@@ -262,6 +283,7 @@
 					<th>Class</th>
 					<th>Section</th>
 					<th>Roll</th>
+					<th>PDF</th>
 				</tr>
 			</thead>
 			<tbody></tbody>
