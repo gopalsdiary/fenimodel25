@@ -13,8 +13,9 @@
     header{ position:sticky; top:0; background:#fff; border-bottom:1px solid #e5e7eb; z-index:10 }
     .container{ max-width:980px; margin:0 auto; padding:1rem }
     h1{ margin:.25rem 0; text-align:center; font-size:1.1rem }
-    .card-wrap{ display:flex; justify-content:center; padding:1rem }
-    .card{ position:relative; width:min(210mm, 95vw); aspect-ratio: 210 / 115; background:#fff url('./admit.png') center/cover no-repeat; border:1px solid #e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.08) }
+  .card-wrap{ display:flex; justify-content:center; padding:1rem }
+  /* Use full A4 size so background and overlays align exactly */
+  .card{ position:relative; width:min(210mm, 95vw); height:297mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; border:1px solid #e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.08) }
     .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
     /* Positions tuned from list page */
     .t.name{ left:10mm; top:68mm; font-size:4.8mm; letter-spacing:.3mm; text-transform:uppercase }
@@ -36,6 +37,11 @@
     function q(n, d=''){ const v=new URLSearchParams(location.search).get(n); return v==null?d:v; }
     function text(el, v){ el.textContent = v==null? '': String(v); }
     function upper(s){ return String(s||'').toUpperCase(); }
+    function setPos(selector, prop, qname){
+      const v = q(qname, null); if(v===null || v==='') return;
+      const el = document.querySelector(selector); if(!el) return;
+      const num = Number(v); if(Number.isFinite(num)) el.style[prop] = num + 'mm';
+    }
     function render(){
       const data = {
         exam: q('exam',''),
@@ -47,16 +53,24 @@
         roll: q('roll',''),
         iid: q('iid','')
       };
-      document.querySelector('.t.exam').textContent = data.exam;
-      document.querySelector('.t.year').textContent = data.year;
-      document.querySelector('.t.name').textContent = upper(data.name);
-      document.querySelector('.t.class').textContent = data.cls;
-      document.querySelector('.t.section').textContent = upper(data.section);
-      document.querySelector('.t.roll').textContent = data.roll;
-      document.querySelector('.t.iid').textContent = data.iid ? `IID : ${data.iid}` : '';
+  document.querySelector('.t.exam').textContent = data.exam;
+  document.querySelector('.t.year').textContent = data.year;
+  document.querySelector('.t.name').textContent = upper(data.name);
+  document.querySelector('.t.class').textContent = data.cls;
+  document.querySelector('.t.section').textContent = upper(data.section);
+  document.querySelector('.t.roll').textContent = data.roll;
+  document.querySelector('.t.iid').textContent = data.iid ? `IID : ${data.iid}` : '';
+  // Optional position overrides via query params (values in mm)
+  setPos('.t.name','left','name_left'); setPos('.t.name','top','name_top');
+  setPos('.t.class','left','class_left'); setPos('.t.class','top','class_top');
+  setPos('.t.section','left','section_left'); setPos('.t.section','top','section_top');
+  setPos('.t.roll','left','roll_left'); setPos('.t.roll','top','roll_top');
+  setPos('.t.exam','left','exam_left'); setPos('.t.exam','top','exam_top');
+  setPos('.t.year','left','year_left'); setPos('.t.year','top','year_top');
+  setPos('.t.iid','left','iid_left'); setPos('.t.iid','top','iid_top');
+  setPos('.barcode','left','barcode_left'); setPos('.barcode','bottom','barcode_bottom');
       const svg = document.getElementById('bar');
-      try{ JsBarcode(svg, String(data.iid||data.roll||''), { format:'CODE128', displayValue:false, margin:0 }); }catch(_){ }
-      if(new URLSearchParams(location.search).has('auto')) setTimeout(()=>window.print(), 200);
+  try{ JsBarcode(svg, String(data.iid||data.roll||''), { format:'CODE128', displayValue:false, margin:0 }); }catch(_){ }
     }
     window.addEventListener('DOMContentLoaded', render);
   </script>

@@ -134,7 +134,7 @@
 								const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
 								const params = new URLSearchParams({
 									exam, year,
-									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||'') , auto: '1'
+									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||'')
 								});
 								btn.href = `print_admit.html?${params.toString()}`;
 								tdPdf.appendChild(btn); tr.appendChild(tdPdf);
@@ -171,7 +171,7 @@
 
 			function printSingle(s){
 				renderPrint([s]);
-				setTimeout(()=>window.print(), 150);
+				// Printing is now manual; use the Print button or Ctrl+P
 			}
 
 			async function init(){
@@ -236,12 +236,12 @@
 					document.getElementById('generate').addEventListener('click', ()=>{
 				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
 				renderPrint(sel);
-				setTimeout(()=>window.print(), 150);
+				// Printing is manual: press the browser's Print or use Ctrl+P
 			});
 					const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{
 						const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
 						renderPrint(sel);
-						setTimeout(()=>window.print(), 150);
+						// Printing is manual; use the Print button in the preview window
 					}); }
 		});
 	</script>
