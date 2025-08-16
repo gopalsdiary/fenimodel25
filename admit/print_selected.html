@@ -118,7 +118,7 @@
 
 		window.addEventListener('DOMContentLoaded', ()=>{
 			render();
-					document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+					/* Print button removed */
 							const dl = document.getElementById('downloadBtn');
 							if(dl){ dl.addEventListener('click', async ()=>{
 								const infoText = (document.getElementById('info')?.textContent||'').trim();
@@ -162,7 +162,6 @@
 		<div class="container">
 			<h1>Selected Admit Cards (10 per A4)</h1>
 			<div class="actions">
-				<button id="printBtn" class="btn primary">Print</button>
 		<button id="downloadBtn" class="btn">Download PDF</button>
 				<button class="btn" onclick="history.back()">Back</button>
 			</div>
