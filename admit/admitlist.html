@@ -134,7 +134,7 @@
 								const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
 								const params = new URLSearchParams({
 									exam, year,
-									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||'')
+									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||''), GROUP: String(s.group||'')
 								});
 								btn.href = `print_admit.html?${params.toString()}`;
 								tdPdf.appendChild(btn); tr.appendChild(tdPdf);
@@ -207,6 +207,7 @@
 						const fatherKey = guessField(fields, 'father');
 						const rollKey = guessField(fields, 'roll');
 						const iidKey = (function(){ const m=new Map(fields.map(f=>[norm(f),f])); const keys=['iid','studentid','sid','id']; for(const k of keys){ if(m.has(k)) return m.get(k);} return null; })();
+						const groupKey = (function(){ const m=new Map(fields.map(f=>[norm(f),f])); const keys=['group','grp','groupname','stream','streamname']; for(const k of keys){ if(m.has(k)) return m.get(k);} return null; })();
 						rows.forEach((r,rowIdx)=>{
 							const s = {
 								_idx: idx++,
@@ -214,6 +215,7 @@
 								father: fatherKey? r[fatherKey] : '',
 								roll: rollKey? r[rollKey] : '',
 								iid: iidKey? r[iidKey] : '',
+								group: groupKey? r[groupKey] : '',
 								cls, section, sheetId:t.id, sheetName:t.name, row:rowIdx
 							};
 							allStudents.push(s);
@@ -234,7 +236,7 @@
 			document.getElementById('generate').addEventListener('click', ()=>{
 				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
 				// Open bulk preview in a new tab and pass data via localStorage (shared across tabs)
-				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid })) };
+				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid, group:s.group })) };
 				const key = 'admit_bulk_' + Date.now();
 				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
 		window.open(`print_selected.html?key=${encodeURIComponent(key)}`, '_blank', 'noopener');

@@ -15,35 +15,44 @@
     h1{ margin:.25rem 0; text-align:center; font-size:1.1rem }
   .card-wrap{ display:flex; justify-content:center; padding:1rem }
   /* Visible frame sized exactly 93x90mm */
-  .print-frame{ width:93mm; height:90mm; background:#fff; display:block; position:relative }
-  /* Design canvas 210x115mm scaled to fit the 93x90mm frame */
-  .card{ position:absolute; left:0; top:0; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; border:1px solid #000; box-shadow:0 10px 30px rgba(0,0,0,.08); transform-origin: top left }
-  .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
+  .print-frame{ width:93mm; height:90mm; background:#fff; display:block; position:relative; overflow:hidden; border:0.5mm solid #000 }
+  /* Design canvas sized exactly to the frame (positions are ratio-mapped for 93x90mm) */
+  .card{ position:absolute; left:0; top:0; width:93mm; height:90mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; border:none; box-shadow:0 10px 30px rgba(0,0,0,.08) }
+  .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111; line-height:1.12; -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision }
   .labelled::before{ content: attr(data-label) ' : '; font-weight:400; margin-right:1.5mm }
-  /* Positions tuned; adjust with query overrides if needed */
-  .t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:400; letter-spacing:.3mm; text-transform:uppercase }
-    .t.class{ left:10mm; top:74mm; font-size:5mm }
-    .t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
-    .t.iid{ left:76mm; top:90mm; font-size:5mm }
-  .t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:400 }
-  .t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:400; font-size:5.52mm }
-    .t.year{ left:138mm; top:52mm; font-weight:400; font-size:4.6mm }
+  /* Ratio-mapped positions and sizes for 93x90mm */
+  .t.name{ font-size:3.75mm; font-weight:700; letter-spacing:.2mm; text-transform:uppercase; white-space:normal; overflow-wrap:anywhere }
+    .t.class{ font-size:3.91mm }
+    .t.section{ font-size:3.91mm; text-transform:uppercase }
+  /* Flow container so name can wrap and push subsequent lines */
+  .info-block{ position:absolute; left:4.43mm; right:4.43mm; top:51.44mm }
+  .info-block .t{ position:static; display:block }
+  .info-block .row{ display:flex; align-items:flex-end; justify-content:space-between; gap:6mm }
+  /* Sizes */
+  .t.name{ font-size:3.75mm; font-weight:700; letter-spacing:.2mm; text-transform:uppercase; white-space:normal; overflow-wrap:anywhere; margin:0 0 2mm 0 }
+  .t.class{ font-size:3.91mm }
+  .t.section{ font-size:3.91mm; text-transform:uppercase; text-align:right }
+  .t.roll{ font-size:4.9mm; font-weight:700; max-width:46mm; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
+  .t.iid{ font-size:3.91mm; font-weight:400; white-space:nowrap; max-width:38mm; text-align:right }
+  .t.group{ font-size:3.52mm; font-weight:400; text-align:right; margin-top:1.2mm }
+  .t.exam{ left:0; top:36.65mm; width:100%; text-align:center; font-weight:700; font-size:4.32mm; text-decoration: underline; text-underline-offset: 1mm; text-decoration-thickness: .4mm }
+    .t.year{ left:61.29mm; top:40.70mm; font-weight:400; font-size:3.60mm }
   /* School header */
-  .t.school-name{ left:0; top:3.45mm; width:100%; text-align:center; font-weight:400; font-size:11.4mm; color:#111 }
-  .t.school-address{ left:0; top:16mm; width:100%; text-align:center; font-weight:400; font-size:4.5mm; color:#111 }
+  .t.school-name{ left:0; top:2.70mm; width:100%; text-align:center; font-weight:400; font-size:8.92mm; color:#111 }
+  .t.school-address{ left:0; top:12.52mm; width:100%; text-align:center; font-weight:400; font-size:3.52mm; color:#111 }
   /* Admit Card badge under address */
-  .t.admit-badge{ left:50%; top:22mm; transform:translateX(-50%);
-    background:#777; color:#fff; padding:4.2mm 10.5mm; border-radius:5.25mm;
+  .t.admit-badge{ left:50%; top:17.22mm; transform:translateX(-50%);
+    background:#777; color:#fff; padding:3.29mm 8.22mm; border-radius:4.11mm;
     font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-    font-weight:400; font-size:10.5mm; line-height:1; white-space:nowrap }
+    font-weight:400; font-size:8.22mm; line-height:1; white-space:nowrap }
   /* Footer signatures */
-  .t.class-teacher{ left:15mm; bottom:8mm; font-weight:400; font-size:4.5mm; color:#111 }
-  .t.headteacher{ right:15mm; bottom:8mm; font-weight:400; font-size:4.5mm; color:#111 }
+  .t.class-teacher{ left:6.64mm; bottom:2mm; font-weight:400; font-size:3.52mm; color:#111 }
+  .t.headteacher{ right:6.64mm; bottom:2mm; font-weight:400; font-size:3.52mm; color:#111 }
   /* QR/Barcode removed */
     .actions{ display:flex; gap:.5rem; justify-content:center; padding:1rem }
     .btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.5rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
     .btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
-  @media print{ header,.actions{ display:none !important } body{ background:#fff } @page{ size:A4; margin:10mm } .card-wrap{ padding:0 } .card{ box-shadow:none; border:1px solid #000 } }
+  @media print{ header,.actions{ display:none !important } body{ background:#fff } @page{ size:A4; margin:3mm } .card-wrap{ padding:0 } .card{ box-shadow:none; border:1px solid #000 } }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script>
@@ -81,8 +90,9 @@
     father: q('father',''),
         cls: q('cls', q('class','')),
         section: q('section',''),
-        roll: q('roll',''),
-        iid: q('iid','')
+    roll: q('roll', q('ROLL', q('Roll',''))),
+  iid: q('iid', q('IID', q('Iid',''))),
+  group: q('GROUP', q('group', q('Group', q('grp', q('GRP','')))))
       };
       // Background template switch (use bg=sample to compare with sample.jpg)
   const bg = q('bg','admit');
@@ -93,9 +103,24 @@
   const nameEl = document.querySelector('.t.name'); nameEl.classList.add('labelled'); nameEl.setAttribute('data-label','Name'); nameEl.textContent = upper(data.name);
   const classEl = document.querySelector('.t.class'); classEl.classList.add('labelled'); classEl.setAttribute('data-label','Class'); classEl.textContent = data.cls;
   const secEl = document.querySelector('.t.section'); secEl.classList.add('labelled'); secEl.setAttribute('data-label','Section'); secEl.textContent = upper(data.section);
-  const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.style.whiteSpace='pre';
-  rollEl.textContent = data.iid ? `${data.roll||''}                           IID : ${data.iid}` : `${data.roll||''}`;
-  const iidEl = document.querySelector('.t.iid'); iidEl.textContent='';
+  const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.style.whiteSpace='nowrap';
+  rollEl.textContent = `${data.roll||''}`;
+  const iidEl = document.querySelector('.t.iid'); iidEl.classList.add('labelled'); iidEl.setAttribute('data-label','IID'); iidEl.style.whiteSpace='nowrap'; iidEl.textContent = data.iid ? `${data.iid}` : '';
+  // Group (only for class 9 & 10)
+  const groupEl = document.querySelector('.t.group');
+  if(groupEl){
+    const clsNum = parseInt(String(data.cls||'').match(/\d+/)?.[0]||'',10);
+    const grp = String(data.group||'').trim();
+    if((clsNum===9 || clsNum===10) && grp){
+      groupEl.classList.remove('labelled');
+      groupEl.removeAttribute('data-label');
+      groupEl.textContent = upper(grp);
+      groupEl.style.display = 'block';
+    }else{
+      groupEl.style.display = 'none';
+      groupEl.textContent = '';
+    }
+  }
   // Optional position overrides via query params (values in mm)
   setPos('.t.name','left','name_left'); setPos('.t.name','top','name_top');
   // father field removed
@@ -106,8 +131,7 @@
   setPos('.t.year','left','year_left'); setPos('.t.year','top','year_top');
   setPos('.t.iid','left','iid_left'); setPos('.t.iid','top','iid_top');
   setPos('.t.admit-badge','left','badge_left'); setPos('.t.admit-badge','top','badge_top');
-  // Scale the 210x115mm design to fit the 93x90mm frame exactly
-  const scaleX = 93/210, scaleY = 90/115; card.style.transform = `scale(${scaleX}, ${scaleY})`;
+  // No scaling needed: positions are defined for the 93x90mm canvas
   // QR removed
     }
     window.addEventListener('DOMContentLoaded', render);
@@ -125,11 +149,18 @@
   <div class="t admit-badge">Admit Card</div>
       <div class="t exam"></div>
       <div class="t year"></div>
-      <div class="t name"></div>
-      <div class="t class"></div>
-      <div class="t section"></div>
-      <div class="t roll"></div>
-      <div class="t iid"></div>
+  <div class="info-block">
+          <div class="t name"></div>
+          <div class="row">
+            <div class="t class"></div>
+            <div class="t section"></div>
+          </div>
+          <div class="row">
+            <div class="t roll"></div>
+            <div class="t iid"></div>
+          </div>
+          <div class="t group" style="display:none"></div>
+        </div>
       <div class="t class-teacher">Class Teacher</div>
       <div class="t headteacher">Headteacher</div>
       </div>
