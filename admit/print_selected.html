@@ -18,43 +18,43 @@
 		.btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
 
 		/* Print layout: A4 portrait, 2 columns x 3 rows = 6 cards (each 9.3cm x 9cm) */
-		.sheet{ width:210mm; margin:0 auto; padding:4mm; page-break-inside: avoid; break-inside: avoid-page; background:#fff }
+		.sheet{ width:200mm; margin:0 auto; padding:0mm 1mm; page-break-inside: avoid; break-inside: avoid-page; background:#fff }
 		.sheet + .sheet{ page-break-before: always; break-before: page }
-		.grid{ display:grid; grid-template-columns: repeat(2, max-content); gap:2mm }
+		.grid{ display:grid; grid-template-columns: repeat(2, max-content); gap:8mm }
 		/* Wrapper sized to scaled card footprint; .card remains true-size (210x115mm) */
 		.box{ /* JS sets exact mm sizes */ break-inside: avoid; page-break-inside: avoid; display:block; border:none }
 		.box::after{ display:none }
 		.grid{ break-inside: avoid; page-break-inside: avoid }
-		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
-		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
-		.labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
+		.card{ position:relative; width:210mm; height:115mm; background:#fff; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
+		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111; line-height:1.12; -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision }
+		.labelled::before{ content: attr(data-label) ' : '; font-weight:400; margin-right:1.5mm }
 		/* Positions aligned with single-card page (may be slightly scaled visually) */
-		.t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:700; letter-spacing:.3mm; text-transform:uppercase }
+		.t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:400; letter-spacing:.3mm; text-transform:uppercase }
 		.t.class{ left:10mm; top:74mm; font-size:5mm }
 		.t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
-		.t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:700; white-space:pre }
-		.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:8.28mm; text-decoration: underline; text-underline-offset: 1.2mm; text-decoration-thickness: .6mm }
-		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
+		.t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:400; white-space:pre }
+		.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:400; font-size:8.28mm; text-decoration: underline; text-underline-offset: 1.2mm; text-decoration-thickness: .4mm }
+		.t.year{ left:138mm; top:52mm; font-weight:400; font-size:4.6mm }
 		.t.iid{ left:76mm; top:90mm; font-size:5mm }
 		/* School header & footer (show on each card) */
-		.t.school-name{ left:0; top:3.45mm; width:100%; text-align:center; font-weight:700; font-size:11.4mm; color:#111 }
+		.t.school-name{ left:0; top:3.45mm; width:100%; text-align:center; font-weight:400; font-size:11.4mm; color:#111 }
 		.t.school-address{ left:0; top:16mm; width:100%; text-align:center; font-weight:400; font-size:4.5mm; color:#111 }
 		/* Admit Card badge under address */
-		.t.admit-badge{ left:50%; top:22mm; transform:translateX(-50%); background:#777; color:#fff; padding:4.2mm 10.5mm; border-radius:5.25mm; font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; font-weight:800; font-size:10.5mm; line-height:1; white-space:nowrap }
-		.t.class-teacher{ left:15mm; bottom:8mm; font-weight:600; font-size:4.5mm; color:#111 }
-		.t.headteacher{ right:15mm; bottom:8mm; font-weight:600; font-size:4.5mm; color:#111 }
+		.t.admit-badge{ left:50%; top:22mm; transform:translateX(-50%); background:#777; color:#fff; padding:4.2mm 10.5mm; border-radius:5.25mm; font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; font-weight:400; font-size:10.5mm; line-height:1; white-space:nowrap }
+		.t.class-teacher{ left:15mm; bottom:8mm; font-weight:400; font-size:4.5mm; color:#111 }
+		.t.headteacher{ right:15mm; bottom:8mm; font-weight:400; font-size:4.5mm; color:#111 }
 
 		.sheets{ display:flex; flex-direction:column; gap:5mm; padding:5mm 0 }
 
 		@media print{
 			header,.actions{ display:none !important }
 			body{ background:#fff; margin:0; padding:0 }
-			@page{ size:A4; margin:6mm }
+			@page{ size:A4; margin:5mm }
 			.sheets{ gap:0; padding:0 }
-			.sheet{ page-break-inside:avoid; margin:0 auto; padding:1mm; width:210mm }
+			.sheet{ page-break-inside:avoid; margin:0 auto; padding:0; width:200mm }
 			.card{ border:none }
-			.box{ border:1px solid #ccc; background:none }
-			.grid{ gap:1mm; height:295mm }
+			.box{ border:none; outline:0.3mm solid #000; outline-offset:0; background:none }
+			.grid{ gap:8mm }
 		}
 	</style>
 				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -91,21 +91,21 @@
 			sheetsWrap.innerHTML = '';
 				// Compute scale to fit 6 cards exactly like the image layout
 				const PAGE_W = 210, PAGE_H = 297; // mm
-				const PAD = 6, GAP = 2, COLS = 2, ROWS = 3;
+				const PAD = 0, GAP = 8, COLS = 2, ROWS = 3;
 				const contentW = PAGE_W - 2*PAD; // mm
 				const contentH = PAGE_H - 2*PAD; // mm
 				// Fixed required card print size per user: 93mm x 90mm
 				const targetW = 93, targetH = 90; // mm
 				const colW = targetW; // fixed per card
 				const rowH = targetH; // fixed per card
-				// Compute SCALE for the 210x115mm design to fit inside 93x90mm
-				const widthScale = targetW / 210; // relative to design width
-				const heightScale = targetH / 115; // relative to design height
-				let SCALE = Math.min(widthScale, heightScale);
-				// Safety: if fixed layout exceeds page due to browser print margins, nudge down a bit
+				// Compute exact non-uniform scale so the visible card is exactly 93x90mm
+				const scaleX = targetW / 210; // relative to design width
+				const scaleY = targetH / 115; // relative to design height
+				// Safety: keep exact size; allow 0.5mm slack to avoid floating rounding causing shrink
 				const totalW = COLS * targetW + (COLS-1)*GAP + 2*PAD;
 				const totalH = ROWS * targetH + (ROWS-1)*GAP + 2*PAD;
-				if(totalW > PAGE_W || totalH > PAGE_H){ SCALE *= 0.98; }
+				const slack = 0.5; // mm
+				// No size reduction; we want exact target sizes
 				const boxW = targetW; // mm
 				const boxH = targetH; // mm
 
@@ -115,7 +115,7 @@
 				const grid = document.createElement('div'); grid.className='grid'; sheet.appendChild(grid);
 				page.forEach(s=>{
 						const box = document.createElement('div'); box.className='box'; box.style.width = boxW + 'mm'; box.style.height = boxH + 'mm';
-					const card = document.createElement('div'); card.className='card'; card.style.transform = `scale(${SCALE})`;
+						const card = document.createElement('div'); card.className='card'; card.style.transform = `scale(${scaleX}, ${scaleY})`;
 						// School header
 						const tSchoolName = document.createElement('div'); tSchoolName.className='t school-name'; tSchoolName.textContent = 'Feni Model High School'; card.appendChild(tSchoolName);
 						const tSchoolAddress = document.createElement('div'); tSchoolAddress.className='t school-address'; tSchoolAddress.textContent = 'Trunk Road, Feni'; card.appendChild(tSchoolAddress);
