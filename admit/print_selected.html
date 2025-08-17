@@ -27,6 +27,7 @@
 		.grid{ break-inside: avoid; page-break-inside: avoid }
 	.card{ position:relative; width:93mm; height:90mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:0.5mm solid #000 }
 	.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111; line-height:1.12; -webkit-font-smoothing:antialiased; text-rendering:geometricPrecision }
+	.watermark{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:58mm; max-width:80%; height:auto; opacity:.08; pointer-events:none; filter:grayscale(100%) }
 	.labelled::before{ content: attr(data-label) ' : '; font-weight:400; margin-right:1.5mm }
 	/* Flow container (same as single-card) */
 	.info-block{ position:absolute; left:4.43mm; right:4.43mm; top:51.44mm }
@@ -107,6 +108,8 @@
 				page.forEach(s=>{
 						const box = document.createElement('div'); box.className='box'; box.style.width = targetW + 'mm'; box.style.height = targetH + 'mm';
 						const card = document.createElement('div'); card.className='card';
+						// Watermark
+						const wm = document.createElement('img'); wm.className='watermark'; wm.src='./logowatermark.png'; wm.alt=''; wm.decoding='async'; card.appendChild(wm);
 						// School header
 						const tSchoolName = document.createElement('div'); tSchoolName.className='t school-name'; tSchoolName.textContent = 'Feni Model High School'; card.appendChild(tSchoolName);
 						const tSchoolAddress = document.createElement('div'); tSchoolAddress.className='t school-address'; tSchoolAddress.textContent = 'Trunk Road, Feni'; card.appendChild(tSchoolAddress);
