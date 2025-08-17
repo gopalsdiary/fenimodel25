@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Admit Cards — Selected (10 per page)</title>
+	<title>Admit Cards — Selected (6 per page)</title>
 	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
 	<style>
@@ -17,12 +17,13 @@
 		.btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.45rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
 		.btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
 
-		/* Print layout: A4 portrait, 5 columns x 2 rows = 10 cards */
-		.sheet{ width:210mm; margin:0 auto; padding:1.5mm; page-break-inside: avoid; break-inside: avoid-page }
+		/* Print layout: A4 portrait, 2 columns x 3 rows = 6 cards (seatplan style) */
+		.sheet{ width:210mm; margin:0 auto; padding:1.5mm; page-break-inside: avoid; break-inside: avoid-page; min-height:297mm; background:#fff }
 		.sheet + .sheet{ page-break-before: always; break-before: page }
-		.grid{ display:grid; grid-template-columns:repeat(2, max-content); gap:3.5mm }
+		.grid{ display:grid; grid-template-columns: repeat(2, max-content); gap:3.5mm }
 		/* Wrapper sized to scaled card footprint; .card remains true-size (210x115mm) */
-		.box{ width:38mm; height:22mm; /* placeholder; JS will set exact mm via inline style */ break-inside: avoid; page-break-inside: avoid; display:block }
+		.box{ /* JS sets exact mm sizes */ break-inside: avoid; page-break-inside: avoid; display:block }
+		.box::after{ display:none }
 		.grid{ break-inside: avoid; page-break-inside: avoid }
 		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
 		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
@@ -32,25 +33,22 @@
 		.t.class{ left:10mm; top:74mm; font-size:5mm }
 		.t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
 		.t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:700; white-space:pre }
-		.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:5.52mm }
+		.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:8.28mm; text-decoration: underline; text-underline-offset: 1.2mm; text-decoration-thickness: .6mm }
 		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.iid{ left:76mm; top:90mm; font-size:5mm }
-		/* School header */
-		.t.school-name{ left:0; top:3.45mm; width:100%; text-align:center; font-weight:700; font-size:11.4mm; color:#111 }
-		.t.school-address{ left:0; top:16mm; width:100%; text-align:center; font-weight:400; font-size:4.5mm; color:#111 }
-		/* Footer signatures */
-		.t.class-teacher{ left:15mm; bottom:8mm; font-weight:600; font-size:4.5mm; color:#111 }
-		.t.headteacher{ right:15mm; bottom:8mm; font-weight:600; font-size:4.5mm; color:#111 }
+		/* School header/footers not used in seatplan style */
 
-		.sheets{ display:flex; flex-direction:column; gap:8mm; padding:8mm 0 }
+		.sheets{ display:flex; flex-direction:column; gap:5mm; padding:5mm 0 }
 
 		@media print{
 			header,.actions{ display:none !important }
-			body{ background:#fff }
+			body{ background:#fff; margin:0; padding:0 }
 			@page{ size:A4; margin:6mm }
 			.sheets{ gap:0; padding:0 }
-			.sheet{ page-break-inside:avoid; margin:0 auto }
+			.sheet{ page-break-inside:avoid; margin:0 auto; padding:1mm; width:210mm }
 			.card{ border:none }
+			.box{ border:1px solid #ccc; background:none }
+			.grid{ gap:1mm; height:295mm }
 		}
 	</style>
 				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -85,30 +83,27 @@
 
 			const sheetsWrap = document.getElementById('sheets');
 			sheetsWrap.innerHTML = '';
-				// Compute scale to fit 2 columns x 5 rows within A4 portrait content area
+				// Compute scale to fit 6 cards exactly like the image layout
 				const PAGE_W = 210, PAGE_H = 297; // mm
-				const PAD = 1.5, GAP = 3.5, COLS = 2, ROWS = 5;
+				const PAD = 1.5, GAP = 3.5, COLS = 2, ROWS = 3;
 				const contentW = PAGE_W - 2*PAD; // mm
 				const contentH = PAGE_H - 2*PAD; // mm
 				const colW = (contentW - GAP*(COLS-1)) / COLS; // mm per column
 				const rowH = (contentH - GAP*(ROWS-1)) / ROWS; // mm per row
-				const widthScale = colW / 210; // relative to 210mm true card width
-				const heightScale = rowH / 115; // relative to 115mm true card height
-				// Small safety margin to avoid clipping from rounding when rendering or exporting
+				const widthScale = (contentW - GAP*(COLS-1)) / COLS / 210; // relative to 210mm true card width
+				const heightScale = (contentH - GAP*(ROWS-1)) / ROWS / 115; // relative to 115mm true card height
+				// Seatplan approach: scale card and let .box be the scaled footprint
 				const SCALE = Math.min(widthScale, heightScale) * 0.985;
 				const boxW = 210 * SCALE; // mm
 				const boxH = 115 * SCALE; // mm
 
-			const pages = chunk(payload.students, 10);
+			const pages = chunk(payload.students, 6);
 					pages.forEach((page, pageIdx)=>{
 				const sheet = document.createElement('div'); sheet.className='sheet';
 				const grid = document.createElement('div'); grid.className='grid'; sheet.appendChild(grid);
 				page.forEach(s=>{
 						const box = document.createElement('div'); box.className='box'; box.style.width = boxW + 'mm'; box.style.height = boxH + 'mm';
 					const card = document.createElement('div'); card.className='card'; card.style.transform = `scale(${SCALE})`;
-						// School header
-						const tSchoolName = document.createElement('div'); tSchoolName.className='t school-name'; tSchoolName.textContent = 'Feni Model High School'; card.appendChild(tSchoolName);
-						const tSchoolAddress = document.createElement('div'); tSchoolAddress.className='t school-address'; tSchoolAddress.textContent = 'Trunk Road, Feni'; card.appendChild(tSchoolAddress);
 						// Main content
 						const tExam = document.createElement('div'); tExam.className='t exam'; tExam.textContent = [exam, year].filter(Boolean).join(' - '); card.appendChild(tExam);
 						const tYear = document.createElement('div'); tYear.className='t year'; tYear.textContent = ''; card.appendChild(tYear);
@@ -138,29 +133,61 @@
 								const filename = (infoText? infoText.replace(/\s+/g,'_').slice(0,60)+'_': '') + 'Selected_Admit_Cards.pdf';
 								const sheets = Array.from(document.querySelectorAll('.sheet'));
 								if(!sheets.length){ alert('Nothing to export.'); return; }
-								const hasLibs = window.jspdf && window.html2canvas;
-								if(!hasLibs){ alert('PDF libraries not loaded. Please check internet connection.'); return; }
-								const { jsPDF } = window.jspdf;
-								const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
-								for(let i=0;i<sheets.length;i++){
-									const sheet = sheets[i];
-									// Ensure no transforms interfere with measurements
-									const canvas = await window.html2canvas(sheet, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-									const imgData = canvas.toDataURL('image/jpeg', 0.95);
-									// Fit image into A4 while preserving aspect
-									const pageW = 210, pageH = 297;
-									const imgWmm = pageW; // target full width
-									const imgHmm = canvas.height * imgWmm / canvas.width;
-									let x = 0, y = 0, w = imgWmm, h = imgHmm;
-									if(h > pageH){
-										const scale = pageH / h; w = w * scale; h = pageH; x = (pageW - w)/2; y = 0;
-									}else{
-										y = (pageH - h)/2; // center vertically
+
+								try {
+									// Prefer html2pdf if available (bundled + handles page breaks reliably)
+									if(window.html2pdf){
+										// Clone sheets into a clean export root to avoid sticky headers/positioning issues
+										const exportRoot = document.createElement('div');
+										exportRoot.style.width = '210mm';
+										exportRoot.style.margin = '0 auto';
+										exportRoot.style.background = '#fff';
+										exportRoot.id = 'export-root';
+										sheets.forEach(s => exportRoot.appendChild(s.cloneNode(true)));
+										document.body.appendChild(exportRoot);
+
+										const opt = {
+											margin:       0,
+											filename,
+											image:        { type: 'jpeg', quality: 0.95 },
+											html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+											jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+											pagebreak:    { mode: ['css','legacy'], before: '.sheet', avoid: ['.card','.box'] }
+										};
+										// Allow layout to settle
+										await new Promise(r => setTimeout(r, 50));
+										await window.html2pdf().set(opt).from(exportRoot).save();
+										// Cleanup
+										exportRoot.remove();
+										return;
 									}
-									if(i>0) pdf.addPage('a4','portrait');
-									pdf.addImage(imgData, 'JPEG', x, y, w, h);
+
+									// Fallback: html2canvas + jsPDF manual composition
+									if(!window.html2canvas || !window.jspdf){
+										alert('PDF libraries not loaded. Please check internet connection.');
+										return;
+									}
+
+									const { jsPDF } = window.jspdf;
+									const pdf = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+									for(let i = 0; i < sheets.length; i++){
+										const sheet = sheets[i];
+										const canvas = await window.html2canvas(sheet, {
+											scale: 2, useCORS: true, backgroundColor: '#ffffff', width: sheet.offsetWidth, height: sheet.offsetHeight, logging: false
+										});
+										const imgData = canvas.toDataURL('image/jpeg', 0.95);
+										if(i>0) pdf.addPage('a4','portrait');
+										const pageW = 210, pageH = 297;
+										const finalW = pageW, finalH = canvas.height * pageW / canvas.width;
+										let x = 0, y = 0, w = finalW, h = finalH;
+										if(h > pageH){ const scale = pageH / h; w *= scale; h = pageH; x = (pageW - w)/2; y = 0; } else { y = (pageH - h)/2; }
+										pdf.addImage(imgData, 'JPEG', x, y, w, h);
+									}
+									pdf.save(filename);
+								} catch(error) {
+									console.error('PDF generation error:', error);
+									alert('Error generating PDF. Please try again.');
 								}
-								pdf.save(filename);
 							}); }
 		});
 	</script>
@@ -173,7 +200,7 @@
 <body>
 	<header>
 		<div class="container">
-			<h1>Selected Admit Cards (10 per A4)</h1>
+			<h1>Selected Admit Cards (Seatplan style — 6 per A4)</h1>
 			<div class="actions">
 		<button id="downloadBtn" class="btn">Download PDF</button>
 				<button class="btn" onclick="history.back()">Back</button>
