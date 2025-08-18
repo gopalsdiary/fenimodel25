@@ -128,6 +128,8 @@
                 <div class="logout-bar">
                     <button class="mode-toggle" id="modeToggle2" onclick="toggleMode()" aria-label="Toggle dark mode (secondary)">🌓</button>
                     <button class="logout-btn" onclick="logout()">LOGOUT</button>
+                    <button type="button" class="show-toggle" onclick="clearSessionStorage()">Clear SessionStorage</button>
+
                 </div>
                 <h2 id="portalTitle" style="margin:0 0 .25rem;font-size:1.55rem;letter-spacing:.5px;">Student Modules & Exam Modules</h2>
                 <p style="margin:.15rem 0 1.3rem;font-size:.82rem;color:var(--text-soft);max-width:680px;">Choose a module below grouped by academic year. Use a desktop computer for best printing accuracy. <strong style="color:var(--danger);">মোবাইল ফোন এড়িয়ে চলুন</strong>.</p>
@@ -263,6 +265,7 @@
                 lastActivityTime = loginTime;
                 attachActivityListeners();
                 startSessionTimeout();
+                cacheAllDataFieldIfNeeded();
             } else {
                 // Wrong password - show error
                 errorMessage.style.display = 'block';
@@ -350,6 +353,7 @@
                     document.getElementById('passwordSection').style.display = 'none';
                     document.getElementById('examSection').style.display = 'block';
                     // Do NOT restart timeout here to avoid perpetual extension; start/refresh only on activity
+                    cacheAllDataFieldIfNeeded();
                 } else {
                     logout();
                 }
@@ -365,6 +369,56 @@
                     btn.setAttribute('aria-pressed', (!visible).toString());
                 }
 
+                // Cache 0newdatabase/all_data_field.html in SessionStorage for 5 minutes
+                const ALL_DATA_KEY = 'all_data_field_html';
+                const ALL_DATA_EXP_KEY = 'all_data_field_html_expires';
+                const ALL_DATA_TTL = 5 * 60 * 1000; // 5 minutes
+
+                function scheduleAllDataExpiry(timeoutMs){
+                    if(window.__allDataExpiryTimer) clearTimeout(window.__allDataExpiryTimer);
+                    if(timeoutMs>0){
+                        window.__allDataExpiryTimer = setTimeout(()=>{
+                            sessionStorage.removeItem(ALL_DATA_KEY);
+                            sessionStorage.removeItem(ALL_DATA_EXP_KEY);
+                        }, timeoutMs);
+                    }
+                }
+
+                async function cacheAllDataFieldIfNeeded(){
+                    try{
+                        const now = Date.now();
+                        const exp = Number(sessionStorage.getItem(ALL_DATA_EXP_KEY) || 0);
+                        const cached = sessionStorage.getItem(ALL_DATA_KEY);
+                        if(cached && exp && now < exp){
+                            scheduleAllDataExpiry(exp - now);
+                            return;
+                        }
+                        const res = await fetch('0newdatabase/all_data_field.html', { cache:'no-store' });
+                        if(!res.ok) return;
+                        const text = await res.text();
+                        const expiresAt = now + ALL_DATA_TTL;
+                        sessionStorage.setItem(ALL_DATA_KEY, text);
+                        sessionStorage.setItem(ALL_DATA_EXP_KEY, String(expiresAt));
+                        scheduleAllDataExpiry(ALL_DATA_TTL);
+                    }catch(e){ /* ignore */ }
+                }
+
+                function initAllDataCacheOnLoad(){
+                    const now = Date.now();
+                    const exp = Number(sessionStorage.getItem(ALL_DATA_EXP_KEY) || 0);
+                    if(exp && now < exp){
+                        scheduleAllDataExpiry(exp - now);
+                    } else {
+                        sessionStorage.removeItem(ALL_DATA_KEY);
+                        sessionStorage.removeItem(ALL_DATA_EXP_KEY);
+                    }
+                }
+
+                function clearSessionStorage(){
+                    try{ sessionStorage.clear(); }catch(e){}
+                    alert('SessionStorage cleared');
+                }
+
                 // Theme toggle (persist)
                 function applyMode(m){ document.documentElement.classList.toggle('dark', m==='dark'); }
                 function toggleMode(){ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyMode(cur); }
@@ -376,10 +430,12 @@
                 window.onload = function() {
                         const saved= localStorage.getItem('theme'); if(saved) applyMode(saved); else if(window.matchMedia('(prefers-color-scheme: dark)').matches) applyMode('dark');
                         checkSessionValidity();
+                        initAllDataCacheOnLoad();
                         if(sessionStorage.getItem('authenticated')==='true'){
                             lastActivityTime = Date.now();
                             attachActivityListeners();
                             startSessionTimeout();
+                            cacheAllDataFieldIfNeeded();
                         }
                         initSecondaryToggle();
                         document.getElementById('year').textContent = new Date().getFullYear();
