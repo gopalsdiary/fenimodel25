@@ -129,8 +129,10 @@
 				const tdFather=document.createElement('td'); tdFather.textContent=s.father||''; tr.appendChild(tdFather);
 				const tdClass=document.createElement('td'); tdClass.textContent=s.cls||''; tr.appendChild(tdClass);
 				const tdSection=document.createElement('td'); tdSection.textContent=s.section||''; tr.appendChild(tdSection);
-						const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
-								const tdPdf=document.createElement('td');
+					const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
+					const tdIID=document.createElement('td'); tdIID.textContent = s.iid || ''; tr.appendChild(tdIID);
+					const tdGroup=document.createElement('td'); tdGroup.textContent = s.group || ''; tr.appendChild(tdGroup);
+							const tdPdf=document.createElement('td');
 								const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
 								const params = new URLSearchParams({
 									exam, year,
@@ -286,6 +288,8 @@
 					<th>Class</th>
 					<th>Section</th>
 					<th>Roll</th>
+					<th>IID</th>
+					<th>Group</th>
 					<th>PDF</th>
 				</tr>
 			</thead>
