@@ -80,8 +80,8 @@
 		function guessField(fields, type){
 			const W = fields.map(f=>({ key:f, n:norm(f), w:normWide(f) }));
 			const dict = {
-				name: ['name','studentname','student','NAME EN','fullname','stuname','sname','nam','শিক্ষার্থীর নাম','শিক্ষার্থী নাম','শিক্ষার্থী','নাম','ছাত্রের নাম','ছাত্রীর নাম'],
-				father: ['father','fathersname','fathername','FATHER NAME EN','guardianname','parentname','পিতার নাম','বাবার নাম','অভিভাবক','অভিভাবকের নাম'],
+				name: ['name','Student Information _NAME EN','NAME EN'],
+				father: ['father','fathersname','Fathers Information _FATHER NAME EN','FATHER NAME EN'],
 				roll: ['roll','rollno','rollnumber','CLASS ROLL','রোল','রোলনং','রোল নম্বর','ক্রমিক']
 			};
 			const hints = dict[type]||[];

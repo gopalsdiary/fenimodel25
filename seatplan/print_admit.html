@@ -69,7 +69,8 @@
         cls: q('cls', q('class','')),
         section: q('section',''),
         roll: q('roll',''),
-        iid: q('iid','')
+        iid: q('iid',''),
+        group: q('GROUP', q('group',''))
       };
       // Background template switch (use bg=sample to compare with sample.jpg)
       const bg = q('bg','admit');
@@ -79,7 +80,10 @@
   document.querySelector('.t.exam').textContent = [data.exam, data.year].filter(Boolean).join(' - ');
   const nameEl = document.querySelector('.t.name'); nameEl.classList.add('labelled'); nameEl.setAttribute('data-label','Name'); nameEl.textContent = upper(data.name);
   const classEl = document.querySelector('.t.class'); classEl.classList.add('labelled'); classEl.setAttribute('data-label','Class'); classEl.textContent = data.cls;
-  const secEl = document.querySelector('.t.section'); secEl.classList.add('labelled'); secEl.setAttribute('data-label','Section'); secEl.textContent = upper(data.section);
+  const secEl = document.querySelector('.t.section'); secEl.classList.add('labelled'); secEl.setAttribute('data-label','Section');
+  const clsNum = parseInt(String(data.cls||'').replace(/\D+/g,''),10);
+  const showGroup = Number.isFinite(clsNum) && (clsNum===9 || clsNum===10) && data.group;
+  secEl.textContent = showGroup ? `${upper(data.section)}   |   ${String(data.group).trim()}` : upper(data.section);
   const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.style.whiteSpace='pre';
   rollEl.textContent = data.iid ? `${data.roll||''}                           IID : ${data.iid}` : `${data.roll||''}`;
   const iidEl = document.querySelector('.t.iid'); iidEl.textContent='';

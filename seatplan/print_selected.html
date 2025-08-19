@@ -104,7 +104,11 @@
 							  const tYear = document.createElement('div'); tYear.className='t year'; tYear.textContent = ''; card.appendChild(tYear);
 							const tName = document.createElement('div'); tName.className='t name labelled'; tName.setAttribute('data-label','Name'); tName.textContent = upper(s.name||''); card.appendChild(tName);
 							const tClass = document.createElement('div'); tClass.className='t class labelled'; tClass.setAttribute('data-label','Class'); tClass.textContent = s.cls||''; card.appendChild(tClass);
-							const tSection = document.createElement('div'); tSection.className='t section labelled'; tSection.setAttribute('data-label','Section'); tSection.textContent = upper(s.section||''); card.appendChild(tSection);
+							const tSection = document.createElement('div'); tSection.className='t section labelled'; tSection.setAttribute('data-label','Section');
+							const clsNum = parseInt(String(s.cls||'').replace(/\D+/g,''),10);
+							const showGroup = Number.isFinite(clsNum) && (clsNum===9 || clsNum===10) && s.group;
+							tSection.textContent = showGroup ? `${upper(s.section||'')}   |   ${String(s.group).trim()}` : upper(s.section||'');
+							card.appendChild(tSection);
 							const tRoll = document.createElement('div'); tRoll.className='t roll labelled'; tRoll.setAttribute('data-label','Roll'); tRoll.textContent = s.iid ? `${s.roll||''}                           IID : ${s.iid}` : `${s.roll||''}`; card.appendChild(tRoll);
 					const tIid = document.createElement('div'); tIid.className='t iid'; tIid.textContent = ''; card.appendChild(tIid);
 						box.appendChild(card);
