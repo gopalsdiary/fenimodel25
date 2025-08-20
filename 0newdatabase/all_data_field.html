@@ -87,6 +87,35 @@ function escapeHtml(v){
     .replace(/\"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
+// Robust CSV loader helpers
+const FETCH_TIMEOUT_MS = 12000; // 12s per sheet
+const MAX_RETRY = 1;            // retry once on timeout/error
+
+function parseCsvWithTimeout(url, { timeoutMs = FETCH_TIMEOUT_MS } = {}){
+  const papaPromise = new Promise((resolve)=>{
+    Papa.parse(url, {
+      download: true, header: true, skipEmptyLines: true, worker: true,
+      complete: r => resolve({ type: 'result', r }),
+      error: e => resolve({ type: 'error', e })
+    });
+  });
+  const timeoutPromise = new Promise(resolve => setTimeout(()=> resolve({ type: 'timeout' }), timeoutMs));
+  return Promise.race([papaPromise, timeoutPromise]);
+}
+
+function createLimiter(limit){
+  let active = 0; const queue = [];
+  function next(){
+    if(active >= limit) return;
+    const item = queue.shift(); if(!item) return;
+    active++;
+    item.fn().then(v=>{ active--; item.resolve(v); next(); }).catch(e=>{ active--; item.reject(e); next(); });
+  }
+  return function schedule(fn){
+    return new Promise((resolve, reject)=>{ queue.push({ fn, resolve, reject }); next(); });
+  };
+}
+
 function addSheetButton(name, count, targetId){
   // No-op now; replaced by summary table. Keep for backward safety.
 }
@@ -198,24 +227,48 @@ async function init(){
     status.textContent = `Found ${pairs.length} sheets. Fetching…`;
     const host = document.getElementById('host');
     let ok=0,fail=0;
-    // Kick off all fetches in parallel
-    const tasks = pairs.map(({id,name}, idx)=> (async ()=>{
-      try{
-        const url = csvUrl(id, name);
-        const results = await new Promise((res,rej)=>{ Papa.parse(url, { download:true, header:true, skipEmptyLines:true, worker:true, complete:r=>res(r), error:e=>rej(e) }); });
-        const rows = (results && results.data)? results.data : [];
-        const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
-        ok++; status.textContent = `Loaded ${ok}/${pairs.length}` + (fail? `, failed ${fail}` : '');
-        return { idx, id, name, rows, fields, meta: parseSheetMeta(name), success:true };
-      }catch(error){
-        console.error('Fetch error', name, error); fail++; status.textContent = `Loaded ${ok}/${pairs.length}, failed ${fail}`; return { idx, name, error, success:false };
+    // Kick off fetches with concurrency limit and per-sheet timeouts
+    const limit = createLimiter(4);
+    const tasks = pairs.map(({id,name}, idx)=> limit(async ()=>{
+      const url = csvUrl(id, name);
+      let attempt = 0;
+      while(true){
+        const outcome = await parseCsvWithTimeout(url, { timeoutMs: FETCH_TIMEOUT_MS });
+        if(outcome.type === 'result'){
+          const results = outcome.r;
+          const rows = (results && results.data)? results.data : [];
+          const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
+          ok++; status.textContent = `Loaded ${ok}/${pairs.length}` + (fail? `, failed ${fail}` : '');
+          return { idx, id, name, rows, fields, meta: parseSheetMeta(name), success:true };
+        }
+        const err = (outcome.type === 'timeout') ? new Error('Timeout') : (outcome.e || new Error('Parse error'));
+        if(attempt < MAX_RETRY){ attempt++; await new Promise(r=>setTimeout(r, 500 + Math.random()*700)); continue; }
+        console.error('Fetch error', name, err);
+        fail++; status.textContent = `Loaded ${ok}/${pairs.length}, failed ${fail}`;
+        return { idx, name, error: err, success:false };
       }
-    })());
+    }));
     const results = await Promise.all(tasks);
     // Render in original order for consistency
-    results.sort((a,b)=>a.idx-b.idx).forEach(r=>{
-      if(r.success){ renderSheet(host, r.name, r.fields, r.rows, r.meta, { id:r.id, name:r.name }); }
-      else { const err=document.createElement('section'); err.className='group'; const h=document.createElement('h2'); h.textContent = r.name+' (failed)'; err.appendChild(h); const pre=document.createElement('pre'); pre.textContent = String(r.error && r.error.message || r.error); err.appendChild(pre); host.appendChild(err); }
+    results.sort((a,b)=>a.idx-b.idx);
+    const allSheetNames = results.filter(r=>r.success).map(r=>r.name);
+    results.forEach(r=>{
+      if(r.success){
+        renderSheet(host, r.name, r.fields, r.rows, r.meta, { id:r.id, name:r.name });
+      }
+      else {
+        const err=document.createElement('section'); err.className='group'; const h=document.createElement('h2'); h.textContent = r.name+' (failed)'; err.appendChild(h); const pre=document.createElement('pre'); pre.textContent = String(r.error && r.error.message || r.error); err.appendChild(pre); host.appendChild(err);
+      }
+    });
+    // Populate filter dropdown
+    const sheetSel = document.getElementById('sheetFilter');
+    sheetSel.innerHTML = '<option value="">সব ক্লাস/শিট</option>' + allSheetNames.map(n=>`<option value="${slugify(n)}">${escapeHtml(n)}</option>`).join('');
+    sheetSel.addEventListener('change', ()=>{
+      const val = sheetSel.value;
+      document.querySelectorAll('.group').forEach(sec=>{
+        if(!val || sec.id === val) sec.style.display = '';
+        else sec.style.display = 'none';
+      });
     });
     // Summary tables removed
     status.classList.add('ok');
@@ -232,6 +285,9 @@ window.addEventListener('DOMContentLoaded', ()=>{ init(); const s=document.getEl
   <div class="container">
     <h1>All Data Fields</h1>
     <div class="toolbar">
+      <select id="sheetFilter" style="padding:.5rem .7rem;border:1px solid #d1d5db;border-radius:10px;background:#fff;min-width:180px;">
+        <option value="">সব ক্লাস/শিট</option>
+      </select>
       <input id="search" type="search" placeholder="Search column name or value…" aria-label="Filter" />
       <span id="status" class="muted"></span>
     </div>
