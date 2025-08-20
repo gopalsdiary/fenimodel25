@@ -586,6 +586,30 @@
                     </table>
                 </div>
 
+                <!-- Summary highlight like terminal25 sheet -->
+                ${(() => {
+                    const getFirst = (obj, keys) => {
+                        for(const k of keys){
+                            const v = obj[k];
+                            if(v!=null && String(v).trim()!=='') return String(v).trim();
+                        }
+                        return '';
+                    };
+                    const gpa  = getFirst(student, ['gpa']);
+                    const remark = getFirst(student, ['remark','gpa_remark']);
+                    const total = getFirst(student, ['total_mark','total']);
+                    const avg = getFirst(student, ['average','avg']);
+                    if(!gpa && !remark && !total && !avg) return '';
+                    return `
+                        <div class="highlight-box" style="display:flex;gap:.75rem;flex-wrap:wrap;justify-content:center;margin:12px 0 4px;">
+                            ${gpa ? `<div class="highlight-item" style="min-width:120px;padding:10px 14px;border-radius:8px;background:#e8f5e9;border:1px solid #c8e6c9;text-align:center;"><div style="font-size:12px;color:#2e7d32;font-weight:600;">GPA</div><div style="font-size:18px;color:#1b5e20;font-weight:700;">${gpa}</div></div>` : ''}
+                            ${remark ? `<div class="highlight-item" style="min-width:160px;padding:10px 14px;border-radius:8px;background:#e3f2fd;border:1px solid #bbdefb;text-align:center;"><div style="font-size:12px;color:#1565c0;font-weight:600;">Remark</div><div style="font-size:16px;color:#0d47a1;font-weight:700;">${remark}</div></div>` : ''}
+                            ${total ? `<div class="highlight-item" style="min-width:150px;padding:10px 14px;border-radius:8px;background:#fff8e1;border:1px solid #ffe082;text-align:center;"><div style="font-size:12px;color:#ef6c00;font-weight:600;">Total Marks</div><div style="font-size:18px;color:#e65100;font-weight:700;">${total}</div></div>` : ''}
+                            ${avg ? `<div class="highlight-item" style="min-width:160px;padding:10px 14px;border-radius:8px;background:#f3e5f5;border:1px solid #e1bee7;text-align:center;"><div style="font-size:12px;color:#6a1b9a;font-weight:600;">Average Mark</div><div style="font-size:18px;color:#4a148c;font-weight:700;">${avg}</div></div>` : ''}
+                        </div>
+                    `;
+                })()}
+
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">
                     <div style="flex: 1; padding-right: 20px;">
                         <p style="margin-top: 20px; font-weight: bold;">
