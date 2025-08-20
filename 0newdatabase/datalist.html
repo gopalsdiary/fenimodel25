@@ -128,6 +128,16 @@
 			return null;
 		}
 
+		// Small util to safely inject text into HTML
+		function escapeHtml(v){
+			return String(v==null? '': v)
+				.replace(/&/g, '&amp;')
+				.replace(/</g, '&lt;')
+				.replace(/>/g, '&gt;')
+				.replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;');
+		}
+
 		// --- Summary helpers (same behavior as all_data_field.html) ---
 		function slugify(s){ return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
 		function scrollToSection(targetId){
@@ -181,48 +191,45 @@
 		}
 
 				function renderGroup(container, title, fields, rows, meta, src){
-				const group = document.createElement('section'); group.className='group';
-				if(meta){ if(meta.cls) group.dataset.class = meta.cls; if(meta.shift) group.dataset.shift = meta.shift.toLowerCase(); }
-				const h = document.createElement('h2'); h.innerHTML = `${title} <span class="count">(Total: ${rows.length})</span>`; group.appendChild(h);
-			const wrap = document.createElement('div'); wrap.className='table-wrap'; group.appendChild(wrap);
-			const table = document.createElement('table'); wrap.appendChild(table);
-			const thead = document.createElement('thead'); const trh=document.createElement('tr');
-			fields.forEach(f=>{ const th=document.createElement('th'); th.textContent=String(f||''); trh.appendChild(th); });
-			thead.appendChild(trh); table.appendChild(thead);
-			const tbody = document.createElement('tbody');
-					rows.forEach((r, idx)=>{
-						const tr=document.createElement('tr');
-						fields.forEach((f, fi)=>{ 
-							const td=document.createElement('td'); 
-							const val = r[f] ?? '';
-							if(fi === 0 && src && src.id && src.name){
-								const a=document.createElement('a');
-								a.textContent = val || '(open)';
-								// Prefer linking by a unique IID if present; fallback to row index
+					const group = document.createElement('section'); group.className='group';
+					if(meta){ if(meta.cls) group.dataset.class = meta.cls; if(meta.shift) group.dataset.shift = meta.shift.toLowerCase(); }
+					// Header
+					const total = rows.length;
+					const headerHtml = `<h2>${escapeHtml(title)} <span class="count">(Total: ${total})</span></h2>`;
+					// Compute iid key once per group using the first row's keys (fallback to provided fields)
+					const allFieldNames = rows[0] ? Object.keys(rows[0]) : fields;
+					const iidKey = findIidKey(allFieldNames);
+					// Build table head
+					const theadHtml = '<thead><tr>' + fields.map(f=>`<th>${escapeHtml(f)}</th>`).join('') + '</tr></thead>';
+					// Build table body fast
+					let bodyHtml = '<tbody>';
+					for(let i=0;i<rows.length;i++){
+						const r = rows[i];
+						bodyHtml += '<tr>';
+						for(let fi=0; fi<fields.length; fi++){
+							const f = fields[fi];
+							const val = r && Object.prototype.hasOwnProperty.call(r,f) ? r[f] : '';
+							if(fi===0 && src && src.id && src.name){
 								let href = `detailsinfo.html?id=${encodeURIComponent(src.id)}&sheet=${encodeURIComponent(src.name)}`;
-								try{
-									const allFields = Object.keys(r||{});
-									const iidKey = findIidKey(allFields);
-									const iidVal = iidKey ? (r[iidKey]) : '';
-									if(iidVal!=null && String(iidVal).trim()!== ''){
-										href += `&iid=${encodeURIComponent(String(iidVal))}`;
-									}else{
-										href += `&r=${idx}`;
-									}
-								}catch(_){ href += `&r=${idx}`; }
-								a.href = href;
-								a.className = 'link';
-								td.appendChild(a);
-							} else {
-								td.textContent = val;
+								let iidVal = '';
+								try{ iidVal = iidKey ? (r[iidKey]) : ''; }catch(_){ iidVal=''; }
+								if(iidVal!=null && String(iidVal).trim()!==''){
+									href += `&iid=${encodeURIComponent(String(iidVal))}`;
+								}else{
+									href += `&r=${i}`;
+								}
+								bodyHtml += `<td><a class="link" href="${href}">${escapeHtml(val || '(open)')}</a></td>`;
+							}else{
+								bodyHtml += `<td>${escapeHtml(val)}</td>`;
 							}
-							tr.appendChild(td); 
-						});
-				tbody.appendChild(tr);
-			});
-			table.appendChild(tbody);
-			container.appendChild(group);
-		}
+						}
+						bodyHtml += '</tr>';
+					}
+					bodyHtml += '</tbody>';
+					const tableHtml = `<div class="table-wrap"><table>${theadHtml}${bodyHtml}</table></div>`;
+					group.innerHTML = headerHtml + tableHtml;
+					container.appendChild(group);
+				}
 
 			function filterAll(q){
 			const query = q.toLowerCase();
@@ -280,9 +287,9 @@
 						await Promise.all(pairs.map(async ({id,name})=>{
 					try{
 						const url = csvUrl(id, name);
-						const results = await new Promise((resolve,reject)=>{
-							Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
-						});
+							const results = await new Promise((resolve,reject)=>{
+								Papa.parse(url, { download:true, header:true, skipEmptyLines:true, worker:true, complete:r=>resolve(r), error:e=>reject(e) });
+							});
 						const allRows = (results && results.data) ? results.data : [];
 						const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(allRows[0]||{});
 						const useFields = selectColumns(fields, cols);
