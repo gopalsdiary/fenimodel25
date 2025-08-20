@@ -535,7 +535,15 @@
                 <h2>${student.name}</h2>
                 <p>Father's Name: ${student.fathers_name || 'N/A'}</p>
                 <p>Roll: ${student.roll} | Class: ${student.class || 'N/A'} | Shift: ${student.shift || 'N/A'}</p>
-                <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}</p>
+                <p>Mobile Number: ${student.mobile || 'N/A'} | IID: ${student.iid || 'N/A'}${(() => {
+                    const cls = String(student.class || '').toLowerCase();
+                    // detect class 9/10, including possible roman numerals or words
+                    const is9 = /\b(9|ix|nine)\b/i.test(cls);
+                    const is10 = /\b(10|x|ten)\b/i.test(cls);
+                    const show = is9 || is10;
+                    const group = (student.group || student.stream || student.group_name || student.grp || '').toString().trim();
+                    return show && group ? ' | Group: ' + group : '';
+                })()}</p>
                 
                 <div class="table-wrapper">
                     <table>
