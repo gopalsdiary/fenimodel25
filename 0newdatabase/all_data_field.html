@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>All Data Fields — 0newdatabase</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://docs.google.com" crossorigin>
 <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
 
 <style>
@@ -30,7 +31,7 @@ input[type=search]{padding:.55rem .8rem;min-width:240px;border:1px solid #d1d5db
 .group[data-class="10"] h2{background:linear-gradient(90deg,#c2185b,#ec407a);color:#fff}
 /* Table (Google Sheets like) */
 .table-wrap{overflow:auto;border-radius:8px;border:1px solid #e8eef8;background:#fff}
-table.sheet-table{border-collapse:collapse;width:100%;min-width:720px}
+table.sheet-table{border-collapse:collapse;width:100%;min-width:720px;font-size:0.5em}
 table.sheet-table thead th{position:sticky;top:0;background:linear-gradient(180deg,#f8fafc,#f1f5f9);padding:.55rem .7rem;text-align:left;border-bottom:2px solid #e6eef7}
 table.sheet-table th, table.sheet-table td{padding:.5rem .65rem;border-right:1px solid #f1f5f9;border-bottom:1px solid #f6f9fc}
 table.sheet-table tbody tr:hover{background:#fbfdff}
@@ -42,17 +43,7 @@ table.sheet-table td:first-child{min-width:160px}
 .notice{font-size:.9rem;color:#444;text-align:center;margin-top:-6px}
 .summary-line{font-size:.95rem;color:#334155;margin:.5rem 0 0}
 @media (prefers-color-scheme:dark){ .summary-line{color:#cbd5e1} }
-/* Summary table (replaces class buttons) */
-.summary-wrap{max-width:1200px;margin:.25rem auto 0;overflow:auto}
-.summary-table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #e8eef8}
-.summary-table thead th{background:linear-gradient(180deg,#f8fafc,#f1f5f9);text-align:left;padding:.6rem .7rem;border-bottom:2px solid #e6eef7}
-.summary-table thead th.sortable{cursor:pointer;user-select:none}
-.summary-table thead th .arrow{margin-left:6px;color:#64748b;font-size:.85em}
-.summary-table td{padding:.55rem .7rem;border-bottom:1px solid #f1f5f9}
-.summary-table tfoot td{padding:.6rem .7rem;font-weight:600;background:#f8fafc;border-top:2px solid #e6eef7}
-.summary-table tr:hover{background:#fbfdff}
-.summary-table a{color:#0f172a;text-decoration:none}
-.summary-table a:hover{text-decoration:underline}
+
 </style>
 
 
@@ -82,70 +73,24 @@ function slugify(s){
   return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
 }
 
+// Fast helpers for header detection and safe HTML
+function normHeader(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
+function findIidKey(fields){
+  const order=['iid','id','studentid','sid'];
+  const map=new Map(fields.map(f=>[normHeader(f), f]));
+  for(const k of order){ if(map.has(k)) return map.get(k); }
+  return null;
+}
+function escapeHtml(v){
+  return String(v==null? '': v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function addSheetButton(name, count, targetId){
   // No-op now; replaced by summary table. Keep for backward safety.
 }
 
-// Build the summary table rows
-const summaryData = [];
-let summarySort = { key: 'name', dir: 'asc' };
-function addSummaryRow({ name, total, tc, existing, targetId }){
-  summaryData.push({ name, total, tc, existing, targetId });
-}
-function renderSummaryTableInto(host){
-  if(!host) return;
-  const table = document.createElement('table'); table.className='summary-table';
-  const thead = document.createElement('thead');
-  const trh = document.createElement('tr');
-  const cols = [
-    { key:'name', label:'Class name' },
-    { key:'total', label:'Total student' },
-    { key:'tc', label:'TC count' },
-    { key:'existing', label:'Existing Student count' },
-  ];
-  cols.forEach(col=>{
-    const th=document.createElement('th'); th.textContent=col.label; th.classList.add('sortable');
-    if(summarySort.key===col.key){ const arrow=document.createElement('span'); arrow.className='arrow'; arrow.textContent = summarySort.dir==='asc' ? '▲' : '▼'; th.appendChild(arrow); }
-    th.addEventListener('click', ()=>{
-      if(summarySort.key===col.key){ summarySort.dir = summarySort.dir==='asc' ? 'desc' : 'asc'; } else { summarySort.key=col.key; summarySort.dir='asc'; }
-      renderSummaryTable();
-    });
-    trh.appendChild(th);
-  });
-  thead.appendChild(trh);
-  table.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  const data=[...summaryData].sort((a,b)=>{
-    const k=summarySort.key; const dir=summarySort.dir==='asc'?1:-1;
-    const av=a[k], bv=b[k];
-    if(typeof av==='number' && typeof bv==='number') return (av-bv)*dir;
-    return String(av).localeCompare(String(bv))*dir;
-  });
-  data.forEach(row=>{
-    const tr=document.createElement('tr');
-    const link=document.createElement('a'); link.href='#'; link.textContent=row.name; link.addEventListener('click', (e)=>{ e.preventDefault(); scrollToSection(row.targetId); });
-    const td0=document.createElement('td'); td0.appendChild(link); tr.appendChild(td0);
-    const td1=document.createElement('td'); td1.textContent=row.total; tr.appendChild(td1);
-    const td2=document.createElement('td'); td2.textContent=row.tc; tr.appendChild(td2);
-    const td3=document.createElement('td'); td3.textContent=row.existing; tr.appendChild(td3);
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  // totals
-  const totals = data.reduce((acc,r)=>({
-    total: acc.total + (Number(r.total)||0),
-    tc: acc.tc + (Number(r.tc)||0),
-    existing: acc.existing + (Number(r.existing)||0)
-  }), { total:0, tc:0, existing:0 });
-  const tfoot=document.createElement('tfoot');
-  const trf=document.createElement('tr');
-  const tdLabel=document.createElement('td'); tdLabel.textContent='Total'; trf.appendChild(tdLabel);
-  const tdT=document.createElement('td'); tdT.textContent=totals.total; trf.appendChild(tdT);
-  const tdC=document.createElement('td'); tdC.textContent=totals.tc; trf.appendChild(tdC);
-  const tdE=document.createElement('td'); tdE.textContent=totals.existing; trf.appendChild(tdE);
-  tfoot.appendChild(trf); table.appendChild(tfoot);
-  host.innerHTML=''; host.appendChild(table);
-}
 function scrollToSection(targetId){
   const el = document.getElementById(targetId); if(!el) return;
   const header = document.querySelector('.header');
@@ -154,60 +99,91 @@ function scrollToSection(targetId){
   window.scrollTo({ top, behavior:'smooth' });
 }
 
+// Chunked rendering to keep UI responsive
+const INITIAL_ROWS = 60;  // render this many rows immediately (smaller to avoid jank)
+const CHUNK_SIZE = 300;   // append this many rows per batch on demand
+
+// Lazy-load observer: auto-append remaining rows when the section comes into view
+let lazyObserver = null;
+if('IntersectionObserver' in window){
+  lazyObserver = new IntersectionObserver((entries)=>{
+    for(const e of entries){
+      if(e.isIntersecting){
+        const sec = e.target;
+        const btn = sec.querySelector('button.lazy-load-btn');
+        if(btn && !btn.__clicked){ btn.__clicked = true; btn.click(); }
+        lazyObserver.unobserve(sec);
+      }
+    }
+  }, { rootMargin: '200px' });
+}
+
 function renderSheet(container, name, fields, rows, meta, src){
   const section = document.createElement('section'); section.className='group'; if(meta && meta.cls) section.dataset.class = meta.cls; section.id = slugify(name);
-  // Calculate TC count (from a column named exactly 'TC', case-insensitive)
-  const tcFieldIndex = fields.findIndex(f => String(f||'').trim().toLowerCase() === 'tc');
-  let tcCount = 0;
-  if(tcFieldIndex >= 0){
-    const key = fields[tcFieldIndex];
-    tcCount = rows.reduce((n,r)=>{
-      const v = (r && Object.prototype.hasOwnProperty.call(r,key)) ? r[key] : '';
-      return n + (String(v||'').trim().toLowerCase() === 'tc' ? 1 : 0);
-    },0);
-  }
-  const effectiveCount = rows.length - tcCount;
-  const h = document.createElement('h2'); h.textContent = name + '  '; const cspan=document.createElement('span'); cspan.className='count'; cspan.textContent = `student : ${effectiveCount}`; h.appendChild(cspan);
-  section.appendChild(h);
-  const wrap = document.createElement('div'); wrap.className='table-wrap';
-  const table = document.createElement('table'); table.className = 'sheet-table';
-  const thead = document.createElement('thead'); const trh = document.createElement('tr');
-  fields.forEach(f=>{ const th = document.createElement('th'); th.textContent = String(f||''); trh.appendChild(th); });
-  thead.appendChild(trh); table.appendChild(thead);
-  const tbody = document.createElement('tbody');
-  rows.forEach((r, rIdx)=>{
-    const tr = document.createElement('tr');
-    fields.forEach((f, fi)=>{
-      const td = document.createElement('td');
-      const val = (r && Object.prototype.hasOwnProperty.call(r,f)) ? r[f] : '';
-      // first column link to details page (if iid or fallback index)
-      if(fi === 0){
-        const a = document.createElement('a'); a.className='link'; a.textContent = val || '(open)';
-        let href = `detailsinfo.html?id=${encodeURIComponent(src.id)}&sheet=${encodeURIComponent(src.name)}`;
-        try{
-          const allFields = Object.keys(r||{});
-          const norm = k=>String(k||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-          const pref = allFields.find(k=>['iid','id','studentid','sid'].includes(norm(k)));
-          const iidVal = pref ? r[pref] : '';
-          if(iidVal!=null && String(iidVal).trim()!=='') href += `&iid=${encodeURIComponent(String(iidVal))}`; else href += `&r=${rIdx}`;
-        }catch(_){ href += `&r=${rIdx}` }
-        a.href = href; a.style.color='inherit'; a.style.textDecoration='none'; td.appendChild(a);
-      } else {
-        td.textContent = val;
-      }
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody);
-  wrap.appendChild(table);
-  // Summary line below table: Total - TC count = **
-  const sum = document.createElement('div'); sum.className='summary-line'; sum.textContent = `Total - TC count = ${effectiveCount}`;
-  wrap.appendChild(sum);
-  section.appendChild(wrap);
+  // Header (no counts)
+  const headerHtml = `<h2>${escapeHtml(name)}</h2>`;
+  // Skeleton table
+  const theadHtml = '<thead><tr>' + fields.map(f=>`<th>${escapeHtml(f)}</th>`).join('') + '</tr></thead>';
+  section.innerHTML = headerHtml + `<div class="table-wrap"><table class="sheet-table">${theadHtml}<tbody></tbody></table></div>`;
   container.appendChild(section);
-  // record summary (for the top table)
-  addSummaryRow({ name, total: rows.length, tc: tcCount, existing: effectiveCount, targetId: section.id });
+
+  const tbody = section.querySelector('tbody');
+  const allFieldNames = rows[0] ? Object.keys(rows[0]) : fields;
+  const iidKey = findIidKey(allFieldNames);
+
+  function rowHtml(rIdx){
+    const r = rows[rIdx];
+    let html = '<tr>';
+    for(let fi=0; fi<fields.length; fi++){
+      const f = fields[fi]; const val = (r && Object.prototype.hasOwnProperty.call(r,f)) ? r[f] : '';
+      if(fi===0){
+        let href = `detailsinfo.html?id=${encodeURIComponent(src.id)}&sheet=${encodeURIComponent(src.name)}`;
+        let iidVal = '';
+        try{ iidVal = iidKey ? (r[iidKey]) : ''; }catch(_){ iidVal=''; }
+        if(iidVal!=null && String(iidVal).trim()!=='') href += `&iid=${encodeURIComponent(String(iidVal))}`; else href += `&r=${rIdx}`;
+        const text = (val!=null && String(val).trim()!=='') ? String(val) : `#${rIdx+1}`;
+        html += `<td><a class="link" style="color:inherit;text-decoration:none" href="${href}">${escapeHtml(text)}</a></td>`;
+      } else {
+        html += `<td>${escapeHtml(val)}</td>`;
+      }
+    }
+    html += '</tr>';
+    return html;
+  }
+
+  function renderRange(start, end){
+    let buf = '';
+    for(let i=start;i<end;i++) buf += rowHtml(i);
+    tbody.insertAdjacentHTML('beforeend', buf);
+  }
+
+  // Initial render
+  const initialEnd = Math.min(INITIAL_ROWS, rows.length);
+  if(initialEnd > 0) renderRange(0, initialEnd);
+
+  // If many rows, provide a lazy load button
+  if(rows.length > initialEnd){
+    const btn = document.createElement('button');
+    btn.textContent = `Load remaining ${rows.length - initialEnd} rows`;
+    btn.style.cssText = 'margin:8px 0; padding:6px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; cursor:pointer;';
+    btn.className = 'lazy-load-btn';
+    const wrap = document.createElement('div'); wrap.appendChild(btn);
+    section.querySelector('.table-wrap').appendChild(wrap);
+    btn.addEventListener('click', ()=>{
+      btn.disabled = true; btn.textContent = 'Loading…';
+      let next = initialEnd;
+      function step(){
+        const end = Math.min(next + CHUNK_SIZE, rows.length);
+        renderRange(next, end);
+        next = end;
+        if(next < rows.length){ setTimeout(step, 0); }
+        else { btn.remove(); }
+      }
+      step();
+    });
+    // Observe section to auto-load when visible
+    if(lazyObserver){ lazyObserver.observe(section); }
+  }
 }
 
 function filterAll(q){ const query=q.toLowerCase(); document.querySelectorAll('table.sheet-table tbody tr').forEach(tr=>{
@@ -222,21 +198,27 @@ async function init(){
     status.textContent = `Found ${pairs.length} sheets. Fetching…`;
     const host = document.getElementById('host');
     let ok=0,fail=0;
-    for(const {id,name} of pairs){
+    // Kick off all fetches in parallel
+    const tasks = pairs.map(({id,name}, idx)=> (async ()=>{
       try{
         const url = csvUrl(id, name);
-        const results = await new Promise((res,rej)=>{ Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>res(r), error:e=>rej(e) }); });
+        const results = await new Promise((res,rej)=>{ Papa.parse(url, { download:true, header:true, skipEmptyLines:true, worker:true, complete:r=>res(r), error:e=>rej(e) }); });
         const rows = (results && results.data)? results.data : [];
         const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
-        renderSheet(host, name, fields, rows, parseSheetMeta(name), {id,name});
-        ok++;
-      }catch(e){ console.error('Fetch error', name, e); fail++; const err=document.createElement('section'); err.className='group'; const h=document.createElement('h2'); h.textContent = name+' (failed)'; err.appendChild(h); const pre=document.createElement('pre'); pre.textContent = String(e && e.message || e); err.appendChild(pre); host.appendChild(err); }
-      status.textContent = `Loaded ${ok}/${pairs.length}` + (fail? `, failed ${fail}` : '');
-    }
-  // After all groups rendered, draw the summary tables (top and bottom)
-  renderSummaryTableInto(document.getElementById('summaryHost'));
-  renderSummaryTableInto(document.getElementById('summaryBottomHost'));
-  status.classList.add('ok');
+        ok++; status.textContent = `Loaded ${ok}/${pairs.length}` + (fail? `, failed ${fail}` : '');
+        return { idx, id, name, rows, fields, meta: parseSheetMeta(name), success:true };
+      }catch(error){
+        console.error('Fetch error', name, error); fail++; status.textContent = `Loaded ${ok}/${pairs.length}, failed ${fail}`; return { idx, name, error, success:false };
+      }
+    })());
+    const results = await Promise.all(tasks);
+    // Render in original order for consistency
+    results.sort((a,b)=>a.idx-b.idx).forEach(r=>{
+      if(r.success){ renderSheet(host, r.name, r.fields, r.rows, r.meta, { id:r.id, name:r.name }); }
+      else { const err=document.createElement('section'); err.className='group'; const h=document.createElement('h2'); h.textContent = r.name+' (failed)'; err.appendChild(h); const pre=document.createElement('pre'); pre.textContent = String(r.error && r.error.message || r.error); err.appendChild(pre); host.appendChild(err); }
+    });
+    // Summary tables removed
+    status.classList.add('ok');
   }catch(err){ console.error(err); status.textContent='Init failed'; status.classList.add('error'); }
 }
 
@@ -254,13 +236,11 @@ window.addEventListener('DOMContentLoaded', ()=>{ init(); const s=document.getEl
       <span id="status" class="muted"></span>
     </div>
   
-    <div class="notice">Click a class name in the summary to jump to its table. Counts exclude TC rows in "Existing".</div>
+  <div class="notice">ক্লাস অনুযায়ী ডাটা টেবিলগুলো দেখানো হয়েছে।</div>
   </div>
 </header>
-<div id="summaryHost" class="summary-wrap" aria-label="Summary"></div>
 <main class="container">
   <div id="host"></div>
-  <div id="summaryBottomHost" class="summary-wrap" aria-label="Summary (bottom)"></div>
 </main>
 </body>
 
