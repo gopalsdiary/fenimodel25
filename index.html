@@ -11,6 +11,9 @@
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
     <!-- Kalpurush Bangla font -->
     <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+    <!-- Dependencies for the top summary graph -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
         <style>
             :root {
@@ -130,6 +133,16 @@
                     <button class="logout-btn" onclick="logout()">LOGOUT</button>
                     <button type="button" class="show-toggle" onclick="clearSessionStorage()">Clear SessionStorage</button>
 
+                </div>
+                <!-- Top summary graph (click bars to open detailed list) -->
+                <div id="homeChartWrap" class="year-group" style="margin-top:.5rem; display:none;">
+                    <h3 class="year-head"><span class="line"></span> Students Summary</h3>
+                    <div style="background:var(--bg-alt);border:1px solid var(--border);border-radius:14px;padding:10px;">
+                        <canvas id="homeSummaryChart" height="320" aria-label="শিক্ষার্থীদের যোগফল চার্ট" role="img"></canvas>
+                        <div style="text-align:right;margin-top:.35rem;">
+                            <a class="btn" href="0newdatabase/datalist.html" target="_blank" rel="noopener">Open detailed data list</a>
+                        </div>
+                    </div>
                 </div>
                 <h2 id="portalTitle" style="margin:0 0 .25rem;font-size:1.55rem;letter-spacing:.5px;">Student Modules & Exam Modules</h2>
                 <p style="margin:.15rem 0 1.3rem;font-size:.82rem;color:var(--text-soft);max-width:680px;">Choose a module below grouped by academic year. Use a desktop computer for best printing accuracy. <strong style="color:var(--danger);">মোবাইল ফোন এড়িয়ে চলুন</strong>.</p>
@@ -266,6 +279,8 @@
                 attachActivityListeners();
                 startSessionTimeout();
                 cacheAllDataFieldIfNeeded();
+                // Show the summary graph after login
+                initHomeChart();
             } else {
                 // Wrong password - show error
                 errorMessage.style.display = 'block';
@@ -354,6 +369,7 @@
                     document.getElementById('examSection').style.display = 'block';
                     // Do NOT restart timeout here to avoid perpetual extension; start/refresh only on activity
                     cacheAllDataFieldIfNeeded();
+                    initHomeChart();
                 } else {
                     logout();
                 }
@@ -431,6 +447,74 @@
                     const pw = document.getElementById('passwordInput');
                     if(pw){ pw.value=''; pw.focus(); }
                     alert('SessionStorage cleared. Please log in again.');
+                }
+
+                // ----- Home summary chart (totals per sheet) -----
+                const HOME_CHART_STATE = { loaded:false };
+                function slugifyHome(s){ return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+                async function loadSheetListHome(){
+                    try{
+                        const res = await fetch('0newdatabase/sheetidname.text', { cache:'no-store' });
+                        if(!res.ok) throw new Error('Failed to load sheetidname.text');
+                        const txt = await res.text();
+                        const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+                        const pairs=[]; let curId=null;
+                        const idRe = /^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?$/i;
+                        const nameRe = /^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?$/i;
+                        for(const line of lines){
+                            const im = idRe.exec(line); if(im){ curId = im[1]; continue; }
+                            const nm = nameRe.exec(line); if(nm && curId){ pairs.push({ id:curId, name:nm[1] }); curId=null; continue; }
+                        }
+                        return pairs;
+                    }catch(_){ return []; }
+                }
+                function csvUrlHome(id, sheet){
+                    return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+                }
+                async function buildHomeChartData(pairs){
+                    const labels=[]; const totals=[];
+                    await Promise.all(pairs.map(async ({id,name})=>{
+                        try{
+                            const url = csvUrlHome(id, name);
+                            const results = await new Promise((resolve,reject)=>{
+                                Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
+                            });
+                            const allRows = (results && results.data) ? results.data : [];
+                            labels.push(name);
+                            totals.push(allRows.length);
+                        }catch(_){ labels.push(name); totals.push(0); }
+                    }));
+                    return { labels, totals };
+                }
+                function renderHomeChart(labels, totals){
+                    const wrap = document.getElementById('homeChartWrap');
+                    const canvas = document.getElementById('homeSummaryChart');
+                    if(!wrap || !canvas || typeof Chart === 'undefined') return;
+                    wrap.style.display = '';
+                    if(window.__homeSummaryChart){ try{ window.__homeSummaryChart.destroy(); }catch(_){} }
+                    const ctx = canvas.getContext('2d');
+                    window.__homeSummaryChart = new Chart(ctx, {
+                        type:'bar',
+                        data:{ labels, datasets:[{ label:'Total students', data:totals, backgroundColor:'rgba(14,165,233,.55)', borderColor:'rgba(2,132,199,1)', borderWidth:1, borderRadius:6, maxBarThickness:48 }] },
+                        options:{
+                            maintainAspectRatio:false,
+                            onClick: (evt, elements)=>{
+                                if(elements && elements.length){ const i=elements[0].index; const targetId = slugifyHome(labels[i]); window.open('0newdatabase/datalist.html#'+targetId, '_blank'); }
+                            },
+                            plugins:{ legend:{ display:false }, title:{ display:true, text:'শিক্ষার্থীদের যোগফল (সেকশনভিত্তিক)' } },
+                            scales:{ y:{ beginAtZero:true, title:{ display:true, text:'Total' } }, x:{ ticks:{ maxRotation:45 } } }
+                        }
+                    });
+                }
+                async function initHomeChart(){
+                    if(HOME_CHART_STATE.loaded) return;
+                    try{
+                        const pairs = await loadSheetListHome();
+                        if(!pairs.length) return;
+                        const { labels, totals } = await buildHomeChartData(pairs);
+                        renderHomeChart(labels, totals);
+                        HOME_CHART_STATE.loaded = true;
+                    }catch(_){ /* ignore */ }
                 }
 
                 // Theme toggle (persist)

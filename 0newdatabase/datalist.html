@@ -78,6 +78,8 @@
 		.summary-table a:hover{text-decoration:underline}
 	</style>
 		<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+		<!-- Chart.js for the column graph -->
+		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 	<script>
 		// Parse sheet list from sheetidname.text
 		async function loadSheetList(){
@@ -168,6 +170,46 @@
 		function renderSummaryTable(){
 			renderSummaryTableInto(document.getElementById('summaryHost'));
 			renderSummaryTableInto(document.getElementById('summaryBottomHost'));
+		}
+
+		// --- Column graph of total students per sheet/group ---
+		function renderSummaryChart(){
+			const canvas = document.getElementById('summaryChart');
+			if(!canvas || typeof Chart === 'undefined') return;
+			const labels = summaryData.map(r => r.name);
+			const totals = summaryData.map(r => Number(r.total)||0);
+			// Destroy previous chart if any
+			if(window.__summaryChart){ try{ window.__summaryChart.destroy(); }catch(_){} }
+			// Give the canvas a reasonable height for readability
+			canvas.style.height = '320px';
+			const ctx = canvas.getContext('2d');
+			window.__summaryChart = new Chart(ctx, {
+				type: 'bar',
+				data: {
+					labels,
+					datasets: [{
+						label: 'Total students',
+						data: totals,
+						backgroundColor: 'rgba(14, 165, 233, 0.55)',
+						borderColor: 'rgba(2, 132, 199, 1)',
+						borderWidth: 1,
+						borderRadius: 6,
+						maxBarThickness: 48
+					}]
+				},
+				options: {
+					maintainAspectRatio: false,
+					plugins: {
+						legend: { display: false },
+						title: { display: true, text: 'শিক্ষার্থীদের যোগফল (সেকশনভিত্তিক)' },
+						tooltip: { callbacks: { label: (ctx)=> `Total: ${ctx.formattedValue}` } }
+					},
+					scales: {
+						y: { beginAtZero: true, title: { display: true, text: 'Total' } },
+						x: { ticks: { maxRotation: 45, minRotation: 0 } }
+					}
+				}
+			});
 		}
 
 		function selectColumns(fields, cols){
@@ -315,6 +357,7 @@
 						populateFilters(classSet, shiftSet);
 						applyGroupFilters();
 						renderSummaryTable();
+						renderSummaryChart();
 				status.classList.add('ok');
 			}catch(err){
 				console.error(err);
@@ -347,7 +390,11 @@
 			</div>
 		</div>
 	</header>
-  <div id="summaryHost" class="summary-wrap" aria-label="Summary"></div>
+	<!-- Column graph: Total students per sheet/group -->
+	<div class="summary-wrap" style="background:#fff;border:1px solid #e8eef8;border-radius:10px;padding:12px 12px 4px;margin-top:.5rem;max-width:1100px;">
+		<canvas id="summaryChart" aria-label="শিক্ষার্থীদের যোগফল চার্ট" role="img"></canvas>
+	</div>
+	<div id="summaryHost" class="summary-wrap" aria-label="Summary"></div>
 	<main>
 		<div id="groups" class="container"></div>
 		<div id="summaryBottomHost" class="summary-wrap" aria-label="Summary (bottom)"></div>
