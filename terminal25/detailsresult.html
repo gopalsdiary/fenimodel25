@@ -289,6 +289,78 @@
         let headers = [];
         let SUBJECT_MAP = {};
 
+        // Build subject map from headers (match "*_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA")
+        function generateSubjectMapFromHeaders(hdrs){
+            const map = {};
+            if(!Array.isArray(hdrs)) return map;
+            const norm = s => String(s||'').replace(/\*/g,'').trim();
+
+            // Collect unique subject bases
+            const subjects = new Set();
+            hdrs.forEach(hRaw => {
+                const h = norm(hRaw);
+                const m = h.match(/^(.*?)(_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA)$/i);
+                if(m) subjects.add(m[1]);
+            });
+
+            // Build map preferring _WRITTEN when present, else _CQ
+            subjects.forEach(subject => {
+                const find = (suffixes) => hdrs.find(h => {
+                    const hh = norm(h);
+                    return suffixes.some(s => hh.endsWith(s) && hh.startsWith(subject));
+                }) || '';
+                map[subject] = {
+                    CQ: find(['_CQ','_WRITTEN']),
+                    MCQ: find(['_MCQ']),
+                    CA: find(['_CA']),
+                    Practical: find(['_Practical']),
+                    Total: find(['_Total']),
+                    GPA: find(['_GPA'])
+                };
+            });
+
+            return map;
+        }
+
+        function cleanHeaderKey(h){
+            if(!h) return '';
+                return String(h)
+                    .replace(/\*/g,'')
+                    .replace(/"/g,'')
+                    .toLowerCase()
+                    .trim()
+                    .replace(/\s+/g,'_')
+                    .replace(/[^\w_]/g,'_')
+                    .replace(/_+/g,'_')
+                    .replace(/^_|_$/g,'');
+        }
+
+        // Try multiple sanitized variants of a header to fetch a student's value
+        function getStudentValueByHeader(student, hdr){
+            if(!hdr) return '';
+            const variants = [];
+            const original = String(hdr);
+            // raw -> cleaned
+            variants.push(cleanHeaderKey(original));
+            // remove extra spaces around underscores
+            variants.push(cleanHeaderKey(original.replace(/\s*_\s*/g,'_')));
+            // collapse multiple spaces inside
+            variants.push(cleanHeaderKey(original.replace(/\s{2,}/g,' ')));
+            // hyphen as underscore
+            variants.push(cleanHeaderKey(original.replace(/\s*-\s*/g,'_')));
+            // explicit practical short alias
+            const ck = variants[0];
+            if(/_practical$/.test(ck)) variants.push(ck.replace(/_practical$/,'_prac'));
+            // unique
+            const used = new Set();
+            for(const k of variants){
+                if(!k || used.has(k)) continue; used.add(k);
+                const v = student[k];
+                if(v!=null && String(v).trim()!=='') return v;
+            }
+            return '';
+        }
+
         // Get IID from URL parameter
         function getIIDFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -313,7 +385,7 @@
                 
                 // Load data from all CSV files
                 const allStudents = [];
-                let allHeaders = [];
+                let allHeaders = []; 
                 
                 for (const csvFile of csvFiles) {
                     try {
@@ -328,19 +400,20 @@
                         
                         if (rows.length === 0) continue;
                         
-                        // Process headers (use the first file's headers)
-                        if (allHeaders.length === 0) {
-                            allHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                        }
-                        
-                        // Skip header row and process student data
-                        const fileStudents = rows.slice(2).map(row => { // Skip first two rows (headers)
+                        // Headers for this file (use first header row)
+                        const currentHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                        if (allHeaders.length === 0) { allHeaders = currentHeaders.slice(); }
+
+                        // Skip header rows and process student data (first 2 rows are headers)
+            const fileStudents = rows.slice(2).map(row => {
                             const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                             const student = {};
-                            allHeaders.forEach((header, index) => {
-                                const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
-                                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                            currentHeaders.forEach((header, index) => {
+                const cleanHeader = cleanHeaderKey(header);
+                student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
                             });
+                            // Keep this student's source headers for subject mapping later
+                            Object.defineProperty(student, '__headers', { value: currentHeaders.slice(), enumerable: false });
                             return student;
                         });
                         
@@ -356,7 +429,7 @@
                 headers = allHeaders;
                 students = allStudents;
 
-                // Dynamically generate SUBJECT_MAP
+                // Keep legacy map to avoid breaking references (not used for rendering rows)
                 generateSubjectMap(headers);
 
                 console.log('Total students loaded:', students.length);
@@ -393,18 +466,57 @@
             }
         }
 
-        function generateSubjectMap(headers) {
-            const subjects = new Set();
-            headers.forEach(header => {
-                const match = header.match(/^(.*?)(_CQ|_MCQ|_Practical|_Total|_GPA)$/);
+    function generateSubjectMap(headers) { 
+            // First collect all subjects and their column indices
+            const subjectColumns = {};
+            
+            // List of non-subject columns to exclude
+        const excludeColumns = ['fail+gpa', 'rank', 'remark', 'mobile', 'password', 'class', 'shift', 'sms', 'absent', 'fail count', 'gpa/remark'];
+            
+            headers.forEach((header, index) => {
+                const cleanHeader = header.replace(/\*/g, '').trim();
+                
+                const match = cleanHeader.match(/^(.*?)(_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA)$/i);
                 if (match) {
-                    subjects.add(match[1]);
+                    const subject = match[1];
+                    const component = match[2];
+                    
+            // Skip if subject base name is too generic or in exclude list
+            if (excludeColumns.some(exclude => subject.toLowerCase().includes(exclude.toLowerCase()))) {
+                        return;
+                    }
+                    
+                    if (!subjectColumns[subject]) {
+                        subjectColumns[subject] = {};
+                    }
+                    subjectColumns[subject][component] = index;
                 }
             });
 
-            subjects.forEach(subject => {
+            // Check if subject has any valid data (not empty, not "-", and not just whitespace)
+            function hasValidData(subject) {
+                const indices = Object.values(subjectColumns[subject] || {});
+                if (indices.length === 0) return false;
+                
+                // Check data in all rows for this subject's columns
+                for (let student of students) {
+                    for (let index of indices) {
+                        const value = (Object.values(student)[index] || '').toString().trim();
+                        // If we find any non-empty value that's not "-", consider it valid
+                        if (value && value !== '-' && value !== '0' && value.toLowerCase() !== 'fail') {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // Only include subjects that have valid data
+            const validSubjects = Object.keys(subjectColumns).filter(hasValidData);
+            
+            validSubjects.forEach(subject => {
                 SUBJECT_MAP[subject] = {
-                    CQ: headers.find(h => h.includes(`${subject}_CQ`)) || '',
+                    CQ: headers.find(h => /_(CQ|WRITTEN)\b/i.test(h) && h.startsWith(subject)) || '',
                     MCQ: headers.find(h => h.includes(`${subject}_MCQ`)) || '',
                     Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
                     Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
@@ -413,7 +525,7 @@
             });
         }
 
-        function displayStudentDetails(student) {
+    function displayStudentDetails(student) { 
             const container = document.getElementById('marksheetContent');
             container.innerHTML = `
                 <div id="padHeader" class="pad-header" style="text-align:center;display:none;">
@@ -437,33 +549,41 @@
                                 <th>GPA</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${Object.entries(SUBJECT_MAP).map(([subject, cols]) => {
-                                const cleanCQ = cols.CQ.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                const cleanMCQ = cols.MCQ.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                const cleanPractical = cols.Practical.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                const cleanTotal = cols.Total.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                const cleanGPA = cols.GPA.replace(/\*/g, '').replace(/ /g, '_').toLowerCase();
-                                
-                                return `
-                                <tr>
-                                    <td>${subject.replace(/\*/g, '')}</td>
-                                    <td>${student[cleanCQ] || '-'}</td>
-                                    <td>${student[cleanMCQ] || '-'}</td>
-                                    <td>${student[cleanPractical] || '-'}</td>
-                                    <td>${student[cleanTotal] || '-'}</td>
-                                    <td>${student[cleanGPA] || '-'}</td>
-                                </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
+                            <tbody>
+                                ${(() => {
+                                    const subjMap = generateSubjectMapFromHeaders(student.__headers || headers, student);
+                                    return Object.entries(subjMap).map(([subject, cols]) => {
+                                        const safe = (x)=> (x==null||String(x).trim()==='') ? '' : String(x).trim();
+                                        const get = (label)=>{
+                                            const hdr = cols[label];
+                                            const v = getStudentValueByHeader(student, hdr);
+                                            return safe(v);
+                                        };
+                                        const cq = get('CQ');
+                                        const mcq = get('MCQ');
+                                        const ca = get('CA');
+                                        let practical = get('Practical');
+                                        const total = get('Total');
+                                        const gpa = get('GPA');
+                                        // If practical header is missing or empty, try derive from total - (cq+mcq+ca)
+                                        if((!practical || practical==='-') && total){
+                                            const n = (s)=> isNaN(parseFloat(s))?0:parseFloat(s);
+                                            const derived = n(total) - (n(cq)+n(mcq)+n(ca));
+                                            if(derived>0) practical = String(derived);
+                                        }
+                                        return `
+                                        <tr>
+                                            <td>${subject.replace(/\*/g, '')}</td>
+                                            <td>${cq||'-'}</td>
+                                            <td>${mcq||'-'}</td>
+                                            <td>${practical||'-'}</td>
+                                            <td>${total||'-'}</td>
+                                            <td>${gpa||'-'}</td>
+                                        </tr>`;
+                                    }).join('');
+                                })()}
+                            </tbody>
                     </table>
-                </div>
-
-                <div class="highlight-box">
-                    ${student.gpa ? `<div class="highlight-item"><p>GPA</p><p>${student.gpa}</p></div>` : ''}
-                    ${student.remark ? `<div class="highlight-item"><p>Remark</p><p>${student.remark}</p></div>` : ''}
-                    ${student.ranking ? `<div class="highlight-item"><p>Rank :</p><p>${student.ranking}</p></div>` : ''}
                 </div>
 
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px;">

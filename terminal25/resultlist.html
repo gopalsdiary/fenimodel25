@@ -49,11 +49,25 @@ let headers = [];
 let SUBJECT_MAP = {};
 let authenticatedStudents = new Set();
 
+function cleanHeaderKey(h){
+    if(!h) return '';
+    return String(h)
+        .replace(/\*/g,'')
+        .replace(/"/g,'')
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g,'_')
+        .replace(/[^\w_]/g,'_')
+        .replace(/_+/g,'_')
+        .replace(/^_|_$/g,'');
+}
+
 async function loadData() {
     try {
         // Load data from all CSV files
         const allStudents = [];
-        let allHeaders = [];
+    let allHeaders = [];
+    const allHeadersSet = new Set();
         
         for (const csvFile of csvFiles) {
             try {
@@ -68,18 +82,20 @@ async function loadData() {
                 
                 if (rows.length === 0) continue;
                 
-                // Process headers (use the first file's headers)
-                if (allHeaders.length === 0) {
-                    allHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                }
+                // Process headers
+                const currentHeaders = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                // Capture union of headers for any later use
+                currentHeaders.forEach(h=> allHeadersSet.add(h));
+                if (allHeaders.length === 0) { allHeaders = currentHeaders.slice(); }
                 
                 // Skip header row and process student data
                 const fileStudents = rows.slice(2).map(row => { // Skip first two rows (headers)
                     const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                     const student = {};
-                    allHeaders.forEach((header, index) => {
-                        const cleanHeader = header.replace(/\*/g, '').trim().replace(/ /g, '_').toLowerCase();
-                        student[cleanHeader] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                    // Use this file's own header ordering for correct column alignment
+                    currentHeaders.forEach((header, index) => {
+                        const key = cleanHeaderKey(header);
+                        student[key] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
                     });
                     return student;
                 });
@@ -93,7 +109,7 @@ async function loadData() {
         }
         
         // Set global variables
-        headers = allHeaders;
+    headers = allHeaders.length ? allHeaders : Array.from(allHeadersSet);
         students = allStudents;
 
         if (students.length === 0) {
@@ -121,18 +137,62 @@ async function loadData() {
 }
 
 function generateSubjectMap(headers) {
-    const subjects = new Set();
-    headers.forEach(header => {
-        const match = header.match(/^(.*?)(_WRITTEN|_CA|_Practical|_Total|_GPA)$/);
+    // First collect all subjects and their column indices
+    const subjectColumns = {};
+    
+    // List of non-subject columns to exclude
+    const excludeColumns = ['fail+gpa', 'gpa', 'total', 'rank', 'remark', 'mobile', 'password', 'class', 'shift', 'sms', 'absent', 'fail count', 'gpa/remark'];
+    
+    headers.forEach((header, index) => {
+        const cleanHeader = header.replace(/\*/g, '').trim();
+        
+        // Skip non-subject columns
+        if (excludeColumns.some(exclude => cleanHeader.toLowerCase().includes(exclude.toLowerCase()))) {
+            return;
+        }
+        
+        const match = cleanHeader.match(/^(.*?)(_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA)$/i);
         if (match) {
-            subjects.add(match[1]);
+            const subject = match[1];
+            const component = match[2];
+            
+            // Skip if subject name is too generic or in exclude list
+            if (excludeColumns.some(exclude => subject.toLowerCase().includes(exclude.toLowerCase()))) {
+                return;
+            }
+            
+            if (!subjectColumns[subject]) {
+                subjectColumns[subject] = {};
+            }
+            subjectColumns[subject][component] = index;
         }
     });
 
-    subjects.forEach(subject => {
+    // Check if subject has any valid data (not empty, not "-", and not just whitespace)
+    function hasValidData(subject) {
+        const indices = Object.values(subjectColumns[subject] || {});
+        if (indices.length === 0) return false;
+        
+        // Check data in all rows for this subject's columns
+        for (let student of students) {
+            for (let index of indices) {
+                const value = (Object.values(student)[index] || '').toString().trim();
+                // If we find any non-empty value that's not "-", consider it valid
+                if (value && value !== '-' && value !== '0' && value.toLowerCase() !== 'fail') {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Only include subjects that have valid data
+    const validSubjects = Object.keys(subjectColumns).filter(hasValidData);
+    
+    validSubjects.forEach(subject => {
         SUBJECT_MAP[subject] = {
-            WRITTEN: headers.find(h => h.includes(`${subject}_WRITTEN`)) || '',
-            CA: headers.find(h => h.includes(`${subject}_CA`)) || '',
+            CQ: headers.find(h => /_(CQ|WRITTEN)\b/i.test(h) && h.startsWith(subject)) || '',
+            MCQ: headers.find(h => h.includes(`${subject}_MCQ`)) || '',
             Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
             Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
             GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
@@ -188,7 +248,20 @@ function filterStudentList() {
         return matchesQuery && matchesClass && matchesShift;
     });
 
-    renderFilteredStudentList(filteredStudents);
+    // Sort by numeric Roll ascending when filtering
+    const toRoll = s => {
+        if(!s) return Number.POSITIVE_INFINITY;
+        const m = String(s).match(/\d+/);
+        return m ? parseInt(m[0],10) : Number.POSITIVE_INFINITY;
+    };
+    const sorted = filteredStudents.slice().sort((a,b)=>{
+        const ra = toRoll(a.roll);
+        const rb = toRoll(b.roll);
+        if(ra !== rb) return ra - rb;
+        return (a.name||'').localeCompare(b.name||'');
+    });
+
+    renderFilteredStudentList(sorted);
 }
 
 function renderFilteredStudentList(filteredStudents) {
