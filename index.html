@@ -416,7 +416,21 @@
 
                 function clearSessionStorage(){
                     try{ sessionStorage.clear(); }catch(e){}
-                    alert('SessionStorage cleared');
+                    // Also cancel any timers related to session & cached data
+                    if(window.sessionTimeoutId){ try{ clearTimeout(window.sessionTimeoutId); }catch(_){} window.sessionTimeoutId = null; }
+                    if(window.__allDataExpiryTimer){ try{ clearTimeout(window.__allDataExpiryTimer); }catch(_){} window.__allDataExpiryTimer = null; }
+                    // Reset activity tracking
+                    lastActivityTime = null;
+                    // Return UI to login state
+                    const passwordSection = document.getElementById('passwordSection');
+                    const examSection = document.getElementById('examSection');
+                    if(passwordSection && examSection){
+                        passwordSection.style.display = 'block';
+                        examSection.style.display = 'none';
+                    }
+                    const pw = document.getElementById('passwordInput');
+                    if(pw){ pw.value=''; pw.focus(); }
+                    alert('SessionStorage cleared. Please log in again.');
                 }
 
                 // Theme toggle (persist)
