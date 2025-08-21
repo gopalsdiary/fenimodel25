@@ -1,0 +1,6 @@
+
+let homeShowColumns = [1, 2, 3, 4, 5, 6];
+
+
+let sheetId = '1G8hQHZMdEg2peCCOm2q0EPcXZel_voAZLck7rahGvPg';
+let sheetName = 'student_login';
