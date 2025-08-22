@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Regular Excel SMS Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f6f8fa; margin: 0; }
+        .sidebar { width: 220px; background: #fff; height: 100vh; position: fixed; left: 0; top: 0; box-shadow: 1px 0 8px #eee; }
+        .sidebar ul { list-style: none; padding: 0; margin: 0; }
+        .sidebar li { padding: 18px 24px; border-bottom: 1px solid #f0f0f0; cursor: pointer; color: #34495e; }
+        .sidebar li.active, .sidebar li:hover { background: #eaf6ff; font-weight: bold; }
+        .main { margin-left: 240px; padding: 32px; }
+        h2 { color: #2c3e50; }
+        .excel-upload { margin-bottom: 24px; }
+        table { border-collapse: collapse; width: 100%; background: #fff; }
+        th, td { border: 1px solid #bfc9d1; padding: 8px 12px; text-align: left; }
+        th { background: #eaf6ff; }
+        .status-success { color: green; font-weight: bold; }
+        .status-fail { color: red; font-weight: bold; }
+        .send-btn { margin-top: 18px; padding: 10px 24px; background: #3498db; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .send-btn:disabled { background: #bfc9d1; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <ul>
+            <li>Dashboard</li>
+            <li class="active">Regular excel SMS</li>
+            <li>Refill SMS</li>
+            <li>Logout</li>
+        </ul>
+    </div>
+    <div class="main">
+        <h2>Regular excel SMS <span style="font-size:14px;color:#888;">Send SMS from excel</span></h2>
+        <div class="excel-upload">
+            <input type="file" id="excelFile" accept=".xlsx,.xls" />
+        </div>
+        <table id="smsTable" style="display:none;">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>phone</th>
+                    <th>body</th>
+                    <th>status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div id="manualRowArea" style="margin-top:18px;">
+        <input type="text" id="manualPhone" placeholder="Type phone number" style="width:180px;" />
+        <input type="text" id="manualBody" placeholder="Type SMS body" style="width:320px;" />
+        <button class="send-btn" id="addRowBtn" type="button" style="background:#27ae60;">Add Row</button>
+        <button class="send-btn" id="sendSingleBtn" type="button" style="background:#e67e22; margin-left:10px;">Send</button>
+        </div>
+        <button class="send-btn" id="sendAllBtn" style="display:none;">Send All SMS</button>
+    </div>
+    <script>
+        document.getElementById('sendSingleBtn').onclick = async function() {
+            let phone = document.getElementById('manualPhone').value.trim();
+            const body = document.getElementById('manualBody').value.trim();
+            if(phone && body) {
+                if(!phone.startsWith('+88')) {
+                    phone = '+88' + phone.replace(/^\+?88/, '');
+                }
+                document.getElementById('sendSingleBtn').textContent = 'Sending...';
+                try {
+                    const res = await fetch('send.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'single', number: phone, message: body })
+                    });
+                    const result = await res.json();
+                    alert(result.response_code === 200 ? 'SMS Sent Successfully!' : 'SMS Send Failed! ' + (result.error_message||''));
+                } catch (e) {
+                    alert('SMS Send Failed! ' + e);
+                }
+                document.getElementById('sendSingleBtn').textContent = 'Send';
+            }
+        };
+        let smsRows = [];
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, {header:1});
+                // Expecting header: phone, body
+                smsRows = [];
+                for(let i=1; i<json.length; i++) {
+                    const row = json[i];
+                    if(row[0] && row[1]) {
+                        smsRows.push({phone: row[0], body: row[1], status: ''});
+                    }
+                }
+                renderTable();
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        document.getElementById('addRowBtn').onclick = function() {
+            let phone = document.getElementById('manualPhone').value.trim();
+            const body = document.getElementById('manualBody').value.trim();
+            if(phone && body) {
+                if(!phone.startsWith('+88')) {
+                    phone = '+88' + phone.replace(/^\+?88/, '');
+                }
+                smsRows.push({phone: phone, body: body, status: ''});
+                document.getElementById('manualPhone').value = '';
+                document.getElementById('manualBody').value = '';
+                renderTable();
+            }
+        };
+        function renderTable() {
+            const table = document.getElementById('smsTable');
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+            smsRows.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${idx+1}</td><td>${row.phone}</td><td>${row.body}</td><td class="${row.status==='Success'?'status-success':row.status==='Fail'?'status-fail':''}">${row.status||''}</td>`;
+                tbody.appendChild(tr);
+            });
+            table.style.display = smsRows.length ? '' : 'none';
+            document.getElementById('sendAllBtn').style.display = smsRows.length ? '' : 'none';
+        }
+        document.getElementById('sendAllBtn').onclick = async function() {
+            for(let i=0; i<smsRows.length; i++) {
+                let phone = smsRows[i].phone;
+                if(!phone.startsWith('+88')) {
+                    phone = '+88' + phone.replace(/^\+?88/, '');
+                    smsRows[i].phone = phone;
+                }
+                smsRows[i].status = 'Sending...';
+                renderTable();
+                try {
+                    const res = await fetch('send.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: 'single', number: phone, message: smsRows[i].body })
+                    });
+                    const result = await res.json();
+                    smsRows[i].status = result.response_code === 200 ? 'Success' : (result.error_message ? 'Fail' : JSON.stringify(result));
+                } catch (e) {
+                    smsRows[i].status = 'Fail';
+                }
+                renderTable();
+            }
+        };
+    </script>
+
+</body>
+</html>
