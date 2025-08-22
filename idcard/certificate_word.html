@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transfer Certificate (Image)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Kalpurush Bangla font -->
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+  <style>
+    :root { 
+      color-scheme: light dark; 
+      /* Text block area (main paragraph) */
+      --box-left: 10%;
+      --box-right: 10%;
+      --box-top: 45%;
+      --box-bottom: 22%;
+
+      /* Serial/Date positions (percentages of the image box) */
+      --serial-top: 28%;
+      --serial-left: 15%;
+
+      --date-top: 10%;
+      --date-right: 7%;
+
+  /* QR code position & size */
+  --qr-size: 80px;
+  --qr-bottom: 18%;
+  --qr-right: 77%;
+    } 
+    body { font-family: 'Times New Roman', Times, serif; margin: 0; background: #f6f7f9; color: #111; }
+  header { position: sticky; top: 0; background: white; padding: 1rem; border-bottom: 1px solid #e5e7eb; z-index: 10; }
+  /* Original .8rem reduced by 12% => 0.704rem */
+  .btn { display: inline-block; padding: .45rem .9rem; font-size: .704rem; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; border: 1px solid #d0d7de; background:#fff; color:#111; border-radius:6px; cursor:pointer; line-height:1.1; text-decoration:none; }
+  .btn:hover { background:#f2f4f7; }
+  .btn:active { background:#e5e7eb; }
+  @media (prefers-color-scheme: dark) { .btn { background:#1f2937; color:#e5e7eb; border-color:#374151; } .btn:hover { background:#2a3342; } .btn:active { background:#374151; } }
+  .action-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: .75rem; background: rgba(255,255,255,.9); padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12), 0 8px 28px rgba(37,99,235,0.10); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  @media (prefers-color-scheme: dark) { .action-bar { background: rgba(17,23,41,.85); border-color:#263148; } }
+  /* QR code overlay */
+  .qr-wrap { position:absolute; bottom: var(--qr-bottom); right: var(--qr-right); width: var(--qr-size); background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; mix-blend-mode:multiply; }
+  .qr-wrap canvas, .qr-wrap img { width:100% !important; height:var(--qr-size) !important; image-rendering:pixelated; display:block; mix-blend-mode:multiply; }
+  /* 8px -> 7.04px (12% reduction), 7px -> 6.16px */
+  .qr-caption { font-size:7.04px; line-height:1.1; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.3px; color:#000; mix-blend-mode:multiply; text-transform:uppercase; }
+  .qr-meta { font-size:6.16px; line-height:1.2; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.25px; color:#000; mix-blend-mode:multiply; text-align:center; width:100%; white-space:normal; overflow:visible; word-break:break-word; }
+  /* Emphasize SL No under QR */
+  #qrIID { font-weight:700; font-size:8px; letter-spacing:.4px; }
+  @media (prefers-color-scheme: dark) { .qr-meta { color:#ccc; } }
+  @media (prefers-color-scheme: dark) { .qr-caption { color:#ddd; } }
+  @media (prefers-color-scheme: dark) { .qr-wrap { filter: brightness(1.1); } }
+  /* 1.2rem -> 1.056rem */
+  h1 { margin: 0; font-size: 1.056rem; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    main { padding: 1rem; }
+    .layout { display: flex; gap: 2rem; align-items: flex-start; justify-content: center; }
+  /* Adjust width for portrait template (taller aspect) */
+  .img-wrap { position: relative; width: 620px; min-width: 320px; max-width: 100vw; }
+    .img-wrap img { width: 100%; height: auto; display: block; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.08); border: 1px solid #e5e7eb; }
+  .overlay { position: absolute; inset: var(--box-top) var(--box-right) var(--box-bottom) var(--box-left); display: block; z-index: 2; pointer-events: none; }
+    .overlay-text { 
+  /* Increased body font size by ~40% */
+  font-size: clamp(7.762px, 1.035vw, 13.8px); 
+      line-height: 1.55; 
+      color: #111; 
+      white-space: pre-line; 
+      text-align: justify;
+      text-justify: inter-word;
+    word-break: break-word; 
+    hyphens: auto; 
+  /* Prefer Kalpurush for Bangla text, with sensible fallbacks */
+  font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, 'Times New Roman', serif;
+  letter-spacing: .1px;
+    z-index: 3;
+    position: relative;
+    }
+  .overlay-text .emph { font-size: 110%; }
+    /* Serial and Date small overlays */
+  /* 9->7.92, 1vw->0.88vw, 11->9.68 */
+  .field { position: absolute; font-size: clamp(7.92px, 0.88vw, 9.68px); line-height: 1; color: #111; }
+  /* Replaced serial/date with consolidated info box */
+  .info-box { position:absolute; top: var(--serial-top); left: var(--box-left); right: var(--date-right); text-align: initial; font-size:15.68px; line-height:1.25; font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, 'Times New Roman', serif; font-weight:600; white-space:normal; }
+  .info-box .row { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+  .info-box .left, .info-box .right { display:inline-block; }
+
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; align-items: stretch; }
+      .img-wrap { max-width: 100vw; width: 100%; }
+    }
+    @media print {
+  @page { size: A4 portrait; margin: 8mm; }
+  html, body { background: #fff; width: 100%; height: 100%; }
+  header { display: none; }
+  .layout { flex-direction: column; align-items: stretch; }
+  /* Keep on-screen aspect & sizing for precise overlay alignment */
+  .img-wrap { width: 600px; max-width: 600px; margin: 0 auto; }
+  .img-wrap img { box-shadow: none; border: none; border-radius: 0; width: 100%; height: auto; }
+  .right-panel { display: none; }
+  .overlay-text, .field { color: #000; }
+  /* Ensure overlays scale proportionally */
+  .img-wrap, .img-wrap * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0b1020; color: #e5e7eb; }
+      header, .right-panel { background: #111729; border-color: #263148; color: #e5e7eb; }
+      .muted { color: #9aa5b1; }
+  .overlay-text, .field { color: #e5e7eb; }
+    }
+  </style>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSR6FCD57Krj-QJLlvmKymos6jYF57RkYGishM_hEXgGmaAWDyOPuu9toXGNuEOgzBOM4ZqEeyaqSN7/pub?output=csv';
+  // v3: sessionStorage only, 1 minute TTL, parsed rows + fields
+  // Cache disabled: always fetch fresh data
+
+
+  const CSV_CACHE_KEY = null;
+  const CSV_CACHE_TTL_MS = 0;
+  const STORAGE = { getItem(){ return null; }, setItem(){} };
+
+    const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    function normalizeFieldMap(fields){ const m = {}; (fields||[]).forEach(f => { if (!f) return; m[String(f).toLowerCase().trim()] = f; }); return m; }
+    function findHeaderByAliases(fieldMap, aliases){ const keys = Object.keys(fieldMap); for (const a of aliases){ const t = norm(a); const k = keys.find(x => norm(x)===t || norm(x).includes(t)); if (k) return fieldMap[k]; } return null; }
+    function buildCsvKeyMap(fieldMap){
+      const alias = {
+  name: ['name','student name','studentname','full name','fullname'],
+  father: ['father','father name','fathers name','guardian','parent'],
+  mother: ['mother','mother name','mothers name'],
+  roll: ['roll','roll no','roll number','rollno','roll_no'],
+  registrationnumber: ['registration number','registration','reg no','regno','registration no','registrationno','registration'],
+  dob: ['dob','date of birth','birth date','dateofbirth'],
+    iid: ['iid','id','student id','studentid','student-id','sid','s id','s.i.d','school_iid','school iid','schoolid','school-id','sch_iid','sch iid','uniqueid','unique id','unique_id','studentcode','student code','student_code','stu_id','studid'],
+  sl: ['sl','serial','serial no','serial number','serialno','sl no','slno','sl.','s.l','s.l.'],
+  issue_date: ['date','issue date','certificate date'],
+  issueby: ['issueby','issuedby','issued by','issued','issue by','issue-by','issuedbyname','issued name','issuedname'],
+  gender: ['gender','sex'],
+  group: ['group','grp','subject group'],
+  gpa: ['gpa','grade point','gradepoint','result','g.p.a'],
+  sscmonth: ['sscmonth','exam month','ssc exam month','month','exammonth'],
+  session: ['session','academic session','sess','session year','exam session','year'],
+  year: ['year','yr','exam year','passing year','issue year','issue_year','session_year','year of issue'],
+  // Bangla fields
+  name_bangla: ['name_bangla','name (bangla)','student name bangla','name bn','name_bn','bn_name','student_name_bangla'],
+  father_bangla: ['father_bangla','father (bangla)','father name bangla','bn_father','father_bn','fathers_name_bangla'],
+  mother_bangla: ['mother_bangla','mother (bangla)','mother name bangla','bn_mother','mother_bn','mothers_name_bangla'],
+  village_bangla: ['village_bangla','gram_bangla','village (bangla)','gram','gram bn','gram_bn'],
+  postoffice_bangla: ['postoffice_bangla','post office bangla','dakghor_bangla','dakghor bangla','postoffice (bangla)','dakghar_bangla'],
+  upazila_bangla: ['upazila_bangla','upazilla_bangla','upozila_bangla','upazila (bangla)','thana_bangla'],
+  zilla_bangla: ['zilla_bangla','district_bangla','zilla (bangla)','jila_bangla'],
+  class_bangla: ['class_bangla','class (bangla)','shreni_bangla','class_bn'],
+  shift_bangla: ['shift_bangla','section_bangla','shakha_bangla','section (bangla)','shift (bangla)'],
+  roll_bangla: ['roll_bangla','roll no bangla','roll_bn','roll (bangla)']
+      };
+      const csvMap = {};
+      for (const key of Object.keys(alias)){ const hdr = findHeaderByAliases(fieldMap, alias[key]); if (hdr) csvMap[key] = hdr; }
+      return csvMap;
+    }
+    function getVal(row, csvMap, key){ const hdr = csvMap[key]; const v = hdr ? row[hdr] : undefined; return v == null ? '' : String(v).trim(); }
+    function byParam(n){ return new URLSearchParams(location.search).get(n) || ''; }
+
+    function defaultDate(raw){ if (raw) return raw; const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); return `${dd}-${mm}-${yyyy}`; }
+
+    function buildRecord(row, csvMap){
+      return {
+        name: getVal(row, csvMap, 'name'),
+        father: getVal(row, csvMap, 'father'),
+        mother: getVal(row, csvMap, 'mother'),
+  roll: getVal(row, csvMap, 'roll'),
+        registrationnumber: getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration'),
+        dob: getVal(row, csvMap, 'dob'),
+        iid: getVal(row, csvMap, 'iid'),
+  sl: getVal(row, csvMap, 'sl'),
+  issue_date: getVal(row, csvMap, 'issue_date'),
+  year: getVal(row, csvMap, 'year'),
+  date: getVal(row, csvMap, 'issue_date') || defaultDate(''),
+  issueby: getVal(row, csvMap, 'issueby'),
+  gender: getVal(row, csvMap, 'gender'),
+  group: getVal(row, csvMap, 'group'),
+  gpa: getVal(row, csvMap, 'gpa'),
+  sscmonth: getVal(row, csvMap, 'sscmonth'),
+  session: getVal(row, csvMap, 'session'),
+  // Bangla fields
+  name_bangla: getVal(row, csvMap, 'name_bangla'),
+  father_bangla: getVal(row, csvMap, 'father_bangla'),
+  mother_bangla: getVal(row, csvMap, 'mother_bangla'),
+  village_bangla: getVal(row, csvMap, 'village_bangla'),
+  postoffice_bangla: getVal(row, csvMap, 'postoffice_bangla'),
+  upazila_bangla: getVal(row, csvMap, 'upazila_bangla'),
+  zilla_bangla: getVal(row, csvMap, 'zilla_bangla'),
+  class_bangla: getVal(row, csvMap, 'class_bangla'),
+  shift_bangla: getVal(row, csvMap, 'shift_bangla'),
+  roll_bangla: getVal(row, csvMap, 'roll_bangla'),
+      };
+    }
+
+    function buildCertificateText(r){
+      const name = r.name_bangla || r.name || '';
+      const father = r.father_bangla || r.father || '';
+      const mother = r.mother_bangla || r.mother || '';
+      const village = r.village_bangla || '';
+      const post = r.postoffice_bangla || '';
+      const upazila = r.upazila_bangla || '';
+      const zilla = r.zilla_bangla || '';
+      const cls = r.class_bangla || '';
+      const shift = r.shift_bangla || '';
+      const roll = r.roll_bangla || r.roll || '';
+      const line1 = `এই মর্মে প্রত্যয়ন করা যাইতেছে যে, ${name}, পিতা: ${father}, মাতা: ${mother}, গ্রাম- ${village}, ডাকঘর: ${post}, উপজেলা: ${upazila}, জেলা: ${zilla}, অত্র বিদ্যালয়ে ${cls} শ্রেণিতে ${shift} শাখায় অধ্যয়নরত। তাহার শ্রেণি রোল নং- ${roll}।`;
+      const line2 = `আমি তাহার সর্বাঙ্গীন সাফল্য ও উজ্জ্বল ভবিষ্যৎ কামনা করি।`;
+      return [line1, '', line2].join('\n');
+    }
+
+    // Safe HTML for overlay with bolded name
+    function escHtml(s){
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+    function buildCertificateHtml(r){
+      const name = `<strong class=\"emph\">${escHtml(r.name_bangla || r.name)}</strong>`;
+      const father = `<strong>${escHtml(r.father_bangla || r.father)}</strong>`;
+      const mother = `<strong>${escHtml(r.mother_bangla || r.mother)}</strong>`;
+      const village = escHtml(r.village_bangla || '');
+      const post = escHtml(r.postoffice_bangla || '');
+      const upazila = escHtml(r.upazila_bangla || '');
+      const zilla = escHtml(r.zilla_bangla || '');
+  const cls = `<strong>${escHtml(r.class_bangla || '')}</strong>`;
+  const shift = `<strong>${escHtml(r.shift_bangla || '')}</strong>`;
+      const roll = `<strong>${escHtml(r.roll_bangla || r.roll || '')}</strong>`;
+      const line1 = `এই মর্মে প্রত্যয়ন করা যাইতেছে যে, ${name}, পিতা: ${father}, মাতা: ${mother}, গ্রাম- ${village}, ডাকঘর: ${post}, উপজেলা: ${upazila}, জেলা: ${zilla}, অত্র বিদ্যালয়ে ${cls} শ্রেণিতে ${shift} শাখায় অধ্যয়নরত। তাহার শ্রেণি রোল নং- ${roll}।`;
+      const line2 = `আমি তাহার সর্বাঙ্গীন সাফল্য ও উজ্জ্বল ভবিষ্যৎ কামনা করি।`;
+      return [line1, line2].join('<br/><br/>');
+    }
+
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      const iidParam = (params.get('iid')||'').trim();
+      const slParam = (params.get('sl')||'').trim();
+      const ukParam = (params.get('uk')||'').trim(); // format: iid_sl
+      const regParam = (params.get('reg')||params.get('registration')||'').trim();
+      const DEBUG = params.has('debug');
+      function logDbg(...a){ if(DEBUG) console.log('[CERT]', ...a); }
+      const status = document.getElementById('status');
+      status.textContent = 'Loading…';
+      function ensureDebugBox(){
+        let box = document.getElementById('debugInfo');
+        if(!box){
+          box = document.createElement('div');
+          box.id = 'debugInfo';
+          box.style.cssText = 'max-width:640px;margin:1rem auto 0;padding:.75rem .9rem;border:1px dashed #d0d7de;background:#fff;font:12px system-ui,Arial;border-radius:8px;white-space:pre-wrap;line-height:1.35;overflow:auto;';
+          const main = document.querySelector('main');
+          if(main) main.prepend(box);
+        }
+        return box;
+      }
+      loadCsvData((results) => {
+        try {
+          const fieldMap = normalizeFieldMap(results.meta.fields);
+          const csvMap = buildCsvKeyMap(fieldMap);
+          const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'];
+          const slHeader = csvMap.sl || fieldMap['sl'] || fieldMap['serial'];
+          const regHeader = csvMap.registrationnumber || fieldMap['registration number'] || fieldMap['registration'];
+          let candidates = results.data.slice();
+          logDbg('Total rows', candidates.length, 'Params',{iidParam,slParam,ukParam,regParam});
+          const valueEquals = (a,b)=>{
+            if(a==null || b==null) return false; const A=String(a).trim(); const B=String(b).trim();
+            if(!A||!B) return false; if(A===B) return true; // ignore leading zeros numeric
+              // Case-insensitive
+              if(A.toLowerCase()===B.toLowerCase()) return true;
+              // Strip leading zeros if both numeric
+              if(/^\d+$/.test(A) && /^\d+$/.test(B)) return A.replace(/^0+/,'') === B.replace(/^0+/,'');
+              // Normalized (alphanumeric only)
+              const NA = A.toLowerCase().replace(/[^a-z0-9]/g,'');
+              const NB = B.toLowerCase().replace(/[^a-z0-9]/g,'');
+              if(NA && NA===NB) return true;
+            return false;
+          };
+          const debugSteps = [];
+          // If uk present, split and narrow early
+          if(ukParam){
+            const [ukIid, ukSl] = ukParam.split('_');
+            candidates = candidates.filter(r => {
+              const riid = String(iidHeader ? r[iidHeader] : '').trim();
+              const rsl = String(slHeader ? r[slHeader] : '').trim();
+              return (ukIid?valueEquals(riid,ukIid):true) && (ukSl?valueEquals(rsl,ukSl):true);
+            });
+          }
+          if(iidParam){
+            const before = candidates.length;
+            candidates = candidates.filter(r => valueEquals(iidHeader ? r[iidHeader] : '', iidParam));
+            debugSteps.push(`Filter iid=${iidParam} -> ${before} => ${candidates.length}`);
+          }
+            if(slParam){
+            const before = candidates.length;
+            candidates = candidates.filter(r => valueEquals(slHeader ? r[slHeader] : '', slParam));
+            debugSteps.push(`Filter sl=${slParam} -> ${before} => ${candidates.length}`);
+          }
+          if(!iidParam && !slParam && regParam && regHeader){
+            const before = candidates.length;
+            candidates = candidates.filter(r => valueEquals(r[regHeader], regParam));
+            debugSteps.push(`Filter reg=${regParam} -> ${before} => ${candidates.length}`);
+          }
+          // If still multiple, try roll+class params
+          if(candidates.length > 1){
+            const rollParam = (params.get('roll')||'').trim();
+            const classParam = (params.get('class')||params.get('cls')||'').trim();
+            const rollHeader = csvMap.roll || fieldMap['roll'];
+            const classHeader = csvMap.class || fieldMap['class'];
+            if(rollParam){ const before=candidates.length; candidates = candidates.filter(r => valueEquals(rollHeader? r[rollHeader]: '', rollParam)); debugSteps.push(`Narrow roll=${rollParam} -> ${before} => ${candidates.length}`); }
+            if(classParam){ const before=candidates.length; candidates = candidates.filter(r => valueEquals(classHeader? r[classHeader]: '', classParam)); debugSteps.push(`Narrow class=${classParam} -> ${before} => ${candidates.length}`); }
+          }
+          if(candidates.length === 0){
+            // Fallback: loosen to partial name/roll match if iid supplied
+            const nameParam = (params.get('name')||'').trim().toLowerCase();
+            if(nameParam){
+              const nameHeader = csvMap.name || fieldMap['name'];
+              const loose = results.data.filter(r => String(nameHeader? r[nameHeader]: '').toLowerCase().includes(nameParam));
+              if(loose.length){ candidates = [loose[0]]; logDbg('Loose name fallback used', loose.length,'matches'); debugSteps.push(`Loose name fallback '${nameParam}' matches=${loose.length}`); }
+            }
+          }
+          if(candidates.length === 0){
+            // Extra fallback: roll only match (if provided) across all rows
+            const rollParamExtra = (params.get('roll')||'').trim();
+            if(rollParamExtra){
+              const rollHeader = csvMap.roll || fieldMap['roll'];
+              const rollMatches = results.data.filter(r => valueEquals(rollHeader? r[rollHeader]: '', rollParamExtra));
+              if(rollMatches.length === 1){ candidates = [rollMatches[0]]; debugSteps.push(`Roll-only fallback used roll=${rollParamExtra}`); }
+            }
+          }
+          if(candidates.length === 0){
+            status.textContent = 'No record found';
+            status.classList.add('error');
+            logDbg('First row sample', results.data[0]);
+            const box = ensureDebugBox();
+            const first = results.data[0] || {};
+            function distinctVals(header){
+              if(!header) return [];
+              const set = new Set();
+              for(const r of results.data){
+                let v = r[header];
+                if(v==null) continue; v=String(v).trim(); if(!v) continue; set.add(v);
+                if(set.size>30) break;
+              }
+              return Array.from(set).slice(0,30);
+            }
+            const iidVals = distinctVals(iidHeader);
+            const slVals = distinctVals(slHeader);
+            const regVals = distinctVals(regHeader);
+            const rollHeader = csvMap.roll || fieldMap['roll'];
+            const rollVals = distinctVals(rollHeader);
+            box.innerHTML = '<strong style="font-size:13px;">Debug Info – No Match</strong><br>'
+              + 'Params: ' + JSON.stringify({iidParam,slParam,ukParam,regParam}, null, 2) + '<br>'
+              + 'Mapped headers: ' + JSON.stringify(csvMap, null, 2) + '<br>'
+              + 'Available headers: ' + Object.keys(fieldMap).join(', ') + '<br>'
+              + 'First row sample: ' + JSON.stringify(first, null, 2) + '<br>'
+              + 'Distinct iid values (sample): ' + (iidVals.join(', ')||'(none)') + '<br>'
+              + 'Distinct sl values (sample): ' + (slVals.join(', ')||'(none)') + '<br>'
+              + 'Distinct registration values (sample): ' + (regVals.join(', ')||'(none)') + '<br>'
+              + 'Distinct roll values (sample): ' + (rollVals.join(', ')||'(none)') + '<br>'
+              + 'Debug steps: ' + debugSteps.join(' | ');
+            return;
+          }
+          if(DEBUG){
+            const box = ensureDebugBox();
+            const first = results.data[0] || {};
+            box.innerHTML = '<strong style="font-size:13px;">Debug Info</strong><br>'
+              + 'Params: ' + JSON.stringify({iidParam,slParam,ukParam,regParam}, null, 2) + '<br>'
+              + 'Mapped headers: ' + JSON.stringify(csvMap, null, 2) + '<br>'
+              + 'Available headers: ' + Object.keys(fieldMap).join(', ') + '<br>'
+              + 'First row sample: ' + JSON.stringify(first, null, 2) + '<br>'
+              + 'Debug steps: ' + debugSteps.join(' | ');
+          }
+          if(candidates.length > 1){ status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; status.classList.add('warn'); }
+          const row = candidates[0];
+          const rec = buildRecord(row, csvMap);
+          // Unique key for QR & share
+          rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
+          renderRecord(rec);
+          status.textContent = 'Ready';
+          if(DEBUG) status.textContent += ' (debug)';
+        } catch(e){ console.error(e); status.textContent='Failed to render'; status.classList.add('error'); }
+      }, (err) => {
+        console.error(err);
+        status.textContent = 'Failed to load CSV';
+        status.classList.add('error');
+      });
+    });
+
+    function renderRecord(rec){
+      // If SL missing, warn but still show certificate
+      if(!rec.sl){
+        const statusWarn = document.getElementById('status');
+        if(statusWarn){ statusWarn.textContent = 'SL missing (showing certificate)'; statusWarn.classList.add('error'); }
+      }
+      const text = buildCertificateText(rec);
+      const html = buildCertificateHtml ? buildCertificateHtml(rec) : text.replace(/\n/g,'<br/>');
+      const imgText = document.getElementById('imgText'); if (imgText) imgText.innerHTML = html;
+  if(!imgText){ console.warn('Overlay text element #imgText not found'); }
+  else if(!imgText.innerHTML){ console.warn('Overlay text element empty after render'); }
+      const infoBox = document.getElementById('infoBox');
+        if(infoBox){
+          const yr = rec.year || (rec.issue_date && (String(rec.issue_date).match(/\d{4}/)||[])[0]) || String(new Date().getFullYear());
+          const slHtml = rec.sl ? ('স্বারক নং - ' + escHtml(rec.sl + '/' + yr)) : '';
+          const dateHtml = rec.issue_date ? ('তারিখ : ' + escHtml(rec.issue_date) +'  ইং') : '';
+          const firstRow = (slHtml || dateHtml)
+            ? `<div class="row"><span class="left">${slHtml}</span><span class="right">${dateHtml}</span></div>`
+            : '';
+          infoBox.innerHTML = firstRow;
+        }
+    // Remove SL text from under QR (moved to info box)
+    const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = '';
+  
+      // Prepare a stable shareable QR URL with unique key
+      try {
+        const base = new URL(location.href.split('#')[0]);
+        if(rec.iid) base.searchParams.set('iid', rec.iid);
+        if(rec.sl) base.searchParams.set('sl', rec.sl);
+        if(rec.uk) base.searchParams.set('uk', rec.uk);
+        window.__QR_URL = base.toString();
+      } catch(_e) { window.__QR_URL = location.href.split('#')[0]; }
+      renderQr();
+    }
+
+    // Load CSV with caching + worker parsing (persisted via localStorage when available)
+    function loadCsvData(onSuccess, onError){
+      const now = Date.now();
+  // Always fresh download (cache disabled)
+      Papa.parse(CSV_URL, {
+        download:true, header:true, skipEmptyLines:true, worker:true, fastMode:true,
+        complete:(results)=>{
+          try {
+            onSuccess(results);
+          } catch(e){ onError(e); }
+        }, error:onError
+      });
+    }
+
+  function tryPersistParsed(){ /* disabled */ }
+
+    function renderQr(){
+      const box = document.getElementById('qrBox');
+      if(!box) return;
+      // Remove any old caption if present
+      const oldCap = document.getElementById('qrCaption'); if(oldCap) oldCap.remove();
+      const url = window.__QR_URL || location.href.split('#')[0];
+      const MAX_TRIES = 12; let tries = 0;
+      function attempt(){
+        if(!(window.QRCode)){ tries++; if(tries < MAX_TRIES) return setTimeout(attempt, 120); console.warn('QRCode lib not loaded, using fallback service'); return fallbackService(); }
+        box.innerHTML='';
+        try {
+          if(typeof window.QRCode.toCanvas === 'function'){
+            const canvas = document.createElement('canvas');
+            window.QRCode.toCanvas(canvas, url, { errorCorrectionLevel:'M', margin:1, scale:6, color:{ dark:'#000000', light:'#00000000' } }, err => {
+              if(err){ console.error('QR toCanvas error', err); return fallbackDataURL(); }
+              box.appendChild(canvas);
+            });
+          } else { fallbackDataURL(); }
+        } catch(e){ console.error('QR exception', e); fallbackService(); }
+      }
+      function fallbackDataURL(){
+        if(!(window.QRCode && typeof window.QRCode.toDataURL === 'function')) return fallbackService();
+        window.QRCode.toDataURL(url, { errorCorrectionLevel:'M', margin:1, scale:5, color:{ dark:'#000000', light:'#00000000' } }, (err, dataUrl) => {
+          if(err){ console.error('QR toDataURL error', err); return fallbackService(); }
+          box.innerHTML='';
+          const img = new Image(); img.alt='QR'; img.src=dataUrl; box.appendChild(img);
+        });
+      }
+      function fallbackService(){
+        box.innerHTML='';
+        const img = new Image();
+        img.alt='QR';
+        img.crossOrigin='anonymous';
+        img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(url);
+        img.onload = ()=>{ tryMakeTransparent(img); };
+        img.onerror = ()=>{ box.textContent='QR failed'; };
+        box.appendChild(img);
+      }
+      function tryMakeTransparent(image){
+        try {
+          const c = document.createElement('canvas');
+          c.width = image.naturalWidth; c.height = image.naturalHeight;
+            const ctx = c.getContext('2d');
+            ctx.drawImage(image,0,0);
+            const imgData = ctx.getImageData(0,0,c.width,c.height);
+            const d = imgData.data;
+            for(let i=0;i<d.length;i+=4){
+              if(d[i]>240 && d[i+1]>240 && d[i+2]>240){ d[i+3]=0; }
+            }
+            ctx.putImageData(imgData,0,0);
+            image.replaceWith(c);
+        } catch(e){ /* likely CORS block; ignore */ }
+      }
+      attempt();
+    }
+
+    async function downloadPdf(){
+      try {
+        const status = document.getElementById('status');
+        status.textContent = 'Preparing PDF…';
+        const target = document.querySelector('.img-wrap');
+        if(!target){ status.textContent='No content'; return; }
+        const canvas = await html2canvas(target, {scale:2, useCORS:true});
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('portrait','pt','a4');
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        // Fit width; center vertically
+        const imgW = pageW;
+        const imgH = canvas.height * (imgW / canvas.width);
+        const y = Math.max(0,(pageH - imgH)/2);
+        pdf.addImage(imgData, 'PNG', 0, y, imgW, imgH);
+        pdf.save('certificate_'+Date.now()+'.pdf');
+        status.textContent = 'Ready';
+      } catch(e){ console.error(e); const status = document.getElementById('status'); status.textContent='PDF failed'; }
+    }
+  </script>
+</head>
+<body>
+  <header>
+  <h1>Transfer Certificate (Image) <span id="status" class="muted"></span></h1>
+  <div style="margin-top:.5rem"></div>
+  </header>
+  <main>
+    <div class="layout">
+      <div class="img-wrap">
+  <img src="./pad_protoyan.png" alt="Certificate background" />
+  <!-- Consolidated info box -->
+  <div class="info-box" id="infoBox"></div>
+  <!-- Left panel removed -->
+        <div class="overlay">
+          <div id="imgText" class="overlay-text">Loading certificate text…</div>
+        </div>
+        <!-- QR Code (current link) -->
+        <div class="qr-wrap" title="Verify online" aria-label="QR code with link">
+          <div id="qrBox" style="width:100%;height:var(--qr-size);"></div>
+          <div class="qr-meta" id="qrIID"></div>
+          <div class="qr-meta" id="qrIssued"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="action-bar no-print">
+    <button type="button" class="btn" onclick="window.print()">Print</button>
+    <button type="button" class="btn" onclick="downloadPdf()">Download PDF</button>
+  </div>
+</body>
+</html>
