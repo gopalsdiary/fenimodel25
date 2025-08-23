@@ -29,14 +29,20 @@
   --qr-size: 80px;
   --qr-bottom: 18%;
   --qr-right: 77%;
-    } 
-    body { font-family: 'Times New Roman', Times, serif; margin: 0; background: #f6f7f9; color: #111; }
+  } 
+  html { font-size: 130%; }
+  body { font-family: 'Times New Roman', Times, serif; margin: 0; background: #f6f7f9; color: #111; }
   header { position: sticky; top: 0; background: white; padding: 1rem; border-bottom: 1px solid #e5e7eb; z-index: 10; }
   /* Original .8rem reduced by 12% => 0.704rem */
   .btn { display: inline-block; padding: .45rem .9rem; font-size: .704rem; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; border: 1px solid #d0d7de; background:#fff; color:#111; border-radius:6px; cursor:pointer; line-height:1.1; text-decoration:none; }
   .btn:hover { background:#f2f4f7; }
   .btn:active { background:#e5e7eb; }
+  /* Primary blue button variant */
+  .btn.btn-primary { background: #2563eb; color: #fff; border-color: #1e40af; }
+  .btn.btn-primary:hover { background: #1e40af; }
+  .btn.btn-primary:active { background: #1b3b94; }
   @media (prefers-color-scheme: dark) { .btn { background:#1f2937; color:#e5e7eb; border-color:#374151; } .btn:hover { background:#2a3342; } .btn:active { background:#374151; } }
+  @media (prefers-color-scheme: dark) { .btn.btn-primary { background:#2563eb; color:#fff; border-color:#1e40af; } .btn.btn-primary:hover { background:#1e40af; } }
   .action-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: .75rem; background: rgba(255,255,255,.9); padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12), 0 8px 28px rgba(37,99,235,0.10); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   @media (prefers-color-scheme: dark) { .action-bar { background: rgba(17,23,41,.85); border-color:#263148; } }
   /* QR code overlay */
@@ -84,6 +90,24 @@
   .center { text-align:center; }
   .small { font-size:0.85rem; color:#555; }
 
+  /* Form-like styling for showing database fields (label: value) */
+  .form-like { margin-top:8px; border-top:1px solid #e6e9ef; padding-top:8px; font-family:inherit; }
+  /* decreased form size and tighter spacing */
+  /* smaller form sizing */
+  .form-like { font-size:0.86rem; }
+  .form-row { display:flex; gap:8px; padding:3px 0; border-bottom:1px dashed #efefef; align-items:flex-start; }
+  .form-row .label { flex:0 0 28%; font-weight:700; color:#333; max-width:200px; word-break:break-word; font-size:0.86rem; }
+  .form-row .value { flex:1 1 auto; color:#111; word-break:break-word; white-space:normal; font-size:0.86rem; }
+  @media (prefers-color-scheme: dark) { .form-like { border-top-color:#22303b } .form-row { border-bottom-color: rgba(255,255,255,0.04); } .form-row .label { color:#e5e7eb } .form-row .value { color:#dbeafe } }
+
+  /* Top-right avatar: 3:2 ratio, multiply blend */
+  /* passport-size photo (3:4) — rectangular, not rounded */
+  .photo-top-right { position: absolute; top: 16px; right: 16px; width: 120px; height: 180px; object-fit: cover; mix-blend-mode: multiply; border-radius:0; box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 2px solid rgba(255,255,255,0.6); }
+  /* Stronger override for parent selector that previously made images round */
+  #topPhoto { border-radius: 0 !important; display: block !important; }
+  @media (max-width: 900px) { .photo-top-right { width: 100px; height: 133px; top: 12px; right: 12px; } }
+  @media (max-width: 480px) { .photo-top-right { width: 84px; height: 112px; top:10px; right:10px; } }
+
     @media (max-width: 900px) {
       .layout { flex-direction: column; align-items: stretch; }
       .img-wrap { max-width: 100vw; width: 100%; }
@@ -111,8 +135,7 @@
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <!-- PDF/export libs removed -->
 
 <script>
   const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
@@ -402,15 +425,7 @@
       const text = buildCertificateText(rec);
       const html = buildCertificateHtml ? buildCertificateHtml(rec) : text.replace(/\n/g,'<br/>');
 
-      // Set avatar image using iid (fallback to sl)
-      const avatar = document.getElementById('avatarImg');
-      if(avatar){
-        const idForPhoto = (rec.iid && String(rec.iid).trim()) || (rec.sl && String(rec.sl).trim()) || '';
-        const photoUrl = idForPhoto ? `https://shikkhanobish.com/uploads/avatar-${encodeURIComponent(idForPhoto)}.jpg` : 'https://via.placeholder.com/120';
-        // Attempt to fetch the image as a blob and set an object URL so html2canvas can include it in the canvas.
-        // This works only if the remote host sends CORS headers. If fetch fails, fall back to assigning src directly.
-        fetchImageToImg(photoUrl, avatar).catch(() => { avatar.src = photoUrl; });
-      }
+  // Photo removed — not displayed
 
       // Fill info rows (left aligned)
       const serialRow = document.getElementById('serialRow');
@@ -419,9 +434,15 @@
       const motherRow = document.getElementById('motherRow');
       const otherRows = document.getElementById('otherRows');
       
+      // Serial / IID row: prefer IID then SL
+      if(serialRow){
+        serialRow.innerHTML = 'IID: ' + escHtml(rec.iid || rec.sl || '');
+      }
+
       if(otherRows){
         const parts = [];
         if(rec.registrationnumber) parts.push('Registration: ' + escHtml(rec.registrationnumber));
+        // roll intentionally not shown as primary identifier
         if(rec.roll) parts.push('Roll: ' + escHtml(rec.roll));
         if(rec.dob) parts.push('DOB: ' + escHtml(rec.dob));
         if(rec.gender) parts.push('Gender: ' + escHtml(rec.gender));
@@ -433,27 +454,65 @@
         otherRows.innerHTML = parts.map(p=>`<div style="text-align:left;">${p}</div>`).join('');
       }
 
-      // Show only CSV columns available in rawRow (header: value)
+      // Show only CSV columns available in rawRow (labelled form rows).
+      // Hide any QR-related fields/links coming from the database.
+      function isQrField(key, value){
+        if(!key) return false;
+        const k = String(key).toLowerCase();
+        if(k.includes('qr') || k.includes('qrcode') || k.includes('qr_link') || k.includes('qrlink') || k.includes('qr_url')) return true;
+        if(value && typeof value === 'string'){
+          const v = value.toLowerCase();
+          if(v.includes('api.qrserver.com') || v.includes('create-qr-code') || v.includes('chart.googleapis.com/chart?cht=qr') || v.includes('qrcode')) return true;
+        }
+        return false;
+      }
+
       const imgText = document.getElementById('imgText');
       if(imgText){
-        const lines = [];
+        const rows = [];
         if(rawRow && typeof rawRow === 'object'){
           for(const k of Object.keys(rawRow)){
             const v = rawRow[k];
             if(v == null) continue;
-            lines.push(`${k}: ${escHtml(v)}`);
+            if(isQrField(k, v)) continue; // skip QR fields
+            rows.push({k, v});
           }
         } else {
           for(const k of Object.keys(rec)){
             if(!rec[k]) continue;
-            lines.push(`${k}: ${escHtml(rec[k])}`);
+            if(isQrField(k, rec[k])) continue;
+            rows.push({k, v: rec[k]});
           }
         }
-        imgText.innerHTML = '<pre style="white-space:pre-wrap; font-family:inherit;">' + lines.join('\n') + '</pre>';
+        if(rows.length === 0){
+          imgText.innerHTML = '<div class="small muted">No additional fields available</div>';
+        } else {
+          imgText.innerHTML = '<div class="form-like">' + rows.map(r => `
+            <div class="form-row"><div class="label">${escHtml(String(r.k))}</div><div class="value">${escHtml(String(r.v))}</div></div>`).join('') + '</div>';
+        }
       }
 
       // Remove QR IID text
       const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = '';
+
+      // Load top-right photo from pattern using IID (fallback to SL if IID missing)
+      try {
+        const photoEl = document.getElementById('topPhoto');
+        if(photoEl){
+          const idForPhoto = rec.iid || rec.sl || '';
+          if(idForPhoto){
+            const url = 'https://shikkhanobish.com/uploads/avatar-' + encodeURIComponent(idForPhoto) + '.jpg';
+            photoEl.style.display = '';
+            photoEl.src = url;
+            // Hide if loading fails
+            photoEl.onerror = () => { photoEl.style.display = 'none'; photoEl.removeAttribute('src'); };
+            photoEl.onload = () => { /* keep shown */ };
+          } else {
+            photoEl.style.display = 'none';
+            photoEl.removeAttribute('src');
+          }
+        }
+      } catch(_){}
 
       // Prepare a stable shareable QR URL with unique key
       try {
@@ -538,47 +597,9 @@
       attempt();
     }
 
-    async function downloadPdf(){
-      try {
-        const status = document.getElementById('status');
-        status.textContent = 'Preparing PDF…';
-        const target = document.querySelector('.img-wrap');
-        if(!target){ status.textContent='No content'; return; }
-        const canvas = await html2canvas(target, {scale:2, useCORS:true});
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF('portrait','pt','a4');
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        // Fit width; center vertically
-        const imgW = pageW;
-        const imgH = canvas.height * (imgW / canvas.width);
-        const y = Math.max(0,(pageH - imgH)/2);
-        pdf.addImage(imgData, 'PNG', 0, y, imgW, imgH);
-        pdf.save('certificate_'+Date.now()+'.pdf');
-        status.textContent = 'Ready';
-      } catch(e){ console.error(e); const status = document.getElementById('status'); status.textContent='PDF failed'; }
-    }
+  // downloadPdf removed
 
-    // Try to fetch an image as a blob and set it on an <img> element using an object URL.
-    // Returns a promise that resolves when set, rejects on failure.
-    async function fetchImageToImg(url, imgEl){
-      if(!url || !imgEl) return Promise.reject(new Error('missing'));
-      try {
-        const resp = await fetch(url, { mode: 'cors', cache: 'reload', referrerPolicy: 'no-referrer' });
-        if(!resp.ok) throw new Error('fetch failed '+resp.status);
-        // Attempt to consume as blob
-        const blob = await resp.blob();
-        // Create object URL and set it
-        const objectUrl = URL.createObjectURL(blob);
-        imgEl.src = objectUrl;
-        // Revoke after some time to avoid leaking memory
-        setTimeout(()=>{ try{ URL.revokeObjectURL(objectUrl); }catch(e){} }, 60_000);
-        return Promise.resolve();
-      } catch(e){
-        return Promise.reject(e);
-      }
-    }
+  // fetchImageToImg removed
   </script>
 </head>
 <body>
@@ -589,6 +610,8 @@
   <main>
     <div class="layout">
       <div class="img-wrap">
+      <!-- Top-right photo -->
+      <img id="topPhoto" class="photo-top-right" alt="Photo" style="display:none;" />
   <!-- HTML-based ID Card -->
   <div class="center">
     <div class="center" style="font-weight:700; font-size:1.1rem;">Feni Model High School</div>
@@ -596,9 +619,8 @@
     <div class="center" style="margin-top:8px; font-weight:700;">ID card Info</div>
   </div>
   <div style="height:10px"></div>
-  <div style="text-align:center;">
-    <img id="avatarImg" src="" alt="Photo" crossorigin="anonymous" referrerpolicy="no-referrer" onerror="this.src='https://via.placeholder.com/120'" />
-  </div>
+  <!-- Photo removed as requested -->
+  <div style="height:8px"></div>
   <div class="info-box" id="infoBox">
     <div class="row" id="serialRow"></div>
     <div class="row" id="nameRow"></div>
@@ -612,10 +634,11 @@
       </div>
     </div>
   </main>
-  <div class="action-bar no-print">
-  <button type="button" class="btn" onclick="window.print()">Print</button>
-  <button type="button" class="btn" onclick="downloadPdf()">Download PDF</button>
-  <a class="btn" href="https://modelresult.netlify.app/" target="_blank" rel="noopener">Model Result</a>
+
+  <div style="max-width:640px;margin:1rem auto;padding:0 1rem;">
+    <div style="text-align:right;margin-top:.6rem;">
+      <a class="btn btn-primary" href="https://modelresult.netlify.app/" target="_blank" rel="noopener">More info & Result</a>
+    </div>
   </div>
 </body>
 </html>
