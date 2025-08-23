@@ -51,6 +51,10 @@
   .t.class-teacher{ left:6.64mm; bottom:2mm; font-weight:400; font-size:3.52mm; color:#111 }
   .t.headteacher{ right:6.64mm; bottom:2mm; font-weight:400; font-size:3.52mm; color:#111 }
   /* QR/Barcode removed */
+  /* QR images to the right of the Admit Card badge */
+  .qr-container{ position:absolute; top:17.22mm; right:6mm; display:flex; flex-direction:column; gap:1mm; align-items:center }
+  .qr-container.horizontal{ flex-direction:row; top:14mm; }
+  .qr-container img{ width:12mm; height:12mm; object-fit:contain; display:block }
     .actions{ display:flex; gap:.5rem; justify-content:center; padding:1rem }
     .btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.5rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
     .btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
@@ -133,6 +137,18 @@
   setPos('.t.year','left','year_left'); setPos('.t.year','top','year_top');
   setPos('.t.iid','left','iid_left'); setPos('.t.iid','top','iid_top');
   setPos('.t.admit-badge','left','badge_left'); setPos('.t.admit-badge','top','badge_top');
+  // Render QR copies: ?qr=0 to hide, ?qr=3 (default) to show 3 copies.
+  (function renderQR(){
+    const container = document.querySelector('.qr-container');
+    if(!container) return;
+    const count = Math.max(0, Math.min(12, Number(q('qr', '3')) || 0));
+    container.innerHTML = '';
+    if(count <= 0) { container.style.display = 'none'; return; }
+    container.style.display = 'flex';
+    // optional layout mode: ?qr_layout=hor for horizontal
+    if(q('qr_layout','').toLowerCase() === 'hor') container.classList.add('horizontal'); else container.classList.remove('horizontal');
+    for(let i=0;i<count;i++){ const img = document.createElement('img'); img.decoding='async'; img.alt='QR'; img.src = './qr.png'; container.appendChild(img); }
+  })();
   // No scaling needed: positions are defined for the 93x90mm canvas
   // QR removed
     }
