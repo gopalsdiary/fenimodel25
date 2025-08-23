@@ -102,7 +102,7 @@
       const nameLink=document.createElement('a');
       nameLink.className='link';
       nameLink.textContent=name||'(No Name)';
-      const hrefBase='certificate_word.html';
+      const hrefBase='verify.html';
       let certHref = hrefBase;
       if(iid) certHref = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
       else if(sl) certHref = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
@@ -226,8 +226,8 @@
       return `<div class="cert-body">${line1}<br><br><em>${line2}</em><br><br><em>${line3}</em></div>`;
     }
     function generateAll(){
-      // Open new page that renders all certificates with full layout like certificate_word.html
-      const url = 'certificate_all.html';
+      // Open new page that renders all certificates with full layout like verify.html
+      const url = 'verify.html';
       window.open(url, '_blank');
     }
     window.addEventListener('DOMContentLoaded', () => {
