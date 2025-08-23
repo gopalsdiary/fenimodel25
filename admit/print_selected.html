@@ -65,6 +65,10 @@
 		}
 	/* Export tweaks: ensure solid background, avoid CSS bg images issues */
 	body.exporting .card{ background:#fff !important; background-image:none !important }
+	/* QR images aligned to the right of the Admit Card badge */
+	.qr-container{ position:absolute; top:58mm; right:42mm; display:flex; flex-direction:column; gap:0.6mm; align-items:center; pointer-events:none }
+	.qr-container.horizontal{ flex-direction:row; top:16mm; }
+	.qr-container img{ width:25mm; height:25mm; object-fit:contain; display:block }
 	</style>
 				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 				<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -136,6 +140,15 @@
 						// Footer signatures
 						const tClassTeacher = document.createElement('div'); tClassTeacher.className='t class-teacher'; tClassTeacher.textContent = 'Class Teacher'; card.appendChild(tClassTeacher);
 						const tHeadteacher = document.createElement('div'); tHeadteacher.className='t headteacher'; tHeadteacher.textContent = 'Headteacher'; card.appendChild(tHeadteacher);
+						// QR copies: use ?qr=N (default 3) and ?qr_layout=hor for horizontal layout
+						(function addQR(){
+							const count = 1; // always render a single QR per admit card
+							if(count<=0) return;
+							const container = document.createElement('div'); container.className='qr-container';
+							if(q('qr_layout','').toLowerCase()==='hor') container.classList.add('horizontal');
+							for(let i=0;i<count;i++){ const img=document.createElement('img'); img.src='./qr.png'; img.alt='QR'; img.decoding='async'; container.appendChild(img); }
+							card.appendChild(container);
+						})();
 						box.appendChild(card);
 						grid.appendChild(box);
 				});

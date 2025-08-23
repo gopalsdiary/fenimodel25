@@ -137,11 +137,11 @@
   setPos('.t.year','left','year_left'); setPos('.t.year','top','year_top');
   setPos('.t.iid','left','iid_left'); setPos('.t.iid','top','iid_top');
   setPos('.t.admit-badge','left','badge_left'); setPos('.t.admit-badge','top','badge_top');
-  // Render QR copies: ?qr=0 to hide, ?qr=3 (default) to show 3 copies.
+  // Render QR copies: ?qr=0 to hide, ?qr=1 (default) to show 1 copy.
   (function renderQR(){
     const container = document.querySelector('.qr-container');
     if(!container) return;
-    const count = Math.max(0, Math.min(12, Number(q('qr', '3')) || 0));
+  const count = 1; // always show a single QR on the single admit view
     container.innerHTML = '';
     if(count <= 0) { container.style.display = 'none'; return; }
     container.style.display = 'flex';

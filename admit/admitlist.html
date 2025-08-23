@@ -48,7 +48,10 @@
 		.t.exam{ left:60mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.iid{ left:78mm; top:122mm; font-size:4mm }
-	/* QR/Barcode removed */
+	/* QR images aligned to the right of the Admit Card badge */
+	.qr-container{ position:absolute; top:17.22mm; right:6mm; display:flex; flex-direction:column; gap:0.6mm; align-items:center; pointer-events:none }
+	.qr-container.horizontal{ flex-direction:row; top:16mm; }
+	.qr-container img{ width:4mm; height:4mm; object-fit:contain; display:block }
 	</style>
 
 
@@ -152,7 +155,8 @@
 
 			function renderPrint(students){
 			const wrap = document.getElementById('printArea');
-			wrap.innerHTML = '';
+				wrap.innerHTML = '';
+				wrap.style.display = 'block';
 			const sheet = document.createElement('div'); sheet.className='sheet';
 			const grid = document.createElement('div'); grid.className='print-grid'; sheet.appendChild(grid); wrap.appendChild(sheet);
 			students.forEach(s=>{
@@ -166,7 +170,15 @@
 					if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
 				grid.appendChild(card);
 			});
-			// QR removed
+			// Render QR copies on each generated card (default 3, configurable via ?qr=)
+			const qrCount = 1; // always show single QR in inline preview
+			if(qrCount>0){
+				Array.from(grid.querySelectorAll('.card')).forEach(cardEl=>{
+					const container = document.createElement('div'); container.className='qr-container';
+					for(let i=0;i<qrCount;i++){ const img=document.createElement('img'); img.src='./qr.png'; img.alt='QR'; img.decoding='async'; container.appendChild(img); }
+					cardEl.appendChild(container);
+				});
+			}
 		}
 
 			function printSingle(s){
@@ -241,7 +253,11 @@
 				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid, group:s.group })) };
 				const key = 'admit_bulk_' + Date.now();
 				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
-		window.open(`print_selected.html?key=${encodeURIComponent(key)}`, '_blank', 'noopener');
+			// include qr param from current page (or default 3)
+			const qrParam = new URLSearchParams(location.search).get('qr') || '3';
+			window.open(`print_selected.html?key=${encodeURIComponent(key)}&qr=${encodeURIComponent(qrParam)}`, '_blank', 'noopener');
+			// Also render a quick preview in the current page's printArea
+			renderPrint(sel);
 			});
 					const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{
 						const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
