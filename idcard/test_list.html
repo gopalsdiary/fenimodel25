@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>প্রত্যয়ন তালিকা (বাংলা)</title>
+  <title>ID card list </title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <!-- Kalpurush Bangla font -->
   <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
@@ -52,7 +52,7 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSR6FCD57Krj-QJLlvmKymos6jYF57RkYGishM_hEXgGmaAWDyOPuu9toXGNuEOgzBOM4ZqEeyaqSN7/pub?output=csv';
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
     function getVal(row, headers, key){ const h = headers[key]; const v = h ? row[h] : ''; return v == null ? '' : String(v).trim(); }
 
     function buildHeaderMap(fields){
@@ -116,7 +116,7 @@
       pdfLink.rel='noopener';
       pdfLink.title='Open certificate (use browser Print to save as PDF)';
       const tr=document.createElement('tr');
-      createRow(tr,[sl,{element:nameLink},father,roll,{element:pdfLink}]);
+  createRow(tr,[sl,{element:nameLink},father,iid,{element:pdfLink}]);
       rows.push(tr);
     }
     return rows;
@@ -242,14 +242,14 @@
 <body>
   <header>
     <div class="container">
-      <h1>প্রত্যয়ন তালিকা (বাংলা) <span class="muted status" id="status"></span></h1>
-      <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted"> প্রত্যয়ন এন্ট্রিকরার পর প্রসেসিং এর জন্য ৫ মিনিট অপেক্ষা করুণ।</p>
+      <h1>ID Card List <span class="muted status" id="status"></span></h1>
+      <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted"> Please wait 5 minutes for processing after ID card entry.</p>
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
         <span class="muted">Rows: <span id="count">0</span></span>
         <a class="nav-btn" href="../index.html">Home</a>
-        <a class="nav-btn secondary" href="https://docs.google.com/spreadsheets/d/12RcNJHKc8oLIIjM6k65gFeT7ZFcxEam-_L_hsnnIRLQ/edit?gid=1173319178#gid=1173319178">Database for প্রত্যয়ন</a>
-  <a id="genAllBtn" class="nav-btn" href="https://forms.gle/vMqy6zQbuGqxUD5e6">প্রত্যয়ন ফরম</a>
+        <a class="nav-btn secondary" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv'">Database for প্রত্যয়ন</a>
+  <a id="genAllBtn" class="nav-btn" href="/index.html">Home</a>
       </div>
     </div>
   </header>
@@ -262,7 +262,7 @@
               <th>SL. NO</th>
               <th>Name (Open Certificate)</th>
               <th>Father’s Name</th>
-              <th>Roll Number</th>
+              <th>iid</th>
             </tr>
           </thead>
             <tbody id="tbody"></tbody>
