@@ -573,18 +573,33 @@
                                         let practical = get('Practical');
                                         const total = get('Total');
                                         const gpa = get('GPA');
-                                        // If practical header is missing or empty, try derive from total - (cq+mcq+ca)
-                                        if((!practical || practical==='-') && total){
-                                            const n = (s)=> isNaN(parseFloat(s))?0:parseFloat(s);
-                                            const derived = n(total) - (n(cq)+n(mcq)+n(ca));
-                                            if(derived>0) practical = String(derived);
+
+                                        // Detect English 1st/2nd paper subject base names (tolerant to minor variants)
+                                        const subjClean = subject.replace(/\*/g, '').toLowerCase();
+                                        const isEnglish1 = /\benglish\b/.test(subjClean) && /\b(1|1st|first)\b/.test(subjClean);
+                                        const isEnglish2 = /\benglish\b/.test(subjClean) && /\b(2|2nd|second)\b/.test(subjClean);
+                                        const isEnglish = isEnglish1 || isEnglish2;
+
+                                        // For English subjects: do not show Practical values (keep Practical cell blank)
+                                        // Also avoid deriving Practical from Total for English subjects
+                                        if(!isEnglish){
+                                            // If practical header is missing or empty, try derive from total - (cq+mcq+ca)
+                                            if((!practical || practical==='-') && total){
+                                                const n = (s)=> isNaN(parseFloat(s))?0:parseFloat(s);
+                                                const derived = n(total) - (n(cq)+n(mcq)+n(ca));
+                                                if(derived>0) practical = String(derived);
+                                            }
+                                        } else {
+                                            // Ensure practical is empty for English rows
+                                            practical = '';
                                         }
+
                                         return `
                                         <tr>
                                             <td>${subject.replace(/\*/g, '')}</td>
                                             <td>${cq||'-'}</td>
                                             <td>${mcq||'-'}</td>
-                                            <td>${practical||'-'}</td>
+                                            <td>${isEnglish ? '' : (practical||'-')}</td>
                                             <td>${total||'-'}</td>
                                             <td>${gpa||'-'}</td>
                                         </tr>`;
