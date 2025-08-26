@@ -51,9 +51,10 @@
 			.info-label{ font-weight:700; min-width:18mm; font-size:4.6mm }
 			/* show colon after each label */
 			.info-label::after{ content: ':'; margin-left:2mm }
-			.info-value{ font-size:5mm; font-weight:600 }
-			/* larger bold value for Name and Class (20% larger) */
-			.info-value.big{ font-size: calc(5mm * 1.2); font-weight:800 }
+			/* Values grow to fill remaining space; allow truncation when too long */
+			.info-value{ font-size:5mm; font-weight:600; flex:1; min-width:0; white-space:normal; overflow:visible; text-overflow:clip }
+			/* larger bold value for Name and Class (20% larger), force single line with ellipsis */
+			.info-value.big{ font-size: calc(5mm * 1.2); font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 			.info-row.cs{ justify-content:flex-start }
 			.info-row.cs .info-value{ margin-left:2mm }
 
