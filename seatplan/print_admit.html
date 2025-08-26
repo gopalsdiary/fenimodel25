@@ -14,19 +14,40 @@
     .container{ max-width:980px; margin:0 auto; padding:1rem }
     h1{ margin:.25rem 0; text-align:center; font-size:1.1rem }
   .card-wrap{ display:flex; justify-content:center; padding:1rem }
+  
   /* Single-card preview: keep exact card ratio so mm positions match the template */
   .card{ position:relative; width:min(210mm, 95vw); aspect-ratio: 210 / 115; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; border:1px solid #e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.08) }
   .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
   .labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
+  
   /* Positions tuned; adjust with query overrides if needed */
   .t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:700; letter-spacing:.3mm; text-transform:uppercase }
   .t.class{ left:10mm; top:74mm; font-size:7.5mm }
     .t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
     .t.iid{ left:76mm; top:90mm; font-size:5mm }
   .t.roll{ left:10mm; top:82mm; font-size:9.9mm; font-weight:700 }
-  .t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:5.52mm }
+  
+  /* Exam title bar (centered) - moved down to 40% of card height */
+  .t.exam{ left:50%; top: calc(115mm * 0.30); transform:translateX(-50%); background:#666; color:#fff; padding:1.8mm 6mm; border-radius:2mm; text-align:center; font-weight:700; font-size:6mm }
     .t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
   /* QR/Barcode removed */
+  
+  /* Right-side roll box (matches attached image) */
+  .roll-box{ position:absolute; right:6mm; top:65mm; width:34mm; height:34mm; border:0.9mm solid #111; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; box-sizing:border-box }
+  .roll-box .roll-label{ font-size:4.5mm; font-weight:700; margin-top:2.5mm }
+  .roll-box .roll-divider{ width:90%; height:0.6mm; background:#111; margin-top:2mm }
+  .roll-box .roll-number{ font-size:14mm; font-weight:800; margin-top:3mm; line-height:1; display:flex; align-items:center; justify-content:center }
+  
+  /* Left-aligned info block (match selected view) */
+  .card .t.name, .card .t.class, .card .t.section, .card .t.roll, .card .t.iid{ display:none }
+  .info-left{ position:absolute; left:8mm; top: calc(115mm * 0.44); width:95mm; display:flex; flex-direction:column; gap:1mm; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif }
+  .info-row{ display:flex; align-items:center; gap:4mm }
+  .info-label{ font-weight:700; min-width:18mm; font-size:4.6mm }
+  .info-label::after{ content: ':'; margin-left:2mm }
+  .info-value{ font-size:5mm; font-weight:600 }
+  .info-value.big{ font-size: calc(5mm * 1.2); font-weight:800 }
+  .info-row.cs{ justify-content:flex-start }
+  .info-row.cs .info-value{ margin-left:2mm }
     .actions{ display:flex; gap:.5rem; justify-content:center; padding:1rem }
     .btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.5rem .9rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; cursor:pointer; font-weight:600 }
     .btn.primary{ background:#0ea5e9; border-color:#0284c7; color:#fff }
@@ -87,6 +108,18 @@
   const rollEl = document.querySelector('.t.roll'); rollEl.classList.add('labelled'); rollEl.setAttribute('data-label','Roll'); rollEl.style.whiteSpace='pre';
   rollEl.textContent = data.iid ? `${data.roll||''}                           IID : ${data.iid}` : `${data.roll||''}`;
   const iidEl = document.querySelector('.t.iid'); iidEl.textContent='';
+  // Populate right-side roll box (single preview)
+  const rb = document.querySelector('.roll-box .roll-number'); if(rb) rb.textContent = data.roll || '';
+  // Populate left info block
+  const infoName = document.getElementById('info_name'); if(infoName) infoName.textContent = upper(data.name||'');
+  const infoIid = document.getElementById('info_iid'); if(infoIid) infoIid.textContent = data.iid? String(data.iid): '';
+  // Year/Session and Exam Name intentionally hidden in this layout
+  const infoClass = document.getElementById('info_class'); if(infoClass) infoClass.textContent = data.cls || '';
+  const infoShift = document.getElementById('info_shift'); if(infoShift) infoShift.textContent = data.section || '';
+  const infoGroup = document.getElementById('info_group'); const infoGroupRow = document.getElementById('info_group_row');
+  const clsNum2 = parseInt(String(data.cls||'').replace(/\D+/g,''),10);
+  const showGroup2 = Number.isFinite(clsNum2) && (clsNum2===9 || clsNum2===10) && data.group;
+  if(showGroup2){ if(infoGroup) infoGroup.textContent = String(data.group).toUpperCase(); if(infoGroupRow) infoGroupRow.style.display = '' } else { if(infoGroupRow) infoGroupRow.style.display = 'none' }
   // Optional position overrides via query params (values in mm)
   setPos('.t.name','left','name_left'); setPos('.t.name','top','name_top');
   // father field removed
@@ -114,6 +147,18 @@
       <div class="t section"></div>
       <div class="t roll"></div>
       <div class="t iid"></div>
+      <div class="info-left">
+        <div class="info-row"><div class="info-label">Name</div><div class="info-value" id="info_name"></div></div>
+        <div class="info-row"><div class="info-label">IID</div><div class="info-value" id="info_iid"></div></div>
+        <div class="info-row"><div class="info-label">Class</div><div class="info-value big" id="info_class"></div></div>
+        <div class="info-row"><div class="info-label">Shift</div><div class="info-value" id="info_shift"></div></div>
+        <div class="info-row" id="info_group_row" style="display:none"><div class="info-label">Group</div><div class="info-value" id="info_group"></div></div>
+      </div>
+        <div class="roll-box">
+          <div class="roll-label">Roll</div>
+          <div class="roll-divider" aria-hidden="true"></div>
+          <div class="roll-number"></div>
+        </div>
     </div>
   </div>
   <div class="actions">

@@ -33,8 +33,29 @@
 		.t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
 		.t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:700; white-space:pre }
 	.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:8.28mm; text-decoration: underline; text-underline-offset: 1.2mm; text-decoration-thickness: .6mm }
+		/* Exam title bar (centered) */
+		.t.exam{ left:50%; top: calc(115mm * 0.30); transform:translateX(-50%); background:#666; color:#fff; padding:1.8mm 6mm; border-radius:2mm; text-align:center; font-weight:700; font-size:6mm }
 		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.iid{ left:76mm; top:90mm; font-size:5mm }
+			/* Hide original absolute text positions for this seatplan layout (we'll render a left-aligned info block) */
+			.card .t.name, .card .t.class, .card .t.section, .card .t.roll, .card .t.iid{ display:none }
+			/* Right-side roll box (matches attached image) */
+			.roll-box{ position:absolute; right:6mm; top:65mm; width:34mm; height:34mm; border:0.9mm solid #111; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; box-sizing:border-box }
+			.roll-box .roll-label{ font-size:4.5mm; font-weight:700; margin-top:2.5mm }
+			.roll-box .roll-divider{ width:90%; height:0.6mm; background:#111; margin-top:2mm }
+			.roll-box .roll-number{ font-size:14mm; font-weight:800; margin-top:3mm; line-height:1; display:flex; align-items:center; justify-content:center }
+
+			/* Left-aligned info block (Name, IID, Class, Shift, Group) */
+			.info-left{ position:absolute; left:8mm; top: calc(115mm * 0.44); width:95mm; display:flex; flex-direction:column; gap:1mm; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif }
+			.info-row{ display:flex; align-items:center; gap:4mm }
+			.info-label{ font-weight:700; min-width:18mm; font-size:4.6mm }
+			/* show colon after each label */
+			.info-label::after{ content: ':'; margin-left:2mm }
+			.info-value{ font-size:5mm; font-weight:600 }
+			/* larger bold value for Name and Class (20% larger) */
+			.info-value.big{ font-size: calc(5mm * 1.2); font-weight:800 }
+			.info-row.cs{ justify-content:flex-start }
+			.info-row.cs .info-value{ margin-left:2mm }
 
 		.sheets{ display:flex; flex-direction:column; gap:8mm; padding:8mm 0 }
 
@@ -103,14 +124,51 @@
 							  const tExam = document.createElement('div'); tExam.className='t exam'; tExam.textContent = [exam, year].filter(Boolean).join(' - '); card.appendChild(tExam);
 							  const tYear = document.createElement('div'); tYear.className='t year'; tYear.textContent = ''; card.appendChild(tYear);
 							const tName = document.createElement('div'); tName.className='t name labelled'; tName.setAttribute('data-label','Name'); tName.textContent = upper(s.name||''); card.appendChild(tName);
-							const tClass = document.createElement('div'); tClass.className='t class labelled'; tClass.setAttribute('data-label','Class'); tClass.textContent = s.cls||''; card.appendChild(tClass);
-							const tSection = document.createElement('div'); tSection.className='t section labelled'; tSection.setAttribute('data-label','Section');
+							// Left-aligned info block
+							const infoLeft = document.createElement('div'); infoLeft.className = 'info-left';
+							// Name row (big)
+							const rowName = document.createElement('div'); rowName.className='info-row';
+							const lblName = document.createElement('div'); lblName.className='info-label'; lblName.textContent='Name'; rowName.appendChild(lblName);
+							const valName = document.createElement('div'); valName.className='info-value big'; valName.textContent = upper(s.name||''); rowName.appendChild(valName);
+							infoLeft.appendChild(rowName);
+
+							// IID row
+							const rowIid = document.createElement('div'); rowIid.className='info-row';
+							const lblIid = document.createElement('div'); lblIid.className='info-label'; lblIid.textContent='IID'; rowIid.appendChild(lblIid);
+							const valIid = document.createElement('div'); valIid.className='info-value'; valIid.textContent = s.iid? String(s.iid) : ''; rowIid.appendChild(valIid);
+							infoLeft.appendChild(rowIid);
+
+							// Class row (big)
+							const rowClass = document.createElement('div'); rowClass.className='info-row';
+							const lblClass = document.createElement('div'); lblClass.className='info-label'; lblClass.textContent='Class'; rowClass.appendChild(lblClass);
+							const valClass = document.createElement('div'); valClass.className='info-value big'; valClass.textContent = s.cls||''; rowClass.appendChild(valClass);
+							infoLeft.appendChild(rowClass);
+
+							// Shift row (use section as shift value)
+							const rowShift = document.createElement('div'); rowShift.className='info-row';
+							const lblShift = document.createElement('div'); lblShift.className='info-label'; lblShift.textContent='Shift'; rowShift.appendChild(lblShift);
+							const valShift = document.createElement('div'); valShift.className='info-value'; valShift.textContent = s.section||''; rowShift.appendChild(valShift);
+							infoLeft.appendChild(rowShift);
+
+							// Group (optional)
 							const clsNum = parseInt(String(s.cls||'').replace(/\D+/g,''),10);
 							const showGroup = Number.isFinite(clsNum) && (clsNum===9 || clsNum===10) && s.group;
-							tSection.textContent = showGroup ? `${upper(s.section||'')}   |   ${String(s.group).trim()}` : upper(s.section||'');
-							card.appendChild(tSection);
+							if(showGroup){
+								const rowG = document.createElement('div'); rowG.className='info-row';
+								const lblG = document.createElement('div'); lblG.className='info-label'; lblG.textContent='Group'; rowG.appendChild(lblG);
+								const valG = document.createElement('div'); valG.className='info-value'; valG.textContent = String(s.group).toUpperCase(); rowG.appendChild(valG);
+								infoLeft.appendChild(rowG);
+							}
+
+							card.appendChild(infoLeft);
 							const tRoll = document.createElement('div'); tRoll.className='t roll labelled'; tRoll.setAttribute('data-label','Roll'); tRoll.textContent = s.iid ? `${s.roll||''}                           IID : ${s.iid}` : `${s.roll||''}`; card.appendChild(tRoll);
-					const tIid = document.createElement('div'); tIid.className='t iid'; tIid.textContent = ''; card.appendChild(tIid);
+						const tIid = document.createElement('div'); tIid.className='t iid'; tIid.textContent = ''; card.appendChild(tIid);
+							// Right-side roll box (matching single preview)
+							const rollBox = document.createElement('div'); rollBox.className = 'roll-box';
+							const rlabel = document.createElement('div'); rlabel.className = 'roll-label'; rlabel.textContent = 'Roll'; rollBox.appendChild(rlabel);
+							const rdiv = document.createElement('div'); rdiv.className = 'roll-divider'; rollBox.appendChild(rdiv);
+							const rnum = document.createElement('div'); rnum.className = 'roll-number'; rnum.textContent = s.roll || ''; rollBox.appendChild(rnum);
+							card.appendChild(rollBox);
 						box.appendChild(card);
 						grid.appendChild(box);
 				});
