@@ -95,27 +95,50 @@
 			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
 		}
 		async function fetchCounts({id,name}){
-			try{
-				const url = csvUrl(id,name);
-				const results = await new Promise((resolve,reject)=>{
-					Papa.parse(url,{ download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
-				});
-				const rows = (results && results.data) ? results.data : [];
-				const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
-				let tcIdx = fields.findIndex(f => String(f||'').trim().toLowerCase()==='tc');
-				let tcCount = 0;
-				if(tcIdx>=0){ const key = fields[tcIdx]; tcCount = rows.reduce((n,r)=> n + (String(r[key]||'').trim().toLowerCase()==='tc'?1:0), 0); }
-				return { name, total: rows.length, tc: tcCount, existing: rows.length - tcCount, targetId: slugify(name) };
-			}catch(err){
-				return { name, total: 0, tc: 0, existing: 0, targetId: slugify(name), error: String(err && err.message || err) };
-			}
-		}
+						try{
+							const url = csvUrl(id,name);
+							const results = await new Promise((resolve,reject)=>{
+								Papa.parse(url,{ download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
+							});
+							const rows = (results && results.data) ? results.data : [];
+							const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
+							// TC detection (same as before)
+							let tcIdx = fields.findIndex(f => String(f||'').trim().toLowerCase()==='tc');
+							let tcCount = 0;
+							if(tcIdx>=0){ const key = fields[tcIdx]; tcCount = rows.reduce((n,r)=> n + (String(r[key]||'').trim().toLowerCase()==='tc'?1:0), 0); }
+
+							// Religion field detection: look for field names containing 'relig' or common misspelling 'religon'
+							const religFieldName = fields.find(f=> /relig/i.test(String(f||''))) || fields.find(f=> /religon/i.test(String(f||'')));
+							// If not found among fields, try keys of first row (robustness)
+							let religKey = religFieldName;
+							if(!religKey && rows[0]){
+								religKey = Object.keys(rows[0]).find(k=> /relig/i.test(String(k||'')) || /religon/i.test(String(k||'')));
+							}
+
+							// Count hindu and islam (case-insensitive, allow Bangla words too)
+							const hinduMatches = [/^\s*hindu\b/i, /হিন্দু/i, /হিন্দু\b/];
+							const islamMatches = [/^\s*islam\b/i, /ইসলাম/i, /ইসলাম\b/];
+							let hinduCount = 0, islamCount = 0;
+							if(religKey){
+								for(const r of rows){
+									const raw = String(r[religKey]||'').trim();
+									const v = raw.toLowerCase();
+									if(hinduMatches.some(rx=> rx.test(raw) || rx.test(v))) hinduCount++;
+									else if(islamMatches.some(rx=> rx.test(raw) || rx.test(v))) islamCount++;
+								}
+							}
+
+							return { name, total: rows.length, tc: tcCount, existing: rows.length - tcCount, hindu: hinduCount, islam: islamCount, targetId: slugify(name) };
+						}catch(err){
+							return { name, total: 0, tc: 0, existing: 0, hindu:0, islam:0, targetId: slugify(name), error: String(err && err.message || err) };
+						}
+					}
 		function renderTable(rows){
 			const host = document.getElementById('tableHost');
 			const status = document.getElementById('status');
 			const table = document.createElement('table');
 			const thead = document.createElement('thead'); const trh = document.createElement('tr');
-			['Class name','Total student','TC count','Existing Student count'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+			['Class name','Total student','TC count','Existing Student count','HINDU','ISLAM'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
 			thead.appendChild(trh); table.appendChild(thead);
 			const tbody = document.createElement('tbody');
 			rows.forEach((r, idx)=>{
@@ -125,12 +148,15 @@
 				const td0=document.createElement('td');
 				const a=document.createElement('a'); a.href=`0newdatabase/datalist.html#${r.targetId}`; a.target='_blank'; a.rel='noopener'; a.className='link'; a.textContent=r.name; td0.appendChild(a); tr.appendChild(td0);
 				;['total','tc','existing'].forEach(k=>{ const td=document.createElement('td'); td.textContent=r[k]; tr.appendChild(td); });
+				// Hindu / Islam columns (fall back to 0 if undefined)
+				const tdH = document.createElement('td'); tdH.textContent = (Number.isFinite(Number(r.hindu))?r.hindu:0); tr.appendChild(tdH);
+				const tdI = document.createElement('td'); tdI.textContent = (Number.isFinite(Number(r.islam))?r.islam:0); tr.appendChild(tdI);
 				tbody.appendChild(tr);
 			});
 			table.appendChild(tbody);
-			const totals = rows.reduce((acc,r)=>({ total:acc.total+(+r.total||0), tc:acc.tc+(+r.tc||0), existing:acc.existing+(+r.existing||0) }), { total:0, tc:0, existing:0 });
+			const totals = rows.reduce((acc,r)=>({ total:acc.total+(+r.total||0), tc:acc.tc+(+r.tc||0), existing:acc.existing+(+r.existing||0), hindu:acc.hindu+(+r.hindu||0), islam:acc.islam+(+r.islam||0) }), { total:0, tc:0, existing:0, hindu:0, islam:0 });
 			const tfoot=document.createElement('tfoot'); const trf=document.createElement('tr');
-			['Total', totals.total, totals.tc, totals.existing].forEach(v=>{ const td=document.createElement('td'); td.textContent=v; trf.appendChild(td); });
+			['Total', totals.total, totals.tc, totals.existing, totals.hindu, totals.islam].forEach(v=>{ const td=document.createElement('td'); td.textContent=v; trf.appendChild(td); });
 			tfoot.appendChild(trf); table.appendChild(tfoot);
 			host.innerHTML=''; host.appendChild(table);
 			status.textContent = `Loaded ${rows.length} sections.`;
