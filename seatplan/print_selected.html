@@ -21,40 +21,43 @@
 		.sheet{ width:210mm; margin:0 auto; padding:1.5mm; page-break-inside: avoid; break-inside: avoid-page }
 		.sheet + .sheet{ page-break-before: always; break-before: page }
 		.grid{ display:grid; grid-template-columns:repeat(2, max-content); gap:3.5mm }
+		
 		/* Wrapper sized to scaled card footprint; .card remains true-size (210x115mm) */
 		.box{ width:38mm; height:22mm; /* placeholder; JS will set exact mm via inline style */ break-inside: avoid; page-break-inside: avoid; display:block }
 		.grid{ break-inside: avoid; page-break-inside: avoid }
 		.card{ position:relative; width:210mm; height:115mm; background:#fff url('./admit.png') center no-repeat; background-size:100% 100%; overflow:hidden; border:1px solid var(--border); transform-origin: top left; }
 		.t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
 		.labelled::before{ content: attr(data-label) ' : '; font-weight:700; margin-right:1.5mm }
+		
 		/* Positions aligned with single-card page (may be slightly scaled visually) */
 		.t.name{ left:10mm; top:66mm; font-size:6.86mm; font-weight:700; letter-spacing:.3mm; text-transform:uppercase }
 		.t.class{ left:10mm; top:74mm; font-size:5mm }
 		.t.section{ left:76mm; top:74mm; font-size:5mm; text-transform:uppercase }
 		.t.roll{ left:10mm; top:82mm; font-size:6.6mm; font-weight:700; white-space:pre }
-	.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:8.28mm; text-decoration: underline; text-underline-offset: 1.2mm; text-decoration-thickness: .6mm }
-		/* Exam title bar (centered) */
-		.t.exam{ left:50%; top: calc(115mm * 0.30); transform:translateX(-50%); background:#666; color:#fff; padding:1.8mm 6mm; border-radius:2mm; text-align:center; font-weight:700; font-size:6mm }
+	.t.exam{ left:0; top:46.8mm; width:100%; text-align:center; font-weight:700; font-size:15mm;  text-underline-offset: 1.2mm; text-decoration-thickness: .6mm }
+		
+	/* Exam title bar (centered) */
+		.t.exam{ left:50%; top: calc(115mm * 0.30); transform:translateX(-50%); background:#666; color:#fff; padding:1.8mm 6mm; border-radius:2mm; text-align:center; font-weight:700; font-size:7.2mm }
 		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
 		.t.iid{ left:76mm; top:90mm; font-size:5mm }
 			/* Hide original absolute text positions for this seatplan layout (we'll render a left-aligned info block) */
 			.card .t.name, .card .t.class, .card .t.section, .card .t.roll, .card .t.iid{ display:none }
 			/* Right-side roll box (matches attached image) */
-			.roll-box{ position:absolute; right:6mm; top:65mm; width:34mm; height:34mm; border:0.9mm solid #111; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; box-sizing:border-box }
-			.roll-box .roll-label{ font-size:4.5mm; font-weight:700; margin-top:2.5mm }
+			.roll-box{ position:absolute; right:6mm; top:65mm; width:28mm; height:34mm; border:0.9mm solid #111; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; box-sizing:border-box }
+			.roll-box .roll-label{ font-size:4.2mm; font-weight:700; margin-top:2.5mm }
 			.roll-box .roll-divider{ width:90%; height:0.6mm; background:#111; margin-top:2mm }
-			.roll-box .roll-number{ font-size:14mm; font-weight:800; margin-top:3mm; line-height:1; display:flex; align-items:center; justify-content:center }
+			.roll-box .roll-number{ font-size:12.5mm; font-weight:800; margin-top:3mm; line-height:1; display:flex; align-items:center; justify-content:center }
 
 			/* Left-aligned info block (Name, IID, Class, Shift, Group) */
-			.info-left{ position:absolute; left:8mm; top: calc(115mm * 0.44); width:95mm; display:flex; flex-direction:column; gap:1mm; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif }
+			.info-left{ position:absolute; left:8mm; top: calc(115mm * 0.44); width:120mm; display:flex; flex-direction:column; gap:1mm; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif }
 			.info-row{ display:flex; align-items:center; gap:4mm }
 			.info-label{ font-weight:700; min-width:18mm; font-size:4.6mm }
 			/* show colon after each label */
 			.info-label::after{ content: ':'; margin-left:2mm }
 			/* Values grow to fill remaining space; allow truncation when too long */
 			.info-value{ font-size:5mm; font-weight:600; flex:1; min-width:0; white-space:normal; overflow:visible; text-overflow:clip }
-			/* larger bold value for Name and Class (20% larger), force single line with ellipsis */
-			.info-value.big{ font-size: calc(5mm * 1.2); font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+			/* larger bold value for Name and Class (20% larger) — keep on a single line and show full name (no ellipsis) */
+			.info-value.big{ font-size: calc(5mm * 1.2); font-weight:800; white-space:nowrap; overflow:visible; text-overflow:clip; max-width:100% }
 			.info-row.cs{ justify-content:flex-start }
 			.info-row.cs .info-value{ margin-left:2mm }
 
@@ -130,7 +133,7 @@
 							// Name row (big)
 							const rowName = document.createElement('div'); rowName.className='info-row';
 							const lblName = document.createElement('div'); lblName.className='info-label'; lblName.textContent='Name'; rowName.appendChild(lblName);
-							const valName = document.createElement('div'); valName.className='info-value big'; valName.textContent = upper(s.name||''); rowName.appendChild(valName);
+							const valName = document.createElement('div'); valName.className='info-value big'; valName.textContent = upper(s.name||''); valName.title = s.name || ''; rowName.appendChild(valName);
 							infoLeft.appendChild(rowName);
 
 							// IID row
