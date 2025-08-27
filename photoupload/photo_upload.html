@@ -28,6 +28,7 @@
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
+
 <body>
 	<div class="container">
 		<h1>Photoupload — student photos</h1>
@@ -36,10 +37,10 @@
 				<select id="classFilter" aria-label="Class filter"><option value="">All sheets</option></select>
 				<input id="search" type="search" placeholder="Filter name or IID…" />
 				<button id="refreshBtn" class="secondary">Refresh data</button>
-				<div class="muted right">Imgbb album: <strong>student_photo</strong></div>
+				<div class="muted right">Image album: <strong>student_photo</strong></div>
 			</div>
 
-		<div class="muted small">Data source: <code>0newdatabase</code> (sheets defined in <code>sheetidname.text</code>).</div>
+		 <div class="muted small">Data source: <code>0newdatabase</code> (sheets defined in <code>sheetidname.text</code>).</div>
 
 		<div id="status" class="muted"></div>
 
@@ -49,10 +50,10 @@
 											<th class="photo-col">Photo</th>
 										<th>IID</th>
 										<th>Roll</th>
-										<th>Class (Sheet)</th>
+										<th>Class</th>
 										<th>Name (EN)</th>
 										<th>Father name (EN)</th>
-											<th class="actions-col">Actions / Upload</th>
+										<th class="actions-col">Actions / Upload</th>
 								</tr>
 			</thead>
 			<tbody></tbody>
@@ -158,7 +159,7 @@
 				const iidKey = findKey(fields, ['iid','id','studentid','sid']);
 				const nameKey = findKey(fields, ['nameen','name en','name','studentname']);
 				const fatherKey = findKey(fields, ['fathernameen','father name en','father name','father']);
-				const rollKey = findKey(fields, ['roll','rollno','CLASS ROLL','roll number','rno']);
+				const rollKey = findKey(fields, ['roll','rollno','CLASS ROLL']);
 				const meta = parseSheetMeta(name);
 				for(let r=0;r<rows.length;r++){
 					const row = rows[r];
