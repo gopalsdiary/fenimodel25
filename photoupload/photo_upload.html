@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Photo upload — Photoupload</title>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+		<style>
+		body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:#f6f7fb;color:#0b1220}
+		.container{max-width:1100px;margin:28px auto;padding:16px}
+		h1{margin:0 0 12px;font-size:20px}
+		.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+		select,input[type=search]{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
+		button{padding:8px 10px;border-radius:8px;border:1px solid #1479d6;background:#0ea5e9;color:#fff;cursor:pointer}
+		button.secondary{background:#fff;color:#0b1220;border-color:#d1d5db}
+		.muted{color:#6b7280;font-size:13px}
+			.muted.right{margin-left:auto}
+			#status{margin-top:8px}
+			thead th.photo-col{width:90px}
+			thead th.actions-col{width:260px}
+		table{width:100%;border-collapse:collapse;margin-top:12px;background:#fff;border-radius:8px;overflow:hidden}
+		thead th{background:#f3f6fb;padding:10px 12px;text-align:left;border-bottom:1px solid #ecf0f4}
+		tbody td{padding:10px 12px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
+		.thumb{width:72px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e6edf6}
+		.uploader{display:flex;gap:8px;align-items:center}
+		.status{font-size:13px}
+		.small{font-size:12px;color:#334155}
+	</style>
+	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+	<div class="container">
+		<h1>Photoupload — student photos</h1>
+			<div class="toolbar">
+				<label for="classFilter" class="small">Class (sheet):</label>
+				<select id="classFilter" aria-label="Class filter"><option value="">All sheets</option></select>
+				<input id="search" type="search" placeholder="Filter name or IID…" />
+				<button id="refreshBtn" class="secondary">Refresh data</button>
+				<div class="muted right">Imgbb album: <strong>student_photo</strong></div>
+			</div>
+
+		<div class="muted small">Data source: <code>0newdatabase</code> (sheets defined in <code>sheetidname.text</code>).</div>
+
+		<div id="status" class="muted"></div>
+
+		<table id="studentsTable" aria-live="polite">
+			<thead>
+				<tr>
+					  <th class="photo-col">Photo</th>
+					<th>IID</th>
+					<th>Name (EN)</th>
+					<th>Father name (EN)</th>
+					  <th class="actions-col">Actions / Upload</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+	</div>
+
+	<script>
+	// Config from instruction.text
+	const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+	const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+	const IMGBB_ALBUM = 'student_photo';
+
+	// Utility
+	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+	function norm(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
+
+	// Read sheet list like the other pages
+	async function loadSheetList(){
+		const res = await fetch('../0newdatabase/sheetidname.text').catch(()=>null);
+		if(!res || !res.ok) throw new Error('Failed to load sheetidname.text');
+		const txt = await res.text();
+		const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+		const pairs=[]; let curId=null;
+		const idRe = /^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?$/i;
+		const nameRe = /^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?$/i;
+		for(const line of lines){
+			const im = idRe.exec(line); if(im){ curId = im[1]; continue; }
+			const nm = nameRe.exec(line); if(nm && curId){ pairs.push({ id:curId, name:nm[1] }); curId=null; }
+		}
+		return pairs;
+	}
+
+	function csvUrl(id, sheet){
+		return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+	}
+
+	function parseSheetMeta(name){
+		const m = String(name||'').trim().match(/^(\d{1,2})\s*[-_\s]?(.+)?$/);
+		if(!m) return {};
+		return { cls: m[1], shift: (m[2]||'').trim() };
+	}
+
+	function findKey(fields, candidates){
+		const map = new Map(fields.map(f=>[norm(f), f]));
+		for(const c of candidates){ if(map.has(norm(c))) return map.get(norm(c)); }
+		// fallback: try keys that include candidate substring
+		for(const c of candidates){ for(const k of fields){ if(norm(k).includes(norm(c))) return k; } }
+		return null;
+	}
+
+	// Load existing photo list from photo/link.csv and map basename -> url
+	async function loadPhotoIndex(){
+		try{
+			const res = await fetch('../photo/link.csv', {cache:'no-store'});
+			if(!res.ok) return new Map();
+			const txt = await res.text();
+			const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+			const m = new Map();
+			for(const u of lines){
+				try{ const name = u.split('/').pop(); if(name) m.set(name.toLowerCase(), u); }
+				catch(e){}
+			}
+			return m;
+		}catch(e){ return new Map(); }
+	}
+
+	// Render helpers
+	const tbody = document.querySelector('#studentsTable tbody');
+	const statusEl = document.getElementById('status');
+
+	function setStatus(s, err){ statusEl.textContent = s || ''; if(err) console.error(err); }
+
+	// Application state
+	let photoIndex = new Map();
+	let allStudents = []; // {iid, name, father, cls, shift, src:{id,name}}
+
+	// Load all sheets and build students list (only necessary fields)
+
+	async function loadAllStudents(pairs){
+		setStatus('Loading sheets...');
+		try{
+			if(!pairs) pairs = await loadSheetList();
+		}catch(e){
+			console.error('Failed to load sheet list', e);
+			setStatus('Failed to load sheet list. If you opened the page with file://, please serve via HTTP (python -m http.server)');
+			return [];
+		}
+		if(!pairs || !pairs.length){ setStatus('No sheets defined'); return []; }
+		setStatus(`Found ${pairs.length} sheets — fetching CSVs…`);
+		const students = [];
+		await Promise.all(pairs.map(async ({id,name})=>{
+			try{
+				console.log('Fetching sheet', name, id);
+				const url = csvUrl(id, name);
+				const res = await new Promise((resolve,reject)=>{
+					Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete: r=>resolve(r), error: e=>reject(e) });
+				});
+				const rows = res.data || [];
+				const fields = (res.meta && res.meta.fields) ? res.meta.fields : Object.keys(rows[0]||{});
+				// detect keys
+				const iidKey = findKey(fields, ['iid','id','studentid','sid']);
+				const nameKey = findKey(fields, ['nameen','name en','name','studentname']);
+				const fatherKey = findKey(fields, ['fathernameen','father name en','father name','father']);
+				const meta = parseSheetMeta(name);
+				for(let r=0;r<rows.length;r++){
+					const row = rows[r];
+					const iid = iidKey ? (row[iidKey]||'').toString().trim() : '';
+					const nm = nameKey ? (row[nameKey]||'') : '';
+					const fa = fatherKey ? (row[fatherKey]||'') : '';
+					students.push({ iid, name: nm, father: fa, cls: meta.cls||'', shift: meta.shift||'', src:{id,name}, rowIndex: r });
+				}
+			}catch(e){ console.warn('sheet load fail', name, e); }
+		}));
+		const withIid = students.filter(s=>s.iid && String(s.iid).trim()!=='').length;
+		allStudents = students; // keep all rows so class/shift filters can be populated even when IID missing
+		setStatus(`Loaded ${students.length} rows (${withIid} with IID)`);
+		return allStudents;
+	}
+
+	// Build table rows based on filters
+		function applyFilters(){
+			const sheetName = document.getElementById('classFilter').value;
+			const q = (document.getElementById('search').value||'').toLowerCase().trim();
+			const list = allStudents.filter(s=>{
+				if(sheetName && String(s.src && s.src.name)!==sheetName) return false;
+				if(q){ return (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q); }
+				return true;
+			});
+			renderTable(list);
+		}
+
+	function renderTable(list){
+		tbody.innerHTML = '';
+		if(!list.length){ tbody.insertAdjacentHTML('beforeend','<tr><td colspan="5" class="muted small">No students found for selected filters.</td></tr>'); return; }
+		const rowsHtml = list.map(s=>{
+			// try to find photo by matching any basename that contains iid or equals avatar-iid.jpg
+			const iidStr = String(s.iid).trim();
+			let thumbUrl = '';
+			// exact avatar-<iid>.jpg
+			const cand1 = (`avatar-${iidStr}.jpg`).toLowerCase();
+			const cand2 = (`avatar-${iidStr}.jpeg`).toLowerCase();
+			if(photoIndex.has(cand1)) thumbUrl = photoIndex.get(cand1);
+			else if(photoIndex.has(cand2)) thumbUrl = photoIndex.get(cand2);
+			else {
+				// any filename containing iid
+				for(const [k,u] of photoIndex.entries()){ if(iidStr && k.includes(iidStr)) { thumbUrl = u; break; } }
+			}
+			const imgHtml = thumbUrl ? `<img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo">` : '';
+			return `<tr data-iid="${escapeHtml(iidStr)}" data-src-sheet="${escapeHtml(s.src.name)}" data-src-id="${escapeHtml(s.src.id)}">
+				<td>${imgHtml}</td>
+				<td>${escapeHtml(iidStr)}</td>
+				<td>${escapeHtml(s.name)}</td>
+				<td>${escapeHtml(s.father)}</td>
+				<td>
+					<div class="uploader">
+						<input type="file" accept="image/*" class="file-input" data-iid="${escapeHtml(iidStr)}">
+						<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
+						<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
+					</div>
+				</td>
+			</tr>`;
+		}).join('');
+		tbody.insertAdjacentHTML('beforeend', rowsHtml);
+
+		// wire upload handlers
+		document.querySelectorAll('.upload-btn').forEach(btn=>{
+			btn.addEventListener('click', async (e)=>{
+				const iid = btn.dataset.iid;
+				const tr = btn.closest('tr');
+				const input = tr.querySelector('.file-input');
+				const status = tr.querySelector('.status');
+				status.textContent = '';
+				if(!input || !input.files || !input.files[0]){ status.textContent = 'Choose file first'; return; }
+				const f = input.files[0];
+				// Resize to target size (944x1181) while preserving aspect by fitting into canvas
+				const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src = URL.createObjectURL(f); });
+				const targetW = 944, targetH = 1181;
+				const canvas = document.createElement('canvas');
+				canvas.width = targetW; canvas.height = targetH;
+				const ctx = canvas.getContext('2d');
+				// fill white
+				ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+				// compute fit
+				const ratio = Math.min(targetW/img.width, targetH/img.height);
+				const w = Math.round(img.width * ratio); const h = Math.round(img.height * ratio);
+				const x = Math.round((targetW - w)/2); const y = Math.round((targetH - h)/2);
+				ctx.drawImage(img, x, y, w, h);
+				// get base64
+				const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+				const base64 = dataUrl.split(',')[1];
+				status.textContent = 'Uploading…';
+				try{
+					const form = new FormData();
+					form.append('key', IMGBB_API_KEY);
+					form.append('image', base64);
+					form.append('name', `avatar-${iid}.jpg`);
+					form.append('album', IMGBB_ALBUM);
+					const resp = await fetch(IMGBB_UPLOAD_URL + '?key=' + encodeURIComponent(IMGBB_API_KEY), { method:'POST', body: form });
+					const j = await resp.json();
+					if(j && j.success && j.data && j.data.display_url){
+						status.textContent = 'Uploaded ✓';
+						// update thumbnail in table
+						const imgEl = tr.querySelector('img.thumb');
+						const newUrl = j.data.display_url || j.data.url || j.data.image && j.data.image.url;
+						if(imgEl && newUrl){ imgEl.src = newUrl; }
+						// optionally log to console; user can copy/display j.data.url
+						console.log('imgbb response', j);
+						alert(`Upload done for ${iid}. URL: ${newUrl}`);
+					} else {
+						status.textContent = 'Upload failed'; console.error(j);
+					}
+				}catch(err){ status.textContent='Upload error'; console.error(err); }
+			});
+		});
+	}
+
+	// Populate filter dropdowns
+	function populateFilters(){
+		// Populate classFilter with sheet names (unique src.name values)
+		const sheetSet = new Set(allStudents.map(s => (s.src && s.src.name) || '').filter(Boolean));
+		const clsSel = document.getElementById('classFilter');
+		const items = Array.from(sheetSet);
+		items.sort((a,b)=> String(a).localeCompare(String(b), undefined, {sensitivity:'base'}));
+		clsSel.innerHTML = '<option value="">All sheets</option>' + items.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+	}
+
+	// Wire filter controls (defensive)
+	const classFilterEl = document.getElementById('classFilter');
+	const searchEl = document.getElementById('search');
+	const refreshBtn = document.getElementById('refreshBtn');
+	if(classFilterEl) classFilterEl.addEventListener('change', applyFilters);
+	if(searchEl) searchEl.addEventListener('input', ()=>{ setTimeout(applyFilters,120) });
+	if(refreshBtn) refreshBtn.addEventListener('click', init);
+
+	// Populate class dropdown early with sheet list to help UX
+	async function populateClassFromSheetList(){
+		try{
+			const pairs = await loadSheetList();
+			const sel = document.getElementById('classFilter');
+			if(!sel) return;
+			sel.innerHTML = '<option value="">All sheets</option>' + pairs.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
+		}catch(e){ console.warn('Could not prefill class list', e); }
+	}
+
+	// initial load
+	async function init(){
+		setStatus('Loading photo index…');
+		photoIndex = await loadPhotoIndex();
+		setStatus(`Photos indexed: ${photoIndex.size}`);
+		// Prefill class dropdown from sheet list quickly
+		await populateClassFromSheetList();
+		const pairs = await loadSheetList().catch(e=>{ console.warn(e); return []; });
+		await loadAllStudents(pairs);
+		populateFilters();
+		applyFilters();
+		setStatus('Ready');
+	}
+
+	// start
+	window.addEventListener('DOMContentLoaded', ()=>{ init(); });
+	</script>
+</body>
+</html>
