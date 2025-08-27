@@ -1,0 +1,55 @@
+on >> photo_upload.html
+you have to make a pannel for uploading photos (iid অনুযায়ী)
+first add filter pannel (CLASS - SECTION - CLASS ROLL) 
+data will come from 0newdatabase and show on bottm after filter >> IID, NAME EN, FATHER NAME EN 
+
+if photo available on image db, then show the image & upload
+
+
+API version 1
+Imgbb's API v1 allows to upload pictures.
+Api key : 4d2cdd03bb1da4404f875c22f0bfdf31 
+
+photo will upload in Album name : "student_photo" album  
+
+Photo size : 944 pixel * 1181 pixel - 96dpi 
+Avatar-106584230013.jpg       where “avatar-*iid.jpg
+
+Example:
+Request method
+API v1 calls can be done using the POST or GET request methods but since GET request are limited by the maximum allowed length of an URL you should prefer the POST request method.
+Image Upload  https://api.imgbb.com/1/upload
+
+
+API response
+API v1 responses display all the image uploaded information in JSON format.
+JSON the response will have headers status codes to allow you to easily notice if the request was OK or not. It will also output the status properties.
+
+
+
+
+Example response (JSON)
+
+
+{
+  "data": {
+    "id": "2ndCYJK",
+    "title": "avatar-106584230013.jpg",
+    "url_viewer": "https://ibb.co/2ndCYJK",
+    "url": "https://i.ibb.co/w04Prt6/avatar-106584230013.jpg",
+    "display_url": "https://i.ibb.co/98W13PY/avatar-106584230013.jpg",
+    "time": "1552042565",
+    "expiration":"0",
+    "image": {
+      "filename": "avatar-106584230013.jpg",
+      "url": "https://i.ibb.co/avatar-106584230013.jpg",
+    },
+  },
+  "success": true,
+  "status": 200
+}
+
+
+ 
+
+
