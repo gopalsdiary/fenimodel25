@@ -222,44 +222,16 @@
       };
     }
 
-    function buildCertificateText(r){
-      const name = r.name_bangla || r.name || '';
-      const father = r.father_bangla || r.father || '';
-      const mother = r.mother_bangla || r.mother || '';
-      const village = r.village_bangla || '';
-      const post = r.postoffice_bangla || '';
-      const upazila = r.upazila_bangla || '';
-      const zilla = r.zilla_bangla || '';
-      const cls = r.class_bangla || '';
-      const shift = r.shift_bangla || '';
-      const roll = r.roll_bangla || r.roll || '';
-      const line1 = `এই মর্মে প্রত্যয়ন করা যাইতেছে যে, ${name}, পিতা: ${father}, মাতা: ${mother}, গ্রাম- ${village}, ডাকঘর: ${post}, উপজেলা: ${upazila}, জেলা: ${zilla}, অত্র বিদ্যালয়ে ${cls} শ্রেণিতে ${shift} শাখায় অধ্যয়নরত। তাহার শ্রেণি রোল নং- ${roll}।`;
-      const line2 = `আমি তাহার সর্বাঙ্গীন সাফল্য ও উজ্জ্বল ভবিষ্যৎ কামনা করি।`;
-      return [line1, '', line2].join('\n');
-    }
-
-    // Safe HTML for overlay with bolded name
+  // Safe HTML for overlay with bolded name
     function escHtml(s){
       return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
-    function buildCertificateHtml(r){
-      const name = `<strong class=\"emph\">${escHtml(r.name_bangla || r.name)}</strong>`;
-      const father = `<strong>${escHtml(r.father_bangla || r.father)}</strong>`;
-      const mother = `<strong>${escHtml(r.mother_bangla || r.mother)}</strong>`;
-      const village = escHtml(r.village_bangla || '');
-      const post = escHtml(r.postoffice_bangla || '');
-      const upazila = escHtml(r.upazila_bangla || '');
-      const zilla = escHtml(r.zilla_bangla || '');
-  const cls = `<strong>${escHtml(r.class_bangla || '')}</strong>`;
-  const shift = `<strong>${escHtml(r.shift_bangla || '')}</strong>`;
-      const roll = `<strong>${escHtml(r.roll_bangla || r.roll || '')}</strong>`;
-      const line1 = `এই মর্মে প্রত্যয়ন করা যাইতেছে যে, ${name}, পিতা: ${father}, মাতা: ${mother}, গ্রাম- ${village}, ডাকঘর: ${post}, উপজেলা: ${upazila}, জেলা: ${zilla}, অত্র বিদ্যালয়ে ${cls} শ্রেণিতে ${shift} শাখায় অধ্যয়নরত। তাহার শ্রেণি রোল নং- ${roll}।`;
-      const line2 = `আমি তাহার সর্বাঙ্গীন সাফল্য ও উজ্জ্বল ভবিষ্যৎ কামনা করি।`;
-      return [line1, line2].join('<br/><br/>');
-    }
+  // certificate/testimonial builders removed — overlay will not include testimonial wording
 
 
     window.addEventListener('DOMContentLoaded', () => {
+  // populate photo links from ../photo/link.csv
+  try { loadPhotoLinks(); } catch(_){}
       const params = new URLSearchParams(location.search);
       const iidParam = (params.get('iid')||'').trim();
       const slParam = (params.get('sl')||'').trim();
@@ -422,8 +394,9 @@
         const statusWarn = document.getElementById('status');
         if(statusWarn){ statusWarn.textContent = 'SL missing (showing certificate)'; statusWarn.classList.add('error'); }
       }
-      const text = buildCertificateText(rec);
-      const html = buildCertificateHtml ? buildCertificateHtml(rec) : text.replace(/\n/g,'<br/>');
+  // Certificate/testimonial removed: produce a concise overlay showing name only
+  const text = (rec.name_bangla || rec.name || '');
+  const html = escHtml(text).replace(/\n/g,'<br/>');
 
   // Photo removed — not displayed
 
@@ -449,8 +422,7 @@
         if(rec.group) parts.push('Group: ' + escHtml(rec.group));
         if(rec.class_bangla) parts.push('Class: ' + escHtml(rec.class_bangla));
         if(rec.session) parts.push('Session: ' + escHtml(rec.session));
-        if(rec.gpa) parts.push('GPA: ' + escHtml(rec.gpa));
-        if(rec.sscmonth) parts.push('Exam Month: ' + escHtml(rec.sscmonth));
+    
         otherRows.innerHTML = parts.map(p=>`<div style="text-align:left;">${p}</div>`).join('');
       }
 
@@ -501,18 +473,31 @@
         if(photoEl){
           const idForPhoto = rec.iid || rec.sl || '';
           if(idForPhoto){
-            const url = 'https://shikkhanobish.com/uploads/avatar-' + encodeURIComponent(idForPhoto) + '.jpg';
-            photoEl.style.display = '';
-            photoEl.src = url;
-            // Hide if loading fails
-            photoEl.onerror = () => { photoEl.style.display = 'none'; photoEl.removeAttribute('src'); };
-            photoEl.onload = () => { /* keep shown */ };
+            // Prefer local photo links if available
+            let chosen = '';
+            try {
+              const links = window.__PHOTO_LINKS || PHOTO_LINKS || [];
+              // Find an URL that contains the id (like avatar-<id> or the id itself)
+              const normId = String(idForPhoto).replace(/^0+/, '');
+              chosen = links.find(u => u && (u.includes('avatar-'+normId) || u.includes(normId))) || '';
+            } catch(e){ chosen = ''; }
+            if(!chosen){
+              // No local photo link found — do not use external fallback. Hide the photo element.
+              photoEl.style.display = 'none';
+              photoEl.removeAttribute('src');
+            } else {
+              photoEl.style.display = '';
+              photoEl.src = chosen;
+              // Hide if loading fails
+              photoEl.onerror = () => { photoEl.style.display = 'none'; photoEl.removeAttribute('src'); };
+              photoEl.onload = () => { /* keep shown */ };
+            }
           } else {
             photoEl.style.display = 'none';
             photoEl.removeAttribute('src');
           }
         }
-      } catch(_){}
+      } catch(_){ }
 
       // Prepare a stable shareable QR URL with unique key
       try {
@@ -540,6 +525,20 @@
     }
 
   function tryPersistParsed(){ /* disabled */ }
+
+  // Load local photo links (one URL per line) and expose as window.__PHOTO_LINKS
+  let PHOTO_LINKS = [];
+  function loadPhotoLinks(){
+    // relative path from idcard/verify.html to photo/link.csv
+    const path = '../photo/link.csv';
+    fetch(path).then(r => {
+      if(!r.ok) throw new Error('no photo list');
+      return r.text();
+    }).then(txt => {
+      PHOTO_LINKS = txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      window.__PHOTO_LINKS = PHOTO_LINKS;
+    }).catch(() => { PHOTO_LINKS = []; window.__PHOTO_LINKS = PHOTO_LINKS; });
+  }
 
     function renderQr(){
       const box = document.getElementById('qrBox');
@@ -597,7 +596,7 @@
       attempt();
     }
 
-  // downloadPdf removed
+  
 
   // fetchImageToImg removed
   </script>
