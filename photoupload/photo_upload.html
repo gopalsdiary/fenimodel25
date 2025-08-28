@@ -218,6 +218,21 @@
 		const rollStr = String((s.roll && String(s.roll).trim()) || (typeof s.rowIndex !== 'undefined' ? String(s.rowIndex + 1) : '')).trim();
 			const iidDisplay = escapeHtml(iidStr);
 			const classCell = s.cls ? `${escapeHtml(s.cls)}${s.shift? ' '+escapeHtml(s.shift): ''}` : escapeHtml(s.src && s.src.name);
+			// prepare download filenames (sanitize minimally)
+			const rawClass = (s.cls && String(s.cls).trim()) || ((s.src && s.src.name) || '');
+			const rawName = (s.name || '').toString().trim();
+			const shortName = (rawName.split(/\s+/)[0]||rawName) || '';
+			// simple filename sanitizer: remove problematic chars and spaces
+			const safe = t => String(t||'').replace(/[^a-z0-9A-Z\-_.]/g, '').replace(/\s+/g, '');
+			const classVal = safe(rawClass);
+			const nameVal = safe(shortName);
+			const rollVal = safe(rollStr);
+			const avatarFile = `avatar-${iidStr}.jpg`;
+			const classRollFile = `${classVal ? classVal + '_' : ''}${nameVal || 'student'}${rollVal ? '-'+rollVal : ''}.jpg`;
+			const hasPhoto = Boolean(thumbUrl);
+			const dlAvatar = hasPhoto ? `<a class="small" href="${escapeHtml(thumbUrl)}" download="${escapeHtml(avatarFile)}" target="_blank" rel="noopener">Download (IID)</a>` : `<span class="small muted">Download (IID)</span>`;
+			const dlClassRoll = hasPhoto ? `<a class="small" href="${escapeHtml(thumbUrl)}" download="${escapeHtml(classRollFile)}" target="_blank" rel="noopener">Download (Class-roll)</a>` : `<span class="small muted">Download (Class-roll)</span>`;
+
 			return `<tr data-iid="${escapeHtml(iidStr)}" data-roll="${escapeHtml(rollStr)}" data-src-sheet="${escapeHtml(s.src && s.src.name)}" data-src-id="${escapeHtml(s.src && s.src.id)}">
 				<td>${imgHtml}</td>
 				<td>${iidDisplay}</td>
@@ -230,6 +245,10 @@
 						<input type="file" accept="image/*" class="file-input" data-iid="${escapeHtml(iidStr)}">
 						<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
 						<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
+					</div>
+					<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+						${dlAvatar}
+						${dlClassRoll}
 					</div>
 				</td>
 			</tr>`;
