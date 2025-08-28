@@ -230,6 +230,8 @@
 			// Class-roll: <Class>_<SECTION>-<roll>.jpg  (omit section if not present)
 			const classRollFile = `${classNum}${sectionVal ? '_' + sectionVal : ''}${rollVal ? '-'+rollVal : ''}.jpg`;
 			const hasPhoto = Boolean(thumbUrl);
+			// details link to detailsinfo.html with iid query param
+			const detailsLink = iidStr ? `<a class="small" href="/0newdatabase/detailsinfo.html?iid=${encodeURIComponent(iidStr)}" target="_blank" rel="noopener">Details</a>` : `<span class="small muted">Details</span>`;
 			// download links: use data-filename and class so we can force-download via JS (avoids opening new tab)
 			const dlAvatar = hasPhoto ? `<a class="small dl-link dl-avatar" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(avatarFile)}">Download (IID)</a>` : `<span class="small muted">Download (IID)</span>`;
 			const dlClassRoll = hasPhoto ? `<a class="small dl-link dl-classroll" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(classRollFile)}">Download (Class-roll)</a>` : `<span class="small muted">Download (Class-roll)</span>`;
@@ -248,6 +250,7 @@
 						<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
 					</div>
 					<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+						${detailsLink}
 						${dlAvatar}
 						${dlClassRoll}
 					</div>

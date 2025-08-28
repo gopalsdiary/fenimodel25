@@ -165,13 +165,16 @@ function renderSheet(container, name, fields, rows, meta, src){
     let html = '<tr>';
     for(let fi=0; fi<fields.length; fi++){
       const f = fields[fi]; const val = (r && Object.prototype.hasOwnProperty.call(r,f)) ? r[f] : '';
-      if(fi===0){
-        let href = `detailsinfo.html?id=${encodeURIComponent(src.id)}&sheet=${encodeURIComponent(src.name)}`;
+    if(fi===0){
         let iidVal = '';
         try{ iidVal = iidKey ? (r[iidKey]) : ''; }catch(_){ iidVal=''; }
-        if(iidVal!=null && String(iidVal).trim()!=='') href += `&iid=${encodeURIComponent(String(iidVal))}`; else href += `&r=${rIdx}`;
         const text = (val!=null && String(val).trim()!=='') ? String(val) : `#${rIdx+1}`;
-        html += `<td><a class="link" style="color:inherit;text-decoration:none" href="${href}">${escapeHtml(text)}</a></td>`;
+        if(iidVal!=null && String(iidVal).trim()!==''){
+          const href = `/0newdatabase/detailsinfo.html?iid=${encodeURIComponent(String(iidVal))}`;
+          html += `<td><a class="link" style="color:inherit;text-decoration:none" href="${href}">${escapeHtml(text)}</a></td>`;
+        } else {
+          html += `<td>${escapeHtml(text)}</td>`;
+        }
       } else {
         html += `<td>${escapeHtml(val)}</td>`;
       }
