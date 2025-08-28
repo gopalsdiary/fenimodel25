@@ -81,6 +81,11 @@
     position: relative;
     }
   .overlay-text .emph { font-size: 110%; }
+  /* Small inline loader used while CSV/record loads */
+  .loader{ display:inline-flex; align-items:center; gap:10px; }
+  .loader .dot{ width:12px; height:12px; border-radius:50%; background:#6c5ce7; box-shadow:0 6px 18px rgba(108,92,231,0.18); animation: pulseScale 1s ease-in-out infinite; }
+  .loader .text{ font-weight:700; color:#6b7280; font-size:0.95rem; }
+  @keyframes pulseScale{ 0%{ transform:scale(1); opacity:1 } 50%{ transform:scale(.45); opacity:.6 } 100%{ transform:scale(1); opacity:1 } }
     /* Serial and Date small overlays */
   /* 9->7.92, 1vw->0.88vw, 11->9.68 */
   .field { position: absolute; font-size: clamp(7.92px, 0.88vw, 9.68px); line-height: 1; color: #111; }
@@ -180,6 +185,7 @@
   shift_bangla: ['shift_bangla','section_bangla','shakha_bangla','section (bangla)','shift (bangla)'],
   roll_bangla: ['roll_bangla','roll no bangla','roll_bn','roll (bangla)']
       };
+
       const csvMap = {};
       for (const key of Object.keys(alias)){ const hdr = findHeaderByAliases(fieldMap, alias[key]); if (hdr) csvMap[key] = hdr; }
       return csvMap;
@@ -199,26 +205,7 @@
         dob: getVal(row, csvMap, 'dob'),
         iid: getVal(row, csvMap, 'iid'),
   sl: getVal(row, csvMap, 'sl'),
-  issue_date: getVal(row, csvMap, 'issue_date'),
-  year: getVal(row, csvMap, 'year'),
-  date: getVal(row, csvMap, 'issue_date') || defaultDate(''),
-  issueby: getVal(row, csvMap, 'issueby'),
-  gender: getVal(row, csvMap, 'gender'),
-  group: getVal(row, csvMap, 'group'),
-  gpa: getVal(row, csvMap, 'gpa'),
-  sscmonth: getVal(row, csvMap, 'sscmonth'),
-  session: getVal(row, csvMap, 'session'),
-  // Bangla fields
-  name_bangla: getVal(row, csvMap, 'name_bangla'),
-  father_bangla: getVal(row, csvMap, 'father_bangla'),
-  mother_bangla: getVal(row, csvMap, 'mother_bangla'),
-  village_bangla: getVal(row, csvMap, 'village_bangla'),
-  postoffice_bangla: getVal(row, csvMap, 'postoffice_bangla'),
-  upazila_bangla: getVal(row, csvMap, 'upazila_bangla'),
-  zilla_bangla: getVal(row, csvMap, 'zilla_bangla'),
-  class_bangla: getVal(row, csvMap, 'class_bangla'),
-  shift_bangla: getVal(row, csvMap, 'shift_bangla'),
-  roll_bangla: getVal(row, csvMap, 'roll_bangla'),
+
       };
     }
 
@@ -299,6 +286,7 @@
             candidates = candidates.filter(r => valueEquals(r[regHeader], regParam));
             debugSteps.push(`Filter reg=${regParam} -> ${before} => ${candidates.length}`);
           }
+          
           // If still multiple, try roll+class params
           if(candidates.length > 1){
             const rollParam = (params.get('roll')||'').trim();
@@ -439,6 +427,20 @@
         return false;
       }
 
+      // Treat common photo/avatar fields as non-displayable database columns
+      function isPhotoField(key, value){
+        if(!key) return false;
+        const k = String(key).toLowerCase();
+        // common header names
+        if(k.includes('photo') || k.includes('avatar') || k.includes('image') || k === 'img' || k.includes('photo_url') || k.includes('image_url')) return true;
+        if(value && typeof value === 'string'){
+          const v = value.toLowerCase();
+          // values that look like image filenames or avatar tokens
+          if(v.includes('avatar-') || v.match(/\.(jpg|jpeg|png|gif|webp)(\?|$)/)) return true;
+        }
+        return false;
+      }
+
       const imgText = document.getElementById('imgText');
       if(imgText){
         const rows = [];
@@ -446,13 +448,13 @@
           for(const k of Object.keys(rawRow)){
             const v = rawRow[k];
             if(v == null) continue;
-            if(isQrField(k, v)) continue; // skip QR fields
+            if(isQrField(k, v) || isPhotoField(k, v)) continue; // skip QR & photo fields
             rows.push({k, v});
           }
         } else {
           for(const k of Object.keys(rec)){
             if(!rec[k]) continue;
-            if(isQrField(k, rec[k])) continue;
+            if(isQrField(k, rec[k]) || isPhotoField(k, rec[k])) continue;
             rows.push({k, v: rec[k]});
           }
         }
@@ -524,7 +526,7 @@
       });
     }
 
-  function tryPersistParsed(){ /* disabled */ }
+  
 
   // Load local photo links (one URL per line) and expose as window.__PHOTO_LINKS
   let PHOTO_LINKS = [];
@@ -598,12 +600,12 @@
 
   
 
-  // fetchImageToImg removed
+  
   </script>
 </head>
 <body>
   <header>
-  <h1>Id Card information <span id="status" class="muted"></span></h1>
+  <h1>Id Card information : <span id="status" class="muted"></span></h1>
   <div style="margin-top:.5rem"></div>
   </header>
   <main>
