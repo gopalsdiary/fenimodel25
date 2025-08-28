@@ -10,131 +10,69 @@
   <!-- Kalpurush Bangla font -->
   <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
   <style>
-    :root { 
-      color-scheme: light dark; 
-      /* Text block area (main paragraph) */
-      --box-left: 10%;
-      --box-right: 10%;
-      --box-top: 45%;
-      --box-bottom: 22%;
+    :root{ --bg1:#fff1f0; --bg2:#f0f8ff; --accent:#ff69b4; --muted:#6b7280; --card:#ffffff; --glass: rgba(255,255,255,0.6); }
+    html{ font-size:100%; }
+    body{ margin:0; font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans Bengali', sans-serif; background: linear-gradient(135deg,var(--bg1),var(--bg2)); color:#0f172a; }
+    header{ position:sticky; top:0; background:transparent; padding:1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+    header h1{ margin:0; font-size:1.05rem; font-weight:700; color:var(--accent); }
+    header #status{ font-weight:600; color:var(--muted); margin-left:.5rem; }
+    main{ padding:1.25rem; display:flex; justify-content:center; }
+    .layout{ width:960px; max-width:96vw; display:grid; grid-template-columns: 360px 1fr; gap:20px; align-items:start; }
+    .card{ background:linear-gradient(160deg, rgba(124,77,255,0.08), rgba(99,102,241,0.04)); border-radius:12px; padding:18px; box-shadow: 0 10px 30px rgba(15,23,42,0.08); border:1px solid rgba(124,77,255,0.08); }
+    .card .brand{ text-align:center; padding:8px 0 12px; }
+    .card .brand .title{ font-weight:800; color:var(--accent); font-size:1.05rem; }
+    .photo-top-right{ width:160px; height:200px; object-fit:cover; display:block; margin:0 auto 12px; border-radius:8px; border:3px solid #fff; box-shadow:0 10px 30px rgba(2,6,23,0.12); }
+    .info-box{ text-align:left; background:linear-gradient(180deg,#fff,#fbfdff); border-radius:8px; padding:12px; font-weight:600; }
+    .info-box .row{ margin:6px 0; font-size:1rem; color:#08142a; }
 
-      /* Serial/Date positions (percentages of the image box) */
-      --serial-top: 28%;
-      --serial-left: 15%;
+    /* Right column = form-like details */
+    .form-panel{ background: linear-gradient(135deg, rgba(255, 105, 180, 0.1), rgba(255, 182, 193, 0.05)); border-radius:12px; padding:18px; box-shadow:0 12px 30px rgba(2,6,23,0.06); border-left:6px solid var(--accent); }
+    .field-row{ display:flex; gap:12px; padding:10px 0; align-items:flex-start; border-bottom:1px dashed #eef2ff; }
+    .field-label{ width:28%; font-weight:700; color:#203040; }
+    .field-value{ flex:1; color:#0b1220; }
+    .muted{ color:var(--muted); }
+    .small{ font-size:.95rem; color:var(--muted); }
 
-      --date-top: 10%;
-      --date-right: 7%;
+    /* Additional fields block */
+    .form-like{ margin-top:8px; padding-top:8px; }
+    .form-row{ display:flex; gap:8px; padding:8px 0; align-items:flex-start; }
+    .form-row .label{ flex:0 0 28%; font-weight:700; color:#334155; }
+    .form-row .value{ flex:1; color:#0b1220; }
 
-  /* QR code position & size */
-  --qr-size: 80px;
-  --qr-bottom: 18%;
-  --qr-right: 77%;
-  } 
-  html { font-size: 130%; }
-  body { font-family: 'Times New Roman', Times, serif; margin: 0; background: #f6f7f9; color: #111; }
-  header { position: sticky; top: 0; background: white; padding: 1rem; border-bottom: 1px solid #e5e7eb; z-index: 10; }
-  /* Original .8rem reduced by 12% => 0.704rem */
-  .btn { display: inline-block; padding: .45rem .9rem; font-size: .704rem; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; border: 1px solid #d0d7de; background:#fff; color:#111; border-radius:6px; cursor:pointer; line-height:1.1; text-decoration:none; }
-  .btn:hover { background:#f2f4f7; }
-  .btn:active { background:#e5e7eb; }
-  /* Primary blue button variant */
-  .btn.btn-primary { background: #2563eb; color: #fff; border-color: #1e40af; }
-  .btn.btn-primary:hover { background: #1e40af; }
-  .btn.btn-primary:active { background: #1b3b94; }
-  @media (prefers-color-scheme: dark) { .btn { background:#1f2937; color:#e5e7eb; border-color:#374151; } .btn:hover { background:#2a3342; } .btn:active { background:#374151; } }
-  @media (prefers-color-scheme: dark) { .btn.btn-primary { background:#2563eb; color:#fff; border-color:#1e40af; } .btn.btn-primary:hover { background:#1e40af; } }
-  .action-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: .75rem; background: rgba(255,255,255,.9); padding: .6rem .9rem; border: 1px solid #d0d7de; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.12), 0 8px 28px rgba(37,99,235,0.10); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-  @media (prefers-color-scheme: dark) { .action-bar { background: rgba(17,23,41,.85); border-color:#263148; } }
-  /* QR code overlay */
-  .qr-wrap { position:absolute; bottom: var(--qr-bottom); right: var(--qr-right); width: var(--qr-size); background:transparent; border:none; padding:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; mix-blend-mode:multiply; }
-  .qr-wrap canvas, .qr-wrap img { width:100% !important; height:var(--qr-size) !important; image-rendering:pixelated; display:block; mix-blend-mode:multiply; }
-  /* 8px -> 7.04px (12% reduction), 7px -> 6.16px */
-  .qr-caption { font-size:7.04px; line-height:1.1; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.3px; color:#000; mix-blend-mode:multiply; text-transform:uppercase; }
-  .qr-meta { font-size:6.16px; line-height:1.2; margin-top:2px; font-family: system-ui, Arial, sans-serif; letter-spacing:.25px; color:#000; mix-blend-mode:multiply; text-align:center; width:100%; white-space:normal; overflow:visible; word-break:break-word; }
-  /* Emphasize SL No under QR */
-  #qrIID { font-weight:700; font-size:8px; letter-spacing:.4px; }
-  @media (prefers-color-scheme: dark) { .qr-meta { color:#ccc; } }
-  @media (prefers-color-scheme: dark) { .qr-caption { color:#ddd; } }
-  @media (prefers-color-scheme: dark) { .qr-wrap { filter: brightness(1.1); } }
-  /* 1.2rem -> 1.056rem */
-  h1 { margin: 0; font-size: 1.056rem; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    main { padding: 1rem; }
-    .layout { display: flex; gap: 2rem; align-items: flex-start; justify-content: center; }
-  /* Adjust width for portrait template (taller aspect) */
-  .img-wrap { position: relative; width: 620px; min-width: 320px; max-width: 100vw; background: #fff; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,.06); padding:20px; box-sizing:border-box; }
-    .img-wrap img { width: 120px; height:120px; display:block; border-radius:999px; object-fit:cover; border:4px solid #fff; box-shadow:0 6px 18px rgba(0,0,0,.12); margin: 0 auto 8px; }
-  .overlay { position: relative; display:block; z-index:2; pointer-events:none; padding:8px; }
-    .overlay-text { 
-  /* Increased body font size by ~40% */
-  font-size: clamp(7.762px, 1.035vw, 13.8px); 
-      line-height: 1.55; 
-      color: #111; 
-      white-space: pre-line; 
-      text-align: justify;
-      text-justify: inter-word;
-    word-break: break-word; 
-    hyphens: auto; 
-  /* Prefer Kalpurush for Bangla text, with sensible fallbacks */
-  font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, 'Times New Roman', serif;
-  letter-spacing: .1px;
-    z-index: 3;
-    position: relative;
+    @media (max-width:900px){ .layout{ grid-template-columns:1fr; } .photo-top-right{ width:120px; height:150px; } .field-label{ width:35%; } }
+
+    /* Button styles */
+    .btn {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      border: 1px solid #d0d7de;
+      background: #fff;
+      color: #111;
+      border-radius: 6px;
+      cursor: pointer;
+      line-height: 1.1;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background-color 0.2s ease;
     }
-  .overlay-text .emph { font-size: 110%; }
-  /* Small inline loader used while CSV/record loads */
-  .loader{ display:inline-flex; align-items:center; gap:10px; }
-  .loader .dot{ width:12px; height:12px; border-radius:50%; background:#6c5ce7; box-shadow:0 6px 18px rgba(108,92,231,0.18); animation: pulseScale 1s ease-in-out infinite; }
-  .loader .text{ font-weight:700; color:#6b7280; font-size:0.95rem; }
-  @keyframes pulseScale{ 0%{ transform:scale(1); opacity:1 } 50%{ transform:scale(.45); opacity:.6 } 100%{ transform:scale(1); opacity:1 } }
-    /* Serial and Date small overlays */
-  /* 9->7.92, 1vw->0.88vw, 11->9.68 */
-  .field { position: absolute; font-size: clamp(7.92px, 0.88vw, 9.68px); line-height: 1; color: #111; }
-  /* Replaced serial/date with consolidated info box */
-  .info-box { text-align: left; font-size:15.68px; line-height:1.25; font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, 'Times New Roman', serif; font-weight:600; white-space:normal; margin-top:8px; }
-  .info-box .row { display:block; margin-bottom:6px; }
-  .center { text-align:center; }
-  .small { font-size:0.85rem; color:#555; }
-
-  /* Form-like styling for showing database fields (label: value) */
-  .form-like { margin-top:8px; border-top:1px solid #e6e9ef; padding-top:8px; font-family:inherit; }
-  /* decreased form size and tighter spacing */
-  /* smaller form sizing */
-  .form-like { font-size:0.86rem; }
-  .form-row { display:flex; gap:8px; padding:3px 0; border-bottom:1px dashed #efefef; align-items:flex-start; }
-  .form-row .label { flex:0 0 28%; font-weight:700; color:#333; max-width:200px; word-break:break-word; font-size:0.86rem; }
-  .form-row .value { flex:1 1 auto; color:#111; word-break:break-word; white-space:normal; font-size:0.86rem; }
-  @media (prefers-color-scheme: dark) { .form-like { border-top-color:#22303b } .form-row { border-bottom-color: rgba(255,255,255,0.04); } .form-row .label { color:#e5e7eb } .form-row .value { color:#dbeafe } }
-
-  /* Top-right avatar: 3:2 ratio, multiply blend */
-  /* passport-size photo (3:4) — rectangular, not rounded */
-  .photo-top-right { position: absolute; top: 16px; right: 16px; width: 120px; height: 180px; object-fit: cover; mix-blend-mode: multiply; border-radius:0; box-shadow: 0 6px 18px rgba(0,0,0,0.12); border: 2px solid rgba(255,255,255,0.6); }
-  /* Stronger override for parent selector that previously made images round */
-  #topPhoto { border-radius: 0 !important; display: block !important; }
-  @media (max-width: 900px) { .photo-top-right { width: 100px; height: 133px; top: 12px; right: 12px; } }
-  @media (max-width: 480px) { .photo-top-right { width: 84px; height: 112px; top:10px; right:10px; } }
-
-    @media (max-width: 900px) {
-      .layout { flex-direction: column; align-items: stretch; }
-      .img-wrap { max-width: 100vw; width: 100%; }
+    .btn:hover {
+      background: #f2f4f7;
     }
-    @media print {
-  @page { size: A4 portrait; margin: 8mm; }
-  html, body { background: #fff; width: 100%; height: 100%; }
-  header { display: none; }
-  .layout { flex-direction: column; align-items: stretch; }
-  /* Keep on-screen aspect & sizing for precise overlay alignment */
-  .img-wrap { width: 600px; max-width: 600px; margin: 0 auto; }
-  .img-wrap img { box-shadow: none; border: none; border-radius: 0; width: 100%; height: auto; }
-  .right-panel { display: none; }
-  .overlay-text, .field { color: #000; }
-  /* Ensure overlays scale proportionally */
-  .img-wrap, .img-wrap * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .btn:active {
+      background: #e5e7eb;
     }
-    @media (prefers-color-scheme: dark) {
-      body { background: #0b1020; color: #e5e7eb; }
-      header, .right-panel { background: #111729; border-color: #263148; color: #e5e7eb; }
-      .muted { color: #9aa5b1; }
-  .overlay-text, .field { color: #e5e7eb; }
+    .btn-primary {
+      background: #0ea5e9;
+      border-color: #0284c7;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #0284c7;
+    }
+    .btn-primary:active {
+      background: #0369a1;
     }
   </style>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -163,26 +101,10 @@
   roll: ['roll','roll no','roll number','rollno','roll_no'],
   registrationnumber: ['registration number','registration','reg no','regno','registration no','registrationno','registration'],
   dob: ['dob','date of birth','birth date','dateofbirth'],
-    iid: ['iid','id','student id','studentid','student-id','sid','s id','s.i.d','school_iid','school iid','schoolid','school-id','sch_iid','sch iid','uniqueid','unique id','unique_id','studentcode','student code','student_code','stu_id','studid'],
+  iid: ['iid','id','student id','studentid','student-id','sid','s id','s.i.d','school_iid','school iid','schoolid','school-id','sch_iid','sch iid','uniqueid','unique id','unique_id','studentcode','student code','student_code','stu_id','studid'],
   sl: ['sl','serial','serial no','serial number','serialno','sl no','slno','sl.','s.l','s.l.'],
-  issue_date: ['date','issue date','certificate date'],
-  issueby: ['issueby','issuedby','issued by','issued','issue by','issue-by','issuedbyname','issued name','issuedname'],
-  gender: ['gender','sex'],
-  group: ['group','grp','subject group'],
-  gpa: ['gpa','grade point','gradepoint','result','g.p.a'],
-  sscmonth: ['sscmonth','exam month','ssc exam month','month','exammonth'],
-  session: ['session','academic session','sess','session year','exam session','year'],
   year: ['year','yr','exam year','passing year','issue year','issue_year','session_year','year of issue'],
-  // Bangla fields
-  name_bangla: ['name_bangla','name (bangla)','student name bangla','name bn','name_bn','bn_name','student_name_bangla'],
-  father_bangla: ['father_bangla','father (bangla)','father name bangla','bn_father','father_bn','fathers_name_bangla'],
-  mother_bangla: ['mother_bangla','mother (bangla)','mother name bangla','bn_mother','mother_bn','mothers_name_bangla'],
-  village_bangla: ['village_bangla','gram_bangla','village (bangla)','gram','gram bn','gram_bn'],
-  postoffice_bangla: ['postoffice_bangla','post office bangla','dakghor_bangla','dakghor bangla','postoffice (bangla)','dakghar_bangla'],
-  upazila_bangla: ['upazila_bangla','upazilla_bangla','upozila_bangla','upazila (bangla)','thana_bangla'],
-  zilla_bangla: ['zilla_bangla','district_bangla','zilla (bangla)','jila_bangla'],
-  class_bangla: ['class_bangla','class (bangla)','shreni_bangla','class_bn'],
-  shift_bangla: ['shift_bangla','section_bangla','shakha_bangla','section (bangla)','shift (bangla)'],
+
   roll_bangla: ['roll_bangla','roll no bangla','roll_bn','roll (bangla)']
       };
 
@@ -342,7 +264,6 @@
               + 'First row sample: ' + JSON.stringify(first, null, 2) + '<br>'
               + 'Distinct iid values (sample): ' + (iidVals.join(', ')||'(none)') + '<br>'
               + 'Distinct sl values (sample): ' + (slVals.join(', ')||'(none)') + '<br>'
-              + 'Distinct registration values (sample): ' + (regVals.join(', ')||'(none)') + '<br>'
               + 'Distinct roll values (sample): ' + (rollVals.join(', ')||'(none)') + '<br>'
               + 'Debug steps: ' + debugSteps.join(' | ');
             return;
@@ -404,7 +325,7 @@
         const parts = [];
         if(rec.registrationnumber) parts.push('Registration: ' + escHtml(rec.registrationnumber));
         // roll intentionally not shown as primary identifier
-        if(rec.roll) parts.push('Roll: ' + escHtml(rec.roll));
+        if(rec.roll) parts.push('Name: ' + escHtml(rec.name || ''));
         if(rec.dob) parts.push('DOB: ' + escHtml(rec.dob));
         if(rec.gender) parts.push('Gender: ' + escHtml(rec.gender));
         if(rec.group) parts.push('Group: ' + escHtml(rec.group));
@@ -610,28 +531,24 @@
   </header>
   <main>
     <div class="layout">
-      <div class="img-wrap">
-      <!-- Top-right photo -->
-      <img id="topPhoto" class="photo-top-right" alt="Photo" style="display:none;" />
-  <!-- HTML-based ID Card -->
-  <div class="center">
-    <div class="center" style="font-weight:700; font-size:1.1rem;">Feni Model High School</div>
-    <div class="center small">Trunk Road</div>
-    <div class="center" style="margin-top:8px; font-weight:700;">ID card Info</div>
-  </div>
-  <div style="height:10px"></div>
-  <!-- Photo removed as requested -->
-  <div style="height:8px"></div>
-  <div class="info-box" id="infoBox">
-    <div class="row" id="serialRow"></div>
-    <div class="row" id="nameRow"></div>
-    <div class="row" id="fatherRow"></div>
-    <div class="row" id="motherRow"></div>
-    <div class="row" id="otherRows"></div>
-  </div>
-  <div style="margin-top:10px;">
-    <div id="imgText" class="overlay-text">Loading ID card…</div>
-  </div>
+      <div class="card">
+        <div class="brand">
+          <div class="title">Feni Model High School</div>
+          <div class="small muted">Trunk Road</div>
+        </div>
+        <img id="topPhoto" class="photo-top-right" alt="Photo" style="display:none;" />
+        <div class="info-box" id="infoBox">
+          <div class="row" id="serialRow"></div>
+          <div class="row" id="nameRow"></div>
+          <div class="row" id="fatherRow"></div>
+          <div class="row" id="motherRow"></div>
+          <div class="row" id="otherRows"></div>
+        </div>
+      </div>
+      <div class="form-panel">
+        <h3 style="margin:0 0 8px 0;">Record details</h3>
+        <div id="imgText" class="form-like">Loading ID card…</div>
+        <div style="height:10px"></div>
       </div>
     </div>
   </main>
