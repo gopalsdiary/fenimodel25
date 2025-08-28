@@ -219,19 +219,20 @@
 			const iidDisplay = escapeHtml(iidStr);
 			const classCell = s.cls ? `${escapeHtml(s.cls)}${s.shift? ' '+escapeHtml(s.shift): ''}` : escapeHtml(s.src && s.src.name);
 			// prepare download filenames (sanitize minimally)
-			const rawClass = (s.cls && String(s.cls).trim()) || ((s.src && s.src.name) || '');
-			const rawName = (s.name || '').toString().trim();
-			const shortName = (rawName.split(/\s+/)[0]||rawName) || '';
+			const rawClass = (s.cls && String(s.cls).trim()) || '';
+			const rawSection = (s.shift && String(s.shift).trim()) || '';
 			// simple filename sanitizer: remove problematic chars and spaces
 			const safe = t => String(t||'').replace(/[^a-z0-9A-Z\-_.]/g, '').replace(/\s+/g, '');
-			const classVal = safe(rawClass);
-			const nameVal = safe(shortName);
+			const classNum = safe(rawClass);
+			const sectionVal = safe(rawSection);
 			const rollVal = safe(rollStr);
 			const avatarFile = `avatar-${iidStr}.jpg`;
-			const classRollFile = `${classVal ? classVal + '_' : ''}${nameVal || 'student'}${rollVal ? '-'+rollVal : ''}.jpg`;
+			// Class-roll: <Class>_<SECTION>-<roll>.jpg  (omit section if not present)
+			const classRollFile = `${classNum}${sectionVal ? '_' + sectionVal : ''}${rollVal ? '-'+rollVal : ''}.jpg`;
 			const hasPhoto = Boolean(thumbUrl);
-			const dlAvatar = hasPhoto ? `<a class="small" href="${escapeHtml(thumbUrl)}" download="${escapeHtml(avatarFile)}" target="_blank" rel="noopener">Download (IID)</a>` : `<span class="small muted">Download (IID)</span>`;
-			const dlClassRoll = hasPhoto ? `<a class="small" href="${escapeHtml(thumbUrl)}" download="${escapeHtml(classRollFile)}" target="_blank" rel="noopener">Download (Class-roll)</a>` : `<span class="small muted">Download (Class-roll)</span>`;
+			// download links: use data-filename and class so we can force-download via JS (avoids opening new tab)
+			const dlAvatar = hasPhoto ? `<a class="small dl-link dl-avatar" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(avatarFile)}">Download (IID)</a>` : `<span class="small muted">Download (IID)</span>`;
+			const dlClassRoll = hasPhoto ? `<a class="small dl-link dl-classroll" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(classRollFile)}">Download (Class-roll)</a>` : `<span class="small muted">Download (Class-roll)</span>`;
 
 			return `<tr data-iid="${escapeHtml(iidStr)}" data-roll="${escapeHtml(rollStr)}" data-src-sheet="${escapeHtml(s.src && s.src.name)}" data-src-id="${escapeHtml(s.src && s.src.id)}">
 				<td>${imgHtml}</td>
@@ -298,6 +299,28 @@
 						status.textContent = 'Upload failed'; console.error(j);
 					}
 				}catch(err){ status.textContent='Upload error'; console.error(err); }
+			});
+		});
+
+		// wire download handlers (force download by fetching blob then creating object URL)
+		document.querySelectorAll('.dl-link').forEach(a=>{
+			a.addEventListener('click', async (ev)=>{
+				ev.preventDefault();
+				const url = a.href;
+				const filename = a.dataset && a.dataset.filename ? a.dataset.filename : 'download.jpg';
+				try{
+					const resp = await fetch(url, {mode:'cors'});
+					if(!resp.ok) throw new Error('Fetch failed: '+resp.status);
+					const blob = await resp.blob();
+					const objUrl = URL.createObjectURL(blob);
+					const tmp = document.createElement('a');
+					tmp.href = objUrl; tmp.download = filename; document.body.appendChild(tmp);
+					tmp.click(); tmp.remove();
+					setTimeout(()=> URL.revokeObjectURL(objUrl), 5000);
+				}catch(err){
+					console.error('Download fallback, opening in new tab', err);
+					window.open(url,'_blank');
+				}
 			});
 		});
 	}
