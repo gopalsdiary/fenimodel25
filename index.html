@@ -295,19 +295,63 @@
     const correctPassword = "1"; // TODO: move to server-side validation in production
     const SESSION_DURATION = 15 * 60 * 1000; // 15 minutes in milliseconds
     let lastActivityTime = null;
+
+    // Password lockout settings
+    const PW_LOCK_THRESHOLD = 3; // attempts
+    const PW_LOCK_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+    const PW_FAILED_KEY = 'pw_failed_count';
+    const PW_LOCK_UNTIL_KEY = 'pw_lock_until';
+
+    function getFailedCount(){ return Number(localStorage.getItem(PW_FAILED_KEY) || 0); }
+    function setFailedCount(n){ localStorage.setItem(PW_FAILED_KEY, String(n)); }
+    function clearFailedAttempts(){ localStorage.removeItem(PW_FAILED_KEY); localStorage.removeItem(PW_LOCK_UNTIL_KEY); }
+    function registerFailedAttempt(){
+        const cnt = getFailedCount() + 1;
+        setFailedCount(cnt);
+        if(cnt >= PW_LOCK_THRESHOLD){
+            const until = Date.now() + PW_LOCK_DURATION_MS;
+            localStorage.setItem(PW_LOCK_UNTIL_KEY, String(until));
+        }
+    }
+    function getLockRemaining(){
+        const until = Number(localStorage.getItem(PW_LOCK_UNTIL_KEY) || 0);
+        const now = Date.now();
+        return until > now ? until - now : 0;
+    }
+    function isLocked(){ return getLockRemaining() > 0; }
+    function formatMsRemaining(ms){
+        const sec = Math.ceil(ms/1000);
+        const m = Math.floor(sec/60);
+        const s = sec % 60;
+        if(m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    }
         
-        function checkPassword() {
+        function doCheckPassword() {
             const passwordInput = document.getElementById('passwordInput');
             const errorMessage = document.getElementById('errorMessage');
             const passwordSection = document.getElementById('passwordSection');
             const examSection = document.getElementById('examSection');
-            
+
+            // If locked, show remaining time
+            if (isLocked()) {
+                const rem = getLockRemaining();
+                errorMessage.textContent = `Too many attempts. Try again in ${formatMsRemaining(rem)}.`;
+                errorMessage.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
+                return false;
+            }
+
             if (passwordInput.value === correctPassword) {
                 // Correct password - show exam selection
                 passwordSection.style.display = 'none';
                 examSection.style.display = 'block';
                 errorMessage.style.display = 'none';
-                
+
+                // Clear failed attempts on success
+                clearFailedAttempts();
+
                 // Store authentication with timestamp
                 const loginTime = Date.now();
                 sessionStorage.setItem('authenticated', 'true');
@@ -317,17 +361,26 @@
                 attachActivityListeners();
                 startSessionTimeout();
                 cacheAllDataFieldIfNeeded();
+                return true;
             } else {
-                // Wrong password - show error
+                // Wrong password - show error and register failure
+                registerFailedAttempt();
+                if (isLocked()) {
+                    const rem = getLockRemaining();
+                    errorMessage.textContent = `Too many attempts. Try again in ${formatMsRemaining(rem)}.`;
+                } else {
+                    errorMessage.textContent = 'Incorrect password. Please try again.';
+                }
                 errorMessage.style.display = 'block';
                 passwordInput.value = '';
                 passwordInput.focus();
-                
+
                 // Add shake animation
                 passwordInput.style.animation = 'shake 0.5s';
                 setTimeout(() => {
                     passwordInput.style.animation = '';
                 }, 500);
+                return false;
             }
         }
         
@@ -759,44 +812,20 @@
     });
 
     // Modified checkPassword function to show install popup after successful login
-    const originalCheckPassword = window.checkPassword;
     window.checkPassword = function() {
         const passwordInput = document.getElementById('passwordInput');
-        const errorMessage = document.getElementById('errorMessage');
-        const passwordSection = document.getElementById('passwordSection');
-        const examSection = document.getElementById('examSection');
-        
-        if (passwordInput.value === correctPassword) {
-            // Correct password - show exam selection
-            passwordSection.style.display = 'none';
-            examSection.style.display = 'block';
-            errorMessage.style.display = 'none';
-            
-            // Store authentication with timestamp
-            const loginTime = Date.now();
-            sessionStorage.setItem('authenticated', 'true');
-            sessionStorage.setItem('loginTime', loginTime.toString());
-            // Initialize activity time & start timeout
-            lastActivityTime = loginTime;
-            attachActivityListeners();
-            startSessionTimeout();
-            cacheAllDataFieldIfNeeded();
-            
+        // If locked, call doCheckPassword to show message
+        if (isLocked()) {
+            doCheckPassword();
+            return;
+        }
+
+        const ok = doCheckPassword();
+        if (ok) {
             // Show install popup after successful login
             setTimeout(() => {
                 showInstallPopup();
             }, 1000); // Delay 1 second to let the page load
-        } else {
-            // Wrong password - show error
-            errorMessage.style.display = 'block';
-            passwordInput.value = '';
-            passwordInput.focus();
-            
-            // Add shake animation
-            passwordInput.style.animation = 'shake 0.5s';
-            setTimeout(() => {
-                passwordInput.style.animation = '';
-            }, 500);
         }
     };
     </script>
