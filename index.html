@@ -510,6 +510,286 @@
             }
         `;
     document.head.appendChild(style);
+
+    // Install popup styles
+    const installStyle = document.createElement('style');
+    installStyle.textContent = `
+        .install-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .install-popup.hidden {
+            display: none;
+        }
+
+        .install-content {
+            background: var(--bg-alt);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        .install-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 15px;
+            margin: 0 auto 1rem;
+            display: block;
+        }
+
+        .install-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem;
+            color: var(--text);
+        }
+
+        .install-message {
+            font-size: 0.9rem;
+            color: var(--text-soft);
+            margin: 0 0 1.5rem;
+            line-height: 1.4;
+        }
+
+        .install-buttons {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+        }
+
+        .install-btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .install-btn.primary {
+            background: linear-gradient(90deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+        }
+
+        .install-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+        }
+
+        .install-btn.secondary {
+            background: var(--bg);
+            color: var(--text-soft);
+            border: 1px solid var(--border);
+        }
+
+        .install-btn.secondary:hover {
+            background: var(--border);
+        }
+
+        .install-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--text-soft);
+            padding: 0.25rem;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .install-close:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 480px) {
+            .install-content {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
+
+            .install-title {
+                font-size: 1.2rem;
+            }
+
+            .install-buttons {
+                flex-direction: column;
+            }
+
+            .install-btn {
+                width: 100%;
+            }
+        }
+    `;
+    document.head.appendChild(installStyle);
+
+    // Install popup functionality
+    function createInstallPopup() {
+        const popup = document.createElement('div');
+        popup.id = 'installPopup';
+        popup.className = 'install-popup hidden';
+        popup.innerHTML = `
+            <div class="install-content">
+                <button class="install-close" onclick="closeInstallPopup()">&times;</button>
+                <img src="logo2.png" alt="Feni Model High School" class="install-logo">
+                <h3 class="install-title">Install Our App</h3>
+                <p class="install-message">
+                    Get the best experience by installing our app on your device. 
+                    Access all features with faster loading and offline support.
+                </p>
+                <div class="install-buttons">
+                    <button class="install-btn primary" onclick="installApp()">Install App</button>
+                    <button class="install-btn secondary" onclick="closeInstallPopup()">Maybe Later</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(popup);
+        return popup;
+    }
+
+    function showInstallPopup() {
+        // Check if app is already installed
+        const isInstalled = window.matchMedia('(display-mode: standalone)').matches || 
+                           window.navigator.standalone === true ||
+                           document.referrer.includes('android-app://') ||
+                           window.deferredPrompt === null;
+        
+        if (isInstalled) {
+            return; // Don't show popup if already installed
+        }
+
+        // Check if it's Android or iOS
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
+        if (!isAndroid && !isIOS) {
+            return; // Don't show popup for desktop
+        }
+
+        // Check if already shown today
+        const lastShown = localStorage.getItem('installPopupLastShown');
+        const today = new Date().toDateString();
+        
+        if (lastShown === today) {
+            return; // Already shown today
+        }
+
+        let popup = document.getElementById('installPopup');
+        if (!popup) {
+            popup = createInstallPopup();
+        }
+        
+        popup.classList.remove('hidden');
+        localStorage.setItem('installPopupLastShown', today);
+    }
+
+    function closeInstallPopup() {
+        const popup = document.getElementById('installPopup');
+        if (popup) {
+            popup.classList.add('hidden');
+        }
+    }
+
+    function installApp() {
+        // Try to trigger native install prompt
+        if (window.deferredPrompt) {
+            window.deferredPrompt.prompt();
+            window.deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('User accepted the install prompt');
+                }
+                window.deferredPrompt = null;
+                closeInstallPopup();
+            });
+        } else {
+            // Fallback: show instructions or redirect
+            const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+            if (isIOS) {
+                alert('To install: Tap the Share button, then "Add to Home Screen"');
+            } else {
+                alert('To install: Tap the menu button (⋮), then "Add to Home screen"');
+            }
+            closeInstallPopup();
+        }
+    }
+
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredPrompt = e;
+    });
+
+    // Modified checkPassword function to show install popup after successful login
+    const originalCheckPassword = window.checkPassword;
+    window.checkPassword = function() {
+        const passwordInput = document.getElementById('passwordInput');
+        const errorMessage = document.getElementById('errorMessage');
+        const passwordSection = document.getElementById('passwordSection');
+        const examSection = document.getElementById('examSection');
+        
+        if (passwordInput.value === correctPassword) {
+            // Correct password - show exam selection
+            passwordSection.style.display = 'none';
+            examSection.style.display = 'block';
+            errorMessage.style.display = 'none';
+            
+            // Store authentication with timestamp
+            const loginTime = Date.now();
+            sessionStorage.setItem('authenticated', 'true');
+            sessionStorage.setItem('loginTime', loginTime.toString());
+            // Initialize activity time & start timeout
+            lastActivityTime = loginTime;
+            attachActivityListeners();
+            startSessionTimeout();
+            cacheAllDataFieldIfNeeded();
+            
+            // Show install popup after successful login
+            setTimeout(() => {
+                showInstallPopup();
+            }, 1000); // Delay 1 second to let the page load
+        } else {
+            // Wrong password - show error
+            errorMessage.style.display = 'block';
+            passwordInput.value = '';
+            passwordInput.focus();
+            
+            // Add shake animation
+            passwordInput.style.animation = 'shake 0.5s';
+            setTimeout(() => {
+                passwordInput.style.animation = '';
+            }, 500);
+        }
+    };
     </script>
 </body>
 </html>
