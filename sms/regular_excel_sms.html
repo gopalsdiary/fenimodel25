@@ -10,7 +10,29 @@
         .sidebar ul { list-style: none; padding: 0; margin: 0; }
         .sidebar li { padding: 18px 24px; border-bottom: 1px solid #f0f0f0; cursor: pointer; color: #34495e; }
         .sidebar li.active, .sidebar li:hover { background: #eaf6ff; font-weight: bold; }
-        .main { margin-left: 240px; padding: 32px; }
+        .sidebar { overflow:auto; }
+        .sidebar li { padding: 10px 14px; }
+        .sms-btn {
+            display:block;
+            width:100%;
+            text-align:left;
+            background: linear-gradient(90deg,#e67e22 0%,#d35400 100%); /* match send button */
+            color: #fff;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-weight:700;
+            box-shadow: 0 6px 16px rgba(230,126,34,0.12);
+            cursor: pointer;
+            transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+            text-decoration:none;
+        }
+        .sms-btn:hover{ transform: translateY(-3px); box-shadow: 0 12px 26px rgba(230,126,34,0.14); }
+        .sms-btn:active{ transform: translateY(-1px); }
+        .sms-btn:focus{ outline: 2px solid rgba(37,99,235,0.18); outline-offset:2px; }
+        @media (max-width:720px){ .sms-btn{ font-size:14px; padding:8px 10px; } .sidebar{ width:180px; } }
+    .csv-viewer-container { margin-left:0 !important; padding:0; width:calc(100% - 240px); position:absolute; top:0; left:240px; right:0; z-index:1; background:transparent; height:100vh; overflow:hidden; font-size:80%; }
+        .main { margin-left: 240px; padding: 32px; position:relative; z-index:2; }
         h2 { color: #2c3e50; }
         .excel-upload { margin-bottom: 24px; }
         table { border-collapse: collapse; width: 100%; background: #fff; }
@@ -27,34 +49,21 @@
         <ul>
             <li><a href="../index.html" style="color:inherit;text-decoration:none;display:block;">Dashboard</a></li>
             <li class="active">Regular excel SMS</li>
-            <li>2022 Anuunal SMS </li>
-            <li>2023 Half Yearly SMS </li>
-            <li>2023 Anuunal SMS </li>
-            <li>2024 Half Yearly SMS </li>
-            <li>2024 Anuunal SMS </li>
-            <li>2025 Half Yearly SMS </li>
-            <li>2025 Anuunal SMS </li>
+            <li><button class="sms-btn" data-file="ann22.csv">2022 Annual SMS</button></li>
+            <li><button class="sms-btn" data-file="half23.csv">2023 Half Yearly SMS</button></li>
+            <li><button class="sms-btn" data-file="ann23.csv">2023 Annual SMS</button></li>
+            <li><button class="sms-btn" data-file="half24.csv">2024 Half Yearly SMS</button></li>
+            <li><button class="sms-btn" data-file="ann24.csv">2024 Annual SMS</button></li>
+            <li><button class="sms-btn" data-file="half25.csv">2025 Half Yearly SMS</button></li>
+            <li><button class="sms-btn" data-file="ann25.csv">2025 Annual SMS</button></li>
 
             <li>Logout</li>
         </ul>
     </div>
-    <div class="main">
+    <div class="main" id="mainContent">
         <h2>Regular excel SMS <span style="font-size:14px;color:#888;">Send SMS from excel</span></h2>
         <div class="excel-upload">
             <input type="file" id="excelFile" accept=".xlsx,.xls" />
-        </div>
-        <table id="smsTable" style="display:none;">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>phone</th>
-                    <th>body</th>
-                    <th>status</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-        <div id="manualRowArea" style="margin-top:18px;">
         <input type="text" id="manualPhone" placeholder="Type phone number" style="width:180px;" />
         <input type="text" id="manualBody" placeholder="Type SMS body" style="width:320px;" />
         <button class="send-btn" id="addRowBtn" type="button" style="background:#27ae60;">Add Row</button>
@@ -73,6 +82,23 @@
                 <div style="font-size:15px;margin-bottom:8px;color:#222;">Show Balance : <strong>101 Taka</strong></div>
                 <div style="font-size:16px;margin-top:8px;color:#222;">Sms available  <strong style="font-size:18px;">214</strong></div>
                 <div style="margin-top:8px;color:#888;font-size:12px;"> Validity : 30/10/2025 </div>
+            </div>
+        </div>
+    </div>
+    <!-- CSV viewer area -->
+    <div class="main csv-viewer-container" id="csvViewerContainer" style="margin-top:0;display:none;">
+        <div id="csvViewer" style="padding:12px 18px;height:100vh;box-sizing:border-box;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px 0;">
+                <h3 id="csvTitle" style="margin:0;font-size:1rem;">CSV Data</h3>
+                <button id="showAllBtn" style="background:#eef6ff;border:1px solid #d6e8ff;padding:6px 10px;border-radius:8px;cursor:pointer;color:#1366d6;font-weight:700;">Show all buttons</button>
+            </div>
+            <div style="overflow:auto;height:calc(100vh - 84px);">
+                <table id="csvTable" style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f1f7ff;"><th style="padding:8px;border:1px solid #e6eef8;">iid</th><th style="padding:8px;border:1px solid #e6eef8;">mobile</th><th style="padding:8px;border:1px solid #e6eef8;">sms</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -278,6 +304,113 @@
 
     // Initialize chart on load
         initSmsChart();
+    </script>
+
+    <script>
+    // --- CSV buttons & viewer ---
+    function parseCSV(text){
+        // Basic CSV parser that returns array of rows (array of columns)
+        const rows = [];
+        const lines = text.split(/\r?\n/);
+        for(const line of lines){
+            if(!line.trim()) continue;
+            const cols = [];
+            let cur=''; let inQuotes=false;
+            for(let i=0;i<line.length;i++){
+                const ch=line[i];
+                if(ch==='"'){
+                    if(inQuotes && line[i+1]==='"'){ cur+='"'; i++; }
+                    else inQuotes = !inQuotes;
+                    continue;
+                }
+                if(ch===',' && !inQuotes){ cols.push(cur); cur=''; continue; }
+                cur += ch;
+            }
+            cols.push(cur);
+            rows.push(cols.map(c=>c.trim()));
+        }
+        return rows;
+    }
+
+    function extractIid(mobile, sms){
+        // Try to find a 3-12 digit iid inside sms text
+        const m = sms && sms.match(/\b(\d{3,12})\b/);
+        return m ? m[1] : '';
+    }
+
+    async function loadAndRenderCsv(file, title){
+        try{
+            const res = await fetch(file);
+            if(!res.ok) throw new Error('Fetch failed: '+res.status);
+            const txt = await res.text();
+            const rows = parseCSV(txt);
+            // Heuristic: common CSV formats - try to detect header
+            let startIdx = 0;
+            const header = rows[0] || [];
+            const lower = header.map(h=>h.toLowerCase());
+            if(lower.includes('iid') || lower.includes('id') || lower.includes('mobile') || lower.includes('sms') ){
+                startIdx = 1;
+            }
+
+            const tbody = document.querySelector('#csvTable tbody');
+            tbody.innerHTML = '';
+            for(let i=startIdx;i<rows.length;i++){
+                const r = rows[i];
+                if(r.length<1) continue;
+                // Try patterns: [iid, mobile, sms] OR [mobile, sms] OR [mobile]
+                let iid='', mobile='', sms='';
+                if(r.length>=3){ iid = r[0]; mobile = r[1]; sms = r[2]; }
+                else if(r.length===2){ mobile=r[0]; sms=r[1]; iid=''; }
+                else { mobile = r[0]; sms=''; }
+
+                if(!iid) iid = extractIid(mobile, sms) || extractIid('', sms) || '';
+                // normalize mobile: remove quotes, spaces
+                mobile = mobile.replace(/"/g,'').trim();
+                sms = sms.replace(/"/g,'').trim();
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td style="padding:8px;border:1px solid #eef3fb;">${iid}</td><td style="padding:8px;border:1px solid #eef3fb;">${mobile}</td><td style="padding:8px;border:1px solid #eef3fb;">${sms}</td>`;
+                tbody.appendChild(tr);
+            }
+
+            document.getElementById('csvTitle').textContent = title || file;
+            // csvViewer is now always visible when container is shown
+        }catch(e){
+            alert('Unable to load CSV: '+e.message);
+        }
+    }
+
+    // attach handlers for sidebar buttons
+    const sidebarButtons = Array.from(document.querySelectorAll('.sidebar .sms-btn'));
+    const showAllBtn = document.getElementById('showAllBtn');
+    const mainContent = document.getElementById('mainContent');
+    const csvViewerContainer = document.getElementById('csvViewerContainer');
+
+    sidebarButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const file = btn.getAttribute('data-file');
+            const title = btn.textContent.trim();
+
+            if(file){
+                // CSV button: hide main content and show CSV viewer full width
+                if(mainContent) mainContent.style.display = 'none';
+                if(csvViewerContainer) csvViewerContainer.style.display = '';
+                loadAndRenderCsv(file, title);
+            } else {
+                // non-CSV button (Dashboard/Regular/Logout): just hide main content
+                if(mainContent) mainContent.style.display = 'none';
+                if(csvViewerContainer) csvViewerContainer.style.display = 'none';
+            }
+        });
+    });
+
+    if(showAllBtn){
+        showAllBtn.addEventListener('click', ()=>{
+            // restore main content and hide CSV viewer
+            if(mainContent) mainContent.style.display = '';
+            if(csvViewerContainer) csvViewerContainer.style.display = 'none';
+        });
+    }
     </script>
 
 </body>
