@@ -27,7 +27,14 @@
         <ul>
             <li><a href="../index.html" style="color:inherit;text-decoration:none;display:block;">Dashboard</a></li>
             <li class="active">Regular excel SMS</li>
-            <li>Refill SMS</li>
+            <li>2022 Anuunal SMS </li>
+            <li>2023 Half Yearly SMS </li>
+            <li>2023 Anuunal SMS </li>
+            <li>2024 Half Yearly SMS </li>
+            <li>2024 Anuunal SMS </li>
+            <li>2025 Half Yearly SMS </li>
+            <li>2025 Anuunal SMS </li>
+
             <li>Logout</li>
         </ul>
     </div>
@@ -64,13 +71,15 @@
             <div style="width:320px; background:#fff; padding:16px; border:1px solid #ececec; border-radius:6px;">
                 <h3 style="margin:6px 0 12px 0;">Balance</h3>
                 <div style="font-size:15px;margin-bottom:8px;color:#222;">Show Balance : <strong>101 Taka</strong></div>
-                <div style="font-size:15px;color:#222;">Sms available : <strong>101 ÷ 0.47 = 214.89</strong></div>
-                <div style="margin-top:8px;color:#888;font-size:12px;">(Displayed value rounded to 2 decimal places)</div>
+                <div style="font-size:16px;margin-top:8px;color:#222;">Sms available  <strong style="font-size:18px;">214</strong></div>
+                <div style="margin-top:8px;color:#888;font-size:12px;"> Validity : 30/10/2025 </div>
             </div>
         </div>
     </div>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Data labels plugin for Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script>
         document.getElementById('sendSingleBtn').onclick = async function() {
             let phone = document.getElementById('manualPhone').value.trim();
@@ -172,12 +181,33 @@
         ];
         const smsReportValues = [4027, 5081, 5120, 5081, 5720, 5319];
 
-        // Initialize Chart.js line chart
+        // Initialize Chart.js line chart (enhanced visuals)
         function initSmsChart() {
-            const ctx = document.getElementById('smsChart').getContext('2d');
-            const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-            gradient.addColorStop(0, 'rgba(52,152,219,0.25)');
+            const canvas = document.getElementById('smsChart');
+            const ctx = canvas.getContext('2d');
+
+            // gradient for fill
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height || 150);
+            gradient.addColorStop(0, 'rgba(52,152,219,0.28)');
+            gradient.addColorStop(0.6, 'rgba(52,152,219,0.12)');
             gradient.addColorStop(1, 'rgba(52,152,219,0)');
+
+            // small shadow plugin for subtle depth
+            const shadowPlugin = {
+                id: 'shadowPlugin',
+                beforeDatasetsDraw(chart, args, options) {
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(52,152,219,0.18)';
+                    ctx.shadowBlur = 18;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 8;
+                },
+                afterDatasetsDraw(chart, args, options) {
+                    chart.ctx.restore();
+                }
+            };
+            Chart.register(shadowPlugin);
 
             new Chart(ctx, {
                 type: 'line',
@@ -186,25 +216,62 @@
                     datasets: [{
                         label: 'Sended SMS',
                         data: smsReportValues,
-                        borderColor: '#3498db',
+                        borderColor: '#1e88e5',
                         backgroundColor: gradient,
                         fill: true,
-                        tension: 0.25,
-                        pointRadius: 4,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6,
                         pointBackgroundColor: '#fff',
-                        pointBorderColor: '#3498db',
+                        pointBorderColor: '#1e88e5',
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true }
-                    },
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { mode: 'index', intersect: false }
-                    }
+                        tooltip: {
+                            enabled: true,
+                            backgroundColor: 'rgba(0,0,0,0.75)',
+                            titleFont: { weight: '600' },
+                            callbacks: {
+                                label: function(context) {
+                                    const v = context.parsed.y;
+                                    return 'Sended SMS: ' + (v || 0).toLocaleString();
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: true,
+                            align: 'end',
+                            anchor: 'end',
+                            formatter: function(value) { return (value || 0).toLocaleString(); },
+                            color: '#0f172a',
+                            backgroundColor: 'rgba(255,255,255,0.85)',
+                            borderRadius: 4,
+                            padding: 4,
+                            font: { weight: '600', size: 11 }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#4b5563', maxRotation: 0 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(15,23,42,0.04)' },
+                            ticks: {
+                                color: '#4b5563',
+                                callback: function(value){ return value.toLocaleString(); }
+                            }
+                        }
+                    },
+                    animation: { duration: 900, easing: 'easeOutQuart' }
                 }
             });
         }
