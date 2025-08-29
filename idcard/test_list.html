@@ -74,7 +74,7 @@
       .toolbar { display: none; }
       .table-wrap { overflow: visible; box-shadow: none; border: 1px solid black; border-radius: 0; }
       table { min-width: auto; width: 100%; border-collapse: collapse; }
-  thead th { background: white; border-bottom: 2px solid black; position: static; padding: 0.3cm; height: 2.2cm; font-size: 8px; word-wrap: break-word; white-space: normal; }
+  thead th { background: white; border-bottom: 2px solid black; position: static; padding: 0.3cm; height: 1cm; font-size: 8px; word-wrap: break-word; white-space: normal; }
   tbody td { border-top: 1px solid black; padding: 0.3cm; height: 2.2cm; min-height: 2.2cm; vertical-align: middle; font-size: 8px; word-wrap: break-word; white-space: normal; }
   tbody tr { height: 2.2cm; min-height: 2.2cm; }
       .muted { color: black; }
@@ -371,15 +371,18 @@
       let yPosition = margin;
       let currentPage = 1;
 
-      // Add title
-      doc.setFontSize(12);
-      doc.text('Student ID Card List', pageWidth / 2, yPosition + 0.5, { align: 'center' });
-      yPosition += 0.8;
+  // Add title
+  doc.setFontSize(12);
+  doc.text('Student ID Card List', pageWidth / 2, yPosition + 0.5, { align: 'center' });
+  yPosition += 0.8;
 
-      // Add headers
-      doc.setFontSize(8);
-      doc.setFillColor(240, 240, 240);
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, cellHeight, 'F');
+  // header height separate
+  const headerHeight = 1; // 1 cm header as requested
+
+  // Add headers
+  doc.setFontSize(8);
+  doc.setFillColor(240, 240, 240);
+  doc.rect(margin, yPosition, pageWidth - 2 * margin, headerHeight, 'F');
       doc.setTextColor(0, 0, 0);
 
       let currentX = margin;
@@ -390,8 +393,8 @@
         // Wrap header text if needed
         const wrappedHeader = doc.splitTextToSize(header, colWidth - 0.2);
 
-        // If header is too tall for the cell, truncate it
-        const maxLines = Math.floor(cellHeight / 0.3);
+        // If header is too tall for the header cell, truncate it
+        const maxLines = Math.floor(headerHeight / 0.3);
         if (wrappedHeader.length > maxLines) {
           wrappedHeader.splice(maxLines - 1);
           if (typeof wrappedHeader[wrappedHeader.length - 1] === 'string') {
@@ -400,13 +403,13 @@
         }
 
         const headerTextHeight = wrappedHeader.length * 0.3;
-        const headerY = yPosition + (cellHeight - headerTextHeight) / 2 + 0.3;
+        const headerY = yPosition + (headerHeight - headerTextHeight) / 2 + 0.3;
         doc.text(wrappedHeader, x, headerY, { align: 'center' });
 
         currentX += colWidth;
       });
 
-      yPosition += cellHeight;
+  yPosition += headerHeight;
 
       // Add data rows
       for (let i = 0; i < rows.length; i++) {
@@ -421,7 +424,7 @@
 
           // Re-add headers on new page
           doc.setFillColor(240, 240, 240);
-          doc.rect(margin, yPosition, pageWidth - 2 * margin, cellHeight, 'F');
+          doc.rect(margin, yPosition, pageWidth - 2 * margin, headerHeight, 'F');
           doc.setTextColor(0, 0, 0);
 
           let headerX = margin;
@@ -431,7 +434,7 @@
             const wrappedHeader = doc.splitTextToSize(header, colWidth - 0.2);
 
             // If header is too tall for the cell, truncate it
-            const maxLines = Math.floor(cellHeight / 0.3);
+            const maxLines = Math.floor(headerHeight / 0.3);
             if (wrappedHeader.length > maxLines) {
               wrappedHeader.splice(maxLines - 1);
               if (typeof wrappedHeader[wrappedHeader.length - 1] === 'string') {
@@ -440,13 +443,13 @@
             }
 
             const headerTextHeight = wrappedHeader.length * 0.3;
-            const headerY = yPosition + (cellHeight - headerTextHeight) / 2 + 0.3;
+            const headerY = yPosition + (headerHeight - headerTextHeight) / 2 + 0.3;
             doc.text(wrappedHeader, x, headerY, { align: 'center' });
 
             headerX += colWidth;
           });
 
-          yPosition += cellHeight;
+          yPosition += headerHeight;
         }
 
         // Draw cell borders
@@ -608,7 +611,7 @@
         <table role="table" aria-label="Testimonials">
           <thead>
             <tr>
-              <th>SL. NO</th>
+              <th>SL</th>
               <th>Class</th>
               <th>Section</th>
               <th>Roll</th>
