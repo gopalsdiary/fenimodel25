@@ -5,12 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ID card list </title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <!-- Kalpurush Bangla font -->
+  <!-- Kalp          <thead>
+            <tr>
+              <th>SL. NO</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Roll</th>
+              <th>iid</th>
+              <th>Student Name</th>
+              <th>Father's Name</th>
+              <th>Phone</th>
+              <th>Blood Group</th>
+              <th>Photo</th>
+              <th>Comment</th>
+              <th>Action</th>
+            </tr>
+          </thead>ngla font -->
   <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
   <style>
     :root { color-scheme: light dark; }
     body { font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f6f7f9; color: #111; }
-    .container { max-width: 1100px; margin: 0 auto; width: 100%; padding: 0 1rem; box-sizing: border-box; }
+    .container { width: 100%; padding: 0 0.5rem; box-sizing: border-box; }
     header { position: sticky; top: 0; background: white; padding: 0.85rem 0; border-bottom: 1px solid #e5e7eb; z-index: 10; }
     h1 { margin: 0; font-size: 1.2rem; text-align:center; }
     main { padding: 1rem 0 2rem; }
@@ -21,10 +36,12 @@
     .nav-btn.secondary:hover { background:#475569; }
     input[type="search"]{ padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: 8px; min-width: 240px; }
     .table-wrap { overflow: auto; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
-    table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    table { border-collapse: collapse; width: 100%; min-width: 100%; }
     thead th { position: sticky; top: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: left; padding: .75rem; font-size: .9rem; }
-    tbody td { border-top: 1px solid #f1f5f9; padding: .65rem .75rem; font-size: .92rem; }
+    tbody td { border-top: 1px solid #f1f5f9; padding: .65rem .75rem; font-size: .92rem; vertical-align: middle; }
     tbody tr:hover { background: #f9fafb; }
+    .photo-cell img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s; }
+    .photo-cell img:hover { transform: scale(1.1); }
     .muted { color: #6b7280; }
     .link { color: #2563eb; text-decoration: none; font-weight: 600; }
     .link:hover { text-decoration: underline; }
@@ -49,8 +66,32 @@
       input[type="search"]{ background: #0f162a; color: #e5e7eb; border-color: #263148; }
       .muted { color: #9aa5b1; }
     }
+    /* Printable styles */
+    @media print {
+      body { background: white; color: black; font-size: 8px; margin: 1cm; }
+      .container { max-width: none; padding: 0; }
+      header { position: static; background: white; border: none; padding: 0; }
+      .toolbar { display: none; }
+      .table-wrap { overflow: visible; box-shadow: none; border: 1px solid black; border-radius: 0; }
+      table { min-width: auto; width: 100%; border-collapse: collapse; }
+  thead th { background: white; border-bottom: 2px solid black; position: static; padding: 0.3cm; height: 2.2cm; font-size: 8px; word-wrap: break-word; white-space: normal; }
+  tbody td { border-top: 1px solid black; padding: 0.3cm; height: 2.2cm; min-height: 2.2cm; vertical-align: middle; font-size: 8px; word-wrap: break-word; white-space: normal; }
+  tbody tr { height: 2.2cm; min-height: 2.2cm; }
+      .muted { color: black; }
+      .link { color: black; text-decoration: none; }
+      .pdf-badge { display: none; }
+      .nav-btn { display: none; }
+      h1 { font-size: 1rem; }
+      main { padding: 0; }
+      .status { display: none; }
+  /* Photo styling for print: ensure printed photos are 2.2cm x 2.2cm */
+  tbody td img { width: 2.2cm !important; height: 2.2cm !important; border: 1px solid #000 !important; border-radius: 2px !important; object-fit: cover !important; }
+      .photo-cell { text-align: center; }
+      .photo-cell img { max-width: 100%; max-height: 100%; }
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
     function getVal(row, headers, key){ const h = headers[key]; const v = h ? row[h] : ''; return v == null ? '' : String(v).trim(); }
@@ -60,18 +101,21 @@
       const norm = s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
       const want={
         sl:['sl','serial','serialno','serialnumber','serial_no'],
-        name:['name_bangla','studentname','fullname'],
-        father:['father_bangla','fathername','fathersname','father_s_name','fname'],
+        name:['name_bangla','studentname','fullname','student_name'],
+        father:['father_bangla','fathername','fathersname','father_s_name','fname','father_name'],
         mother:['mother_bangla','mothername','mothersname','m_name'],
-        roll:['roll_bangla','rollno','rollnumber'],
+        roll:['roll_bangla','roll','rollnumber'],
         iid:['iid','id','studentid','sid','uniqueid'],
         registrationnumber:['registrationnumber','registration number','registration','regno','reg no','reg_number'],
         dob:['dob','dateofbirth','birthdate','date of birth'],
-        gender:['gender','sex'],
-        group:['group','grp'],
-        gpa:['gpa','gradepoint','grade point','result'],
         sscmonth:['sscmonth','exammonth','exam month','month'],
-        session:['session','academic session','sess','sessionyear','year']
+        session:['session','academic session','sess','sessionyear','year'],
+        class:['class','cls','standard'],
+        section:['section','sec','division'],
+        phone:['phone','mobile','contact','contactno','phone_number'],
+        bloodgroup:['bloodgroup','blood group','blood','blood_group'],
+        photo:['photo','image','pic','photourl','imageurl'],
+        comment:['comment','remarks','note','comments']
       };
       for(const f of fields){
         const nf=norm(f);
@@ -98,6 +142,33 @@
       const father=getVal(obj, headers,'father');
       const roll=getVal(obj, headers,'roll');
       const iid=getVal(obj, headers,'iid');
+      const cls=getVal(obj, headers,'class');
+      const section=getVal(obj, headers,'section');
+      const phone=getVal(obj, headers,'phone');
+      const bloodgroup=getVal(obj, headers,'bloodgroup');
+      const photo=getVal(obj, headers,'photo');
+      const comment=getVal(obj, headers,'comment');
+      
+      // Find matching photo from photo links
+      let photoUrl = '';
+      if(window.__PHOTO_LINKS && window.__PHOTO_LINKS.length > 0){
+        const normId = String(iid || sl || '').replace(/^0+/, '');
+        photoUrl = window.__PHOTO_LINKS.find(u => u && (u.includes('avatar-'+normId) || u.includes(normId))) || '';
+      }
+      
+      // Create photo element
+      let photoElement = document.createElement('span');
+      photoElement.textContent = photo || 'No Photo';
+      photoElement.className = 'photo-cell';
+      if(photoUrl){
+        const img = document.createElement('img');
+        img.src = photoUrl;
+        img.alt = 'Student Photo';
+        img.onerror = () => { img.style.display = 'none'; photoElement.textContent = 'No Photo'; };
+        photoElement.innerHTML = '';
+        photoElement.appendChild(img);
+      }
+      
       // Name link
       const nameLink=document.createElement('a');
       nameLink.className='link';
@@ -107,16 +178,8 @@
       if(iid) certHref = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
       else if(sl) certHref = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
       nameLink.href = certHref;
-      // PDF badge link (open in new tab; can be used by browser print to save as PDF)
-      const pdfLink=document.createElement('a');
-      pdfLink.className='pdf-badge';
-      pdfLink.textContent='PDF';
-      pdfLink.href=certHref + (certHref.includes('?') ? '&' : '?') + 'view=pdf';
-      pdfLink.target='_blank';
-      pdfLink.rel='noopener';
-      pdfLink.title='Open certificate (use browser Print to save as PDF)';
       const tr=document.createElement('tr');
-  createRow(tr,[sl,{element:nameLink},father,iid,{element:pdfLink}]);
+  createRow(tr,[sl,cls,section,roll,iid,{element:nameLink},father,phone,bloodgroup,{element:photoElement},comment]);
       rows.push(tr);
     }
     return rows;
@@ -230,8 +293,291 @@
       const url = 'verify.html';
       window.open(url, '_blank');
     }
+
+    // Load local photo links (one URL per line) and expose as window.__PHOTO_LINKS
+    let PHOTO_LINKS = [];
+    function loadPhotoLinks(){
+      // relative path from idcard/test_list.html to photo/link.csv
+      const path = '../photo/link.csv';
+      fetch(path).then(r => {
+        if(!r.ok) throw new Error('no photo list');
+        return r.text();
+      }).then(txt => {
+        PHOTO_LINKS = txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        window.__PHOTO_LINKS = PHOTO_LINKS;
+      }).catch(() => { PHOTO_LINKS = []; window.__PHOTO_LINKS = PHOTO_LINKS; });
+    }
+
+    // Download PDF function with 1cm high cells and 1cm margins
+    // Features:
+    // - 1cm margins on all sides
+    // - 1cm high cells (rows)
+    // - Text wrapping within cells
+    // - Proper header and data alignment
+    async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'cm', 'a4'); // Portrait, cm, A4
+
+      // Get table data
+      const table = document.querySelector('table');
+      const rows = Array.from(table.querySelectorAll('tbody tr'));
+      const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+
+      // Remove Action column from headers if it exists
+      const filteredHeaders = headers.filter(h => h !== 'Action');
+
+      // Set up PDF styling
+      doc.setFontSize(8);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 1; // 1cm margin on all sides
+  const cellHeight = 2.2; // 2.2cm high cells
+
+      // Define custom column widths (in cm) as requested:
+      // SL. NO, Class, Roll => 1.0 cm each
+      // Section => 1.3 cm
+      // Phone => 2.5 cm
+      const availableWidth = pageWidth - 2 * margin;
+      const fixedWidthMap = {
+        'SL. NO': 1.0,
+        'Class': 1.0,
+        'Roll': 1.0,
+        'Section': 1.3,
+        'Phone': 2.5
+      };
+
+      // Sum fixed widths for headers present
+      let fixedColumnsWidth = 0;
+      let fixedColumnsCount = 0;
+      filteredHeaders.forEach(h => {
+        const w = fixedWidthMap[h];
+        if (w && !isNaN(w)) { fixedColumnsWidth += w; fixedColumnsCount++; }
+      });
+
+      const remainingColumns = Math.max(0, filteredHeaders.length - fixedColumnsCount);
+      const remainingWidth = Math.max(0, availableWidth - fixedColumnsWidth);
+      const defaultWidth = remainingColumns > 0 ? (remainingWidth / remainingColumns) : Math.max(0, remainingWidth);
+
+      // Create column width mapping
+      const columnWidths = {};
+      filteredHeaders.forEach((header, index) => {
+        if (Object.prototype.hasOwnProperty.call(fixedWidthMap, header)) {
+          columnWidths[index] = fixedWidthMap[header];
+        } else {
+          columnWidths[index] = defaultWidth;
+        }
+      });
+
+      let yPosition = margin;
+      let currentPage = 1;
+
+      // Add title
+      doc.setFontSize(12);
+      doc.text('Student ID Card List', pageWidth / 2, yPosition + 0.5, { align: 'center' });
+      yPosition += 0.8;
+
+      // Add headers
+      doc.setFontSize(8);
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPosition, pageWidth - 2 * margin, cellHeight, 'F');
+      doc.setTextColor(0, 0, 0);
+
+      let currentX = margin;
+      filteredHeaders.forEach((header, index) => {
+        const colWidth = columnWidths[index];
+        const x = currentX + (colWidth / 2);
+
+        // Wrap header text if needed
+        const wrappedHeader = doc.splitTextToSize(header, colWidth - 0.2);
+
+        // If header is too tall for the cell, truncate it
+        const maxLines = Math.floor(cellHeight / 0.3);
+        if (wrappedHeader.length > maxLines) {
+          wrappedHeader.splice(maxLines - 1);
+          if (typeof wrappedHeader[wrappedHeader.length - 1] === 'string') {
+            wrappedHeader[wrappedHeader.length - 1] = wrappedHeader[wrappedHeader.length - 1].substring(0, wrappedHeader[wrappedHeader.length - 1].length - 3) + '...';
+          }
+        }
+
+        const headerTextHeight = wrappedHeader.length * 0.3;
+        const headerY = yPosition + (cellHeight - headerTextHeight) / 2 + 0.3;
+        doc.text(wrappedHeader, x, headerY, { align: 'center' });
+
+        currentX += colWidth;
+      });
+
+      yPosition += cellHeight;
+
+      // Add data rows
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = Array.from(row.querySelectorAll('td'));
+
+        // Check if we need a new page
+        if (yPosition + cellHeight > pageHeight - margin) {
+          doc.addPage();
+          currentPage++;
+          yPosition = margin;
+
+          // Re-add headers on new page
+          doc.setFillColor(240, 240, 240);
+          doc.rect(margin, yPosition, pageWidth - 2 * margin, cellHeight, 'F');
+          doc.setTextColor(0, 0, 0);
+
+          let headerX = margin;
+          filteredHeaders.forEach((header, index) => {
+            const colWidth = columnWidths[index];
+            const x = headerX + (colWidth / 2);
+            const wrappedHeader = doc.splitTextToSize(header, colWidth - 0.2);
+
+            // If header is too tall for the cell, truncate it
+            const maxLines = Math.floor(cellHeight / 0.3);
+            if (wrappedHeader.length > maxLines) {
+              wrappedHeader.splice(maxLines - 1);
+              if (typeof wrappedHeader[wrappedHeader.length - 1] === 'string') {
+                wrappedHeader[wrappedHeader.length - 1] = wrappedHeader[wrappedHeader.length - 1].substring(0, wrappedHeader[wrappedHeader.length - 1].length - 3) + '...';
+              }
+            }
+
+            const headerTextHeight = wrappedHeader.length * 0.3;
+            const headerY = yPosition + (cellHeight - headerTextHeight) / 2 + 0.3;
+            doc.text(wrappedHeader, x, headerY, { align: 'center' });
+
+            headerX += colWidth;
+          });
+
+          yPosition += cellHeight;
+        }
+
+        // Draw cell borders
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.01);
+
+        let cellX = margin;
+        for (let j = 0; j < filteredHeaders.length; j++) {
+          const colWidth = columnWidths[j];
+          doc.rect(cellX, yPosition, colWidth, cellHeight);
+          cellX += colWidth;
+        }
+
+        // Add cell content
+        let contentX = margin;
+        for (let index = 0; index < filteredHeaders.length; index++) {
+          const colWidth = columnWidths[index] || defaultWidth;
+          if (index >= cells.length) { contentX += colWidth; continue; }
+          const cell = cells[index];
+          const x = contentX + (colWidth / 2);
+          let text = (cell && cell.textContent) ? cell.textContent.trim() : '';
+
+          // Handle photo cells: try to embed the actual image at 2.2cm x 2.2cm
+          const img = cell ? cell.querySelector('img') : null;
+          if (img && img.src) {
+            try {
+              const imgData = await (async function(src){
+                return new Promise(resolve => {
+                  try {
+                    const image = new Image();
+                    image.crossOrigin = 'anonymous';
+                    image.onload = () => {
+                      try {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 400; // limit for safety
+                        let w = image.naturalWidth;
+                        let h = image.naturalHeight;
+                        if (w > maxDim || h > maxDim) {
+                          const ratio = Math.min(maxDim / w, maxDim / h);
+                          w = Math.round(w * ratio);
+                          h = Math.round(h * ratio);
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(image, 0, 0, w, h);
+                        const data = canvas.toDataURL('image/jpeg', 0.85);
+                        resolve(data);
+                      } catch (err) { resolve(null); }
+                    };
+                    image.onerror = () => resolve(null);
+                    image.src = src;
+                  } catch (e) { resolve(null); }
+                });
+              })(img.src);
+
+              if (imgData) {
+                const imgW = 2.2; // cm
+                const imgH = 2.2; // cm
+                const imgX = contentX + (colWidth - imgW) / 2;
+                const imgY = yPosition + (cellHeight - imgH) / 2;
+                try { doc.addImage(imgData, 'JPEG', imgX, imgY, imgW, imgH); }
+                catch (e) { doc.text('[Photo]', contentX + (colWidth / 2), yPosition + 0.5, { align: 'center' }); }
+              } else {
+                doc.text('[Photo]', contentX + (colWidth / 2), yPosition + 0.5, { align: 'center' });
+              }
+            } catch (e) {
+              doc.text('[Photo]', contentX + (colWidth / 2), yPosition + 0.5, { align: 'center' });
+            }
+          } else {
+            // Wrap text within cell
+            const wrappedText = doc.splitTextToSize(text, colWidth - 0.2);
+            const maxLines = Math.floor(cellHeight / 0.3);
+            if (wrappedText.length > maxLines) {
+              wrappedText.splice(maxLines - 1);
+              if (typeof wrappedText[wrappedText.length - 1] === 'string') {
+                wrappedText[wrappedText.length - 1] = wrappedText[wrappedText.length - 1].substring(0, wrappedText[wrappedText.length - 1].length - 3) + '...';
+              }
+            }
+            const finalTextHeight = wrappedText.length * 0.3;
+            const textY = yPosition + (cellHeight - finalTextHeight) / 2 + 0.3; // Center vertically
+            doc.text(wrappedText, x, textY, { align: 'center' });
+          }
+
+          contentX += colWidth;
+        }
+
+        yPosition += cellHeight;
+      }
+
+      // Save the PDF
+      doc.save('student_list.pdf');
+    }
+
+    // Test PDF settings function
+    function testPDFSettings() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('l', 'cm', 'a4');
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 1;
+  const cellHeight = 2.2;
+
+      // Test margins
+      doc.setDrawColor(255, 0, 0);
+      doc.setLineWidth(0.05);
+      doc.rect(margin, margin, pageWidth - 2 * margin, pageHeight - 2 * margin);
+
+      // Test cell height
+      doc.setDrawColor(0, 255, 0);
+      doc.rect(margin, margin, pageWidth - 2 * margin, cellHeight);
+
+      // Add test text
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('PDF Settings Test', pageWidth / 2, margin + 0.5, { align: 'center' });
+      doc.text('Red border = 1cm margins', pageWidth / 2, margin + 0.8, { align: 'center' });
+      doc.text('Green rectangle = 1cm cell height', pageWidth / 2, margin + 1.1, { align: 'center' });
+
+      // Test text wrapping
+      const testText = 'This is a long text that should wrap within the cell boundaries when using the PDF generation function.';
+      const wrappedText = doc.splitTextToSize(testText, 5);
+      doc.text(wrappedText, pageWidth / 2, margin + 1.5, { align: 'center' });
+
+      doc.save('pdf_settings_test.pdf');
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       initLoad();
+      loadPhotoLinks(); // Load photo links when page loads
       const b1=document.getElementById('genAllBtn');
       const b2=document.getElementById('genAllBtnBottom');
       if(b1) b1.addEventListener('click', generateAll);
@@ -247,6 +593,9 @@
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
         <span class="muted">Rows: <span id="count">0</span></span>
+        <button class="nav-btn" onclick="window.print()" style="background:#059669;">🖨️ Print List</button>
+        <button class="nav-btn" onclick="downloadPDF()" style="background:#dc2626;">📄 Download PDF</button>
+        <button class="nav-btn" onclick="testPDFSettings()" style="background:#059669;">🧪 Test PDF Settings</button>
         <a class="nav-btn" href="../index.html">Home</a>
         <a class="nav-btn secondary" href="https://docs.google.com/spreadsheets/d/1ET8JKqhrqXUwb1KVbKVN3ldEQeDtHHN2qckzTr5lI4E/edit?gid=0#gid=0'">Database for ID Cards </a>
   <a id="genAllBtn" class="nav-btn" href="/index.html">Home</a>
@@ -260,9 +609,16 @@
           <thead>
             <tr>
               <th>SL. NO</th>
-              <th>Name </th>
-              <th>Father’s Name</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Roll</th>
               <th>iid</th>
+              <th>Student Name</th>
+              <th>Father's Name</th>
+              <th>Phone</th>
+              <th>Blood Group</th>
+              <th>Photo</th>
+              <th>Comment</th>
             </tr>
           </thead>
             <tbody id="tbody"></tbody>
