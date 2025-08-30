@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Details</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a6cf7;
+            --secondary-color: #6c5ce7;
+            --accent-color: #ff7675;
+            --primary-light: #e8f0fe;
+            --secondary-light: #f0f2ff;
+            --accent-light: #fff0f0;
+            --text-primary: #2d3436;
+            --text-secondary: #636e72;
+            --bg-color: #f8f9ff;
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 8px;
+            --shadow-soft: 0 10px 30px rgba(74, 108, 247, 0.1);
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+            box-shadow: 0 0 40px rgba(74, 108, 247, 0.08);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(74, 108, 247, 0.2);
+        }
+
+        .header h1 {
+            font-weight: 700;
+            font-size: 2rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1;
+            letter-spacing: 0.5px;
+            background: linear-gradient(to right, #fff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+
+        .back-btn {
+            padding: 0.8rem 1.5rem;
+            background-color: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: var(--transition-smooth);
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            letter-spacing: 0.5px;
+            text-decoration: none;
+        }
+
+        .back-btn:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 118, 117, 0.3);
+        }
+
+        .content {
+            padding: 2.5rem;
+        }
+
+        .student-card {
+            background: white;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-soft);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(74, 108, 247, 0.1);
+        }
+
+        .student-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            background-color: var(--accent-light);
+            color: var(--accent-color);
+            padding: 1.2rem 1.8rem;
+            border-radius: var(--radius-md);
+            margin-bottom: 1.5rem;
+            border-left: 4px solid var(--accent-color);
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 1.5rem;
+            }
+
+            .header {
+                padding: 1.2rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .student-card {
+                padding: 1.5rem;
+            }
+
+            .student-info {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .content {
+                padding: 1rem;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.3rem;
+            }
+
+            .student-card {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Student Details</h1>
+            <a href="student-dashboard.html" class="back-btn">Back to Dashboard</a>
+        </div>
+        
+        <div class="content">
+            <div id="error-container" class="error" style="display: none;"></div>
+            <div id="loading" class="loading">Loading student information...</div>
+            <div id="student-details" class="student-card" style="display: none;">
+                <div class="student-info" id="student-info-container">
+                    <!-- Student details will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get student ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const studentId = urlParams.get('iid');
+
+        // Google Sheets configuration
+        const SHEET_ID = '1ARS7FReiM1z_UsN5NbYu5__hujB7TOAG6kU6GIm6BKM';
+        const SHEET_NAME = 'all student';
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
+
+        // DOM Elements
+        const loadingElement = document.getElementById('loading');
+        const studentDetailsElement = document.getElementById('student-details');
+        const errorContainer = document.getElementById('error-container');
+        const studentInfoContainer = document.getElementById('student-info-container');
+
+        // Function to show error
+        function showError(message, error = null) {
+            errorContainer.textContent = message;
+            if (error) {
+                console.error('Detailed error:', error);
+            }
+            errorContainer.style.display = 'block';
+            loadingElement.style.display = 'none';
+            studentDetailsElement.style.display = 'none';
+        }
+
+        // Function to format field name
+        function formatFieldName(name) {
+            return name
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        // Function to display student data
+        function displayStudentData(headers, data) {
+            // Convert studentId to string for comparison
+            const studentIid = studentId.toString();
+            
+            // Find the student row by matching the iid column
+            const studentRow = data.find(row => row.iid && row.iid.toString() === studentIid);
+
+            if (!studentRow) {
+                showError(`Student with IID ${studentIid} not found. Please check the IID and try again.`);
+                return;
+            }
+
+            // Create info groups for the student data
+            studentInfoContainer.innerHTML = '';
+            
+            // Create info groups for all fields
+            headers.forEach(header => {
+                if (header && header.trim() !== '') {
+                    const infoGroup = document.createElement('div');
+                    infoGroup.className = 'info-group';
+                    
+                    const label = document.createElement('div');
+                    label.className = 'info-label';
+                    label.textContent = formatFieldName(header);
+                    
+                    const value = document.createElement('div');
+                    value.className = 'info-value';
+                    value.textContent = studentRow[header] || 'N/A';
+                    
+                    infoGroup.appendChild(label);
+                    infoGroup.appendChild(value);
+                    studentInfoContainer.appendChild(infoGroup);
+                }
+            });
+
+            // Show the details section
+            loadingElement.style.display = 'none';
+            studentDetailsElement.style.display = 'block';
+        }
+
+        // Function to fetch student data from Google Sheets
+        async function fetchStudentData() {
+            if (!studentId) {
+                showError('Student IID is missing. Please provide a valid IID in the URL (e.g., ?iid=12345)');
+                return;
+            }
+
+            try {
+                // First, try to fetch from localStorage
+                const cachedData = localStorage.getItem('studentData');
+                const lastFetchTime = localStorage.getItem('lastFetchTime');
+                const now = Date.now();
+                
+                // If we have cached data less than 5 minutes old, use it
+                if (cachedData && lastFetchTime && (now - parseInt(lastFetchTime)) < 5 * 60 * 1000) {
+                    const { headers, data } = JSON.parse(cachedData);
+                    displayStudentData(headers, data);
+                    return;
+                }
+
+                // Fetch data from Google Sheets
+                const response = await fetch(SHEET_URL, { cache: 'force-cache' });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const csvData = await response.text();
+                const rows = csvData.split('\n').filter(row => row.trim() !== '');
+                
+                if (rows.length === 0) {
+                    throw new Error('No data found in the sheet');
+                }
+
+                // Parse headers and data
+                const headers = rows[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/)
+                    .map(h => h.replace(/(^"|"$)/g, '').trim().toLowerCase());
+
+                const data = rows.slice(1).map(row => {
+                    const values = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                    return headers.reduce((obj, header, index) => {
+                        obj[header] = values[index] ? values[index].replace(/(^"|"$)/g, '').trim() : '';
+                        return obj;
+                    }, {});
+                });
+
+                // Cache the data
+                localStorage.setItem('studentData', JSON.stringify({ headers, data }));
+                localStorage.setItem('lastFetchTime', now.toString());
+
+                displayStudentData(headers, data);
+                
+            } catch (error) {
+                console.error('Error fetching student data:', error);
+                showError('Error loading student details. Please try again later.', error);
+            }
+        }
+
+        // Fetch student data when page loads
+        document.addEventListener('DOMContentLoaded', fetchStudentData);
+    </script>
+</body>
+</html>
