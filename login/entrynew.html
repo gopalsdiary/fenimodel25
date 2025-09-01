@@ -170,10 +170,10 @@
   const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
         tr.innerHTML = `
           <td>${escapeHtml(iid)}</td>
-          <td>${escapeHtml(r['Class']||'')}</td>
-          <td>${escapeHtml(r['Section']||'')}</td>
-          <td>${escapeHtml(r['Roll']||'')}</td>
-          <td>${escapeHtml(r['Name']||'')}</td>
+          <td>${escapeHtml(r['class_2025']||'')}</td>
+          <td>${escapeHtml(r['section_2025']||'')}</td>
+          <td>${escapeHtml(r['roll_2025']||'')}</td>
+          <td>${escapeHtml(r['student_name']||'')}</td>
           <td><button class="btn" data-iid="${iid}">Edit</button></td>
         `;
         const btn = tr.querySelector('button');
