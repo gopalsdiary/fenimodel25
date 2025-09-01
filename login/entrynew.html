@@ -25,7 +25,7 @@
   </style>
 </head>
 <body>
-  <h2>previous_data2025 : Data Overview (Udayan)</h2>
+  <h2>student_database : Data Overview </h2>
   <div>
     <button id="refreshBtn" class="btn">Refresh</button>
     <span id="status" style="margin-left:12px;color:#444"></span>
@@ -78,7 +78,7 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    const tableName = 'previous_data2025';
+    const tableName = 'student_database';
 
   const tbody = document.querySelector('#dataTable tbody');
     const statusEl = document.getElementById('status');
@@ -112,8 +112,8 @@
       try{
         const { data, error } = await supabase
           .from(tableName)
-          .select('IID, Class, Section, Roll, Name')
-          .order('IID', { ascending: true })
+          .select('iid, Class, Section, Roll, Name')
+          .order('iid', { ascending: true })
           .limit(5000);
         if(error){
           const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
@@ -167,7 +167,7 @@
       tbody.innerHTML = '';
       rows.forEach(r => {
         const tr = document.createElement('tr');
-        const iid = (r['IID'] ?? r.IID) || '';
+  const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
         tr.innerHTML = `
           <td>${escapeHtml(iid)}</td>
           <td>${escapeHtml(r['Class']||'')}</td>
@@ -187,7 +187,7 @@
       });
     }
 
-    async function openEditByIID(iid){
+  async function openEditByIID(iid){
       // fetch full row from DB to ensure we have all columns
       modalNotice.textContent = '';
       currentIID = iid;
@@ -195,7 +195,7 @@
         const { data, error } = await supabase
           .from(tableName)
           .select('*')
-          .eq('IID', Number(iid))
+      .eq('iid', Number(iid))
           .limit(1)
           .single();
         if(error){
@@ -250,7 +250,7 @@
       const payload = {};
       inputs.forEach(inp =>{
         const field = inp.getAttribute('data-field');
-        if(field === 'IID') return; // don't try to update primary key
+    if(field === 'iid' || field === 'IID') return; // don't try to update primary key
         const v = inp.value === '' ? null : inp.value;
         payload[field] = v;
       });
@@ -260,7 +260,7 @@
         const { data, error } = await supabase
           .from(tableName)
           .update(payload)
-          .eq('IID', Number(currentIID));
+          .eq('iid', Number(currentIID));
         if(error){
           const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
           throw new Error(`${error.message} | details: ${details}`);
