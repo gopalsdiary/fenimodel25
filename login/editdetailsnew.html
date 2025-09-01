@@ -44,10 +44,22 @@
   .notice{margin-top:16px;color:#d32f2f;font-weight:500}
   .notice.success{color:#2e7d32}
 
-  @media (max-width:640px){
-    .field-row{grid-template-columns:1fr}
-    .header{flex-direction:column;align-items:flex-start;gap:8px}
-    .actions{flex-direction:column-reverse}
+  /* Group headers */
+  .field-group {
+    margin: 24px 0 16px 0;
+  }
+  .field-group h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #555;
+    margin: 0 0 12px 0;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #ddd;
+  }
+  .field-group:first-child h3 {
+    margin-top: 0;
   }
   </style>
 </head>
@@ -89,7 +101,64 @@
     const updateBtn = document.getElementById('updateBtn');
     const backBtn = document.getElementById('backBtn');
 
+    // Store field order mapping
+    let fieldOrderMap = {};
+    let fieldDisplayNames = {};
+    let fieldGroups = [];
+
     updateBtn.addEventListener('click', saveChanges);
+
+    // Load field order from CSV
+    async function loadFieldOrder(){
+      try{
+        const response = await fetch('dataorder.csv');
+        if(!response.ok) throw new Error('Could not load dataorder.csv');
+        const csvText = await response.text();
+        const lines = csvText.split('\n');
+        
+        let currentGroup = [];
+        let groupIndex = 0;
+        
+        lines.forEach((line, index) => {
+          const trimmedLine = line.trim();
+          
+          // Skip header and empty lines
+          if(trimmedLine === '' || trimmedLine.startsWith('colm name')) {
+            // If we have a current group and encounter a blank line, save the group
+            if(currentGroup.length > 0) {
+              fieldGroups.push({
+                index: groupIndex++,
+                fields: [...currentGroup]
+              });
+              currentGroup = [];
+            }
+            return;
+          }
+          
+          // Parse field mapping
+          const parts = trimmedLine.split('>').map(part => part.trim());
+          if(parts.length >= 2){
+            const dbField = parts[0];
+            const displayName = parts[1];
+            fieldOrderMap[dbField] = displayName;
+            fieldDisplayNames[dbField] = displayName;
+            currentGroup.push(dbField);
+          }
+        });
+        
+        // Add the last group if it exists
+        if(currentGroup.length > 0) {
+          fieldGroups.push({
+            index: groupIndex,
+            fields: [...currentGroup]
+          });
+        }
+        
+      }catch(err){
+        console.warn('Could not load field order:', err);
+        // Fallback to default alphabetical order
+      }
+    }
 
     if(!iid){
       infoEl.innerHTML = '<span class="iid-badge">No IID</span>';
@@ -106,6 +175,9 @@
     async function loadRecord(iid){
       noticeEl.textContent = 'Loading...';
       try{
+        // First load field order
+        await loadFieldOrder();
+        
         const { data, error } = await supabase
           .from(tableName)
           .select('*')
@@ -113,9 +185,10 @@
           .limit(1)
           .single();
         if(error) throw error;
-  renderFields(data || {});
-  // render photo and name
-  try{ await renderPhotoForIID(iid, data); }catch(e){ console.warn('photo render failed', e); }
+        
+        renderFields(data || {});
+        // render photo and name
+        try{ await renderPhotoForIID(iid, data); }catch(e){ console.warn('photo render failed', e); }
         noticeEl.textContent = '';
       }catch(err){
         console.error('loadRecord error', err);
@@ -134,55 +207,179 @@
         const txt = await resp.text();
         const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
         if(lines.length === 0) return;
-        // pick an index from IID (safe numeric fallback)
-        let idx = 0;
-        const n = Number(iid);
-        if(!Number.isNaN(n) && n > 0) idx = (n - 1) % lines.length;
-        else idx = Math.abs(hashString(iid || '0')) % lines.length;
-        const imgUrl = lines[idx];
+
+        // Find the link that matches the pattern: ends with avatar-{iid}.jpg or avatar-{iid}.png
+        let imgUrl = null;
+        const jpgPattern = new RegExp(`avatar-${iid}\\.jpg$`);
+        const pngPattern = new RegExp(`avatar-${iid}\\.png$`);
+
+        for(const line of lines){
+          if(line && (jpgPattern.test(line) || pngPattern.test(line))){
+            imgUrl = line;
+            break;
+          }
+        }
+
+        // If no matching image found, show default avatar
+        if(!imgUrl){
+          const img = document.createElement('img');
+          img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDE0MCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjcwIiBjeT0iNTUiIHI9IjMwIiBmaWxsPSIjQzRDNEM0Ii8+CjxwYXRoIGQ9Ik03MCA4NUM2MCA4NSA2MCA3NSA3MCA3NUM4MCA3NSA4MCA4NSA3MCA4NVoiIGZpbGw9IiNDNEM0RDQiLz4KPHBhdGggZD0iTTcwIDEwNUM2MCAxMDUgNjAgMTE1IDcwIDExNUM4MCAxMTUgODAgMTA1IDcwIDEwNVoiIGZpbGw9IiNDNEM0RDQiLz4KPC9zdmc+';
+          img.alt = 'Default Avatar';
+          img.style.maxWidth = '140px';
+          img.style.maxHeight = '320px';
+
+          const nameEl = document.createElement('div');
+          nameEl.className = 'student-name';
+          nameEl.textContent = (record && record.student_name_en) ? record.student_name_en : `Student ID: ${iid}`;
+
+          wrap.appendChild(img);
+          wrap.appendChild(nameEl);
+          return;
+        }
+
         const img = document.createElement('img');
         img.src = imgUrl;
-        img.alt = 'photo';
+        img.alt = 'Student Photo';
+        img.style.maxWidth = '140px';
+        img.style.maxHeight = '220px';
+
         const nameEl = document.createElement('div');
         nameEl.className = 'student-name';
-        nameEl.textContent = (record && record.Name) ? record.Name : '';
+        nameEl.textContent = (record && record.student_name_en) ? record.student_name_en : `Student ID: ${iid}`;
+
         wrap.appendChild(img);
         wrap.appendChild(nameEl);
       }catch(err){
         console.warn('renderPhotoForIID error', err);
-      }
-    }
+        // Show default avatar on error
+        const img = document.createElement('img');
+        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDE0MCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjcwIiBjeT0iNTUiIHI9IjMwIiBmaWxsPSIjQzRDNEM0Ii8+CjxwYXRoIGQ9Ik03MCA4NUM2MCA4NSA2MCA3NSA3MCA3NUM4MCA3NSA4MCA4NSA3MCA4NVoiIGZpbGw9IiNDNEM0RDQiLz4KPHBhdGggZD0iTTcwIDEwNUM2MCAxMDUgNjAgMTE1IDcwIDExNUM4MCAxMTUgODAgMTA1IDcwIDEwNVoiIGZpbGw9IiNDNEM0RDQiLz4KPC9zdmc+';
+        img.alt = 'Default Avatar';
+        img.style.maxWidth = '140px';
+        img.style.maxHeight = '220px';
 
-    function hashString(s){
-      let h = 0;
-      for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; }
-      return Math.abs(h);
+        const nameEl = document.createElement('div');
+        nameEl.className = 'student-name';
+        nameEl.textContent = (record && record.student_name_en) ? record.student_name_en : `Student ID: ${iid}`;
+
+        wrap.appendChild(img);
+        wrap.appendChild(nameEl);
+      }
     }
 
     function renderFields(record){
       fieldsEl.innerHTML = '';
-      const keys = Object.keys(record).sort();
-      keys.forEach(key =>{
-        const val = record[key] === null || record[key] === undefined ? '' : record[key];
-        const row = document.createElement('div');
-        row.className = 'field-row';
-        const label = document.createElement('label');
-        label.textContent = key + ':';
-        let input;
-        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
-          input = document.createElement('textarea');
-          input.rows = 4;
+      
+      // Get all field keys
+      const allKeys = Object.keys(record);
+      
+      // Separate ordered and unordered fields
+      const orderedFields = [];
+      const unorderedFields = [];
+      
+      allKeys.forEach(key => {
+        if(fieldOrderMap.hasOwnProperty(key)){
+          orderedFields.push(key);
         } else {
-          input = document.createElement('input');
-          input.type = 'text';
+          unorderedFields.push(key);
         }
-        input.value = val;
-        input.setAttribute('data-field', key);
-        if(key === 'iid') input.readOnly = true;
-        row.appendChild(label);
-        row.appendChild(input);
-        fieldsEl.appendChild(row);
       });
+      
+      // Function to get group name based on first field in group
+      function getGroupName(fields) {
+        if(fields.includes('iid') || fields.includes('student_name_en')) return 'Basic Information';
+        if(fields.includes('class_2025')) return 'Class Information';
+        if(fields.includes('father_name_en')) return 'Father Information';
+        if(fields.includes('mother_name_en')) return 'Mother Information';
+        if(fields.includes('guardian_name_en')) return 'Guardian Information';
+        if(fields.includes('board_name')) return 'Board Information';
+        if(fields.includes('village_bn')) return 'Address Information';
+        if(fields.includes('previous_school')) return 'School Information';
+        return 'Other Information';
+      }
+      
+      // Render grouped fields
+      fieldGroups.forEach(group => {
+        const groupFields = group.fields.filter(field => orderedFields.includes(field));
+        
+        if(groupFields.length > 0) {
+          // Create group container
+          const groupDiv = document.createElement('div');
+          groupDiv.className = 'field-group';
+          
+          // Create group header
+          const groupHeader = document.createElement('h3');
+          groupHeader.textContent = getGroupName(groupFields);
+          groupDiv.appendChild(groupHeader);
+          
+          // Add fields in this group
+          groupFields.forEach(key => {
+            const val = record[key] === null || record[key] === undefined ? '' : record[key];
+            const row = document.createElement('div');
+            row.className = 'field-row';
+            
+            const label = document.createElement('label');
+            const displayName = fieldDisplayNames[key] || key;
+            label.textContent = displayName + ':';
+            
+            let input;
+            if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+              input = document.createElement('textarea');
+              input.rows = 4;
+            } else {
+              input = document.createElement('input');
+              input.type = 'text';
+            }
+            input.value = val;
+            input.setAttribute('data-field', key);
+            if(key === 'iid') input.readOnly = true;
+            
+            row.appendChild(label);
+            row.appendChild(input);
+            groupDiv.appendChild(row);
+          });
+          
+          fieldsEl.appendChild(groupDiv);
+        }
+      });
+      
+      // Render unordered fields at the end
+      if(unorderedFields.length > 0) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'field-group';
+        
+        const groupHeader = document.createElement('h3');
+        groupHeader.textContent = 'Additional Information';
+        groupDiv.appendChild(groupHeader);
+        
+        unorderedFields.sort().forEach(key => {
+          const val = record[key] === null || record[key] === undefined ? '' : record[key];
+          const row = document.createElement('div');
+          row.className = 'field-row';
+          
+          const label = document.createElement('label');
+          const displayName = fieldDisplayNames[key] || key;
+          label.textContent = displayName + ':';
+          
+          let input;
+          if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+            input = document.createElement('textarea');
+            input.rows = 4;
+          } else {
+            input = document.createElement('input');
+            input.type = 'text';
+          }
+          input.value = val;
+          input.setAttribute('data-field', key);
+          if(key === 'iid') input.readOnly = true;
+          
+          row.appendChild(label);
+          row.appendChild(input);
+          groupDiv.appendChild(row);
+        });
+        
+        fieldsEl.appendChild(groupDiv);
+      }
     }
 
     async function saveChanges(){

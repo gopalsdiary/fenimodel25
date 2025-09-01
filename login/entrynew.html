@@ -112,7 +112,7 @@
       try{
         const { data, error } = await supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name')
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en')
           .order('iid', { ascending: true })
           .limit(5000);
         if(error){
@@ -173,7 +173,7 @@
           <td>${escapeHtml(r['class_2025']||'')}</td>
           <td>${escapeHtml(r['section_2025']||'')}</td>
           <td>${escapeHtml(r['roll_2025']||'')}</td>
-          <td>${escapeHtml(r['student_name']||'')}</td>
+          <td>${escapeHtml(r['student_name_en']||'')}</td>
           <td><button class="btn" data-iid="${iid}">Edit</button></td>
         `;
         const btn = tr.querySelector('button');
