@@ -1,0 +1,45 @@
+iid > iid
+student_name_en > Student Name English
+student_name_bn > Student Name Bangla
+birth_registration > Birth Registration
+student_dateofbirth > Student Date of Birth
+father_name_en > Father Name English
+father_name_bn > Father Name Bangla
+father_nid > Father NID
+father_mobile > Father Mobile
+father_occupation > Father Occupation
+mother_name_en > Mother Name English
+mother_name_bn > Mother Name Bangla
+mother_nid > Mother NID
+mother_mobile > Mother Mobile
+mother_occupation > Mother Occupation
+guardian_name_en > Guardian Name English
+guardian_name_bn > Guardian Name Bangla
+guardian_nid > Guardian NID
+guardian_mobile > Guardian Mobile
+guardian_occupation > Guardian Occupation
+religion > Religion
+board_name > Board Name
+board_roll > Board Roll
+board_registration > Board Registration
+student_gender > Student Gender
+village_bn > Village Bangla
+village_en > Village English
+postoffice_bn > Post Office Bangla
+postoffice_en > Post Office English
+upazilla_bn > Upazila Bangla
+upazilla_en > Upazila English
+district_bn > District Bangla
+district_en > District English
+previous_school > Previous School
+class_2025 > Class 2025
+roll_2025 > Roll 2025
+section_2025 > Section 2025
+comment_school > Comment School
+
+
+
+
+
+
+

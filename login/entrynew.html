@@ -112,7 +112,7 @@
       try{
         const { data, error } = await supabase
           .from(tableName)
-          .select('iid, Class, Section, Roll, Name')
+          .select('iid, class_2025, section_2025, roll_2025, student_name')
           .order('iid', { ascending: true })
           .limit(5000);
         if(error){
@@ -135,7 +135,7 @@
       // collect unique classes and sections
       const classes = new Set();
       const sections = new Set();
-      rows.forEach(r=>{ if(r && r.Class) classes.add(String(r.Class)); if(r && r.Section) sections.add(String(r.Section)); });
+      rows.forEach(r=>{ if(r && r.class_2025) classes.add(String(r.class_2025)); if(r && r.section_2025) sections.add(String(r.section_2025)); });
       // clear current options
       classFilter.innerHTML = '';
       sectionFilter.innerHTML = '';
@@ -153,8 +153,8 @@
       const c = classFilter.value;
       const s = sectionFilter.value;
       let filtered = allRowsCache;
-      if(c) filtered = filtered.filter(r => String(r.Class) === c);
-      if(s) filtered = filtered.filter(r => String(r.Section) === s);
+      if(c) filtered = filtered.filter(r => String(r.class_2025) === c);
+      if(s) filtered = filtered.filter(r => String(r.section_2025) === s);
       renderTable(filtered);
       statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
     }
@@ -178,8 +178,8 @@
         `;
         const btn = tr.querySelector('button');
         btn.addEventListener('click', () => {
-          // Open editdetails.html in a new tab with iid as query param
-          const url = `editdetails.html?iid=${encodeURIComponent(iid)}`;
+          // Open editdetailsnew.html in a new tab with iid as query param
+          const url = `editdetailsnew.html?iid=${encodeURIComponent(iid)}`;
           const w = window.open(url, '_blank');
           try{ if(w) w.opener = null; }catch(e){}
         });

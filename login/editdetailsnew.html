@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+  <title>Edit Details</title>
+  <style>
+  /* Clean monochromatic design with white and shadows only */
+  html{font-size:125%;}
+  html,body{height:100%}
+  body{font-family:'Kalpurush', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; padding:28px; background:#f8f9fa; color:#333; margin:0}
+  
+  .container{max-width:980px;margin:0 auto}
+  .card{background:#ffffff;border-radius:12px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.1);}
+  
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .title{font-size:22px;font-weight:600;color:#333}
+  .meta{color:#666; font-size:14px}
+  .iid-badge{display:inline-block;margin-left:8px;padding:6px 12px;background:#f0f0f0;color:#666;border-radius:20px;font-weight:500;font-size:13px}
+
+  .form-grid{display:flex;flex-direction:column;gap:16px}
+  
+  /* Photo area */
+  .photo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:20px}
+  .photo-wrap img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:3px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,0.15);background:#fff}
+  .student-name{margin-top:10px;font-weight:600;font-size:1.1rem;color:#333}
+  
+  /* Form fields */
+  .field-row{display:grid;grid-template-columns:180px 1.4fr;gap:12px;align-items:start;background:#ffffff;padding:16px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);border:1px solid #f0f0f0}
+  .field-row label{font-size:14px;color:#555;font-weight:500;padding:8px 0}
+  .field-row input, .field-row textarea{width:100%;padding:12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;background:#ffffff;color:#333}
+  .field-row textarea{min-height:100px;resize:vertical}
+  
+  .field-row:hover{box-shadow:0 6px 20px rgba(0,0,0,0.12)}
+  .field-row input:focus, .field-row textarea:focus{outline:none;border-color:#ccc;box-shadow:0 0 0 2px rgba(0,0,0,0.1)}
+
+  .actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px}
+  .btn{padding:12px 20px;border:none;background:#333;color:#fff;border-radius:8px;cursor:pointer;font-weight:500;font-size:14px}
+  .btn:hover{background:#555}
+  .btn.secondary{background:#f0f0f0;color:#666;border:1px solid #e0e0e0}
+  .btn.secondary:hover{background:#e0e0e0}
+  
+  .notice{margin-top:16px;color:#d32f2f;font-weight:500}
+  .notice.success{color:#2e7d32}
+
+  @media (max-width:640px){
+    .field-row{grid-template-columns:1fr}
+    .header{flex-direction:column;align-items:flex-start;gap:8px}
+    .actions{flex-direction:column-reverse}
+  }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <div>
+          <div class="title">Edit Record</div>
+          <div class="meta">Modify fields below and click <strong>Update</strong></div>
+        </div>
+        <div id="info" class="meta"></div>
+      </div>
+
+  <div id="photoWrap" class="photo-wrap"></div>
+  <div id="fields" class="form-grid"></div>
+
+      <div class="actions">
+        <button id="updateBtn" class="btn">Update</button>
+      </div>
+      <div id="notice" class="notice"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // same supabase creds as entry.html
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const tableName = 'student_database';
+
+    const params = new URLSearchParams(window.location.search);
+    const iid = params.get('iid');
+
+    const fieldsEl = document.getElementById('fields');
+    const infoEl = document.getElementById('info');
+    const noticeEl = document.getElementById('notice');
+    const updateBtn = document.getElementById('updateBtn');
+    const backBtn = document.getElementById('backBtn');
+
+    updateBtn.addEventListener('click', saveChanges);
+
+    if(!iid){
+      infoEl.innerHTML = '<span class="iid-badge">No IID</span>';
+      updateBtn.disabled = true;
+    } else {
+      // safe display
+      const span = document.createElement('span');
+      span.className = 'iid-badge';
+      span.textContent = iid;
+      infoEl.appendChild(span);
+      loadRecord(iid);
+    }
+
+    async function loadRecord(iid){
+      noticeEl.textContent = 'Loading...';
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('iid', Number(iid))
+          .limit(1)
+          .single();
+        if(error) throw error;
+  renderFields(data || {});
+  // render photo and name
+  try{ await renderPhotoForIID(iid, data); }catch(e){ console.warn('photo render failed', e); }
+        noticeEl.textContent = '';
+      }catch(err){
+        console.error('loadRecord error', err);
+        noticeEl.textContent = 'Failed to load record: ' + (err.message || err);
+        updateBtn.disabled = true;
+      }
+    }
+
+    async function renderPhotoForIID(iid, record){
+      const wrap = document.getElementById('photoWrap');
+      wrap.innerHTML = '';
+      // fetch CSV of image links
+      try{
+        const resp = await fetch('../photo/link.csv');
+        if(!resp.ok) throw new Error('photo list not loaded');
+        const txt = await resp.text();
+        const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        if(lines.length === 0) return;
+        // pick an index from IID (safe numeric fallback)
+        let idx = 0;
+        const n = Number(iid);
+        if(!Number.isNaN(n) && n > 0) idx = (n - 1) % lines.length;
+        else idx = Math.abs(hashString(iid || '0')) % lines.length;
+        const imgUrl = lines[idx];
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.alt = 'photo';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'student-name';
+        nameEl.textContent = (record && record.Name) ? record.Name : '';
+        wrap.appendChild(img);
+        wrap.appendChild(nameEl);
+      }catch(err){
+        console.warn('renderPhotoForIID error', err);
+      }
+    }
+
+    function hashString(s){
+      let h = 0;
+      for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; }
+      return Math.abs(h);
+    }
+
+    function renderFields(record){
+      fieldsEl.innerHTML = '';
+      const keys = Object.keys(record).sort();
+      keys.forEach(key =>{
+        const val = record[key] === null || record[key] === undefined ? '' : record[key];
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        const label = document.createElement('label');
+        label.textContent = key + ':';
+        let input;
+        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
+          input = document.createElement('textarea');
+          input.rows = 4;
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+        }
+        input.value = val;
+        input.setAttribute('data-field', key);
+        if(key === 'iid') input.readOnly = true;
+        row.appendChild(label);
+        row.appendChild(input);
+        fieldsEl.appendChild(row);
+      });
+    }
+
+    async function saveChanges(){
+      noticeEl.textContent = '';
+      const inputs = fieldsEl.querySelectorAll('[data-field]');
+      const payload = {};
+      inputs.forEach(inp =>{
+        const field = inp.getAttribute('data-field');
+        if(field === 'iid') return;
+        const v = inp.value === '' ? null : inp.value;
+        payload[field] = v;
+      });
+      updateBtn.disabled = true;
+      updateBtn.textContent = 'Updating...';
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .update(payload)
+          .eq('iid', Number(iid));
+        if(error) throw error;
+  noticeEl.classList.remove('');
+  noticeEl.classList.add('success');
+  noticeEl.textContent = 'Updated successfully.';
+      }catch(err){
+        console.error('update error', err);
+  noticeEl.classList.remove('success');
+  noticeEl.textContent = 'Update failed: ' + (err.message || err);
+      }finally{
+        updateBtn.disabled = false;
+        updateBtn.textContent = 'Update';
+      }
+    }
+  </script>
+</body>
+</html>
