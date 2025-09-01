@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Entry - Show & Edit</title>
+  <style>
+    body{font-family: Arial, Helvetica, sans-serif;padding:16px}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f4f4f4}
+    .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
+    .btn.secondary{background:#6c757d}
+    /* modal */
+    .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+    .modal .panel{background:#fff;padding:16px;border-radius:6px;max-width:720px;width:100%;max-height:80vh;overflow:auto}
+    .field-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+    .field-row label{min-width:140px}
+    .field-row input, .field-row textarea{flex:1;padding:8px}
+    .notice{margin-top:8px;color:#a00}
+    .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
+  </style>
+</head>
+<body>
+  <h2>previous_data2025 list</h2>
+  <div>
+    <button id="refreshBtn" class="btn">Refresh</button>
+    <span id="status" style="margin-left:12px;color:#444"></span>
+  </div>
+
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>IID</th>
+        <th>Class</th>
+        <th>Section</th>
+        <th>Roll</th>
+        <th>Name</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="6">Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Edit modal -->
+  <div id="editModal" class="modal">
+    <div class="panel">
+      <h3>Edit Record</h3>
+
+      <!-- Dynamic fields will be rendered here -->
+      <div id="editFields"></div>
+
+      <div style="text-align:right;margin-top:12px">
+        <button id="cancelBtn" class="btn secondary">Cancel</button>
+        <button id="saveBtn" class="btn">Save</button>
+      </div>
+      <div id="modalNotice" class="notice"></div>
+    </div>
+  </div>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Use the same project URL/key used elsewhere in this repo
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    const tableName = 'previous_data2025';
+
+    const tbody = document.querySelector('#dataTable tbody');
+    const statusEl = document.getElementById('status');
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    // modal elems
+    const editModal = document.getElementById('editModal');
+    const editFields = document.getElementById('editFields');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const modalNotice = document.getElementById('modalNotice');
+
+    refreshBtn.addEventListener('click', loadData);
+    cancelBtn.addEventListener('click', closeModal);
+    saveBtn.addEventListener('click', saveEdit);
+
+    // store the currently editing IID
+    let currentIID = null;
+
+    async function loadData(){
+      statusEl.textContent = 'Loading...';
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('IID, Class, Section, Roll, Name')
+          .order('IID', { ascending: true })
+          .limit(1000);
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        renderTable(data || []);
+        statusEl.textContent = `Total: ${data ? data.length : 0}`;
+      }catch(err){
+        console.error('loadData error:', err);
+        statusEl.textContent = 'Data loading error';
+        const msg = err && err.message ? err.message : String(err);
+        tbody.innerHTML = `<tr><td colspan="6">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+      }
+    }
+
+    function renderTable(rows){
+      if(!rows || rows.length === 0){
+        tbody.innerHTML = '<tr><td colspan="6">No records found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const iid = (r['IID'] ?? r.IID) || '';
+        tr.innerHTML = `
+          <td>${escapeHtml(iid)}</td>
+          <td>${escapeHtml(r['Class']||'')}</td>
+          <td>${escapeHtml(r['Section']||'')}</td>
+          <td>${escapeHtml(r['Roll']||'')}</td>
+          <td>${escapeHtml(r['Name']||'')}</td>
+          <td><button class="btn" data-iid="${iid}">Edit</button></td>
+        `;
+        const btn = tr.querySelector('button');
+        btn.addEventListener('click', () => openEditByIID(iid));
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function openEditByIID(iid){
+      // fetch full row from DB to ensure we have all columns
+      modalNotice.textContent = '';
+      currentIID = iid;
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('IID', Number(iid))
+          .limit(1)
+          .single();
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        renderEditFields(data || {});
+        editModal.style.display = 'flex';
+      }catch(err){
+        console.error('openEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Failed to load record: ' + (err.message || err);
+        // fallback: if we had a row in the table view, user can still edit minimal fields (not implemented here)
+      }
+    }
+
+    function renderEditFields(record){
+      editFields.innerHTML = '';
+      // iterate keys in sorted order for predictability
+      const keys = Object.keys(record).sort();
+      keys.forEach(key => {
+        const val = record[key] === null || record[key] === undefined ? '' : record[key];
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        const label = document.createElement('label');
+        label.textContent = key + ':';
+        // decide input type: use textarea for long text fields (heuristic)
+        let input;
+        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
+          input = document.createElement('textarea');
+          input.rows = 4;
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+        }
+        input.value = val;
+        input.setAttribute('data-field', key);
+        if(key === 'IID'){
+          input.readOnly = true;
+        }
+        row.appendChild(label);
+        row.appendChild(input);
+        editFields.appendChild(row);
+      });
+    }
+
+    async function saveEdit(){
+      modalNotice.textContent = '';
+      if(!currentIID){ modalNotice.textContent = 'No record selected'; return; }
+      // build payload from inputs
+      const inputs = editFields.querySelectorAll('[data-field]');
+      const payload = {};
+      inputs.forEach(inp =>{
+        const field = inp.getAttribute('data-field');
+        if(field === 'IID') return; // don't try to update primary key
+        const v = inp.value === '' ? null : inp.value;
+        payload[field] = v;
+      });
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .update(payload)
+          .eq('IID', Number(currentIID));
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        modalNotice.style.color = 'green';
+        modalNotice.textContent = 'Updated successfully';
+        // refresh list and close
+        await loadData();
+        setTimeout(()=>{ closeModal(); modalNotice.textContent = ''; }, 700);
+      }catch(err){
+        console.error('saveEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Update error: ' + (err.message || err);
+      }finally{
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    function closeModal(){
+      editModal.style.display = 'none';
+      editFields.innerHTML = '';
+      currentIID = null;
+    }
+
+    function escapeHtml(s){
+      if(s === null || s === undefined) return '';
+      return String(s).replace(/[&<>\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // close modal when clicking outside panel
+    editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
+
+    // initial load
+    loadData();
+  </script>
+</body>
+</html>
+
