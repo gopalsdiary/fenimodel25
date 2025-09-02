@@ -22,11 +22,15 @@
 		thead th{background:#f3f6fb;padding:10px 12px;text-align:left;border-bottom:1px solid #ecf0f4}
 		tbody td{padding:10px 12px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
 		.thumb{width:72px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e6edf6}
+		.image-wrapper{position:relative;display:inline-block}
+		.preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:350px;height:500px;background-size:cover;background-position:center;border-radius:8px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;opacity:0;visibility:hidden;transition:opacity 0.3s ease,visibility 0.3s ease}
+		.image-wrapper:hover .preview{opacity:1;visibility:visible}
 		.uploader{display:flex;gap:8px;align-items:center}
 		.status{font-size:13px}
 		.small{font-size:12px;color:#334155}
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
 <body>
@@ -37,6 +41,7 @@
 				<select id="classFilter" aria-label="Class filter"><option value="">All sheets</option></select>
 				<input id="search" type="search" placeholder="Filter name or IID…" />
 				<button id="refreshBtn" class="secondary">Refresh data</button>
+				<button id="downloadPdfBtn">Download PDF</button>
 				<div class="muted right">Image album: <strong>student_photo</strong></div>
 			</div>
 
@@ -213,7 +218,7 @@
 			else {
 				for(const [k,u] of photoIndex.entries()){ if(iidStr && k.includes(iidStr)) { thumbUrl = u; break; } }
 			}
-			const imgHtml = thumbUrl ? `<img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo">` : '';
+			const imgHtml = thumbUrl ? `<div class="image-wrapper"><img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo"><div class="preview" style="background-image: url('${escapeHtml(thumbUrl)}')"></div></div>` : '';
 		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
 		const rollStr = String((s.roll && String(s.roll).trim()) || (typeof s.rowIndex !== 'undefined' ? String(s.rowIndex + 1) : '')).trim();
 			const iidDisplay = escapeHtml(iidStr);
@@ -243,7 +248,7 @@
 				<td>${classCell}</td>
 				<td>${escapeHtml(s.name)}</td>
 				<td>${escapeHtml(s.father)}</td>
-				<td>
+				<td class="actions-col">
 					<div class="uploader">
 						<input type="file" accept="image/*" class="file-input" data-iid="${escapeHtml(iidStr)}">
 						<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
@@ -398,6 +403,64 @@
 
 	// start
 	window.addEventListener('DOMContentLoaded', ()=>{ init(); });
+
+	// PDF download
+	document.getElementById('downloadPdfBtn').addEventListener('click', async ()=>{
+		const table = document.getElementById('studentsTable');
+		if(!table) return;
+		// Temporarily clear actions column content
+		const actionCells = document.querySelectorAll('td.actions-col');
+		actionCells.forEach(cell => cell.innerHTML = '');
+		const actionHeader = document.querySelector('th.actions-col');
+		if(actionHeader) actionHeader.style.display = 'none'; // hide header
+		// Set row height to approx 1.5 cm (57px)
+		const rows = table.querySelectorAll('tbody tr');
+		rows.forEach(tr => tr.style.minHeight = '57px');
+		// Add black borders
+		table.style.border = '1px solid black';
+		table.style.borderCollapse = 'collapse';
+		table.style.fontFamily = 'Arial, sans-serif';
+		table.style.fontSize = '12px';
+		const cells = table.querySelectorAll('td, th');
+		cells.forEach(cell => {
+			cell.style.border = '1px solid black';
+			cell.style.padding = '8px';
+			cell.style.textAlign = 'center';
+		});
+		const ths = table.querySelectorAll('th');
+		ths.forEach(th => {
+			th.style.backgroundColor = '#e0e0e0';
+			th.style.fontWeight = 'bold';
+			th.style.color = '#000';
+		});
+		const nameCells = table.querySelectorAll('td:nth-child(5), td:nth-child(6)'); // Name and Father columns
+		nameCells.forEach(cell => cell.style.textAlign = 'left');
+		// Wait for images to load
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		// Generate PDF
+		const opt = {
+			margin: [0.2, 0.2, 0.2, 0.2], // 0.5cm margin
+			filename: 'students.pdf',
+			image: { type: 'jpeg', quality: 1.0 },
+			html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794 },
+			jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+			repeat: { thead: true }
+		};
+		await html2pdf().set(opt).from(table).save();
+		// Restore
+		actionCells.forEach(cell => {
+			// Need to restore content, but since it's dynamic, perhaps reload table
+			// For simplicity, since page reloads or re-render, but to avoid, maybe store original
+			// But for now, since it's one time, and user can refresh
+		});
+		if(actionHeader) actionHeader.style.display = '';
+		rows.forEach(tr => tr.style.minHeight = '');
+		table.style.border = '';
+		table.style.borderCollapse = '';
+		cells.forEach(cell => cell.style.border = '');
+		// To restore content, re-render the table
+		applyFilters();
+	});
 	</script>
 </body>
 </html>

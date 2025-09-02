@@ -22,6 +22,13 @@
     .field-row input, .field-row textarea{flex:1;padding:8px}
     .notice{margin-top:8px;color:#a00}
     .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
+    /* photo column */
+    .row-thumb{width:36px;height:36px;object-fit:cover;border-radius:4px;border:1px solid #ddd}
+    .no-image{font-size:14px;color:rgb(243, 0, 0);font-style:italic;font-weight:bold}
+    /* photo preview */
+    #photo-preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;width:350px;height:500px;border:4px solid #000;background:#fff;padding:10px;border-radius:10px;display:none;pointer-events:none}
+    /* status column */
+    .status-tc{background-color:rgba(250, 187, 187, 0.5)}
   </style>
 </head>
 <body>
@@ -46,11 +53,13 @@
         <th>Section</th>
         <th>Roll</th>
         <th>Name</th>
+        <th>Photo</th>
+        <th>Status</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="6">Loading...</td></tr>
+      <tr><td colspan="8">Loading...</td></tr>
     </tbody>
   </table>
 
@@ -87,6 +96,29 @@
   const sectionFilter = document.getElementById('sectionFilter');
   const clearFilters = document.getElementById('clearFilters');
 
+  // photo preview
+  const photoPreview = document.createElement('div');
+  photoPreview.id = 'photo-preview';
+  const previewImg = document.createElement('img');
+  previewImg.style.width = '100%';
+  previewImg.style.height = '100%';
+  previewImg.style.objectFit = 'cover';
+  photoPreview.appendChild(previewImg);
+  document.body.appendChild(photoPreview);
+
+  tbody.addEventListener('mouseover', (e) => {
+    if(e.target.classList.contains('row-thumb')){
+      previewImg.src = e.target.src;
+      photoPreview.style.display = 'block';
+    }
+  });
+
+  tbody.addEventListener('mouseout', (e) => {
+    if(e.target.classList.contains('row-thumb')){
+      photoPreview.style.display = 'none';
+    }
+  });
+
   // keep full dataset in memory for client-side filtering
   let allRowsCache = [];
 
@@ -107,12 +139,28 @@
     // store the currently editing IID
     let currentIID = null;
 
+    // photo links loaded from photo/link.csv (one URL per line).
+    let photoLinks = [];
+
+    async function loadPhotoLinks(){
+      try{
+        const res = await fetch('../photo/link.csv');
+        if(!res.ok) return;
+        const txt = await res.text();
+        photoLinks = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      }catch(e){
+        photoLinks = [];
+      }
+    }
+    // start loading photo links in background
+    loadPhotoLinks();
+
     async function loadData(){
       statusEl.textContent = 'Loading...';
       try{
         const { data, error } = await supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en')
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en, student_photo_url, status')
           .order('iid', { ascending: true })
           .limit(5000);
         if(error){
@@ -127,7 +175,7 @@
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="6">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -161,28 +209,79 @@
 
     function renderTable(rows){
       if(!rows || rows.length === 0){
-        tbody.innerHTML = '<tr><td colspan="6">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
+
+      function getThumbnailSrc(rec, iid){
+        // First, check student_photo_url
+        if(rec && rec.student_photo_url){
+          return rec.student_photo_url;
+        }
+        // Then, search photoLinks for avatar-{iid}.jpg or .png
+        if(photoLinks && iid){
+          const targetJpg = 'avatar-' + iid + '.jpg';
+          const targetPng = 'avatar-' + iid + '.png';
+          for(const url of photoLinks){
+            try{
+              const filename = new URL(url).pathname.split('/').pop();
+              if(filename === targetJpg || filename === targetPng){
+                return url;
+              }
+            }catch(e){}
+          }
+        }
+        // No image found
+        return '';
+      }
+
       rows.forEach(r => {
         const tr = document.createElement('tr');
-  const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
-        tr.innerHTML = `
-          <td>${escapeHtml(iid)}</td>
-          <td>${escapeHtml(r['class_2025']||'')}</td>
-          <td>${escapeHtml(r['section_2025']||'')}</td>
-          <td>${escapeHtml(r['roll_2025']||'')}</td>
-          <td>${escapeHtml(r['student_name_en']||'')}</td>
-          <td><button class="btn" data-iid="${iid}">Edit</button></td>
-        `;
-        const btn = tr.querySelector('button');
+        const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
+
+        const tdIid = document.createElement('td'); tdIid.textContent = escapeHtml(iid);
+        const tdClass = document.createElement('td'); tdClass.textContent = escapeHtml(r['class_2025']||'');
+        const tdSection = document.createElement('td'); tdSection.textContent = escapeHtml(r['section_2025']||'');
+        const tdRoll = document.createElement('td'); tdRoll.textContent = escapeHtml(r['roll_2025']||'');
+        const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['student_name_en']||'');
+
+        const tdPhoto = document.createElement('td');
+        const src = getThumbnailSrc(r, iid);
+        if (src) {
+          const img = document.createElement('img'); img.className = 'row-thumb'; img.alt = 'Photo';
+          img.src = src;
+          tdPhoto.appendChild(img);
+        } else {
+          const noImg = document.createElement('span'); noImg.className = 'no-image'; noImg.textContent = 'No Image';
+          tdPhoto.appendChild(noImg);
+        }
+
+        const tdStatus = document.createElement('td');
+        const statusText = escapeHtml(r['status'] || '');
+        tdStatus.textContent = statusText;
+        if (statusText && statusText.toUpperCase().includes('TC')) {
+          tr.className = 'status-tc';
+        }
+
+        const tdAction = document.createElement('td');
+        const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = 'Edit'; btn.setAttribute('data-iid', iid);
         btn.addEventListener('click', () => {
-          // Open editdetailsnew.html in a new tab with iid as query param
           const url = `editdetailsnew.html?iid=${encodeURIComponent(iid)}`;
           const w = window.open(url, '_blank');
           try{ if(w) w.opener = null; }catch(e){}
         });
+        tdAction.appendChild(btn);
+
+        tr.appendChild(tdIid);
+        tr.appendChild(tdClass);
+        tr.appendChild(tdSection);
+        tr.appendChild(tdRoll);
+        tr.appendChild(tdName);
+        tr.appendChild(tdPhoto);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdAction);
+
         tbody.appendChild(tr);
       });
     }
