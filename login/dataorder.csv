@@ -7,6 +7,7 @@ birth_registration > Birth Registration
 student_dateofbirth > Student Date of Birth
 religion > Religion
 student_gender > Student Gender
+student_photo_url > Student Photo URL
 
 class_2025 > Class 2025
 roll_2025 > Roll 2025
@@ -43,6 +44,8 @@ upazilla_bn > Upazila Bangla
 upazilla_en > Upazila English
 district_bn > District Bangla
 district_en > District English
+
+rfid_card_no > RFID Card No
 
 previous_school > Previous School
 admission_date > Admission Date
