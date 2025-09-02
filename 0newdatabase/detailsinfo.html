@@ -15,6 +15,8 @@
 		.toolbar { display:flex; gap:.6rem; align-items:center; justify-content:center; flex-wrap:wrap; margin:.4rem 0 .8rem; }
 		/* Admission form box styling */
 		.form-box { background:#fff; border:2px solid #0ea5e9; border-radius:14px; box-shadow:0 10px 30px rgba(2,132,199,.12); padding:1.1rem 1.2rem 1.25rem; }
+		.image-container { text-align:center; margin-bottom:1rem; }
+		.student-image { max-width:150px; max-height:200px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,.15); }
 		.form-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin:0 0 .8rem; border-bottom:2px solid #e5e7eb; padding-bottom:.5rem; }
 		.form-title { margin:0; font-size:1.2rem; letter-spacing:.4px; }
 		.form-meta { margin:0; font-size:.82rem; color:#64748b; text-align:right; }
@@ -70,6 +72,44 @@
 			return null;
 		}
 
+		async function loadPhotoLinks(){
+			try{
+				const res = await fetch('../photo/link.csv', {cache:'no-store'});
+				if(!res.ok) throw new Error('Photo links load fail');
+				const txt = await res.text();
+				return txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+			}catch(e){
+				console.error('Failed to load photo links:', e);
+				return [];
+			}
+		}
+
+		function findImageLink(links, iid){
+			const searchPattern = new RegExp(`avatar-${iid}\\.(jpg|png)$`, 'i');
+			return links.find(link => searchPattern.test(link)) || null;
+		}
+
+		async function loadAndDisplayImage(iid){
+			const imageContainer = document.getElementById('image-container');
+			if(!iid) return;
+			
+			const links = await loadPhotoLinks();
+			const imageLink = findImageLink(links, iid);
+			
+			if(imageLink){
+				const img = document.createElement('img');
+				img.src = imageLink;
+				img.alt = `Student ${iid}`;
+				img.className = 'student-image';
+				img.onerror = () => {
+					imageContainer.innerHTML = '<p class="muted">ছবি লোড করা যায়নি</p>';
+				};
+				imageContainer.appendChild(img);
+			}else{
+				imageContainer.innerHTML = '<p class="muted">ছবি পাওয়া যায়নি</p>';
+			}
+		}
+
 		async function findByIid(iid){
 			const pairs = await loadSheetList();
 			for(let idx=0; idx<pairs.length; idx++){
@@ -97,7 +137,7 @@
 			const status = document.getElementById('status');
 			const meta = document.getElementById('meta');
 			head.textContent = 'বিস্তারিত তথ্য';
-			let id=idParam, sheet=sheetParam, row=null, fields=null, usedBy='';
+			let id=idParam, sheet=sheetParam, row=null, fields=null, usedBy='', currentIid=iidParam;
 			if(!id || !sheet){
 				if(iidParam){
 					status.textContent='Searching sheets…';
@@ -123,6 +163,14 @@
 					}
 					if(!row && rowIdx!=null && rowIdx>=0 && rowIdx<rows.length){ row = rows[rowIdx]; usedBy = `Row: ${rowIdx+1}`; }
 					if(!row){ status.textContent='Record not found'; return; }
+				}
+				// Load and display student image
+				const iidKey = findIidKey(fields);
+				if(iidKey && row){
+					currentIid = row[iidKey];
+				}
+				if(currentIid){
+					loadAndDisplayImage(currentIid);
 				}
 				meta.textContent = `Sheet: ${sheet}` + (usedBy? ` · ${usedBy}`:'');
 				const dl = document.getElementById('dl');
@@ -152,6 +200,7 @@
 					<h2 class="form-title">ভর্তি ফরম</h2>
 					<p class="form-meta" id="meta"></p>
 				</div>
+				<div id="image-container" class="image-container"></div>
 				<dl id="dl"></dl>
 				<div class="actions no-print">
 					<button class="btn" onclick="window.print()">Print</button>
