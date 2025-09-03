@@ -125,6 +125,7 @@
         }
   allRowsCache = data || [];
   populateFilterOptions(allRowsCache);
+  renderTable(allRowsCache);
   // update counts: show overall total from DB and current shown count
   updateOverallCount();
   statusEl.textContent = `Total: calculating...`;
