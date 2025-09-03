@@ -22,6 +22,10 @@
     .field-row input, .field-row textarea{flex:1;padding:8px}
     .notice{margin-top:8px;color:#a00}
     .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
+  /* stacked name display: primary name above, bengali name below */
+  .stacked-name{display:flex;flex-direction:column;gap:3px}
+  .stacked-name .primary{font-weight:700;color:#111}
+  .stacked-name .secondary{font-size:0.92rem;color:#555;opacity:0.9}
   </style>
 </head>
 <body>
@@ -110,25 +114,58 @@
     async function loadData(){
       statusEl.textContent = 'Loading...';
       try{
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('IID, Class, Section, Roll, Name')
-          .order('IID', { ascending: true })
-          .limit(5000);
+          const { data, error } = await supabase
+            .from(tableName)
+            .select('IID, Class, Section, Roll, Name')
+            .order('IID', { ascending: true })
+            .limit(5000);
         if(error){
           const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
           throw new Error(`${error.message} | details: ${details}`);
         }
-        allRowsCache = data || [];
-        populateFilterOptions(allRowsCache);
-        renderTable(allRowsCache);
-        statusEl.textContent = `Total: ${allRowsCache ? allRowsCache.length : 0}`;
+  allRowsCache = data || [];
+  populateFilterOptions(allRowsCache);
+  // update counts: show overall total from DB and current shown count
+  updateOverallCount();
+  statusEl.textContent = `Total: calculating...`;
       }catch(err){
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
         tbody.innerHTML = `<tr><td colspan="6">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
+    }
+
+    // Fetch overall total count from Supabase efficiently (no payload) and update status
+    async function updateOverallCount(){
+      try{
+        // use select count via head:true or exact count; Supabase JS v2 supports .select('*', { count: 'exact' })
+        const res = await supabase
+          .from(tableName)
+          .select('IID', { count: 'exact', head: false })
+          .limit(1);
+        // res.count contains total rows when count: 'exact' is used
+        const total = (res && res.count) ? Number(res.count) : (allRowsCache ? allRowsCache.length : 0);
+        const shown = computeShownCount();
+        statusEl.textContent = `Total: ${total} · Showing: ${shown}`;
+      }catch(e){
+        // fallback to local length
+        const total = allRowsCache ? allRowsCache.length : 0;
+        const shown = computeShownCount();
+        statusEl.textContent = `Total: ${total} · Showing: ${shown}`;
+      }
+    }
+
+    function computeShownCount(){
+      // current table rows excluding header and any 'No records' placeholder
+      const rows = tbody.querySelectorAll('tr');
+      if(!rows || rows.length === 0) return 0;
+      // If the single cell 'No records found' or 'Loading...' exists, return 0 or cache length
+      if(rows.length === 1){
+        const td = rows[0].querySelector('td');
+        if(td && (td.textContent.includes('No records') || td.textContent.includes('Loading') || td.textContent.includes('error'))) return 0;
+      }
+      return rows.length;
     }
 
     function populateFilterOptions(rows){
@@ -149,6 +186,21 @@
       sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
     }
 
+    function getBengaliNameFromRow(r){
+      // try common field keys that might contain Bengali name
+      const candidates = ['Name_bn','NameBangla','Name_BN','NameBanglaX','Name_bengali','Bname','NameBanglaTrim','Name (bn)'];
+      for(const k of candidates){
+        if(Object.prototype.hasOwnProperty.call(r,k) && r[k]) return String(r[k]);
+      }
+      // try heuristics: fields that include 'bn' or 'bang' in the key
+      for(const key of Object.keys(r)){
+        const lk = key.toLowerCase();
+        if((lk.includes('bn') || lk.includes('bangla') || lk.includes('beng')) && r[key]) return String(r[key]);
+      }
+      // no bengali name found - return empty string
+      return '';
+    }
+
     function applyFilters(){
       const c = classFilter.value;
       const s = sectionFilter.value;
@@ -156,7 +208,11 @@
       if(c) filtered = filtered.filter(r => String(r.Class) === c);
       if(s) filtered = filtered.filter(r => String(r.Section) === s);
       renderTable(filtered);
-      statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
+  // update status to show overall total and currently shown count
+  const shown = filtered ? filtered.length : 0;
+  // ensure overall count is refreshed as well (async)
+  updateOverallCount();
+  statusEl.textContent = `Total: ... · Showing: ${shown}`;
     }
 
     function renderTable(rows){
@@ -168,12 +224,23 @@
       rows.forEach(r => {
         const tr = document.createElement('tr');
         const iid = (r['IID'] ?? r.IID) || '';
+        // build stacked name: primary (Name) and secondary (Name in Bengali) if available
+        const primaryName = r['Name'] || r.Name || '';
+        // check several possible Bengali-name field variants
+        const bn = getBengaliNameFromRow(r);
+        const nameCellHtml = `
+          <div class="stacked-name">
+            <span class="primary">${escapeHtml(primaryName)}</span>
+            <span class="secondary">${escapeHtml(bn)}</span>
+          </div>
+        `;
+
         tr.innerHTML = `
           <td>${escapeHtml(iid)}</td>
           <td>${escapeHtml(r['Class']||'')}</td>
           <td>${escapeHtml(r['Section']||'')}</td>
           <td>${escapeHtml(r['Roll']||'')}</td>
-          <td>${escapeHtml(r['Name']||'')}</td>
+          <td>${nameCellHtml}</td>
           <td><button class="btn" data-iid="${iid}">Edit</button></td>
         `;
         const btn = tr.querySelector('button');

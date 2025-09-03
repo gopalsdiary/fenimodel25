@@ -53,13 +53,14 @@
         <th>Section</th>
         <th>Roll</th>
         <th>Name</th>
+        <th>Father Name</th>
         <th>Photo</th>
         <th>Status</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="8">Loading...</td></tr>
+      <tr><td colspan="9">Loading...</td></tr>
     </tbody>
   </table>
 
@@ -160,7 +161,7 @@
       try{
         const { data, error } = await supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en, student_photo_url, status')
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, student_photo_url, status')
           .order('iid', { ascending: true })
           .limit(5000);
         if(error){
@@ -175,7 +176,7 @@
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="8">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -209,7 +210,7 @@
 
     function renderTable(rows){
       if(!rows || rows.length === 0){
-        tbody.innerHTML = '<tr><td colspan="8">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
@@ -245,6 +246,7 @@
         const tdSection = document.createElement('td'); tdSection.textContent = escapeHtml(r['section_2025']||'');
         const tdRoll = document.createElement('td'); tdRoll.textContent = escapeHtml(r['roll_2025']||'');
         const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['student_name_en']||'');
+        const tdFatherName = document.createElement('td'); tdFatherName.textContent = escapeHtml(r['father_name_en']||'');
 
         const tdPhoto = document.createElement('td');
         const src = getThumbnailSrc(r, iid);
@@ -278,6 +280,7 @@
         tr.appendChild(tdSection);
         tr.appendChild(tdRoll);
         tr.appendChild(tdName);
+        tr.appendChild(tdFatherName);
         tr.appendChild(tdPhoto);
         tr.appendChild(tdStatus);
         tr.appendChild(tdAction);
