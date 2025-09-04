@@ -116,23 +116,35 @@
     async function loadData(){
       statusEl.textContent = 'Loading...';
       try{
-    // Supabase defaults to 1000 rows when using .select(). Use .range() to request a large window.
-    // Here we request rows 0..999999 to effectively return all rows (adjust if you have >1M rows).
-    const { data, error } = await supabase
-      .from(tableName)
-      .select('*')
-      .order('IID', { ascending: true })
-      .range(0, 999999);
-        if(error){
-          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-          throw new Error(`${error.message} | details: ${details}`);
-        }
-  allRowsCache = data || [];
-  populateFilterOptions(allRowsCache);
-  renderTable(allRowsCache);
-  // update counts: show overall total from DB and current shown count
-  updateOverallCount();
-  statusEl.textContent = `Total: calculating...`;
+    // Fetch in pages to bypass server default page-size limits (fetch all rows in batches)
+    const pageSize = 1000;
+    let start = 0;
+    let accumulated = [];
+    while(true){
+      statusEl.textContent = `Loading rows ${start + 1} ...`;
+      const { data, error } = await supabase
+        .from(tableName)
+        .select('*')
+        .order('IID', { ascending: true })
+        .range(start, start + pageSize - 1);
+      if(error){
+        const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+        throw new Error(`${error.message} | details: ${details}`);
+      }
+      if(!data || data.length === 0) break;
+      accumulated = accumulated.concat(data);
+      // if returned less than a full page, we've reached the end
+      if(data.length < pageSize) break;
+      start += pageSize;
+      // continue loop to fetch next page
+    }
+
+    allRowsCache = accumulated || [];
+    populateFilterOptions(allRowsCache);
+    renderTable(allRowsCache);
+    // update counts: show overall total from DB and current shown count
+    await updateOverallCount();
+    statusEl.textContent = `Total: calculating...`;
       }catch(err){
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
