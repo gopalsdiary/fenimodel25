@@ -131,10 +131,17 @@
     const saveBtn = document.getElementById('saveBtn');
     const modalNotice = document.getElementById('modalNotice');
 
-    refreshBtn.addEventListener('click', loadData);
-  classFilter.addEventListener('change', applyFilters);
-  sectionFilter.addEventListener('change', applyFilters);
-  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; applyFilters(); });
+    refreshBtn.addEventListener('click', () => {
+      const cls = classFilter.value;
+      if(cls) loadDataForClass(cls);
+    });
+
+  classFilter.addEventListener('change', onClassChange);
+  sectionFilter.addEventListener('change', () => {
+    // only apply section filter when a class is selected
+    if(classFilter.value) applyFilters();
+  });
+  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="9">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -156,6 +163,61 @@
     }
     // start loading photo links in background
     loadPhotoLinks();
+
+    // Load records for a specific class only
+    async function loadDataForClass(classValue){
+      statusEl.textContent = `Loading class ${classValue}...`;
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, student_photo_url, status')
+          .eq('class_2025', classValue)
+          .order('iid', { ascending: true })
+          .limit(10000);
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        allRowsCache = data || [];
+        populateFilterOptions(allRowsCache);
+        renderTable(allRowsCache);
+        statusEl.textContent = `Total: ${allRowsCache ? allRowsCache.length : 0}`;
+      }catch(err){
+        console.error('loadDataForClass error:', err);
+        statusEl.textContent = 'Data loading error';
+        const msg = err && err.message ? err.message : String(err);
+        tbody.innerHTML = `<tr><td colspan="9">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+      }
+    }
+
+    // Load class list for the dropdown (fixed classes: 6,7,8,9,10)
+    async function loadClassList(){
+      try{
+        // Fixed class list instead of fetching from database
+        const classes = ['6', '7', '8', '9', '10'];
+        classFilter.innerHTML = '';
+        const opt = document.createElement('option'); 
+        opt.value=''; 
+        opt.textContent='Select class'; 
+        classFilter.appendChild(opt);
+        classes.forEach(c=>{ 
+          const o=document.createElement('option'); 
+          o.value=c; 
+          o.textContent=c; 
+          classFilter.appendChild(o); 
+        });
+        statusEl.textContent = 'Select class to view data';
+      }catch(e){
+        console.warn('loadClassList failed', e);
+      }
+    }
+
+    function onClassChange(){
+      const cls = classFilter.value;
+      if(!cls){ tbody.innerHTML = '<tr><td colspan="9">Select class to view data</td></tr>'; statusEl.textContent='Select class to view data'; return; }
+      // load only when a class is selected
+      loadDataForClass(cls);
+    }
 
     async function loadData(){
       statusEl.textContent = 'Loading...';
@@ -182,21 +244,34 @@
     }
 
     function populateFilterOptions(rows){
-      // collect unique classes and sections
+      // collect unique classes and sections from provided rows
       const classes = new Set();
       const sections = new Set();
-      rows.forEach(r=>{ if(r && r.class_2025) classes.add(String(r.class_2025)); if(r && r.section_2025) sections.add(String(r.section_2025)); });
-      // clear current options
-      classFilter.innerHTML = '';
-      sectionFilter.innerHTML = '';
-      // default empty option
-      const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
-      const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
-      sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
+      rows.forEach(r=>{ 
+        if(r && r.class_2025) classes.add(String(r.class_2025)); 
+        if(r && r.section_2025) sections.add(String(r.section_2025)); 
+      });
 
+      // preserve current selections where possible
+      const selClass = classFilter.value;
+      const selSection = sectionFilter.value;
+
+      // rebuild class options only if they differ
+      const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+      classFilter.innerHTML = '';
+      const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
+      sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
+      if(selClass) classFilter.value = selClass;
+
+      // build section options based on rows (sections are class-specific)
+      sectionFilter.innerHTML = '';
       const optAnyS = document.createElement('option'); optAnyS.value=''; optAnyS.textContent='All'; sectionFilter.appendChild(optAnyS);
       const sortedSections = Array.from(sections).sort();
       sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
+      if(selSection) sectionFilter.value = selSection;
+
+      // ensure section change triggers filtering
+      sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
     }
 
     function applyFilters(){
@@ -205,7 +280,9 @@
       let filtered = allRowsCache;
       if(c) filtered = filtered.filter(r => String(r.class_2025) === c);
       if(s) filtered = filtered.filter(r => String(r.section_2025) === s);
-      renderTable(filtered);
+  // sort by roll_2025 numerically
+  filtered = filtered.sort((a,b)=> (Number(a.roll_2025)||0) - (Number(b.roll_2025)||0));
+  renderTable(filtered);
       statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
     }
 
@@ -397,8 +474,9 @@
     // close modal when clicking outside panel
     editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
 
-    // initial load
-    loadData();
+    // initial load: only populate class list, don't fetch records
+    tbody.innerHTML = '<tr><td colspan="9">Select class to view data</td></tr>';
+    loadClassList();
   </script>
 </body>
 </html>
