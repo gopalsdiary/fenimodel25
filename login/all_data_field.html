@@ -6,8 +6,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <title>Entry - Show & Edit</title>
   <style>
-    /* increase base font size by 20% and use Kalpurush font */
-    html{font-size:120%;}
+    /* reduce base font size by 20% and use Kalpurush font */
+    html{font-size:100%;}
     body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
     table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:auto}
     th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle;white-space:nowrap}
@@ -24,6 +24,8 @@
     .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
     /* status column */
     .status-tc{background-color:rgba(250, 187, 187, 0.5)}
+    /* SL (serial) column small */
+    .col-sl{width:56px;max-width:56px;padding:4px;text-align:center}
   </style>
 </head>
 <body>
@@ -130,30 +132,57 @@
     }
 
     async function loadData(){
-      statusEl.textContent = 'Loading...';
+      statusEl.textContent = 'Loading all data...';
       try{
         // Load column order if not loaded
         if(columnOrder.length === 0){
           await loadColumnOrder();
         }
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('*')
-          .order('iid', { ascending: true })
-          .limit(5000);
-        if(error){
-          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-          throw new Error(`${error.message} | details: ${details}`);
+        
+        // Use multiple fetch calls to get ALL data (bypass Supabase limits)
+        let allData = [];
+        let lastId = 0;
+        let batchSize = 1000;
+        let hasMore = true;
+        
+        while(hasMore) {
+          statusEl.textContent = `Loading... (${allData.length} records loaded)`;
+          
+          const { data, error } = await supabase
+            .from(tableName)
+            .select('*')
+            .gt('iid', lastId)
+            .order('iid', { ascending: true })
+            .limit(batchSize);
+            
+          if(error){
+            const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            throw new Error(`${error.message} | details: ${details}`);
+          }
+          
+          if(!data || data.length === 0) {
+            hasMore = false;
+            break;
+          }
+          
+          allData = allData.concat(data);
+          lastId = data[data.length - 1].iid;
+          
+          // If we got less than batchSize, we've reached the end
+          if(data.length < batchSize) {
+            hasMore = false;
+          }
         }
-        allRowsCache = data || [];
+        
+        allRowsCache = allData;
         populateFilterOptions(allRowsCache);
         renderTable(allRowsCache);
-        statusEl.textContent = `Total: ${allRowsCache ? allRowsCache.length : 0}`;
+        statusEl.textContent = `Total: ${allRowsCache.length} records (ALL DATA LOADED)`;
       }catch(err){
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="100">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${colCount}">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -189,7 +218,7 @@
       if(!rows || rows.length === 0){
         const thead = document.querySelector('#dataTable thead');
         thead.innerHTML = '<tr><th>Columns</th></tr>';
-        tbody.innerHTML = '<tr><td colspan="1">No records found</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="${colCount}">No records found</td></tr>`;
         return;
       }
 
@@ -203,17 +232,23 @@
       const remainingKeys = Array.from(allKeys).filter(k => !columnOrder.includes(k)).sort();
       const keys = orderedKeys.concat(remainingKeys);
 
-      // Render header
+      // Render header with SL column
       const thead = document.querySelector('#dataTable thead');
-      thead.innerHTML = '<tr>' + keys.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '</tr>';
+      thead.innerHTML = '<tr><th class="col-sl">SL</th>' + keys.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '</tr>';
 
       // Render body
       tbody.innerHTML = '';
-      const colCount = keys.length;
+      const colCount = keys.length + 1; // +1 for SL column
 
-      rows.forEach(r => {
+      rows.forEach((r, index) => {
         const tr = document.createElement('tr');
         const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
+
+        // Add SL column first
+        const slTd = document.createElement('td');
+        slTd.className = 'col-sl';
+        slTd.textContent = index + 1;
+        tr.appendChild(slTd);
 
         keys.forEach(k => {
           const td = document.createElement('td');
