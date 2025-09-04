@@ -1,6 +1,7 @@
 colm name > Column Name Show 
 
 iid > iid
+session > Session
 student_name_en > Student Name English
 student_name_bn > Student Name Bangla
 birth_registration > Birth Registration
@@ -18,12 +19,15 @@ father_name_bn > Father Name Bangla
 father_nid > Father NID
 father_mobile > Father Mobile
 father_occupation > Father Occupation
+father_dob > Father Date of Birth
 
 mother_name_en > Mother Name English
 mother_name_bn > Mother Name Bangla
 mother_nid > Mother NID
 mother_mobile > Mother Mobile
 mother_occupation > Mother Occupation
+mother_dob > Mother Date of Birth
+
 
 guardian_name_en > Guardian Name English
 guardian_name_bn > Guardian Name Bangla
@@ -35,6 +39,8 @@ guardian_occupation > Guardian Occupation
 board_name > Board Name
 board_roll > Board Roll
 board_registration > Board Registration
+group > Group
+optional_subject > Optional Subject
 
 village_bn > Village Bangla
 village_en > Village English
@@ -49,6 +55,8 @@ rfid_card_no > RFID Card No
 
 previous_school > Previous School
 admission_date > Admission Date
+previous_class_roll > Previous Class Roll
+school_reg_sl > School Reg Sl No
 comment_school > Comment School
 status > Status
 
