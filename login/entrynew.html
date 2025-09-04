@@ -6,8 +6,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <title>Entry - Show & Edit</title>
   <style>
-    /* increase base font size by 20% and use Kalpurush font */
-    html{font-size:120%;}
+  /* reduced base font size by 20% (reset to 100%) and use Kalpurush font */
+  html{font-size:100%;}
     body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
     table{width:100%;border-collapse:collapse;margin-top:12px}
     th,td{border:1px solid #ddd;padding:8px;text-align:left}
@@ -29,6 +29,8 @@
     #photo-preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:1000;width:350px;height:500px;border:4px solid #000;background:#fff;padding:10px;border-radius:10px;display:none;pointer-events:none}
     /* status column */
     .status-tc{background-color:rgba(250, 187, 187, 0.5)}
+  /* SL column */
+  .col-sl{width:56px;max-width:56px;padding:4px;text-align:center}
   </style>
 </head>
 <body>
@@ -49,6 +51,7 @@
   <table id="dataTable">
     <thead>
       <tr>
+  <th class="col-sl">SL</th>
         <th>IID</th>
         <th>Class</th>
         <th>Section</th>
@@ -61,7 +64,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="9">Loading...</td></tr>
+      <tr><td colspan="10">Loading...</td></tr>
     </tbody>
   </table>
 
@@ -141,7 +144,7 @@
     // only apply section filter when a class is selected
     if(classFilter.value) applyFilters();
   });
-  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="9">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
+  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="10">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -186,7 +189,7 @@
         console.error('loadDataForClass error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="9">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="10">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -196,10 +199,11 @@
         // Fixed class list instead of fetching from database
         const classes = ['6', '7', '8', '9', '10'];
         classFilter.innerHTML = '';
-        const opt = document.createElement('option'); 
-        opt.value=''; 
-        opt.textContent='Select class'; 
-        classFilter.appendChild(opt);
+  // first option: All (empty value means no class filter)
+  const opt = document.createElement('option'); 
+  opt.value=''; 
+  opt.textContent='All'; 
+  classFilter.appendChild(opt);
         classes.forEach(c=>{ 
           const o=document.createElement('option'); 
           o.value=c; 
@@ -214,32 +218,55 @@
 
     function onClassChange(){
       const cls = classFilter.value;
-      if(!cls){ tbody.innerHTML = '<tr><td colspan="9">Select class to view data</td></tr>'; statusEl.textContent='Select class to view data'; return; }
-      // load only when a class is selected
+      if(!cls){ 
+        // 'All' selected - load all data (existing function)
+  tbody.innerHTML = '<tr><td colspan="10">Loading all data...</td></tr>'; 
+        statusEl.textContent='Loading all data';
+        loadData();
+        return; 
+      }
+      // load only when a specific class is selected
       loadDataForClass(cls);
     }
 
     async function loadData(){
-      statusEl.textContent = 'Loading...';
+      // Batched fetch to load ALL rows (handles Supabase default limits)
+      statusEl.textContent = 'Loading all data...';
       try{
-        const { data, error } = await supabase
-          .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, student_photo_url, status')
-          .order('iid', { ascending: true })
-          .limit(5000);
-        if(error){
-          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-          throw new Error(`${error.message} | details: ${details}`);
+        const batchSize = 1000;
+        let allData = [];
+        let lastId = 0;
+        let round = 0;
+        while(true){
+          round++;
+          statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
+          const { data, error } = await supabase
+            .from(tableName)
+            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, student_photo_url, status')
+            .gt('iid', lastId)
+            .order('iid', { ascending: true })
+            .limit(batchSize);
+          if(error){
+            const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            throw new Error(`${error.message} | details: ${details}`);
+          }
+          if(!data || data.length === 0) break;
+          allData = allData.concat(data);
+          lastId = data[data.length-1].iid || lastId;
+          if(data.length < batchSize) break; // last batch
         }
-        allRowsCache = data || [];
+
+        allRowsCache = allData;
+        // sort by roll number
+        allRowsCache = allRowsCache.sort((a,b)=> (Number(a.roll_2025)||0) - (Number(b.roll_2025)||0));
         populateFilterOptions(allRowsCache);
         renderTable(allRowsCache);
-        statusEl.textContent = `Total: ${allRowsCache ? allRowsCache.length : 0}`;
+        statusEl.textContent = `Total: ${allRowsCache.length} records (ALL)`;
       }catch(err){
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="9">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="10">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -288,7 +315,7 @@
 
     function renderTable(rows){
       if(!rows || rows.length === 0){
-        tbody.innerHTML = '<tr><td colspan="9">No records found</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
@@ -315,8 +342,10 @@
         return '';
       }
 
-      rows.forEach(r => {
+      rows.forEach((r, idx) => {
         const tr = document.createElement('tr');
+        // SL cell
+        const tdSl = document.createElement('td'); tdSl.className = 'col-sl'; tdSl.textContent = idx + 1; tr.appendChild(tdSl);
         const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
 
         const tdIid = document.createElement('td'); tdIid.textContent = escapeHtml(iid);
@@ -363,7 +392,7 @@
         tr.appendChild(tdStatus);
         tr.appendChild(tdAction);
 
-        tbody.appendChild(tr);
+  tbody.appendChild(tr);
       });
     }
 
