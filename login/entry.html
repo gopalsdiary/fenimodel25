@@ -1,22 +1,32 @@
 <!doctype html>
-<html lang="en">
+<ht  /* SL (serial) column small */
+  .col-sl{width:56px;max-width:56px;padding:4px}ang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <title>Entry - Show & Edit</title>
   <style>
-    /* increase base font size by 20% and use Kalpurush font */
-    html{font-size:120%;}
+  /* reduce base font size by 20% (was 120%) and use Kalpurush font */
+  html{font-size:96%;}
     body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
   .table-wrapper{width:100%;overflow:auto;border:1px solid #e6e6e6;border-radius:6px;padding:6px;background:#fff}
-  table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:fixed}
+  table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:auto}
   th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}
   th{background:#f4f4f4}
-  .cell-content{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:220px;display:block}
+  /* allow text to wrap inside cell boxes */
+  .cell-content{overflow-wrap:break-word;word-break:break-word;white-space:normal;display:block}
   td .cell-content.multi{white-space:normal;display:block}
   tr:nth-child(even){background:#fbfbfb}
   tr:hover{background:#f1f9ff}
+  /* SL (serial) column small */
+  .col-sl{width:56px;max-width:20px;padding:4px}
+  /* address fields in edit modal — smaller font for large address blocks */
+  #editFields [data-field]{font-size:1rem}
+  #editFields [data-field][data-field*="address" i],
+  #editFields textarea[data-field*="address" i] {
+    font-size:50%;
+  }
     .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
     .btn.secondary{background:#6c757d}
     /* modal */
@@ -238,38 +248,56 @@
         return;
       }
       
-      // Get all column names from the first row
-      const columns = Object.keys(rows[0]).sort();
+      // Define specific column order as requested
+      const desiredColumns = [
+        'IID',
+        'Name_en', 
+        'Name_bn',
+        'Class',
+        'Section', 
+        'Roll',
+        'Father Name en',
+        'Father Name in Bengali',
+        'Mother Name',
+        'Mother_bn'
+      ];
+      
+      // Get all available columns from the data
+      const allColumns = Object.keys(rows[0]).sort();
+      
+      // Filter to only show columns that exist in the data
+      const specifiedColumns = desiredColumns.filter(col => allColumns.includes(col));
+      
+      // Get remaining columns that aren't in the specified list
+      const remainingColumns = allColumns.filter(col => !desiredColumns.includes(col));
+      
+      // Combine specified columns first, then remaining columns
+      const availableColumns = [...specifiedColumns, ...remainingColumns];
       
       // Update table header with Serial Number as first column
       const thead = document.getElementById('tableHead');
-      thead.innerHTML = '<tr><th>SL</th>' + columns.map(col => `<th>${escapeHtml(col)}</th>`).join('') + '<th>Action</th></tr>';
+      thead.innerHTML = '<tr><th class="col-sl">SL</th>' + availableColumns.map(col => `<th>${escapeHtml(col)}</th>`).join('') + '<th>Action</th></tr>';
       
       tbody.innerHTML = '';
       rows.forEach((r, index) => {
         const tr = document.createElement('tr');
         const iid = (r['IID'] ?? r.IID) || '';
         
-        // Add serial number as first cell
-        let cells = `<td>${index + 1}</td>`;
+        // Add serial number as first cell (small column)
+        let cells = `<td class="col-sl">${index + 1}</td>`;
         
-        // Create cells for all columns
-        cells += columns.map(col => {
+        // Create cells for only the desired columns
+        cells += availableColumns.map(col => {
           let value = r[col] || '';
-      if (col === 'Name') {
-            // Special handling for Name column with Bengali name
-            const primaryName = value;
-            const bn = getBengaliNameFromRow(r);
-            const nameCellHtml = `
-              <div class="stacked-name">
-        <span class="primary cell-content multi">${escapeHtml(primaryName)}</span>
-        <span class="secondary cell-content">${escapeHtml(bn)}</span>
-              </div>
-            `;
-            return `<td>${nameCellHtml}</td>`;
+          if (col === 'Name_en') {
+            // Show only English name
+            return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
+          } else if (col === 'Name_bn') {
+            // Show only Bengali name
+            return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
           } else {
-      // wrap other cells in .cell-content for consistent ellipsizing
-      return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
+            // wrap other cells in .cell-content for consistent ellipsizing
+            return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
           }
         }).join('');
         
@@ -284,9 +312,7 @@
         });
         tbody.appendChild(tr);
       });
-    }
-
-    async function openEditByIID(iid){
+    }    async function openEditByIID(iid){
       // fetch full row from DB to ensure we have all columns
       modalNotice.textContent = '';
       currentIID = iid;
