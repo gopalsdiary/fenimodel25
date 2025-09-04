@@ -15,8 +15,13 @@
     .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
     .btn.secondary{background:#6c757d}
     /* modal */
-    .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
-    .modal .panel{background:#fff;padding:16px;border-radius:6px;max-width:720px;width:100%;max-height:80vh;overflow:auto}
+  .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+  .modal .panel{background:#fff;padding:16px;border-radius:6px;max-width:720px;width:100%;max-height:80vh;overflow:auto}
+  /* view modal portrait style: tall centered card with left/right space */
+  #viewModal{align-items:center;justify-content:center}
+  /* make the panel a portrait card: narrow width, full height, centered */
+  #viewModal .panel{position:relative;max-width:720px;width:min(92vw,720px);height:100vh;border-radius:8px;margin:0;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,0.35)}
+  #viewModal .view-close-x{position:absolute;right:12px;top:8px;background:transparent;border:none;font-size:28px;line-height:1;padding:6px 8px;cursor:pointer;color:#333}
     .field-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
     .field-row label{min-width:140px}
     .field-row input, .field-row textarea{flex:1;padding:8px}
@@ -81,6 +86,18 @@
         <button id="saveBtn" class="btn">Save</button>
       </div>
       <div id="modalNotice" class="notice"></div>
+    </div>
+  </div>
+
+  <!-- View modal (read-only) -->
+  <div id="viewModal" class="modal">
+    <div class="panel">
+      <h3>View Record</h3>
+      <button id="viewCloseX" class="view-close-x" aria-label="Close">&times;</button>
+      <div id="viewFields"></div>
+      <div style="text-align:right;margin-top:12px">
+        <button id="closeViewBtn" class="btn secondary">Close</button>
+      </div>
     </div>
   </div>
 
@@ -151,8 +168,19 @@
     // store the currently editing IID
     let currentIID = null;
 
+  // view modal elems
+  const viewModal = document.getElementById('viewModal');
+  const viewFields = document.getElementById('viewFields');
+  const closeViewBtn = document.getElementById('closeViewBtn');
+  const viewCloseX = document.getElementById('viewCloseX');
+  closeViewBtn.addEventListener('click', () => { viewModal.style.display = 'none'; viewFields.innerHTML = ''; });
+  if(viewCloseX) viewCloseX.addEventListener('click', () => { viewModal.style.display = 'none'; viewFields.innerHTML = ''; });
+
     // photo links loaded from photo/link.csv (one URL per line).
     let photoLinks = [];
+
+  // data order loaded from dataorder.csv (defines preview field order and labels)
+  let dataOrder = []; // array of { key, label }
 
     async function loadPhotoLinks(){
       try{
@@ -166,6 +194,31 @@
     }
     // start loading photo links in background
     loadPhotoLinks();
+
+    // load dataorder.csv to determine preview order and labels
+    async function loadDataOrder(){
+      try{
+        // dataorder.csv is in the same `login/` folder as this page
+        const res = await fetch('dataorder.csv');
+        if(!res.ok) return;
+        const txt = await res.text();
+        const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        const parsed = [];
+        for(const line of lines){
+          // expect lines like: key > Label
+          const parts = line.split('>');
+          if(parts.length < 2) continue;
+          const key = parts[0].trim();
+          const label = parts.slice(1).join('>').trim();
+          if(key) parsed.push({ key, label });
+        }
+        dataOrder = parsed;
+      }catch(e){
+        console.warn('loadDataOrder failed', e);
+        dataOrder = [];
+      }
+    }
+    loadDataOrder();
 
     // Load records for a specific class only
     async function loadDataForClass(classValue){
@@ -374,13 +427,19 @@
         }
 
         const tdAction = document.createElement('td');
-        const btn = document.createElement('button'); btn.className = 'btn'; btn.textContent = 'Edit'; btn.setAttribute('data-iid', iid);
-        btn.addEventListener('click', () => {
+        // Edit button (existing behaviour)
+        const btnEdit = document.createElement('button'); btnEdit.className = 'btn'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
+        btnEdit.addEventListener('click', () => {
           const url = `editdetailsnew.html?iid=${encodeURIComponent(iid)}`;
           const w = window.open(url, '_blank');
           try{ if(w) w.opener = null; }catch(e){}
         });
-        tdAction.appendChild(btn);
+        tdAction.appendChild(btnEdit);
+
+        // View button (new) - open read-only modal
+        const btnView = document.createElement('button'); btnView.className = 'btn secondary'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.setAttribute('data-iid', iid);
+        btnView.addEventListener('click', () => { openViewByIID(iid); });
+        tdAction.appendChild(btnView);
 
         tr.appendChild(tdIid);
         tr.appendChild(tdClass);
@@ -419,6 +478,83 @@
         modalNotice.textContent = 'Failed to load record: ' + (err.message || err);
         // fallback: if we had a row in the table view, user can still edit minimal fields (not implemented here)
       }
+    }
+
+    // Open a read-only view modal for a given IID
+    async function openViewByIID(iid){
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('iid', Number(iid))
+          .limit(1)
+          .single();
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        renderViewFields(data || {});
+        viewModal.style.display = 'flex';
+      }catch(err){
+        console.error('openView error:', err);
+        alert('Failed to load record for view: ' + (err.message || err));
+      }
+    }
+
+    // Render record fields in read-only form (labels + values)
+    function renderViewFields(record){
+      viewFields.innerHTML = '';
+      const rendered = new Set();
+
+      // helper to render a single key/value
+      function renderField(key, label, val){
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        const lab = document.createElement('label'); lab.textContent = (label || key) + ':';
+        const container = document.createElement('div');
+        container.style.padding = '8px';
+        container.style.background = '#f9f9f9';
+        container.style.border = '1px solid #eee';
+        container.style.flex = '1';
+        container.style.whiteSpace = 'pre-wrap';
+
+        // special-case photo URL to render image
+        if(key === 'student_photo_url' && val){
+          const img = document.createElement('img');
+          img.src = String(val);
+          img.alt = 'Photo';
+          img.style.maxWidth = '220px';
+          img.style.maxHeight = '220px';
+          img.style.objectFit = 'cover';
+          container.appendChild(img);
+        } else {
+          container.textContent = val === null || val === undefined ? '' : String(val);
+        }
+
+        row.appendChild(lab);
+        row.appendChild(container);
+        viewFields.appendChild(row);
+      }
+
+      // 1) Render fields according to dataOrder.csv
+      if(Array.isArray(dataOrder) && dataOrder.length){
+        dataOrder.forEach(entry => {
+          const key = entry.key;
+          if(Object.prototype.hasOwnProperty.call(record, key)){
+            const val = record[key] === null || record[key] === undefined ? '' : record[key];
+            renderField(key, entry.label || key, val);
+            rendered.add(key);
+          }
+        });
+      }
+
+      // 2) Render any remaining fields not listed in dataOrder, alphabetically
+      const leftover = Object.keys(record).filter(k => !rendered.has(k)).sort();
+      leftover.forEach(k => {
+        const val = record[k] === null || record[k] === undefined ? '' : record[k];
+        renderField(k, k, val);
+        rendered.add(k);
+      });
     }
 
     function renderEditFields(record){
@@ -503,8 +639,11 @@
     // close modal when clicking outside panel
     editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
 
-    // initial load: only populate class list, don't fetch records
-    tbody.innerHTML = '<tr><td colspan="9">Select class to view data</td></tr>';
+    // close view modal when clicking outside panel
+    viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
+
+  // initial load: only populate class list, don't fetch records
+  tbody.innerHTML = '<tr><td colspan="10">Select class to view data</td></tr>';
     loadClassList();
   </script>
 </body>
