@@ -9,9 +9,14 @@
     /* increase base font size by 20% and use Kalpurush font */
     html{font-size:120%;}
     body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
-    table{width:100%;border-collapse:collapse;margin-top:12px}
-    th,td{border:1px solid #ddd;padding:8px;text-align:left}
-    th{background:#f4f4f4}
+  .table-wrapper{width:100%;overflow:auto;border:1px solid #e6e6e6;border-radius:6px;padding:6px;background:#fff}
+  table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:fixed}
+  th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}
+  th{background:#f4f4f4}
+  .cell-content{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;max-width:220px;display:block}
+  td .cell-content.multi{white-space:normal;display:block}
+  tr:nth-child(even){background:#fbfbfb}
+  tr:hover{background:#f1f9ff}
     .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
     .btn.secondary{background:#6c757d}
     /* modal */
@@ -42,21 +47,18 @@
     </div>
   </div>
 
+  <div class="table-wrapper">
   <table id="dataTable">
-    <thead>
+    <thead id="tableHead">
       <tr>
-        <th>IID</th>
-        <th>Class</th>
-        <th>Section</th>
-        <th>Roll</th>
-        <th>Name</th>
-        <th>Action</th>
+        <th>Loading columns...</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="6">Loading...</td></tr>
+      <tr><td colspan="100">Loading...</td></tr>
     </tbody>
   </table>
+  </div>
 
   <!-- Edit modal -->
   <div id="editModal" class="modal">
@@ -114,11 +116,13 @@
     async function loadData(){
       statusEl.textContent = 'Loading...';
       try{
-          const { data, error } = await supabase
-            .from(tableName)
-            .select('IID, Class, Section, Roll, Name')
-            .order('IID', { ascending: true })
-            .limit(5000);
+    // Supabase defaults to 1000 rows when using .select(). Use .range() to request a large window.
+    // Here we request rows 0..999999 to effectively return all rows (adjust if you have >1M rows).
+    const { data, error } = await supabase
+      .from(tableName)
+      .select('*')
+      .order('IID', { ascending: true })
+      .range(0, 999999);
         if(error){
           const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
           throw new Error(`${error.message} | details: ${details}`);
@@ -133,7 +137,7 @@
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="6">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="100">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -218,32 +222,47 @@
 
     function renderTable(rows){
       if(!rows || rows.length === 0){
-        tbody.innerHTML = '<tr><td colspan="6">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="100">No records found</td></tr>';
         return;
       }
+      
+      // Get all column names from the first row
+      const columns = Object.keys(rows[0]).sort();
+      
+      // Update table header with Serial Number as first column
+      const thead = document.getElementById('tableHead');
+      thead.innerHTML = '<tr><th>SL</th>' + columns.map(col => `<th>${escapeHtml(col)}</th>`).join('') + '<th>Action</th></tr>';
+      
       tbody.innerHTML = '';
-      rows.forEach(r => {
+      rows.forEach((r, index) => {
         const tr = document.createElement('tr');
         const iid = (r['IID'] ?? r.IID) || '';
-        // build stacked name: primary (Name) and secondary (Name in Bengali) if available
-        const primaryName = r['Name'] || r.Name || '';
-        // check several possible Bengali-name field variants
-        const bn = getBengaliNameFromRow(r);
-        const nameCellHtml = `
-          <div class="stacked-name">
-            <span class="primary">${escapeHtml(primaryName)}</span>
-            <span class="secondary">${escapeHtml(bn)}</span>
-          </div>
-        `;
-
-        tr.innerHTML = `
-          <td>${escapeHtml(iid)}</td>
-          <td>${escapeHtml(r['Class']||'')}</td>
-          <td>${escapeHtml(r['Section']||'')}</td>
-          <td>${escapeHtml(r['Roll']||'')}</td>
-          <td>${nameCellHtml}</td>
-          <td><button class="btn" data-iid="${iid}">Edit</button></td>
-        `;
+        
+        // Add serial number as first cell
+        let cells = `<td>${index + 1}</td>`;
+        
+        // Create cells for all columns
+        cells += columns.map(col => {
+          let value = r[col] || '';
+      if (col === 'Name') {
+            // Special handling for Name column with Bengali name
+            const primaryName = value;
+            const bn = getBengaliNameFromRow(r);
+            const nameCellHtml = `
+              <div class="stacked-name">
+        <span class="primary cell-content multi">${escapeHtml(primaryName)}</span>
+        <span class="secondary cell-content">${escapeHtml(bn)}</span>
+              </div>
+            `;
+            return `<td>${nameCellHtml}</td>`;
+          } else {
+      // wrap other cells in .cell-content for consistent ellipsizing
+      return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
+          }
+        }).join('');
+        
+        tr.innerHTML = cells + `<td><button class="btn" data-iid="${iid}">Edit</button></td>`;
+        
         const btn = tr.querySelector('button');
         btn.addEventListener('click', () => {
           // Open editdetails.html in a new tab with iid as query param
