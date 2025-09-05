@@ -226,7 +226,6 @@
                 </select>
             </div>
             <button class="btn-primary" onclick="loadStudents()">Load Students</button>
-            <button class="btn-primary" onclick="testLoadAllStudents()" style="margin-left: 10px;">Test Load All</button>
         </div>
 
         <div class="promotion-container">
@@ -398,13 +397,27 @@
 
         // Promote specific student
         async function promoteStudent(iid) {
-            const student = studentsData.find(s => s.iid === iid);
-            if (!student) return;
+            console.log('=== PROMOTE STUDENT START ===', iid);
+            
+            // Get student name from the table row instead of studentsData array
+            const studentRow = document.querySelector(`tr[data-iid="${iid}"]`);
+            if (!studentRow) {
+                console.error('Student row not found:', iid);
+                alert('Student row not found!');
+                return;
+            }
+            
+            const studentNameCell = studentRow.cells[1]; // Student name is in 2nd column (index 1)
+            const studentName = studentNameCell ? studentNameCell.textContent : 'Unknown';
+            console.log('Found student name from table:', studentName);
             
             const class2026 = document.getElementById(`class_2026_${iid}`).value;
             const section2026 = document.getElementById(`section_2026_${iid}`).value;
             let roll2026 = document.getElementById(`roll_2026_${iid}`).value;
-            // force session to 2026 regardless of input
+            
+            console.log('Form values:', { class2026, section2026, roll2026 });
+            
+            // Force session to 2026 regardless of input
             const sessionInput = document.getElementById(`session_${iid}`);
             sessionInput.value = '2026';
             const session = '2026';
@@ -416,19 +429,26 @@
             warningText.style.display = 'none';
 
             if (!roll2026) {
+                console.log('Roll 2026 is empty - showing warning');
                 rollInput.classList.add('input-error');
                 warningText.style.display = 'block';
                 document.getElementById('message').innerHTML = '<div class="message error">Roll 2026 is empty. Please enter new roll.</div>';
                 rollInput.focus();
+                alert('Roll 2026 is empty!'); // Extra alert for testing
                 return;
             }
-            if (!class2026 || !section2026 || !session) {
+            if (!class2026 || !section2026) {
+                console.log('Missing fields:', { class2026, section2026 });
                 document.getElementById('message').innerHTML = '<div class="message error">Please fill in all promotion fields for this student</div>';
+                alert('Please fill all fields!'); // Extra alert for testing
                 return;
             }
             
+            console.log('All validations passed - proceeding with database update');
+            
             try {
                 // Check for duplicate roll in target class/section
+                console.log('Checking for duplicate roll...');
                 const { data: existing, error: checkError } = await supabase
                     .from('student_database')
                     .select('iid')
@@ -436,27 +456,48 @@
                     .eq('section_2026', section2026)
                     .eq('roll_2026', roll2026);
                 
-                if (checkError) throw checkError;
+                if (checkError) {
+                    console.error('Check error:', checkError);
+                    throw checkError;
+                }
+                
+                console.log('Duplicate check result:', existing);
                 
                 if (existing && existing.length > 0 && existing[0].iid !== iid) {
+                    console.log('Duplicate roll found');
                     document.getElementById('message').innerHTML = `<div class="message error">Roll ${roll2026} already exists in Class ${class2026}, Section ${section2026} for 2026</div>`;
+                    alert(`Duplicate roll ${roll2026} found!`);
                     return;
                 }
                 
-                // Update student with promotion data
-                const { error } = await supabase
+                // Update student with promotion data - ALWAYS set session to 2026
+                console.log('Updating database with:', {
+                    class_2026: class2026,
+                    section_2026: section2026,
+                    roll_2026: parseInt(roll2026), // Ensure roll is stored as number
+                    session: 2026 // Force session to 2026 as number
+                });
+                
+                const { data: updateData, error } = await supabase
                     .from('student_database')
                     .update({
                         class_2026: class2026,
                         section_2026: section2026,
-                        roll_2026: roll2026,
-                        session: session
+                        roll_2026: parseInt(roll2026),
+                        session: 2026
                     })
-                    .eq('iid', iid);
+                    .eq('iid', iid)
+                    .select(); // Add select to get returned data
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Update error:', error);
+                    throw error;
+                }
                 
-                document.getElementById('message').innerHTML = `<div class=\"message success\">Student ${student.student_name_en} promoted successfully to Class ${class2026}, Section ${section2026}, Roll ${roll2026}</div>`;
+                console.log('Database update successful:', updateData);
+                alert('Database updated successfully!'); // Success alert
+                
+                document.getElementById('message').innerHTML = `<div class=\"message success\">Student ${studentName} promoted successfully to Class ${class2026}, Section ${section2026}, Roll ${roll2026}</div>`;
                 
                 // Clear any warning and disable the button to show it's completed
                 const warningText = document.getElementById(`warning_${iid}`);
@@ -467,8 +508,11 @@
                 btn.textContent = 'Promoted ✓';
                 btn.disabled = true;
                 
+                console.log('=== PROMOTE STUDENT SUCCESS ===');
+                
             } catch (error) {
                 console.error('Error promoting student:', error);
+                alert('Database error: ' + error.message); // Error alert
                 document.getElementById('message').innerHTML = `<div class="message error">Error promoting student: ${error.message}</div>`;
             }
         }
