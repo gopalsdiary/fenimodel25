@@ -11,9 +11,9 @@
   body{font-family: 'Kalpurush', Inter, Arial, Helvetica, sans-serif; padding:18px;background:linear-gradient(180deg,#f6f8fb,#fbfdff);color:#0f1724}
   /* Base elements */
   table{width:100%;border-collapse:separate;border-spacing:0;margin-top:14px}
-  th,td{padding:10px 12px;text-align:left}
+  th,td{padding:6px 8px;text-align:left;font-size:0.92rem}
   th{background:linear-gradient(180deg,#fbfdff,#f1f6fb);font-weight:700;font-size:.78rem;color:#0b1220;border-bottom:1px solid #e6eef8}
-  .col-sl{width:56px;max-width:56px;text-align:center}
+  .col-sl{width:44px;max-width:44px;text-align:center}
 
   /* Buttons */
   .btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
@@ -35,15 +35,17 @@
   .error-details{font-family:monospace;font-size:12px;color:#b42318;margin-top:6px}
 
   /* photo column */
-  .row-thumb{width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid #eef4fb}
+  .row-thumb{width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid #eef4fb}
   .no-image{font-size:13px;color:#c12b2b;font-style:italic}
   /* raised z-index so photo preview sits above sticky headers */
   #photo-preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2700;width:380px;height:520px;border-radius:12px;border:2px solid rgba(10,40,80,0.06);background:#fff;padding:12px;display:none;box-shadow:0 20px 60px rgba(12,24,40,0.12)}
 
   /* Top bar and controls */
-  .top-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:linear-gradient(180deg,#ffffff,#fbfdff);padding:14px 16px;border:1px solid #eef4fb;border-radius:12px;box-shadow:0 8px 20px rgba(14,24,40,0.04);margin-bottom:14px}
+  .top-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:linear-gradient(180deg,#ffffff,#fbfdff);padding:14px 16px;border:1px solid #eef4fb;border-radius:12px;box-shadow:0 8px 20px rgba(14,24,40,0.04);margin-bottom:14px;position:relative}
   .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   select, input[type="text"]{padding:9px 12px;border:1px solid #e6eef8;border-radius:10px;background:#fff;font-family:inherit;font-size:.96rem;min-width:120px;color:#0b1a2b}
+  /* center the status text within top-bar */
+  #status{position:absolute;left:50%;transform:translateX(-50%);font-weight:700}
   select:focus, input[type="text"]:focus{outline:2px solid rgba(11,116,222,0.14);box-shadow:0 8px 24px rgba(11,116,222,0.06)}
 
   /* Orange (কমলা) accent for filters */
@@ -106,12 +108,13 @@
   <th>Father Name</th>
   <th>Father Mobile</th>
   <th>Photo</th>
+  <th>Session</th>
         <th>Status</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="11">Loading...</td></tr>
+      <tr><td colspan="12">Loading...</td></tr>
     </tbody>
   </table>
 
@@ -204,7 +207,7 @@
     // only apply section filter when a class is selected
     if(classFilter.value) applyFilters();
   });
-  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="11">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
+  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="12">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -287,7 +290,7 @@
         console.error('loadDataForClass error:', err);
         statusEl.textContent = 'Data loading error';
     const msg = err && err.message ? err.message : String(err);
-  tbody.innerHTML = `<tr><td colspan="11">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="12">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -329,7 +332,7 @@
       const cls = classFilter.value;
   if(!cls){ 
     // 'All' selected - load all data (existing function)
-  tbody.innerHTML = '<tr><td colspan="11">Loading all data...</td></tr>'; 
+  tbody.innerHTML = '<tr><td colspan="12">Loading all data...</td></tr>'; 
         statusEl.textContent='Loading all data';
         loadData();
         return; 
@@ -377,7 +380,7 @@
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-  tbody.innerHTML = `<tr><td colspan="11">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="12">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -433,7 +436,7 @@
 
     function renderTable(rows){
     if(!rows || rows.length === 0){
-  tbody.innerHTML = '<tr><td colspan="11">No records found</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
@@ -497,6 +500,10 @@
           const noImg = document.createElement('span'); noImg.className = 'no-image'; noImg.textContent = 'No Image';
           tdPhoto.appendChild(noImg);
         }
+  const tdSession = document.createElement('td');
+  // session may be stored as 'session' or other variants
+  const sessionVal = getField(r, ['session','session_2025','academic_session']);
+  tdSession.textContent = escapeHtml(sessionVal || (r.session || ''));
 
         const tdStatus = document.createElement('td');
         const statusText = escapeHtml(r['status'] || '');
@@ -528,7 +535,8 @@
   tr.appendChild(tdFatherName);
   tr.appendChild(tdFatherMobile);
   tr.appendChild(tdPhoto);
-        tr.appendChild(tdStatus);
+  tr.appendChild(tdSession);
+  tr.appendChild(tdStatus);
         tr.appendChild(tdAction);
 
   tbody.appendChild(tr);
@@ -756,7 +764,7 @@
     viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
 
   // initial load: only populate class list, don't fetch records
-  tbody.innerHTML = '<tr><td colspan="11">Select class to view data</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12">Select class to view data</td></tr>';
     loadClassList();
   </script>
 </body>
