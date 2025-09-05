@@ -537,8 +537,27 @@
                         sessionStorage.setItem(ALL_DATA_KEY, text);
                         sessionStorage.setItem(ALL_DATA_EXP_KEY, String(expiresAt));
                         scheduleAllDataExpiry(ALL_DATA_TTL);
+                            // Also attempt to load the real page in background so its JS can warm localStorage cache
+                            backgroundLoadAllDataFieldPageIfNeeded();
                     }catch(e){ /* ignore */ }
                 }
+
+                    // Insert a hidden iframe to actually run /0newdatabase/all_data_field.html
+                    function backgroundLoadAllDataFieldPageIfNeeded(){
+                        try{
+                            // if session copy exists, or the all-data cache key exists in localStorage, skip
+                            if(sessionStorage.getItem(ALL_DATA_EXP_KEY) && sessionStorage.getItem(ALL_DATA_KEY)) return;
+                            if(localStorage.getItem('all_data_field_cache_v1')) return;
+                            const ifr = document.createElement('iframe');
+                            ifr.style.width = '1px'; ifr.style.height = '1px'; ifr.style.border = '0';
+                            ifr.style.position = 'absolute'; ifr.style.left = '-9999px'; ifr.style.top = '-9999px';
+                            ifr.loading = 'lazy';
+                            ifr.src = '0newdatabase/all_data_field.html';
+                            // keep iframe briefly to allow page scripts to run and populate caches
+                            document.body.appendChild(ifr);
+                            setTimeout(()=>{ try{ ifr.remove(); }catch(e){} }, 60000);
+                        }catch(e){ /* ignore */ }
+                    }
 
                 function initAllDataCacheOnLoad(){
                     const now = Date.now();

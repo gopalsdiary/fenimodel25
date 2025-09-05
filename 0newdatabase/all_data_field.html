@@ -35,15 +35,7 @@
 <body>
   <h2>student_database : Data Overview </h2>
   <div>
-    <button id="refreshBtn" class="btn">Refresh</button>
     <span id="status" style="margin-left:12px;color:#444"></span>
-    <div style="display:inline-block;margin-left:18px;vertical-align:middle">
-      <label for="classFilter" style="margin-right:6px;color:#333">Class:</label>
-      <select id="classFilter" style="padding:6px;border-radius:4px;border:1px solid #ccc"></select>
-      <label for="sectionFilter" style="margin:0 6px 0 12px;color:#333">Section:</label>
-      <select id="sectionFilter" style="padding:6px;border-radius:4px;border:1px solid #ccc"></select>
-      <button id="clearFilters" class="btn secondary" style="margin-left:8px;padding:6px 8px">Clear</button>
-    </div>
   </div>
 
   <table id="dataTable">
@@ -88,10 +80,6 @@
 
   const tbody = document.querySelector('#dataTable tbody');
     const statusEl = document.getElementById('status');
-    const refreshBtn = document.getElementById('refreshBtn');
-  const classFilter = document.getElementById('classFilter');
-  const sectionFilter = document.getElementById('sectionFilter');
-  const clearFilters = document.getElementById('clearFilters');
 
   // keep full dataset in memory for client-side filtering
   let allRowsCache = [];
@@ -103,10 +91,7 @@
     const saveBtn = document.getElementById('saveBtn');
     const modalNotice = document.getElementById('modalNotice');
 
-    refreshBtn.addEventListener('click', loadData);
-  classFilter.addEventListener('change', applyFilters);
-  sectionFilter.addEventListener('change', applyFilters);
-  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; applyFilters(); });
+  // Refresh and filter controls removed per request
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -140,9 +125,8 @@
       if(!cached) return false;
       const age = Date.now() - cached.ts;
       if(age > CACHE_TTL_MS) return false;
-      allRowsCache = cached.rows;
-      populateFilterOptions(allRowsCache);
-      renderTable(allRowsCache);
+  allRowsCache = cached.rows;
+  renderTable(allRowsCache);
       const mins = Math.max(0, Math.floor(age/60000));
       statusEl.textContent = `Total: ${allRowsCache.length} (from cache, ${mins}m old)`;
       // Kick off a background refresh (SWR) without blocking UI
@@ -150,7 +134,7 @@
       return true;
     }
 
-    async function loadColumnOrder(){
+  async function loadColumnOrder(){
       try{
         const res = await fetch('dataorder.csv');
         if(!res.ok) return;
@@ -179,18 +163,23 @@
           await loadColumnOrder();
         }
         
-        // Use multiple fetch calls to get ALL data (bypass Supabase limits)
-        let allData = [];
-        let lastId = 0;
-        let batchSize = 1000;
-        let hasMore = true;
+  // Use multiple fetch calls to get ALL data (bypass Supabase limits)
+  let allData = [];
+  let lastId = 0;
+  // larger batch size to reduce round-trip overhead (monitor memory)
+  let batchSize = 5000;
+  let hasMore = true;
         
         while(hasMore) {
           statusEl.textContent = `Loading... (${allData.length} records loaded)`;
           
+          // select only needed columns when possible to reduce payload
+          const selectCols = (columnOrder && columnOrder.length>0)
+            ? columnOrder.concat(['iid']).filter(Boolean).map(c=> `"${c.replace(/"/g,'') }"`).join(',')
+            : '*';
           const { data, error } = await supabase
             .from(tableName)
-            .select('*')
+            .select(selectCols)
             .gt('iid', lastId)
             .order('iid', { ascending: true })
             .limit(batchSize);
@@ -205,7 +194,8 @@
             break;
           }
           
-          allData = allData.concat(data);
+          // append results (faster than repeated concat)
+          for(const row of data) allData.push(row);
           lastId = data[data.length - 1].iid;
           
           // If we got less than batchSize, we've reached the end
@@ -214,10 +204,9 @@
           }
         }
         
-        allRowsCache = allData;
-        populateFilterOptions(allRowsCache);
-        renderTable(allRowsCache);
-        statusEl.textContent = `Total: ${allRowsCache.length} records (updated just now)`;
+  allRowsCache = allData;
+  renderTable(allRowsCache);
+  statusEl.textContent = `Total: ${allRowsCache.length} records (updated just now)`;
         // Persist to cache for 10 minutes use
         saveCache(allRowsCache);
       }catch(err){
@@ -229,8 +218,7 @@
         // If we have cache, show it as fallback
         const cached = loadCache();
         if(cached && Array.isArray(cached.rows)){
-          allRowsCache = cached.rows;
-          populateFilterOptions(allRowsCache);
+        allRowsCache = cached.rows;
           renderTable(allRowsCache);
           const ageM = Math.floor((Date.now()-cached.ts)/60000);
           statusEl.textContent = `Total: ${allRowsCache.length} (offline cache, ${ageM}m old)`;
@@ -238,33 +226,7 @@
       }
     }
 
-    function populateFilterOptions(rows){
-      // collect unique classes and sections
-      const classes = new Set();
-      const sections = new Set();
-      rows.forEach(r=>{ if(r && r.class_2025) classes.add(String(r.class_2025)); if(r && r.section_2025) sections.add(String(r.section_2025)); });
-      // clear current options
-      classFilter.innerHTML = '';
-      sectionFilter.innerHTML = '';
-      // default empty option
-      const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
-      const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
-      sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
-
-      const optAnyS = document.createElement('option'); optAnyS.value=''; optAnyS.textContent='All'; sectionFilter.appendChild(optAnyS);
-      const sortedSections = Array.from(sections).sort();
-      sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
-    }
-
-    function applyFilters(){
-      const c = classFilter.value;
-      const s = sectionFilter.value;
-      let filtered = allRowsCache;
-      if(c) filtered = filtered.filter(r => String(r.class_2025) === c);
-      if(s) filtered = filtered.filter(r => String(r.section_2025) === s);
-      renderTable(filtered);
-      statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
-    }
+  // Filter helpers removed per request
 
     function renderTable(rows){
       if(!rows || rows.length === 0){
