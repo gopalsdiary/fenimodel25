@@ -394,14 +394,13 @@
         const photoEl = document.getElementById('topPhoto');
         if(photoEl){
           const idForPhoto = rec.iid || rec.sl || '';
-          if(idForPhoto){
+          if(idForPhoto && rec.iid){  // Only show if iid is present
             // Prefer local photo links if available
             let chosen = '';
             try {
               const links = window.__PHOTO_LINKS || PHOTO_LINKS || [];
-              // Find an URL that contains the id (like avatar-<id> or the id itself)
-              const normId = String(idForPhoto).replace(/^0+/, '');
-              chosen = links.find(u => u && (u.includes('avatar-'+normId) || u.includes(normId))) || '';
+              // Find an URL that contains the exact iid
+              chosen = links.find(u => u && u.includes('avatar-' + rec.iid + '.')) || '';
             } catch(e){ chosen = ''; }
             if(!chosen){
               // No local photo link found — do not use external fallback. Hide the photo element.

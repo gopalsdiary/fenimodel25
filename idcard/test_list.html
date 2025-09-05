@@ -151,9 +151,8 @@
       
       // Find matching photo from photo links
       let photoUrl = '';
-      if(window.__PHOTO_LINKS && window.__PHOTO_LINKS.length > 0){
-        const normId = String(iid || sl || '').replace(/^0+/, '');
-        photoUrl = window.__PHOTO_LINKS.find(u => u && (u.includes('avatar-'+normId) || u.includes(normId))) || '';
+      if(window.__PHOTO_LINKS && window.__PHOTO_LINKS.length > 0 && iid){
+        photoUrl = window.__PHOTO_LINKS.find(u => u && u.includes('avatar-' + iid + '.')) || '';
       }
       
       // Create photo element
