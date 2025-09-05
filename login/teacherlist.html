@@ -4,11 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
-  <title>Entry - Show & Edit</title>
+  <title>ADD - Show & Edit</title>
   <style>
   /* Polished UI: improved typography, spacing, colors */
   html{font-size:100%;}
-  body{font-family: 'Kalpurush', Inter, Arial, Helvetica, sans-serif; padding:18px;background:linear-gradient(180deg,#f6f8fb,#fbfdff);color:#0f1724}
+  body{font-family:  Helvetica, sans-serif; padding:18px;background:linear-gradient(180deg,#f6f8fb,#fbfdff);color:#0f1724}
   /* Base elements */
   table{width:100%;border-collapse:separate;border-spacing:0;margin-top:14px}
   th,td{padding:6px 8px;text-align:left;font-size:0.92rem}
@@ -17,8 +17,8 @@
 
   /* Buttons */
   .btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
-  .btn.primary{background:#0b74de;color:#fff;box-shadow:0 10px 24px rgba(11,116,222,0.12)}
-  .btn.secondary{background:#f1f5f9;color:#334155;border:1px solid #e6eef8}
+  .btn.primary{background:#ff7a00;color:#fff;box-shadow:0 10px 24px rgba(255,122,0,0.12)}
+  .btn.secondary{background:#f8fafc;color:#334155;border:2px solid #cbd5e1;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
 
   /* Modal styles */
   .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(6,12,28,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:2500}
@@ -54,13 +54,13 @@
   .filter-select:focus{outline:2px solid rgba(255,122,0,0.16);box-shadow:0 10px 30px rgba(255,122,0,0.08)}
 
   /* Table visuals */
-  #dataTable{background:linear-gradient(180deg,#ffffff,#fbfcff);border:1px solid #eef4fb;border-radius:12px;overflow:hidden}
-  #dataTable thead th{position:sticky;top:0;z-index:3;padding:12px 14px}
-  #dataTable tbody td{padding:12px 14px;border-bottom:1px solid #f3f7fb}
-  #dataTable tbody tr:hover{background:linear-gradient(90deg,#f7fbff,#ffffff)}
+  #dataTable{background:#ffffff;border:2px solid #ffb366;border-radius:8px;overflow:hidden;box-shadow:0 4px 6px rgba(255,179,102,0.1), 0 2px 4px rgba(255,179,102,0.06)}
+  #dataTable thead th{position:sticky;top:0;z-index:3;padding:16px 20px;background:linear-gradient(135deg,#ffb366,#ffcc80);border:1px solid #ffb366;font-weight:600;color:#ffffff}
+  #dataTable tbody td{padding:16px 20px;border:1px solid #ffb366;border-bottom:1px solid #f1f5f9}
+  #dataTable tbody tr:hover{background:#fff7ed;border-left:3px solid #ffb366;transition:background-color 0.15s ease}
 
   /* tint entire row redder when student has TC status (strong highlight) */
-  #dataTable tbody tr.status-tc{background:linear-gradient(90deg, rgba(184, 10, 1, 0.4), rgba(240, 23, 23, 0.2));}
+  #dataTable tbody tr.status-tc{background:#fef2f2;border-left:4px solid #ef4444}
   .small-muted{font-size:.86rem;color:#64748b}
 
   .loading-spinner{width:32px;height:32px;border:4px solid #edf4fb;border-top-color:#0b74de;border-radius:50%;animation:spin 1s linear infinite;margin:auto}
@@ -334,7 +334,7 @@
         const tdJoin = document.createElement('td'); tdJoin.textContent = escapeHtml(r['join_date'] || r.join_date || '');
 
         const tdAction = document.createElement('td');
-  const btnEdit = document.createElement('button'); btnEdit.className = 'btn'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
+  const btnEdit = document.createElement('button'); btnEdit.className = 'btn primary'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
   btnEdit.addEventListener('click', () => { openEditByIID(iid); });
         tdAction.appendChild(btnEdit);
         const btnView = document.createElement('button'); btnView.className = 'btn secondary'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.addEventListener('click', ()=> openViewByIID(iid));
