@@ -83,7 +83,9 @@
       <label for="classFilter" class="filter-label">Class</label>
       <select id="classFilter" class="filter-select"></select>
       <label for="sectionFilter" class="filter-label">Section</label>
-      <select id="sectionFilter" class="filter-select"></select>
+  <select id="sectionFilter" class="filter-select"></select>
+  <label for="sessionFilter" class="filter-label">Session</label>
+  <select id="sessionFilter" class="filter-select"></select>
     </div>
     <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
       <button id="refreshBtn" class="btn primary">Refresh</button>
@@ -156,6 +158,7 @@
     const refreshBtn = document.getElementById('refreshBtn');
   const classFilter = document.getElementById('classFilter');
   const sectionFilter = document.getElementById('sectionFilter');
+  const sessionFilter = document.getElementById('sessionFilter');
   const clearFilters = document.getElementById('clearFilters');
 
   // photo preview
@@ -264,12 +267,14 @@
     async function loadDataForClass(classValue){
       statusEl.textContent = `Loading class ${classValue}...`;
       try{
-        const { data, error } = await supabase
+        // Build query and optionally apply session filter
+        let q = supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status')
-          .eq('class_2025', classValue)
-          .order('iid', { ascending: true })
-          .limit(10000);
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session')
+          .eq('class_2025', classValue);
+        if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
+        q = q.order('iid', { ascending: true }).limit(10000);
+        const { data, error } = await q;
         if(error){
           const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
           throw new Error(`${error.message} | details: ${details}`);
@@ -304,6 +309,17 @@
           classFilter.appendChild(o); 
         });
         statusEl.textContent = 'Select class to view data';
+        // initialize session filter (fixed list)
+        if(sessionFilter){
+          sessionFilter.innerHTML = '';
+          const optAny = document.createElement('option'); optAny.value=''; optAny.textContent='All'; sessionFilter.appendChild(optAny);
+          ['2025','2026'].forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionFilter.appendChild(o); });
+          sessionFilter.value = '';
+          sessionFilter.onchange = () => {
+            // if a class is selected, reload that class with session filter, else load all
+            if(classFilter.value) loadDataForClass(classFilter.value); else loadData();
+          };
+        }
       }catch(e){
         console.warn('loadClassList failed', e);
       }
@@ -333,12 +349,14 @@
         while(true){
           round++;
           statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
-          const { data, error } = await supabase
+          // build paginated query and optionally apply session filter
+          let q = supabase
             .from(tableName)
-            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status')
-            .gt('iid', lastId)
-            .order('iid', { ascending: true })
-            .limit(batchSize);
+            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session')
+            .gt('iid', lastId);
+          if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
+          q = q.order('iid', { ascending: true }).limit(batchSize);
+          const { data, error } = await q;
           if(error){
             const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
             throw new Error(`${error.message} | details: ${details}`);
@@ -372,34 +390,41 @@
         if(r && r.section_2025) sections.add(String(r.section_2025)); 
       });
 
-      // preserve current selections where possible
-      const selClass = classFilter.value;
-      const selSection = sectionFilter.value;
+  // preserve current selections where possible
+  const selClass = classFilter.value;
+  const selSection = sectionFilter.value;
+  const selSession = sessionFilter && sessionFilter.value;
 
       // rebuild class options only if they differ
       const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
       classFilter.innerHTML = '';
       const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
       sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
-      if(selClass) classFilter.value = selClass;
+  if(selClass) classFilter.value = selClass;
 
       // build section options based on rows (sections are class-specific)
       sectionFilter.innerHTML = '';
       const optAnyS = document.createElement('option'); optAnyS.value=''; optAnyS.textContent='All'; sectionFilter.appendChild(optAnyS);
       const sortedSections = Array.from(sections).sort();
       sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
-      if(selSection) sectionFilter.value = selSection;
+  if(selSection) sectionFilter.value = selSection;
+  // if session values are present in rows, prefer keeping user's selection, otherwise keep current
+  if(sessionFilter && selSession) sessionFilter.value = selSession;
 
-      // ensure section change triggers filtering
-      sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
+  // ensure section change triggers filtering
+  sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
+  // ensure session change triggers filtering (client-side)
+  if(sessionFilter) sessionFilter.onchange = () => { if(classFilter.value) applyFilters(); else loadData(); };
     }
 
     function applyFilters(){
       const c = classFilter.value;
       const s = sectionFilter.value;
+  const ses = sessionFilter && sessionFilter.value;
       let filtered = allRowsCache;
       if(c) filtered = filtered.filter(r => String(r.class_2025) === c);
       if(s) filtered = filtered.filter(r => String(r.section_2025) === s);
+  if(ses) filtered = filtered.filter(r => String(r.session) === ses || String(r.session || '') === ses);
   // sort by roll_2025 numerically
   filtered = filtered.sort((a,b)=> (Number(a.roll_2025)||0) - (Number(b.roll_2025)||0));
   renderTable(filtered);
