@@ -58,6 +58,9 @@
   #dataTable thead th{position:sticky;top:0;z-index:3;padding:12px 14px}
   #dataTable tbody td{padding:12px 14px;border-bottom:1px solid #f3f7fb}
   #dataTable tbody tr:hover{background:linear-gradient(90deg,#f7fbff,#ffffff)}
+
+  /* tint entire row redder when student has TC status (strong highlight) */
+  #dataTable tbody tr.status-tc{background:linear-gradient(90deg, rgba(184, 10, 1, 0.4), rgba(240, 23, 23, 0.2));}
   .small-muted{font-size:.86rem;color:#64748b}
 
   .loading-spinner{width:32px;height:32px;border:4px solid #edf4fb;border-top-color:#0b74de;border-radius:50%;animation:spin 1s linear infinite;margin:auto}
@@ -506,10 +509,10 @@
   tdSession.textContent = escapeHtml(sessionVal || (r.session || ''));
 
         const tdStatus = document.createElement('td');
-        const statusText = escapeHtml(r['status'] || '');
-        tdStatus.textContent = statusText;
+        const statusText = String(r['status'] || '');
+        tdStatus.textContent = escapeHtml(statusText);
         if (statusText && statusText.toUpperCase().includes('TC')) {
-          tr.className = 'status-tc';
+          tr.classList.add('status-tc');
         }
 
         const tdAction = document.createElement('td');
