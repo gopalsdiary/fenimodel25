@@ -193,7 +193,16 @@
 					for(const col of columnSpec){
 						const td = document.createElement('td');
 						const v = row[col.field];
-						td.textContent = escapeHtml(v==null?'':String(v));
+						if(col.field === 'iid'){
+							const link = document.createElement('a');
+							link.href = `detailsinfo.html?iid=${encodeURIComponent(v)}`;
+							link.textContent = escapeHtml(v==null?'':String(v));
+							link.style.color = '#0b74de';
+							link.style.textDecoration = 'underline';
+							td.appendChild(link);
+						}else{
+							td.textContent = escapeHtml(v==null?'':String(v));
+						}
 						tr.appendChild(td);
 					}
 					tbody.appendChild(tr);

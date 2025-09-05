@@ -48,137 +48,88 @@
 			.btn:hover { background:#0f162a; }
 		}
 	</style>
-	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script>
-		function byParam(n){ return new URLSearchParams(location.search).get(n) || ''; }
-		function csvUrl(id, sheet){
-			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+		// Supabase config
+		const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+		const tableName = 'student_database';
+
+		function byParam(name){
+			const url = new URL(window.location.href);
+			return url.searchParams.get(name);
 		}
-		async function loadSheetList(){
-			const res = await fetch('sheetidname.text', {cache:'no-store'});
-			if(!res.ok) throw new Error('sheet list load fail');
-			const txt = await res.text();
-			const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-			const pairs=[]; let curId=null; const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?$/i; const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?$/i;
-			for(const line of lines){ const im=idRe.exec(line); if(im){ curId=im[1]; continue;} const nm=nameRe.exec(line); if(nm && curId){ pairs.push({id:curId,name:nm[1]}); curId=null; } }
-			return pairs;
-		}
+
 		function esc(s){ return String(s ?? ''); }
-		function normHeader(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
-		function findIidKey(fields){
-			const order = ['iid','id','studentid','sid'];
-			const map = new Map(fields.map(f=>[normHeader(f), f]));
-			for(const key of order){ if(map.has(key)) return map.get(key); }
-			return null;
-		}
 
-		async function loadPhotoLinks(){
+		async function loadColumnOrder(){
 			try{
-				const res = await fetch('../photo/link.csv', {cache:'no-store'});
-				if(!res.ok) throw new Error('Photo links load fail');
+				const res = await fetch('dataorder.csv');
 				const txt = await res.text();
-				return txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-			}catch(e){
-				console.error('Failed to load photo links:', e);
-				return [];
-			}
-		}
-
-		function findImageLink(links, iid){
-			const searchPattern = new RegExp(`avatar-${iid}\\.(jpg|png)$`, 'i');
-			return links.find(link => searchPattern.test(link)) || null;
+				const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+				const spec = [];
+				for(const line of lines){
+					if(line.toLowerCase().includes('colm name')) continue;
+					const parts = line.split(' > ');
+					if(parts.length >= 2){
+						const field = parts[0].trim();
+						const label = parts[1].trim();
+						if(field) spec.push({ field, label });
+					}
+				}
+				return spec;
+			}catch(e){ return []; }
 		}
 
 		async function loadAndDisplayImage(iid){
-			const imageContainer = document.getElementById('image-container');
-			if(!iid) return;
-			
-			const links = await loadPhotoLinks();
-			const imageLink = findImageLink(links, iid);
-			
-			if(imageLink){
-				const img = document.createElement('img');
-				img.src = imageLink;
-				img.alt = `Student ${iid}`;
-				img.className = 'student-image';
-				img.onerror = () => {
-					imageContainer.innerHTML = '<p class="muted">ছবি লোড করা যায়নি</p>';
-				};
-				imageContainer.appendChild(img);
-			}else{
-				imageContainer.innerHTML = '<p class="muted">ছবি পাওয়া যায়নি</p>';
-			}
-		}
-
-		async function findByIid(iid){
-			const pairs = await loadSheetList();
-			for(let idx=0; idx<pairs.length; idx++){
-				const {id,name} = pairs[idx];
-				try{
-					const results = await new Promise((resolve,reject)=>{ Papa.parse(csvUrl(id,name), {download:true,header:true,skipEmptyLines:true,complete:r=>resolve(r), error:e=>reject(e)}); });
-					const rows = (results && results.data) ? results.data : [];
-					const fields = (results.meta && results.meta.fields) || Object.keys(rows[0]||{});
-					const iidKey = findIidKey(fields);
-					if(!iidKey) continue;
-					const row = rows.find(r=> String(r[iidKey]??'').trim() === String(iid).trim());
-					if(row){ return { id, sheet:name, row, fields }; }
-				}catch(e){ /* ignore and continue */ }
-			}
-			return null;
+			// Placeholder for image loading if needed
 		}
 
 		async function init(){
-			const idParam = byParam('id');
-			const sheetParam = byParam('sheet');
-			const rowIdxParam = byParam('r');
-			const rowIdx = Number.isFinite(parseInt(rowIdxParam,10)) ? parseInt(rowIdxParam,10) : null;
 			const iidParam = byParam('iid');
 			const head = document.getElementById('head');
 			const status = document.getElementById('status');
 			const meta = document.getElementById('meta');
 			head.textContent = 'বিস্তারিত তথ্য';
-			let id=idParam, sheet=sheetParam, row=null, fields=null, usedBy='', currentIid=iidParam;
-			if(!id || !sheet){
-				if(iidParam){
-					status.textContent='Searching sheets…';
-					const found = await findByIid(iidParam);
-					if(found){ id=found.id; sheet=found.sheet; row=found.row; fields=found.fields; usedBy = `IID: ${iidParam}`; history.replaceState(null,'',`?iid=${encodeURIComponent(iidParam)}`); }
-					else { status.textContent='Record not found'; return; }
-				}else{
-					status.textContent='Invalid link'; return;
-				}
+			if(!iidParam){
+				status.textContent='No IID provided';
+				return;
 			}
-			if(status.textContent==='') status.textContent='Loading…';
+			status.textContent='Loading…';
 			try{
-				if(!row){
-					const results = await new Promise((resolve,reject)=>{ Papa.parse(csvUrl(id,sheet), {download:true,header:true,skipEmptyLines:true,complete:r=>resolve(r), error:e=>reject(e)}); });
-					const rows = (results && results.data) ? results.data : [];
-					fields = (results.meta && results.meta.fields) || Object.keys(rows[0]||{});
-					if(iidParam){
-						const iidKey = findIidKey(fields);
-						if(iidKey){
-							row = rows.find(r=> String(r[iidKey]??'').trim() === String(iidParam).trim());
-							if(row) usedBy = `IID: ${iidParam}`;
-						}
-					}
-					if(!row && rowIdx!=null && rowIdx>=0 && rowIdx<rows.length){ row = rows[rowIdx]; usedBy = `Row: ${rowIdx+1}`; }
-					if(!row){ status.textContent='Record not found'; return; }
+				const columnSpec = await loadColumnOrder();
+				const { data, error } = await supabase
+					.from(tableName)
+					.select('*')
+					.eq('iid', Number(iidParam))
+					.single();
+				if(error) throw error;
+				if(!data){
+					status.textContent='Record not found';
+					return;
 				}
-				// Load and display student image
-				const iidKey = findIidKey(fields);
-				if(iidKey && row){
-					currentIid = row[iidKey];
-				}
-				if(currentIid){
-					loadAndDisplayImage(currentIid);
-				}
-				meta.textContent = `Sheet: ${sheet}` + (usedBy? ` · ${usedBy}`:'');
+				meta.textContent = `IID: ${iidParam}`;
+				loadAndDisplayImage(iidParam);
 				const dl = document.getElementById('dl');
-				let shown=0; function cleanLabel(name){ let s=String(name||''); s=s.replace(/["']/g,'').trim(); s=s.replace(/^_+/,''); s=s.replace(/[_\s]+/g,' ').trim(); return s; }
-				(fields||Object.keys(row||{})).forEach(f=>{ const label=cleanLabel(f); const isWeird=!label || /^\d+$/.test(label) || /^_?\d+$/.test(String(f||'')); const valRaw=row[f]; const val=esc(valRaw); const valTrim=String(valRaw==null?'' : valRaw).trim(); if(isWeird && !valTrim) return; if(!valTrim) return; const dt=document.createElement('dt'); dt.textContent=label||String(f||''); const dd=document.createElement('dd'); dd.textContent=val; dl.appendChild(dt); dl.appendChild(dd); shown++; });
-				if(shown===0){ const dt=document.createElement('dt'); dt.textContent='Info'; const dd=document.createElement('dd'); dd.textContent='No non-empty fields to display.'; dl.appendChild(dt); dl.appendChild(dd); }
-				status.textContent='Ready';
-			}catch(e){ console.error(e); status.textContent='Failed to load'; }
+				let shown=0;
+				const fieldsToShow = columnSpec.length > 0 ? columnSpec : Object.keys(data).map(f => ({field: f, label: f}));
+				fieldsToShow.forEach(spec => {
+					const valRaw = data[spec.field];
+					const val = esc(valRaw);
+					const dt = document.createElement('dt');
+					dt.textContent = spec.label || spec.field;
+					const dd = document.createElement('dd');
+					dd.textContent = val || '';
+					dl.appendChild(dt);
+					dl.appendChild(dd);
+					shown++;
+				});
+				status.textContent = 'Ready';
+			}catch(e){
+				console.error(e);
+				status.textContent = 'Failed to load';
+			}
 		}
 		window.addEventListener('DOMContentLoaded', init);
 	</script>
