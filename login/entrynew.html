@@ -21,8 +21,8 @@
   .btn.secondary{background:#f1f5f9;color:#334155;border:1px solid #e6eef8}
 
   /* Modal styles */
-  .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(6,12,28,0.45);display:none;align-items:center;justify-content:center;padding:20px}
-  .modal .panel{background:#fff;padding:18px;border-radius:12px;max-width:820px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(12,24,40,0.12)}
+  .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(6,12,28,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:2500}
+  .modal .panel{background:#fff;padding:18px;border-radius:12px;max-width:820px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(12,24,40,0.12);z-index:2600}
   #viewModal{align-items:flex-start}
   #viewModal .panel{position:relative;border-radius:12px}
   #viewModal .view-close-x{position:absolute;right:14px;top:10px;background:transparent;border:none;font-size:26px;line-height:1;padding:6px 8px;cursor:pointer;color:#334155}
@@ -99,8 +99,9 @@
         <th>Section</th>
         <th>Roll</th>
         <th>Name</th>
-        <th>Father Name</th>
-        <th>Photo</th>
+  <th>Father Name</th>
+  <th>Father Mobile</th>
+  <th>Photo</th>
         <th>Status</th>
         <th>Action</th>
       </tr>
@@ -263,7 +264,7 @@
       try{
         const { data, error } = await supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, student_photo_url, status')
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status')
           .eq('class_2025', classValue)
           .order('iid', { ascending: true })
           .limit(10000);
@@ -332,7 +333,7 @@
           statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
           const { data, error } = await supabase
             .from(tableName)
-            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, student_photo_url, status')
+            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status')
             .gt('iid', lastId)
             .order('iid', { ascending: true })
             .limit(batchSize);
@@ -432,6 +433,17 @@
         return '';
       }
 
+      function getField(rec, candidates){
+        for(const k of candidates){
+          if(!k) continue;
+          if(rec && (rec[k] !== undefined && rec[k] !== null)) return rec[k];
+          // try lower-case key variants
+          const lk = k.toLowerCase();
+          if(rec && (rec[lk] !== undefined && rec[lk] !== null)) return rec[lk];
+        }
+        return '';
+      }
+
       rows.forEach((r, idx) => {
         const tr = document.createElement('tr');
         // SL cell
@@ -443,9 +455,12 @@
         const tdSection = document.createElement('td'); tdSection.textContent = escapeHtml(r['section_2025']||'');
         const tdRoll = document.createElement('td'); tdRoll.textContent = escapeHtml(r['roll_2025']||'');
         const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['student_name_en']||'');
-        const tdFatherName = document.createElement('td'); tdFatherName.textContent = escapeHtml(r['father_name_en']||'');
+  const tdFatherName = document.createElement('td'); tdFatherName.textContent = escapeHtml(r['father_name_en']||'');
+  const tdFatherMobile = document.createElement('td');
+  const fm = getField(r, ['father_mobile','father_mobile_en','father_mobile_bn','father_mobile ']);
+  tdFatherMobile.textContent = escapeHtml(fm || '');
 
-        const tdPhoto = document.createElement('td');
+  const tdPhoto = document.createElement('td');
         const src = getThumbnailSrc(r, iid);
         if (src) {
           const img = document.createElement('img'); img.className = 'row-thumb'; img.alt = 'Photo';
@@ -482,9 +497,10 @@
         tr.appendChild(tdClass);
         tr.appendChild(tdSection);
         tr.appendChild(tdRoll);
-        tr.appendChild(tdName);
-        tr.appendChild(tdFatherName);
-        tr.appendChild(tdPhoto);
+  tr.appendChild(tdName);
+  tr.appendChild(tdFatherName);
+  tr.appendChild(tdFatherMobile);
+  tr.appendChild(tdPhoto);
         tr.appendChild(tdStatus);
         tr.appendChild(tdAction);
 
