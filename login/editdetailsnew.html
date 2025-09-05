@@ -9,34 +9,43 @@
   /* Clean monochromatic design with white and shadows only */
   html{font-size:125%;}
   html,body{height:100%}
-  body{font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; padding:28px; background:#f8f9fa; color:#333; margin:0}
+  body{font-family: -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; padding:16px; background:#f8f9fa; color:#333; margin:0}
   
-  .container{max-width:980px;margin:0 auto}
-  .card{background:#ffffff;border-radius:12px;padding:24px;box-shadow:0 8px 32px rgba(0,0,0,0.1);}
+  .container{max-width:720px;margin:0 auto}
   
-  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
-  .title{font-size:22px;font-weight:600;color:#333}
-  .meta{color:#666; font-size:14px}
+  .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .title{font-size:20px;font-weight:600;color:#333}
+  .meta{color:#666; font-size:13px}
   .iid-badge{display:inline-block;margin-left:8px;padding:6px 12px;background:#f0f0f0;color:#666;border-radius:20px;font-weight:500;font-size:13px}
 
-  .form-grid{display:flex;flex-direction:column;gap:16px}
+  .form-grid{display:flex;flex-direction:column;gap:4px}
   
   /* Photo area */
-  .photo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:20px}
-  .photo-wrap img{width:140px;height:140px;object-fit:cover;border-radius:12px;border:3px solid #fff;box-shadow:0 8px 24px rgba(0,0,0,0.15);background:#fff}
-  .student-name{margin-top:10px;font-weight:600;font-size:1.1rem;color:#333}
+  .photo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:12px}
+  .photo-wrap img{width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.1);background:#fff}
+  .student-name{margin-top:8px;font-weight:600;font-size:1rem;color:#333}
   
   /* Form fields */
-  .field-row{display:grid;grid-template-columns:180px 1.4fr;gap:12px;align-items:start;background:#ffffff;padding:16px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,0.08);border:1px solid #f0f0f0}
-  .field-row label{font-size:14px;color:#555;font-weight:500;padding:8px 0}
-  .field-row input, .field-row textarea{width:100%;padding:12px;border:1px solid #e0e0e0;border-radius:8px;font-size:14px;background:#ffffff;color:#333}
+  .field-row{display:grid;grid-template-columns:160px 1.4fr;gap:10px;align-items:start;background:#ffffff;padding:8px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);border:1px solid #f0f0f0}
+  .field-row label{font-size:13px;color:#555;font-weight:500;padding:6px 0}
+  .field-row input, .field-row textarea{width:100%;padding:8px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;background:#ffffff;color:#333}
   .field-row textarea{min-height:100px;resize:vertical}
   
-  .field-row:hover{box-shadow:0 6px 20px rgba(0,0,0,0.12)}
-  .field-row input:focus, .field-row textarea:focus{outline:none;border-color:#ccc;box-shadow:0 0 0 2px rgba(0,0,0,0.1)}
+  /* Paired fields (English & Bangla side by side) */
+  .field-pair{display:grid;grid-template-columns:80px 1fr 80px 1fr;gap:8px;align-items:start;background:#ffffff;padding:12px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);border:1px solid #f0f0f0}
+  .field-pair .field-label{font-size:12px;color:#555;font-weight:500;padding:4px 0;text-align:center}
+  .field-pair .field-input{width:100%;padding:6px;border:1px solid #e0e0e0;border-radius:4px;font-size:12px;background:#ffffff;color:#333}
+  
+  /* Two column layout for specific fields */
+  .field-two-column{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:4px;margin-bottom:2px}
+  .field-two-column .field-column{display:flex;flex-direction:column;gap:2px}
+  .field-two-column .field-item{display:flex;flex-direction:column;gap:2px;padding:4px}
+  .field-two-column .field-item label{font-size:12px;color:#555;font-weight:600;margin-bottom:1px;text-transform:uppercase;letter-spacing:0.5px}
+  .field-two-column .field-item input, .field-two-column .field-item textarea{width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:13px;background:#ffffff;color:#333}
+  .field-two-column .field-item textarea{min-height:60px;resize:vertical}
 
-  .actions{display:flex;justify-content:flex-end;gap:12px;margin-top:24px}
-  .btn{padding:12px 20px;border:none;background:#333;color:#fff;border-radius:8px;cursor:pointer;font-weight:500;font-size:14px}
+  .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+  .btn{padding:10px 16px;border:none;background:#333;color:#fff;border-radius:6px;cursor:pointer;font-weight:500;font-size:13px}
   .btn:hover{background:#555}
   .btn.secondary{background:#f0f0f0;color:#666;border:1px solid #e0e0e0}
   .btn.secondary:hover{background:#e0e0e0}
@@ -46,17 +55,22 @@
 
   /* Group headers */
   .field-group {
-    margin: 24px 0 16px 0;
+    margin: 4px 0 2px 0;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    overflow: hidden;
   }
   .field-group h3 {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
-    color: #555;
-    margin: 0 0 12px 0;
-    padding: 8px 16px;
+    color: #ff6b35;
+    margin: 0 0 8px 0;
+    padding: 8px 12px;
     background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid #ddd;
+    border-bottom: 1px solid #e0e0e0;
+    border-left: 3px solid #ff6b35;
   }
   .field-group:first-child h3 {
     margin-top: 0;
@@ -67,23 +81,21 @@
 </head>
 <body>
   <div class="container">
-    <div class="card">
-      <div class="header">
-        <div>
-          <div class="title">Edit Record</div>
-          <div class="meta">Modify fields below and click <strong>Update</strong></div>
-        </div>
-        <div id="info" class="meta"></div>
+    <div class="header">
+      <div>
+        <div class="title">Edit Record</div>
+        <div class="meta">Modify fields below and click <strong>Update</strong></div>
       </div>
-
-  <div id="photoWrap" class="photo-wrap"></div>
-  <div id="fields" class="form-grid"></div>
-
-      <div class="actions">
-        <button id="updateBtn" class="btn">Update</button>
-      </div>
-      <div id="notice" class="notice"></div>
+      <div id="info" class="meta"></div>
     </div>
+
+    <div id="photoWrap" class="photo-wrap"></div>
+    <div id="fields" class="form-grid"></div>
+
+    <div class="actions">
+      <button id="updateBtn" class="btn">Update</button>
+    </div>
+    <div id="notice" class="notice"></div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -117,26 +129,35 @@
         if(!response.ok) throw new Error('Could not load dataorder.csv');
         const csvText = await response.text();
         const lines = csvText.split('\n');
-        
+
         let currentGroup = [];
+        let currentGroupName = '';
         let groupIndex = 0;
-        
+
         lines.forEach((line, index) => {
           const trimmedLine = line.trim();
-          
+
           // Skip header and empty lines
           if(trimmedLine === '' || trimmedLine.startsWith('colm name')) {
-            // If we have a current group and encounter a blank line, save the group
+            return;
+          }
+
+          // Check if this is a group header (starts with *)
+          if(trimmedLine.startsWith('*')) {
+            // Save previous group if it exists
             if(currentGroup.length > 0) {
               fieldGroups.push({
                 index: groupIndex++,
+                name: currentGroupName || `Group ${groupIndex}`,
                 fields: [...currentGroup]
               });
               currentGroup = [];
             }
+            // Extract group name (remove *)
+            currentGroupName = trimmedLine.substring(1).trim();
             return;
           }
-          
+
           // Parse field mapping
           const parts = trimmedLine.split('>').map(part => part.trim());
           if(parts.length >= 2){
@@ -147,15 +168,16 @@
             currentGroup.push(dbField);
           }
         });
-        
+
         // Add the last group if it exists
         if(currentGroup.length > 0) {
           fieldGroups.push({
             index: groupIndex,
+            name: currentGroupName || `Group ${groupIndex + 1}`,
             fields: [...currentGroup]
           });
         }
-        
+
       }catch(err){
         console.warn('Could not load field order:', err);
         // Fallback to default alphabetical order
@@ -179,7 +201,7 @@
       try{
         // First load field order
         await loadFieldOrder();
-        
+
         const { data, error } = await supabase
           .from(tableName)
           .select('*')
@@ -187,7 +209,7 @@
           .limit(1)
           .single();
         if(error) throw error;
-        
+
         renderFields(data || {});
         // render photo and name
         try{ await renderPhotoForIID(iid, data); }catch(e){ console.warn('photo render failed', e); }
@@ -271,14 +293,14 @@
 
     function renderFields(record){
       fieldsEl.innerHTML = '';
-      
+
       // Get all field keys
       const allKeys = Object.keys(record);
-      
+
       // Separate ordered and unordered fields
       const orderedFields = [];
       const unorderedFields = [];
-      
+
       allKeys.forEach(key => {
         if(fieldOrderMap.hasOwnProperty(key)){
           orderedFields.push(key);
@@ -286,44 +308,168 @@
           unorderedFields.push(key);
         }
       });
-      
-      // Function to get group name based on first field in group
-      function getGroupName(fields) {
-        if(fields.includes('iid') || fields.includes('student_name_en')) return 'Basic Information';
-        if(fields.includes('class_2025')) return 'Class Information';
-        if(fields.includes('father_name_en')) return 'Father Information';
-        if(fields.includes('mother_name_en')) return 'Mother Information';
-        if(fields.includes('guardian_name_en')) return 'Guardian Information';
-        if(fields.includes('board_name')) return 'Board Information';
-        if(fields.includes('village_bn')) return 'Address Information';
-        if(fields.includes('previous_school')) return 'School Information';
-        return 'Other Information';
-      }
-      
+
       // Render grouped fields
       fieldGroups.forEach(group => {
         const groupFields = group.fields.filter(field => orderedFields.includes(field));
-        
+
         if(groupFields.length > 0) {
           // Create group container
           const groupDiv = document.createElement('div');
           groupDiv.className = 'field-group';
-          
+
           // Create group header
           const groupHeader = document.createElement('h3');
-          groupHeader.textContent = getGroupName(groupFields);
+          groupHeader.textContent = group.name;
           groupDiv.appendChild(groupHeader);
-          
+
           // Add fields in this group
           groupFields.forEach(key => {
             const val = record[key] === null || record[key] === undefined ? '' : record[key];
-            const row = document.createElement('div');
-            row.className = 'field-row';
+            
+            // Apply two-column layout to all fields starting from student_name_en
+            const isTwoColumnField = key !== 'iid' && key !== 'session';
+            
+            if (isTwoColumnField) {
+              // Handle special two-column layout
+              if (!groupDiv.querySelector('.field-two-column')) {
+                const twoColumnDiv = document.createElement('div');
+                twoColumnDiv.className = 'field-two-column';
+                
+                const leftColumn = document.createElement('div');
+                leftColumn.className = 'field-column';
+                
+                const rightColumn = document.createElement('div');
+                rightColumn.className = 'field-column';
+                
+                twoColumnDiv.appendChild(leftColumn);
+                twoColumnDiv.appendChild(rightColumn);
+                groupDiv.appendChild(twoColumnDiv);
+              }
+              
+              const twoColumnDiv = groupDiv.querySelector('.field-two-column');
+              const columns = twoColumnDiv.querySelectorAll('.field-column');
+              const targetColumn = columns[columns[0].children.length <= columns[1].children.length ? 0 : 1];
+              
+              const fieldItem = document.createElement('div');
+              fieldItem.className = 'field-item';
+              
+              const label = document.createElement('label');
+              const displayName = fieldDisplayNames[key] || key;
+              label.textContent = displayName;
+              
+              let input;
+              if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+                input = document.createElement('textarea');
+                input.rows = 3;
+              } else {
+                input = document.createElement('input');
+                input.type = 'text';
+              }
+              input.value = val;
+              input.setAttribute('data-field', key);
+              if(key === 'iid') input.readOnly = true;
+              
+              fieldItem.appendChild(label);
+              fieldItem.appendChild(input);
+              targetColumn.appendChild(fieldItem);
+            } else {
+              // Regular field-row layout for iid and session
+              const row = document.createElement('div');
+              row.className = 'field-row';
+
+              const label = document.createElement('label');
+              const displayName = fieldDisplayNames[key] || key;
+              label.textContent = displayName + ':';
+
+              let input;
+              if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+                input = document.createElement('textarea');
+                input.rows = 4;
+              } else {
+                input = document.createElement('input');
+                input.type = 'text';
+              }
+              input.value = val;
+              input.setAttribute('data-field', key);
+              if(key === 'iid') input.readOnly = true;
+
+              row.appendChild(label);
+              row.appendChild(input);
+              groupDiv.appendChild(row);
+            }
+          });
+
+          fieldsEl.appendChild(groupDiv);
+        }
+      });
+      // Render unordered fields at the end
+      if(unorderedFields.length > 0) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'field-group';
+
+        const groupHeader = document.createElement('h3');
+        groupHeader.textContent = 'Additional Information';
+        groupDiv.appendChild(groupHeader);
+
+        unorderedFields.sort().forEach(key => {
+          const val = record[key] === null || record[key] === undefined ? '' : record[key];
+          
+          // Apply two-column layout to all fields starting from student_name_en
+          const isTwoColumnField = key !== 'iid' && key !== 'session';
+          
+          if (isTwoColumnField) {
+            // Handle special two-column layout
+            if (!groupDiv.querySelector('.field-two-column')) {
+              const twoColumnDiv = document.createElement('div');
+              twoColumnDiv.className = 'field-two-column';
+              
+              const leftColumn = document.createElement('div');
+              leftColumn.className = 'field-column';
+              
+              const rightColumn = document.createElement('div');
+              rightColumn.className = 'field-column';
+              
+              twoColumnDiv.appendChild(leftColumn);
+              twoColumnDiv.appendChild(rightColumn);
+              groupDiv.appendChild(twoColumnDiv);
+            }
+            
+            const twoColumnDiv = groupDiv.querySelector('.field-two-column');
+            const columns = twoColumnDiv.querySelectorAll('.field-column');
+            const targetColumn = columns[columns[0].children.length <= columns[1].children.length ? 0 : 1];
+            
+            const fieldItem = document.createElement('div');
+            fieldItem.className = 'field-item';
             
             const label = document.createElement('label');
             const displayName = fieldDisplayNames[key] || key;
-            label.textContent = displayName + ':';
+            label.textContent = displayName;
             
+            let input;
+            if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+              input = document.createElement('textarea');
+              input.rows = 3;
+            } else {
+              input = document.createElement('input');
+              input.type = 'text';
+            }
+            input.value = val;
+            input.setAttribute('data-field', key);
+            if(key === 'iid') input.readOnly = true;
+            
+            fieldItem.appendChild(label);
+            fieldItem.appendChild(input);
+            targetColumn.appendChild(fieldItem);
+          } else {
+            // Regular field-row layout for iid and session
+            const row = document.createElement('div');
+            row.className = 'field-row';
+
+            const label = document.createElement('label');
+            const displayName = fieldDisplayNames[key] || key;
+            label.textContent = displayName + ':';
+
             let input;
             if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
               input = document.createElement('textarea');
@@ -335,51 +481,13 @@
             input.value = val;
             input.setAttribute('data-field', key);
             if(key === 'iid') input.readOnly = true;
-            
+
             row.appendChild(label);
             row.appendChild(input);
             groupDiv.appendChild(row);
-          });
-          
-          fieldsEl.appendChild(groupDiv);
-        }
-      });
-      
-      // Render unordered fields at the end
-      if(unorderedFields.length > 0) {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'field-group';
-        
-        const groupHeader = document.createElement('h3');
-        groupHeader.textContent = 'Additional Information';
-        groupDiv.appendChild(groupHeader);
-        
-        unorderedFields.sort().forEach(key => {
-          const val = record[key] === null || record[key] === undefined ? '' : record[key];
-          const row = document.createElement('div');
-          row.className = 'field-row';
-          
-          const label = document.createElement('label');
-          const displayName = fieldDisplayNames[key] || key;
-          label.textContent = displayName + ':';
-          
-          let input;
-          if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
-            input = document.createElement('textarea');
-            input.rows = 4;
-          } else {
-            input = document.createElement('input');
-            input.type = 'text';
           }
-          input.value = val;
-          input.setAttribute('data-field', key);
-          if(key === 'iid') input.readOnly = true;
-          
-          row.appendChild(label);
-          row.appendChild(input);
-          groupDiv.appendChild(row);
         });
-        
+
         fieldsEl.appendChild(groupDiv);
       }
     }
@@ -402,13 +510,13 @@
           .update(payload)
           .eq('iid', Number(iid));
         if(error) throw error;
-  noticeEl.classList.remove('');
-  noticeEl.classList.add('success');
-  noticeEl.textContent = 'Updated successfully.';
+        noticeEl.classList.remove('');
+        noticeEl.classList.add('success');
+        noticeEl.textContent = 'Updated successfully.';
       }catch(err){
         console.error('update error', err);
-  noticeEl.classList.remove('success');
-  noticeEl.textContent = 'Update failed: ' + (err.message || err);
+        noticeEl.classList.remove('success');
+        noticeEl.textContent = 'Update failed: ' + (err.message || err);
       }finally{
         updateBtn.disabled = false;
         updateBtn.textContent = 'Update';

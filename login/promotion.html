@@ -85,7 +85,7 @@
             font-size: 13px;
         }
         .student-table th:nth-child(5) {
-            border-right: 3px solid #fff;
+            border-right: 10px solid #fff;
         }
         .student-table td {
             padding: 12px 8px;
@@ -93,7 +93,7 @@
             font-size: 14px;
         }
         .student-table td:nth-child(5) {
-            border-right: 3px solid #e2e8f0;
+            border-right: 6px solid #e2e8f0;
         }
         .student-table tr {
             transition: all 0.2s;
@@ -473,7 +473,7 @@
                 // Update student with promotion data - ALWAYS set session to 2026
                 console.log('Updating database with:', {
                     class_2026: class2026,
-                    section_2026: section2026,
+                    section_2026: section2026.toUpperCase(), // Convert section to uppercase
                     roll_2026: parseInt(roll2026), // Ensure roll is stored as number
                     session: 2026 // Force session to 2026 as number
                 });
@@ -482,7 +482,7 @@
                     .from('student_database')
                     .update({
                         class_2026: class2026,
-                        section_2026: section2026,
+                        section_2026: section2026.toUpperCase(), // Convert section to uppercase
                         roll_2026: parseInt(roll2026),
                         session: 2026
                     })
