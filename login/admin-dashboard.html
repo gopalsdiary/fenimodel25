@@ -300,8 +300,8 @@
 <body>
     <div class="header">
         <h1>Super Admin Dashboard</h1>
+        <div id="header-center" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;color:rgba(255,255,255,0.95);font-weight:700"></div>
         <div>
-            <span id="admin-username">Admin</span>
             <button id="logout-btn" class="logout-btn">Logout</button>
         </div>
     </div>
@@ -407,14 +407,26 @@
         // Add event listener for logout button
         logoutBtn.addEventListener('click', logout);
 
-        // Display admin username from URL parameter if available
-        document.addEventListener('DOMContentLoaded', () => {
+        // Display admin username from Supabase auth (or URL fallback)
+        document.addEventListener('DOMContentLoaded', async () => {
+            const headerCenter = document.getElementById('header-center');
             const urlParams = new URLSearchParams(window.location.search);
-            const adminId = urlParams.get('id');
-            
-            if (adminId) {
-                // You could fetch admin details here if needed
-                // For now, just showing generic "Admin" text which is already in the HTML
+            const fallbackName = urlParams.get('name') || urlParams.get('admin') || '';
+
+            try{
+                const { data: { user } } = await supabase.auth.getUser();
+                if(user){
+                    const name = (user.user_metadata && user.user_metadata.name) || user.email || fallbackName || 'Admin';
+                    headerCenter.textContent = name;
+                    adminUsername.textContent = name;
+                    return;
+                }
+            }catch(e){ console.warn('Could not get supabase user', e); }
+
+            // fallback to URL param or default
+            if(fallbackName){
+                headerCenter.textContent = fallbackName;
+                adminUsername.textContent = fallbackName;
             }
         });
     </script>
