@@ -1,306 +1,440 @@
 <!doctype html>
-<html lang="bn">
+<html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>All Data Fields — 0newdatabase</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preconnect" href="https://docs.google.com" crossorigin>
-<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
-
-<style>
-:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --accent:#2196F3; }
-*{box-sizing:border-box}
-body{margin:0;font-family: 'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif;background:var(--bg);color:#111}
-.header{position:sticky;top:0;background:var(--card);border-bottom:1px solid #e5e7eb;z-index:10}
-.container{max-width:1200px;margin:0 auto;padding:1rem}
-h1{margin:.25rem 0;text-align:center}
-.toolbar{display:flex;gap:.75rem;align-items:center;justify-content:center;flex-wrap:wrap;margin:.5rem 0 1rem}
-input[type=search]{padding:.55rem .8rem;min-width:240px;border:1px solid #d1d5db;border-radius:10px}
-.select{padding:.5rem .7rem;border:1px solid #d1d5db;border-radius:10px;background:#fff}
-.muted{color:var(--muted);font-size:.9rem}
-.group{background:transparent;border:none;border-radius:0;padding:0;margin:1rem 0 0 0;box-shadow:none}
-/* full-bleed header band */
-.group h2{margin:0;font-size:1.05rem;text-align:left;padding:1rem 1rem;border-radius:0;position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;width:100vw}
-/* ensure table content stays centered and constrained */
-.group .table-wrap{position:relative;left:50%;right:50%;margin-left:-50vw;margin-right:-50vw;width:100vw;padding:0.75rem 1rem}
-.group[data-class="6"] h2{background:linear-gradient(90deg,#2196F3,#64b5f6);color:#fff}
-.group[data-class="7"] h2{background:linear-gradient(90deg,#2e7d32,#66bb6a);color:#fff}
-.group[data-class="8"] h2{background:linear-gradient(90deg,#6a1b9a,#ab47bc);color:#fff}
-.group[data-class="9"] h2{background:linear-gradient(90deg,#ef6c00,#ffa726);color:#fff}
-.group[data-class="10"] h2{background:linear-gradient(90deg,#c2185b,#ec407a);color:#fff}
-/* Table (Google Sheets like) */
-.table-wrap{overflow:auto;border-radius:8px;border:1px solid #e8eef8;background:#fff}
-table.sheet-table{border-collapse:collapse;width:100%;min-width:720px;font-size:0.5em}
-table.sheet-table thead th{position:sticky;top:0;background:linear-gradient(180deg,#f8fafc,#f1f5f9);padding:.55rem .7rem;text-align:left;border-bottom:2px solid #e6eef7}
-table.sheet-table th, table.sheet-table td{padding:.5rem .65rem;border-right:1px solid #f1f5f9;border-bottom:1px solid #f6f9fc}
-table.sheet-table tbody tr:hover{background:#fbfdff}
-table.sheet-table td{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
-table.sheet-table td:first-child{min-width:160px}
-/* small responsive tweak */
-@media (max-width:720px){ table.sheet-table td{max-width:160px} }
-@media (prefers-color-scheme:dark){ body{background:#071025;color:#e6eef8} .group{background:#07162a;border-color:#183047} .col-box{background:#071827;border-color:#123146} }
-.notice{font-size:.9rem;color:#444;text-align:center;margin-top:-6px}
-.summary-line{font-size:.95rem;color:#334155;margin:.5rem 0 0}
-@media (prefers-color-scheme:dark){ .summary-line{color:#cbd5e1} }
-
-</style>
-
-
-
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-
-<script>
-// reuse small helpers from datalist
-async function loadSheetList(){
-  const res = await fetch('sheetidname.text',{cache:'no-store'});
-  if(!res.ok) throw new Error('Failed to load sheetidname.text');
-  const txt = await res.text();
-  const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const pairs=[]; let curId=null;
-  const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];/i;
-  const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];/i;
-  for(const line of lines){
-    const im = idRe.exec(line); if(im){ curId = im[1]; continue; }
-    const nm = nameRe.exec(line); if(nm && curId){ pairs.push({id:curId,name:nm[1]}); curId=null; }
-  }
-  return pairs;
-}
-function csvUrl(id, sheet){ return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`; }
-function parseSheetMeta(name){ const m=String(name||'').trim().match(/^(\d{1,2})[\s_\-]?(.+)$/); if(!m) return {}; return { cls: m[1], shift: (m[2]||'').trim() }; }
-
-function slugify(s){
-  return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
-}
-
-// Fast helpers for header detection and safe HTML
-function normHeader(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
-function findIidKey(fields){
-  const order=['iid','id','studentid','sid'];
-  const map=new Map(fields.map(f=>[normHeader(f), f]));
-  for(const k of order){ if(map.has(k)) return map.get(k); }
-  return null;
-}
-function escapeHtml(v){
-  return String(v==null? '': v)
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\"/g,'&quot;').replace(/'/g,'&#39;');
-}
-
-// Robust CSV loader helpers
-const FETCH_TIMEOUT_MS = 12000; // 12s per sheet
-const MAX_RETRY = 1;            // retry once on timeout/error
-
-function parseCsvWithTimeout(url, { timeoutMs = FETCH_TIMEOUT_MS } = {}){
-  const papaPromise = new Promise((resolve)=>{
-    Papa.parse(url, {
-      download: true, header: true, skipEmptyLines: true, worker: true,
-      complete: r => resolve({ type: 'result', r }),
-      error: e => resolve({ type: 'error', e })
-    });
-  });
-  const timeoutPromise = new Promise(resolve => setTimeout(()=> resolve({ type: 'timeout' }), timeoutMs));
-  return Promise.race([papaPromise, timeoutPromise]);
-}
-
-function createLimiter(limit){
-  let active = 0; const queue = [];
-  function next(){
-    if(active >= limit) return;
-    const item = queue.shift(); if(!item) return;
-    active++;
-    item.fn().then(v=>{ active--; item.resolve(v); next(); }).catch(e=>{ active--; item.reject(e); next(); });
-  }
-  return function schedule(fn){
-    return new Promise((resolve, reject)=>{ queue.push({ fn, resolve, reject }); next(); });
-  };
-}
-
-function addSheetButton(name, count, targetId){
-  // No-op now; replaced by summary table. Keep for backward safety.
-}
-
-function scrollToSection(targetId){
-  const el = document.getElementById(targetId); if(!el) return;
-  const header = document.querySelector('.header');
-  const offset = (header? header.offsetHeight: 0) + 8;
-  const top = el.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top, behavior:'smooth' });
-}
-
-// Chunked rendering to keep UI responsive
-const INITIAL_ROWS = 60;  // render this many rows immediately (smaller to avoid jank)
-const CHUNK_SIZE = 300;   // append this many rows per batch on demand
-
-// Lazy-load observer: auto-append remaining rows when the section comes into view
-let lazyObserver = null;
-if('IntersectionObserver' in window){
-  lazyObserver = new IntersectionObserver((entries)=>{
-    for(const e of entries){
-      if(e.isIntersecting){
-        const sec = e.target;
-        const btn = sec.querySelector('button.lazy-load-btn');
-        if(btn && !btn.__clicked){ btn.__clicked = true; btn.click(); }
-        lazyObserver.unobserve(sec);
-      }
-    }
-  }, { rootMargin: '200px' });
-}
-
-function renderSheet(container, name, fields, rows, meta, src){
-  const section = document.createElement('section'); section.className='group'; if(meta && meta.cls) section.dataset.class = meta.cls; section.id = slugify(name);
-  // Header (no counts)
-  const headerHtml = `<h2>${escapeHtml(name)}</h2>`;
-  // Skeleton table
-  const theadHtml = '<thead><tr>' + fields.map(f=>`<th>${escapeHtml(f)}</th>`).join('') + '</tr></thead>';
-  section.innerHTML = headerHtml + `<div class="table-wrap"><table class="sheet-table">${theadHtml}<tbody></tbody></table></div>`;
-  container.appendChild(section);
-
-  const tbody = section.querySelector('tbody');
-  const allFieldNames = rows[0] ? Object.keys(rows[0]) : fields;
-  const iidKey = findIidKey(allFieldNames);
-
-  function rowHtml(rIdx){
-    const r = rows[rIdx];
-    let html = '<tr>';
-    for(let fi=0; fi<fields.length; fi++){
-      const f = fields[fi]; const val = (r && Object.prototype.hasOwnProperty.call(r,f)) ? r[f] : '';
-    if(fi===0){
-        let iidVal = '';
-        try{ iidVal = iidKey ? (r[iidKey]) : ''; }catch(_){ iidVal=''; }
-        const text = (val!=null && String(val).trim()!=='') ? String(val) : `#${rIdx+1}`;
-        if(iidVal!=null && String(iidVal).trim()!==''){
-          const href = `/0newdatabase/detailsinfo.html?iid=${encodeURIComponent(String(iidVal))}`;
-          html += `<td><a class="link" style="color:inherit;text-decoration:none" href="${href}">${escapeHtml(text)}</a></td>`;
-        } else {
-          html += `<td>${escapeHtml(text)}</td>`;
-        }
-      } else {
-        html += `<td>${escapeHtml(val)}</td>`;
-      }
-    }
-    html += '</tr>';
-    return html;
-  }
-
-  function renderRange(start, end){
-    let buf = '';
-    for(let i=start;i<end;i++) buf += rowHtml(i);
-    tbody.insertAdjacentHTML('beforeend', buf);
-  }
-
-  // Initial render
-  const initialEnd = Math.min(INITIAL_ROWS, rows.length);
-  if(initialEnd > 0) renderRange(0, initialEnd);
-
-  // If many rows, provide a lazy load button
-  if(rows.length > initialEnd){
-    const btn = document.createElement('button');
-    btn.textContent = `Load remaining ${rows.length - initialEnd} rows`;
-    btn.style.cssText = 'margin:8px 0; padding:6px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; cursor:pointer;';
-    btn.className = 'lazy-load-btn';
-    const wrap = document.createElement('div'); wrap.appendChild(btn);
-    section.querySelector('.table-wrap').appendChild(wrap);
-    btn.addEventListener('click', ()=>{
-      btn.disabled = true; btn.textContent = 'Loading…';
-      let next = initialEnd;
-      function step(){
-        const end = Math.min(next + CHUNK_SIZE, rows.length);
-        renderRange(next, end);
-        next = end;
-        if(next < rows.length){ setTimeout(step, 0); }
-        else { btn.remove(); }
-      }
-      step();
-    });
-    // Observe section to auto-load when visible
-    if(lazyObserver){ lazyObserver.observe(section); }
-  }
-}
-
-function filterAll(q){ const query=q.toLowerCase(); document.querySelectorAll('table.sheet-table tbody tr').forEach(tr=>{
-    const text = tr.textContent.toLowerCase(); tr.style.display = (!query || text.includes(query))? '' : 'none';
-  }); }
-
-async function init(){
-  const status = document.getElementById('status');
-  try{
-    status.textContent = 'Loading sheet list…';
-    const pairs = await loadSheetList(); if(!pairs.length){ status.textContent='No sheets defined'; return; }
-    status.textContent = `Found ${pairs.length} sheets. Fetching…`;
-    const host = document.getElementById('host');
-    let ok=0,fail=0;
-    // Kick off fetches with concurrency limit and per-sheet timeouts
-    const limit = createLimiter(4);
-    const tasks = pairs.map(({id,name}, idx)=> limit(async ()=>{
-      const url = csvUrl(id, name);
-      let attempt = 0;
-      while(true){
-        const outcome = await parseCsvWithTimeout(url, { timeoutMs: FETCH_TIMEOUT_MS });
-        if(outcome.type === 'result'){
-          const results = outcome.r;
-          const rows = (results && results.data)? results.data : [];
-          const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
-          ok++; status.textContent = `Loaded ${ok}/${pairs.length}` + (fail? `, failed ${fail}` : '');
-          return { idx, id, name, rows, fields, meta: parseSheetMeta(name), success:true };
-        }
-        const err = (outcome.type === 'timeout') ? new Error('Timeout') : (outcome.e || new Error('Parse error'));
-        if(attempt < MAX_RETRY){ attempt++; await new Promise(r=>setTimeout(r, 500 + Math.random()*700)); continue; }
-        console.error('Fetch error', name, err);
-        fail++; status.textContent = `Loaded ${ok}/${pairs.length}, failed ${fail}`;
-        return { idx, name, error: err, success:false };
-      }
-    }));
-    const results = await Promise.all(tasks);
-    // Render in original order for consistency
-    results.sort((a,b)=>a.idx-b.idx);
-    const allSheetNames = results.filter(r=>r.success).map(r=>r.name);
-    results.forEach(r=>{
-      if(r.success){
-        renderSheet(host, r.name, r.fields, r.rows, r.meta, { id:r.id, name:r.name });
-      }
-      else {
-        const err=document.createElement('section'); err.className='group'; const h=document.createElement('h2'); h.textContent = r.name+' (failed)'; err.appendChild(h); const pre=document.createElement('pre'); pre.textContent = String(r.error && r.error.message || r.error); err.appendChild(pre); host.appendChild(err);
-      }
-    });
-    // Populate filter dropdown
-    const sheetSel = document.getElementById('sheetFilter');
-    sheetSel.innerHTML = '<option value="">সব ক্লাস/শিট</option>' + allSheetNames.map(n=>`<option value="${slugify(n)}">${escapeHtml(n)}</option>`).join('');
-    sheetSel.addEventListener('change', ()=>{
-      const val = sheetSel.value;
-      document.querySelectorAll('.group').forEach(sec=>{
-        if(!val || sec.id === val) sec.style.display = '';
-        else sec.style.display = 'none';
-      });
-    });
-    // Summary tables removed
-    status.classList.add('ok');
-  }catch(err){ console.error(err); status.textContent='Init failed'; status.classList.add('error'); }
-}
-
-window.addEventListener('DOMContentLoaded', ()=>{ init(); const s=document.getElementById('search'); s.addEventListener('input', ()=>filterAll(s.value)); });
-</script>
-
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+  <title>Entry - Show & Edit</title>
+  <style>
+    /* reduce base font size by 20% and use Kalpurush font */
+    html{font-size:100%;}
+    body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
+    table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:auto}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle;white-space:nowrap}
+    th{background:#f4f4f4}
+  /* zebra striping */
+  tbody tr:nth-child(odd){ background:#ffffff }
+  tbody tr:nth-child(even){ background:#f5f5f5 }
+    .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
+    .btn.secondary{background:#6c757d}
+    /* modal */
+    .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+    .modal .panel{background:#fff;padding:16px;border-radius:6px;max-width:720px;width:100%;max-height:80vh;overflow:auto}
+    .field-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+    .field-row label{min-width:140px}
+    .field-row input, .field-row textarea{flex:1;padding:8px}
+    .notice{margin-top:8px;color:#a00}
+    .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
+    /* status column */
+  /* ensure TC rows override zebra */
+  tbody tr.status-tc{background-color:rgba(250, 187, 187, 0.5) !important}
+    /* SL (serial) column small */
+    .col-sl{width:56px;max-width:56px;padding:4px;text-align:center}
+  </style>
 </head>
 <body>
-<header class="header">
-  <div class="container">
-    <h1>All Data Fields</h1>
-    <div class="toolbar">
-      <select id="sheetFilter" style="padding:.5rem .7rem;border:1px solid #d1d5db;border-radius:10px;background:#fff;min-width:180px;">
-        <option value="">সব ক্লাস/শিট</option>
-      </select>
-      <input id="search" type="search" placeholder="Search column name or value…" aria-label="Filter" />
-      <span id="status" class="muted"></span>
+  <h2>student_database : Data Overview </h2>
+  <div>
+    <button id="refreshBtn" class="btn">Refresh</button>
+    <span id="status" style="margin-left:12px;color:#444"></span>
+    <div style="display:inline-block;margin-left:18px;vertical-align:middle">
+      <label for="classFilter" style="margin-right:6px;color:#333">Class:</label>
+      <select id="classFilter" style="padding:6px;border-radius:4px;border:1px solid #ccc"></select>
+      <label for="sectionFilter" style="margin:0 6px 0 12px;color:#333">Section:</label>
+      <select id="sectionFilter" style="padding:6px;border-radius:4px;border:1px solid #ccc"></select>
+      <button id="clearFilters" class="btn secondary" style="margin-left:8px;padding:6px 8px">Clear</button>
     </div>
-  
-  <div class="notice">ক্লাস অনুযায়ী ডাটা টেবিলগুলো দেখানো হয়েছে।</div>
   </div>
-</header>
-<main class="container">
-  <div id="host"></div>
-</main>
-</body>
 
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <!-- Headers will be dynamically generated -->
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Edit modal -->
+  <div id="editModal" class="modal">
+    <div class="panel">
+      <h3>Edit Record</h3>
+
+      <!-- Dynamic fields will be rendered here -->
+      <div id="editFields"></div>
+
+      <div style="text-align:right;margin-top:12px">
+        <button id="cancelBtn" class="btn secondary">Cancel</button>
+        <button id="saveBtn" class="btn">Save</button>
+      </div>
+      <div id="modalNotice" class="notice"></div>
+    </div>
+  </div>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Use the same project URL/key used elsewhere in this repo
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    const tableName = 'student_database';
+  // Simple 10-minute TTL cache (localStorage) with SWR behavior
+  const CACHE_KEY = 'all_data_field_cache_v1';
+  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+  const tbody = document.querySelector('#dataTable tbody');
+    const statusEl = document.getElementById('status');
+    const refreshBtn = document.getElementById('refreshBtn');
+  const classFilter = document.getElementById('classFilter');
+  const sectionFilter = document.getElementById('sectionFilter');
+  const clearFilters = document.getElementById('clearFilters');
+
+  // keep full dataset in memory for client-side filtering
+  let allRowsCache = [];
+
+    // modal elems
+    const editModal = document.getElementById('editModal');
+    const editFields = document.getElementById('editFields');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const modalNotice = document.getElementById('modalNotice');
+
+    refreshBtn.addEventListener('click', loadData);
+  classFilter.addEventListener('change', applyFilters);
+  sectionFilter.addEventListener('change', applyFilters);
+  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; applyFilters(); });
+    cancelBtn.addEventListener('click', closeModal);
+    saveBtn.addEventListener('click', saveEdit);
+
+    // store the currently editing IID
+    let currentIID = null;
+
+    // column order from dataorder.csv
+    let columnOrder = [];
+    let displayNames = {};
+
+    // ---- Cache helpers ----
+    function saveCache(rows){
+      try{
+        const payload = { ts: Date.now(), rows };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+      }catch(e){ /* ignore quota or serialization issues */ }
+    }
+
+    function loadCache(){
+      try{
+        const raw = localStorage.getItem(CACHE_KEY);
+        if(!raw) return null;
+        const obj = JSON.parse(raw);
+        if(!obj || !Array.isArray(obj.rows) || typeof obj.ts !== 'number') return null;
+        return obj;
+      }catch(e){ return null; }
+    }
+
+    function showFromCacheIfFresh(){
+      const cached = loadCache();
+      if(!cached) return false;
+      const age = Date.now() - cached.ts;
+      if(age > CACHE_TTL_MS) return false;
+      allRowsCache = cached.rows;
+      populateFilterOptions(allRowsCache);
+      renderTable(allRowsCache);
+      const mins = Math.max(0, Math.floor(age/60000));
+      statusEl.textContent = `Total: ${allRowsCache.length} (from cache, ${mins}m old)`;
+      // Kick off a background refresh (SWR) without blocking UI
+      setTimeout(()=>{ loadData(true /*background*/); }, 0);
+      return true;
+    }
+
+    async function loadColumnOrder(){
+      try{
+        const res = await fetch('dataorder.csv');
+        if(!res.ok) return;
+        const txt = await res.text();
+        const lines = txt.split(/\r?\n/).filter(line => line.trim() && !line.includes('colm name'));
+        lines.forEach(line => {
+          const parts = line.split(' > ');
+          if(parts.length >= 2){
+            const dbField = parts[0].trim();
+            const display = parts[1].trim();
+            columnOrder.push(dbField);
+            displayNames[dbField] = display;
+          }
+        });
+      }catch(e){
+        columnOrder = [];
+        displayNames = {};
+      }
+    }
+
+    async function loadData(background=false){
+      if(!background) statusEl.textContent = 'Loading all data...';
+      try{
+        // Load column order if not loaded
+        if(columnOrder.length === 0){
+          await loadColumnOrder();
+        }
+        
+        // Use multiple fetch calls to get ALL data (bypass Supabase limits)
+        let allData = [];
+        let lastId = 0;
+        let batchSize = 1000;
+        let hasMore = true;
+        
+        while(hasMore) {
+          statusEl.textContent = `Loading... (${allData.length} records loaded)`;
+          
+          const { data, error } = await supabase
+            .from(tableName)
+            .select('*')
+            .gt('iid', lastId)
+            .order('iid', { ascending: true })
+            .limit(batchSize);
+            
+          if(error){
+            const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            throw new Error(`${error.message} | details: ${details}`);
+          }
+          
+          if(!data || data.length === 0) {
+            hasMore = false;
+            break;
+          }
+          
+          allData = allData.concat(data);
+          lastId = data[data.length - 1].iid;
+          
+          // If we got less than batchSize, we've reached the end
+          if(data.length < batchSize) {
+            hasMore = false;
+          }
+        }
+        
+        allRowsCache = allData;
+        populateFilterOptions(allRowsCache);
+        renderTable(allRowsCache);
+        statusEl.textContent = `Total: ${allRowsCache.length} records (updated just now)`;
+        // Persist to cache for 10 minutes use
+        saveCache(allRowsCache);
+      }catch(err){
+        console.error('loadData error:', err);
+        statusEl.textContent = 'Data loading error';
+        const msg = err && err.message ? err.message : String(err);
+        const colSpan = document.querySelectorAll('#dataTable thead th').length || 1;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        // If we have cache, show it as fallback
+        const cached = loadCache();
+        if(cached && Array.isArray(cached.rows)){
+          allRowsCache = cached.rows;
+          populateFilterOptions(allRowsCache);
+          renderTable(allRowsCache);
+          const ageM = Math.floor((Date.now()-cached.ts)/60000);
+          statusEl.textContent = `Total: ${allRowsCache.length} (offline cache, ${ageM}m old)`;
+        }
+      }
+    }
+
+    function populateFilterOptions(rows){
+      // collect unique classes and sections
+      const classes = new Set();
+      const sections = new Set();
+      rows.forEach(r=>{ if(r && r.class_2025) classes.add(String(r.class_2025)); if(r && r.section_2025) sections.add(String(r.section_2025)); });
+      // clear current options
+      classFilter.innerHTML = '';
+      sectionFilter.innerHTML = '';
+      // default empty option
+      const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
+      const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+      sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
+
+      const optAnyS = document.createElement('option'); optAnyS.value=''; optAnyS.textContent='All'; sectionFilter.appendChild(optAnyS);
+      const sortedSections = Array.from(sections).sort();
+      sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
+    }
+
+    function applyFilters(){
+      const c = classFilter.value;
+      const s = sectionFilter.value;
+      let filtered = allRowsCache;
+      if(c) filtered = filtered.filter(r => String(r.class_2025) === c);
+      if(s) filtered = filtered.filter(r => String(r.section_2025) === s);
+      renderTable(filtered);
+      statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
+    }
+
+    function renderTable(rows){
+      if(!rows || rows.length === 0){
+        const thead = document.querySelector('#dataTable thead');
+        thead.innerHTML = '<tr><th>Columns</th></tr>';
+        tbody.innerHTML = `<tr><td colspan="${colCount}">No records found</td></tr>`;
+        return;
+      }
+
+      // Get all unique keys from all rows
+      const allKeys = new Set();
+      rows.forEach(r => {
+        if(r) Object.keys(r).forEach(k => allKeys.add(k));
+      });
+      // Sort keys based on columnOrder, missing ones at end
+      const orderedKeys = columnOrder.filter(k => allKeys.has(k));
+      const remainingKeys = Array.from(allKeys).filter(k => !columnOrder.includes(k)).sort();
+      const keys = orderedKeys.concat(remainingKeys);
+
+      // Render header with SL column
+      const thead = document.querySelector('#dataTable thead');
+      thead.innerHTML = '<tr><th class="col-sl">SL</th>' + keys.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '</tr>';
+
+      // Render body
+      tbody.innerHTML = '';
+      const colCount = keys.length + 1; // +1 for SL column
+
+      rows.forEach((r, index) => {
+        const tr = document.createElement('tr');
+        const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
+
+        // Add SL column first
+        const slTd = document.createElement('td');
+        slTd.className = 'col-sl';
+        slTd.textContent = index + 1;
+        tr.appendChild(slTd);
+
+        keys.forEach(k => {
+          const td = document.createElement('td');
+          const val = r[k] === null || r[k] === undefined ? '' : String(r[k]);
+          td.textContent = escapeHtml(val);
+          if (k === 'status' && val && val.toUpperCase().includes('TC')) {
+            tr.className = 'status-tc';
+          }
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+
+      // Update colspans in other places
+      const loadingRow = document.querySelector('#dataTable tbody tr');
+      if(loadingRow) loadingRow.innerHTML = `<td colspan="${colCount}">Loading...</td>`;
+    }
+
+  async function openEditByIID(iid){
+      // fetch full row from DB to ensure we have all columns
+      modalNotice.textContent = '';
+      currentIID = iid;
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+      .eq('iid', Number(iid))
+          .limit(1)
+          .single();
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        renderEditFields(data || {});
+        editModal.style.display = 'flex';
+      }catch(err){
+        console.error('openEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Failed to load record: ' + (err.message || err);
+        // fallback: if we had a row in the table view, user can still edit minimal fields (not implemented here)
+      }
+    }
+
+    function renderEditFields(record){
+      editFields.innerHTML = '';
+      // iterate keys in sorted order for predictability
+      const keys = Object.keys(record).sort();
+      keys.forEach(key => {
+        const val = record[key] === null || record[key] === undefined ? '' : record[key];
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        const label = document.createElement('label');
+        label.textContent = key + ':';
+        // decide input type: use textarea for long text fields (heuristic)
+        let input;
+        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
+          input = document.createElement('textarea');
+          input.rows = 4;
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+        }
+        input.value = val;
+        input.setAttribute('data-field', key);
+        if(key === 'IID'){
+          input.readOnly = true;
+        }
+        row.appendChild(label);
+        row.appendChild(input);
+        editFields.appendChild(row);
+      });
+    }
+
+    async function saveEdit(){
+      modalNotice.textContent = '';
+      if(!currentIID){ modalNotice.textContent = 'No record selected'; return; }
+      // build payload from inputs
+      const inputs = editFields.querySelectorAll('[data-field]');
+      const payload = {};
+      inputs.forEach(inp =>{
+        const field = inp.getAttribute('data-field');
+    if(field === 'iid' || field === 'IID') return; // don't try to update primary key
+        const v = inp.value === '' ? null : inp.value;
+        payload[field] = v;
+      });
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .update(payload)
+          .eq('iid', Number(currentIID));
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        modalNotice.style.color = 'green';
+        modalNotice.textContent = 'Updated successfully';
+  // refresh list and cache and close
+  await loadData(false);
+        setTimeout(()=>{ closeModal(); modalNotice.textContent = ''; }, 700);
+      }catch(err){
+        console.error('saveEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Update error: ' + (err.message || err);
+      }finally{
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    function closeModal(){
+      editModal.style.display = 'none';
+      editFields.innerHTML = '';
+      currentIID = null;
+    }
+
+    function escapeHtml(s){
+      if(s === null || s === undefined) return '';
+      return String(s).replace(/[&<>\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // close modal when clicking outside panel
+    editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
+
+    // initial load with smart cache
+    (function smartInitial(){
+      const usedCache = showFromCacheIfFresh();
+      if(!usedCache){
+        loadData(false);
+      }
+    })();
+  </script>
+</body>
 </html>
+
