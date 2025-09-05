@@ -280,11 +280,26 @@
         .badge-purple {
             background: #9C27B0;
         }
+
+        .group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .group h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #4f46e5;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Admin Dashboard</h1>
+        <h1>Super Admin Dashboard</h1>
         <div>
             <span id="admin-username">Admin</span>
             <button id="logout-btn" class="logout-btn">Logout</button>
@@ -310,20 +325,45 @@
                 <!-- Dashboard Panel -->
                 <div id="dashboard-panel" class="tab-panel active">
                     <div class="section-header">
-                        <h2>Result Overview</h2>
+                        <h2>Database Overview</h2>
                     </div>
                     
                     
                     
                     <div class="dropdown-content">
-                        <a href="./entry.html" class="dropdown-item" id="midterm25-dropdown">
-                            Previous data June 2025
+                        <div class="group">
+                            <h3>Data Management</h3>
+                            <a href="./entrynew.html" class="dropdown-item" id="midterm25-dropdown">
+                                Database  2025
+                                <span class="dropdown-item-badge badge-orange">New</span>
+                            </a>
+
+                            <a href="./entry.html" class="dropdown-item" id="midterm25-dropdown">
+                                Previous data - till June 2025
+                                <span class="dropdown-item-badge badge-orange">New</span>
+                            </a>
+                            
+                            <a href=" " class="dropdown-item" id="midterm25-dropdown">
+                            Teacher Database
                             <span class="dropdown-item-badge badge-orange">New</span>
                         </a>
-                        <a href="./entrynew.html" class="dropdown-item" id="midterm25-dropdown">
-                            New data 2025
-                            <span class="dropdown-item-badge badge-orange">New</span>
-                        </a>
+                        </div>
+                        <div class="group">
+                            <h3>Add New</h3>
+                            <a href="./newstudent.html" class="dropdown-item" id="midterm25-dropdown">
+                                Add New student 
+                                <span class="dropdown-item-badge badge-orange">New</span>
+                            </a>
+                            <a href=" " class="dropdown-item" id="midterm25-dropdown">
+                                Add New teacher 
+                                <span class="dropdown-item-badge badge-orange">New</span>
+                            </a>
+                            <a href=" " class="dropdown-item" id="midterm25-dropdown">
+                                Promotion 
+                                <span class="dropdown-item-badge badge-orange">New</span>
+                            </a>
+                        </div>
+                       
 
  
                     </div>

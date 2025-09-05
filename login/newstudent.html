@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Student</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root{
+            --bg:#f3f6f9;
+            --card:#ffffff;
+            --muted:#6b7280;
+            --accent:#FF9800; /* orange */
+            --accent-dark:#f57c00;
+            --input-border:#e6e9ee;
+        }
+        body {
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            margin: 24px;
+            background-color: var(--bg);
+            color: #111827;
+        }
+        .form-container {
+            max-width: 680px;
+            margin: 14px auto;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), var(--card));
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(16,24,40,0.06);
+            border: 1px solid rgba(15,23,42,0.04);
+        }
+        h2{margin:0 0 12px 0;font-size:20px;color:#0f172a}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .form-group{margin-bottom:12px}
+        label{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}
+        input, select{width:100%;padding:10px;border:1px solid var(--input-border);border-radius:8px;background:#fff;box-sizing:border-box;font-size:14px}
+        input:focus, select:focus{outline:none;box-shadow:0 6px 18px rgba(16,24,40,0.06);border-color:rgba(0,0,0,0.08)}
+        .btn-primary{background:var(--accent);color:#fff;padding:12px;border-radius:10px;border:none;cursor:pointer;font-weight:600;width:100%;box-shadow:0 6px 18px rgba(255,152,0,0.12)}
+        .btn-primary:hover{background:var(--accent-dark)}
+        .full-width{grid-column: 1 / -1}
+        .message{margin-top:14px;padding:12px;border-radius:8px;font-size:14px}
+        .success{background:linear-gradient(90deg, rgba(220,252,231,1), rgba(220,252,231,0.6));color:#065f46}
+        .error{background:linear-gradient(90deg, rgba(254,226,226,1), rgba(254,226,226,0.6));color:#7f1d1d}
+        @media(max-width:700px){.form-grid{grid-template-columns:1fr}.form-container{padding:18px}}
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Add New Student</h2>
+        <form id="studentForm">
+            <div class="form-group">
+                <label for="student_name_en">Student Name (English)</label>
+                <input type="text" id="student_name_en" name="student_name_en" required>
+            </div>
+            <div class="form-group">
+                <label for="father_name_en">Father Name (English)</label>
+                <input type="text" id="father_name_en" name="father_name_en" required>
+            </div>
+            <div class="form-group">
+                <label for="class_2025">Class 2025</label>
+                <select id="class_2025" name="class_2025" required>
+                    <option value="">Select Class</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="roll_2025">Roll 2025</label>
+                <input type="number" id="roll_2025" name="roll_2025" required>
+            </div>
+            <div class="form-group">
+                <label for="section_2025">Section 2025</label>
+                <select id="section_2025" name="section_2025" required>
+                    <option value="">Select Section</option>
+                    <option value="golap">GOLAP</option>
+                    <option value="mor">MORNING</option>
+                    <option value="shapla">SHAPLA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="session">Session</label>
+                <input type="text" id="session" name="session" required>
+            </div>
+            <button type="submit" class="btn-primary">Add Student</button>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const form = document.getElementById('studentForm');
+        const messageDiv = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+
+            // Check for duplicate roll in same class and section
+            try {
+                const { data: existing, error: checkError } = await supabase
+                    .from('student_database')
+                    .select('iid')
+                    .eq('class_2025', data.class_2025)
+                    .eq('section_2025', data.section_2025)
+                    .eq('roll_2025', data.roll_2025);
+
+                if (checkError) throw checkError;
+
+                if (existing && existing.length > 0) {
+                    messageDiv.innerHTML = '<div class="message error">Error: Roll ' + data.roll_2025 + ' already exists in Class ' + data.class_2025 + ', Section ' + data.section_2025 + '.</div>';
+                    return;
+                }
+
+                // Insert new student
+                const { data: insertedData, error } = await supabase
+                    .from('student_database')
+                    .insert([data])
+                    .select('iid');
+
+                if (error) throw error;
+
+                const iid = insertedData[0].iid;
+                messageDiv.innerHTML = '<div class="message success">Student added successfully! IID: ' + iid + '</div>';
+                form.reset();
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.innerHTML = '<div class="message error">Error: ' + error.message + '</div>';
+            }
+        });
+    </script>
+</body>
+</html>
