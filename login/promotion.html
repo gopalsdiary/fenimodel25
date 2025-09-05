@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Promotion</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root{
+            --bg:#f3f6f9;
+            --card:#ffffff;
+            --muted:#6b7280;
+            --accent:#FF9800; /* orange */
+            --accent-dark:#f57c00;
+            --input-border:#e6e9ee;
+            --success:#10b981;
+            --error:#ef4444;
+        }
+        body {
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            margin: 24px;
+            background-color: var(--bg);
+            color: #111827;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), var(--card));
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(16,24,40,0.06);
+            border: 1px solid rgba(15,23,42,0.04);
+        }
+        h2{margin:0 0 20px 0;font-size:24px;color:#0f172a;text-align:center}
+        .filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 16px;
+            margin-bottom: 24px;
+            align-items: end;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        label{display:block;margin-bottom:6px;font-size:13px;color:var(--muted);font-weight:500}
+        select, input{
+            width:100%;
+            padding:10px;
+            border:1px solid var(--input-border);
+            border-radius:8px;
+            background:#fff;
+            box-sizing:border-box;
+            font-size:14px
+        }
+        select:focus, input:focus{outline:none;box-shadow:0 6px 18px rgba(16,24,40,0.06);border-color:rgba(0,0,0,0.08)}
+        .btn-primary{
+            background:var(--accent);
+            color:#fff;
+            padding:12px 24px;
+            border-radius:8px;
+            border:none;
+            cursor:pointer;
+            font-weight:600;
+            height:42px;
+        }
+        .btn-primary:hover{background:var(--accent-dark)}
+        .promotion-container {
+            margin-top: 20px;
+        }
+        .student-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .student-table th {
+            background: var(--accent);
+            color: white;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .student-table th:nth-child(5) {
+            border-right: 3px solid #fff;
+        }
+        .student-table td {
+            padding: 12px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        .student-table td:nth-child(5) {
+            border-right: 3px solid #e2e8f0;
+        }
+        .student-table tr {
+            transition: all 0.2s;
+        }
+        .student-table tr:hover {
+            background: #f8fafc;
+        }
+        .student-table tr:last-child td {
+            border-bottom: none;
+        }
+        .promotion-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .promotion-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .promote-btn {
+            background: var(--success);
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .promote-btn:hover {
+            background: #059669;
+        }
+        .promote-btn:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        .input-error { 
+            border-color: var(--error) !important; 
+            background: #fef2f2; 
+        }
+        .warning-text {
+            color: var(--error);
+            font-size: 11px;
+            margin-top: 4px;
+            display: none;
+        }
+        .form-grid {
+            display: grid;
+            gap: 16px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+        }
+        .btn-success {
+            background: var(--success);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .message {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .message.success {
+            background: linear-gradient(90deg, rgba(220,252,231,1), rgba(220,252,231,0.6));
+            color: #065f46;
+        }
+        .message.error {
+            background: linear-gradient(90deg, rgba(254,226,226,1), rgba(254,226,226,0.6));
+            color: #7f1d1d;
+        }
+        .loading {
+            text-align: center;
+            color: var(--muted);
+            padding: 20px;
+        }
+        @media(max-width:768px){
+            .promotion-grid{grid-template-columns:1fr}
+            .filters{grid-template-columns:1fr;gap:12px}
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Student Promotion</h2>
+        
+        <div class="filters">
+            <div class="filter-group">
+                <label for="filter_class">Filter by Class 2025</label>
+                <select id="filter_class">
+                    <option value="">All Classes</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter_section">Filter by Section 2025</label>
+                <select id="filter_section">
+                    <option value="">All Sections</option>
+                    <option value="golap">GOLAP</option>
+                    <option value="mor">MORNING</option>
+                    <option value="shapla">SHAPLA</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter_session">Filter by Session</label>
+                <select id="filter_session">
+                    <option value="">All Sessions</option>
+                    <option value="2025">2025</option>
+                    <option value="2026">2026</option>
+                </select>
+            </div>
+            <button class="btn-primary" onclick="loadStudents()">Load Students</button>
+            <button class="btn-primary" onclick="testLoadAllStudents()" style="margin-left: 10px;">Test Load All</button>
+        </div>
+
+        <div class="promotion-container">
+            <div id="studentContainer">
+                <div class="loading">Select filters and click "Load Students" to view data</div>
+            </div>
+            <div id="message"></div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let selectedStudent = null;
+        let studentsData = [];
+
+        // Load students based on filters
+        async function loadStudents() {
+            const rawClass = document.getElementById('filter_class').value;
+            const rawSection = document.getElementById('filter_section').value;
+            const rawSession = document.getElementById('filter_session').value;
+            const filterClass = rawClass ? String(rawClass).trim() : '';
+            const filterSection = rawSection ? String(rawSection).trim() : '';
+            const filterSession = rawSession ? String(rawSession).trim() : '';
+            const container = document.getElementById('studentContainer');
+
+            console.log('Filters applied (normalized):', { filterClass, filterSection, filterSession });
+
+            try {
+                container.innerHTML = '<div class="loading">Loading students...</div>';
+
+                let baseQuery = supabase
+                    .from('student_database')
+                    .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
+
+                // Apply filters one by one with logging
+                if (filterClass) {
+                    // try numeric and string equality fallback
+                    const numericClass = isNaN(Number(filterClass)) ? null : Number(filterClass);
+                    console.log('Attempt class filter eq(class_2025, value):', numericClass ?? filterClass);
+                    baseQuery = baseQuery.eq('class_2025', numericClass ?? filterClass);
+                }
+                if (filterSection) {
+                    // sections might be stored lowercase; we'll try an ilike if eq returns 0 later
+                    console.log('Attempt section filter eq(section_2025, value):', filterSection);
+                    baseQuery = baseQuery.eq('section_2025', filterSection);
+                }
+                if (filterSession) {
+                    const numericSession = isNaN(Number(filterSession)) ? filterSession : Number(filterSession);
+                    console.log('Attempt session filter eq(session, value):', numericSession);
+                    baseQuery = baseQuery.eq('session', numericSession);
+                }
+
+                console.log('Executing primary query...');
+                let { data, error } = await baseQuery.order('class_2025').order('section_2025').order('roll_2025');
+                if (error) throw error;
+
+                // Fallback: if zero results and section filter present, attempt case-insensitive match
+                if ((data?.length === 0) && filterSection) {
+                    console.log('Primary query empty; attempting case-insensitive section match with ilike');
+                    let fallbackQuery = supabase
+                        .from('student_database')
+                        .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
+                    if (filterClass) {
+                        const numericClass = isNaN(Number(filterClass)) ? filterClass : Number(filterClass);
+                        fallbackQuery = fallbackQuery.eq('class_2025', numericClass);
+                    }
+                    if (filterSession) {
+                        const numericSession = isNaN(Number(filterSession)) ? filterSession : Number(filterSession);
+                        fallbackQuery = fallbackQuery.eq('session', numericSession);
+                    }
+                    // ilike pattern for section
+                    fallbackQuery = fallbackQuery.ilike('section_2025', filterSection.toLowerCase());
+                    const fallback = await fallbackQuery.order('class_2025').order('section_2025').order('roll_2025');
+                    if (!fallback.error) {
+                        data = fallback.data;
+                        console.log('Fallback query result count:', data?.length || 0);
+                    }
+                }
+
+                console.log('Final result count:', data ? data.length : 0);
+                studentsData = data || [];
+                displayStudents(studentsData);
+            } catch (error) {
+                console.error('Error loading students:', error);
+                container.innerHTML = `<div class=\"message error\">Error loading students: ${error.message}</div>`;
+            }
+        }
+
+        // Display students in unified table with promotion fields
+        function displayStudents(students) {
+            const container = document.getElementById('studentContainer');
+            
+            if (students.length === 0) {
+                container.innerHTML = '<div class="loading">No students found with the selected filters</div>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="student-table">
+                    <thead>
+                        <tr>
+                            <th>IID</th>
+                            <th>Student Name</th>
+                            <th>Class 2025</th>
+                            <th>Section 2025</th>
+                            <th>Roll 2025</th>
+
+                            <th>Class 2026</th>
+                            <th>Section 2026</th>
+                            <th>Roll 2026</th>
+                            <th>Session</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${students.map(student => {
+                            const currentClass = student.class_2025 || '';
+                            const currentSection = (student.section_2025 || '').toLowerCase();
+                            // If promoting to next class automatically (optional), you could parseInt + 1. For now keep same.
+                                const promotionMap = { '6':'7', '7':'8', '8':'9', '9':'10', '10':'old 10' };
+                                const prefillClass = promotionMap[String(currentClass)] || '';
+                            const sections = ['golap','mor','shapla'];
+                            return `
+                            <tr data-iid="${student.iid}">
+                                <td>${student.iid}</td>
+                                <td>${student.student_name_en || 'N/A'}</td>
+                                <td>${student.class_2025 || 'N/A'}</td>
+                                <td>${student.section_2025 || 'N/A'}</td>
+                                <td>${student.roll_2025 || 'N/A'}</td>
+                                <td>
+                                    <select class="promotion-input" id="class_2026_${student.iid}">
+                                        <option value="">Select</option>
+                                            <option value="6" ${prefillClass==='6'?'selected':''}>6</option>
+                                            <option value="7" ${prefillClass==='7'?'selected':''}>7</option>
+                                            <option value="8" ${prefillClass==='8'?'selected':''}>8</option>
+                                            <option value="9" ${prefillClass==='9'?'selected':''}>9</option>
+                                            <option value="10" ${prefillClass==='10'?'selected':''}>10</option>
+                                            <option value="old 10" ${prefillClass==='old 10'?'selected':''}>old 10</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <select class="promotion-input" id="section_2026_${student.iid}">
+                                        <option value="">Select</option>
+                                        <option value="golap" ${currentSection==='golap'?'selected':''}>GOLAP</option>
+                                        <option value="mor" ${currentSection==='mor'?'selected':''}>MORNING</option>
+                                        <option value="shapla" ${currentSection==='shapla'?'selected':''}>SHAPLA</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" class="promotion-input" id="roll_2026_${student.iid}" placeholder="Roll">
+                                    <div class="warning-text" id="warning_${student.iid}">Roll 2026 is required</div>
+                                </td>
+                                <td>
+                                    <input type="text" class="promotion-input" id="session_${student.iid}" value="2026">
+                                </td>
+                                <td>
+                                    <button class="promote-btn" onclick="promoteStudent('${student.iid}')">Promote</button>
+                                </td>
+                            </tr>
+                        `}).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Promote specific student
+        async function promoteStudent(iid) {
+            const student = studentsData.find(s => s.iid === iid);
+            if (!student) return;
+            
+            const class2026 = document.getElementById(`class_2026_${iid}`).value;
+            const section2026 = document.getElementById(`section_2026_${iid}`).value;
+            let roll2026 = document.getElementById(`roll_2026_${iid}`).value;
+            // force session to 2026 regardless of input
+            const sessionInput = document.getElementById(`session_${iid}`);
+            sessionInput.value = '2026';
+            const session = '2026';
+            
+            // Clear any previous error highlight
+            const rollInput = document.getElementById(`roll_2026_${iid}`);
+            const warningText = document.getElementById(`warning_${iid}`);
+            rollInput.classList.remove('input-error');
+            warningText.style.display = 'none';
+
+            if (!roll2026) {
+                rollInput.classList.add('input-error');
+                warningText.style.display = 'block';
+                document.getElementById('message').innerHTML = '<div class="message error">Roll 2026 is empty. Please enter new roll.</div>';
+                rollInput.focus();
+                return;
+            }
+            if (!class2026 || !section2026 || !session) {
+                document.getElementById('message').innerHTML = '<div class="message error">Please fill in all promotion fields for this student</div>';
+                return;
+            }
+            
+            try {
+                // Check for duplicate roll in target class/section
+                const { data: existing, error: checkError } = await supabase
+                    .from('student_database')
+                    .select('iid')
+                    .eq('class_2026', class2026)
+                    .eq('section_2026', section2026)
+                    .eq('roll_2026', roll2026);
+                
+                if (checkError) throw checkError;
+                
+                if (existing && existing.length > 0 && existing[0].iid !== iid) {
+                    document.getElementById('message').innerHTML = `<div class="message error">Roll ${roll2026} already exists in Class ${class2026}, Section ${section2026} for 2026</div>`;
+                    return;
+                }
+                
+                // Update student with promotion data
+                const { error } = await supabase
+                    .from('student_database')
+                    .update({
+                        class_2026: class2026,
+                        section_2026: section2026,
+                        roll_2026: roll2026,
+                        session: session
+                    })
+                    .eq('iid', iid);
+                
+                if (error) throw error;
+                
+                document.getElementById('message').innerHTML = `<div class=\"message success\">Student ${student.student_name_en} promoted successfully to Class ${class2026}, Section ${section2026}, Roll ${roll2026}</div>`;
+                
+                // Clear any warning and disable the button to show it's completed
+                const warningText = document.getElementById(`warning_${iid}`);
+                warningText.style.display = 'none';
+                rollInput.classList.remove('input-error');
+                
+                const btn = document.querySelector(`button[onclick="promoteStudent('${iid}')"]`);
+                btn.textContent = 'Promoted ✓';
+                btn.disabled = true;
+                
+            } catch (error) {
+                console.error('Error promoting student:', error);
+                document.getElementById('message').innerHTML = `<div class="message error">Error promoting student: ${error.message}</div>`;
+            }
+        }
+
+        // Test function to load all students without filters
+        async function testLoadAllStudents() {
+            const container = document.getElementById('studentContainer');
+            
+            try {
+                container.innerHTML = '<div class="loading">Loading all students for testing...</div>';
+                
+                const { data, error } = await supabase
+                    .from('student_database')
+                    .select('iid, student_name_en, class_2025, section_2025, roll_2025, session')
+                    .limit(10);
+                
+                if (error) {
+                    console.error('Test query error:', error);
+                    throw error;
+                }
+                
+                console.log('Sample data from database:', data);
+                
+                if (data && data.length > 0) {
+                    console.log('Sample student record:', data[0]);
+                    console.log('Available fields:', Object.keys(data[0]));
+                    
+                    // Check data types and values
+                    data.forEach((student, index) => {
+                        if (index < 3) { // Show first 3 students
+                            console.log(`Student ${index + 1}:`, {
+                                class_2025: student.class_2025,
+                                class_2025_type: typeof student.class_2025,
+                                section_2025: student.section_2025,
+                                section_2025_type: typeof student.section_2025,
+                                session: student.session,
+                                session_type: typeof student.session
+                            });
+                        }
+                    });
+                }
+                
+                studentsData = data || [];
+                displayStudents(studentsData);
+                
+            } catch (error) {
+                console.error('Error in test load:', error);
+                container.innerHTML = `<div class="message error">Test load error: ${error.message}</div>`;
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Page loaded and ready
+            console.log('Promotion page loaded');
+        });
+    </script>
+</body>
+</html>

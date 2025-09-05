@@ -413,6 +413,7 @@
 		actionCells.forEach(cell => cell.innerHTML = '');
 		const actionHeader = document.querySelector('th.actions-col');
 		if(actionHeader) actionHeader.style.display = 'none'; // hide header
+		
 		// Set row height to approx 1.5 cm (57px)
 		const rows = table.querySelectorAll('tbody tr');
 		rows.forEach(tr => tr.style.minHeight = '57px');
