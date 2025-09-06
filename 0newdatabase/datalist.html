@@ -95,23 +95,44 @@
 			let all = [];
 			let lastId = 0;
 			let hasMore = true;
-			// Larger batch size for better performance (5x increase)
-			const batchSize = 5000;
+			// Use 1000 to align with PostgREST per-request cap
+			const batchSize = 1000;
+			let batchCount = 0;
+			let prevLastId = null; // plateau guard
+			const maxBatches = 10000; // generous safety cap
 			
-			while(hasMore){
-				statusEl.textContent = `Loading... (${all.length} records loaded)`;
+			while(hasMore && batchCount < maxBatches){
+				batchCount++;
+				statusEl.textContent = `Loading... (${all.length} records loaded, batch ${batchCount})`;
 				
 				// Select only needed columns to reduce payload
-				const selectCols = (columnSpec && columnSpec.length > 0)
-					? columnSpec.map(c => c.field).concat(['iid', 'class_2025', 'section_2025', 'roll_2025', 'status']).filter(Boolean).map(c => `"${c.replace(/"/g, '')}"`).join(',')
-					: '*';
+				const selectColsArr = (columnSpec && columnSpec.length > 0)
+					? Array.from(new Set(columnSpec.map(c => c.field).concat(['iid','class_2025','section_2025','roll_2025','status'])))
+						.filter(Boolean)
+						.map(c => String(c).replace(/["\s]+/g, '').trim())
+					: null;
+				const selectArg = selectColsArr ? selectColsArr.join(',') : '*';
 				
-				const { data, error } = await supabase
-					.from(tableName)
-					.select(selectCols)
-					.gt('iid', lastId)
-					.order('iid', { ascending: true })
-					.limit(batchSize);
+				// Primary attempt
+				let data, error;
+				try{
+					({ data, error } = await supabase
+						.from(tableName)
+						.select(selectArg)
+						.gt('iid', lastId)
+						.order('iid', { ascending: true })
+						.limit(batchSize));
+				}catch(e){ data = null; error = e; }
+				
+				// Fallback to '*' if needed
+				if(error || !Array.isArray(data)){
+					({ data, error } = await supabase
+						.from(tableName)
+						.select('*')
+						.gt('iid', lastId)
+						.order('iid', { ascending: true })
+						.limit(batchSize));
+				}
 				
 				if(error) throw error;
 				
@@ -123,9 +144,13 @@
 				// Use push instead of concat for better performance
 				for(const row of data) all.push(row);
 				lastId = data[data.length - 1].iid;
-				
-				// If we got less than batchSize, we've reached the end
-				if(data.length < batchSize) hasMore = false;
+				// plateau guard
+				if(prevLastId !== null && Number(lastId) === Number(prevLastId)){
+					console.warn('Pagination stalled (iid not advancing). Stopping. lastId=', lastId);
+					hasMore = false;
+					break;
+				}
+				prevLastId = lastId;
 			}
 			return all;
 		}
