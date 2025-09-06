@@ -240,13 +240,28 @@
 
 	// Build table rows based on filters
 	function applyFilters(){
-		const key = document.getElementById('tableFilter').value;
-		let filtered = allStudents;
-		if(key){
-			const [cls, section, session] = key.split('-');
-			filters = { cls, section, session };
-			filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
-		}
+			const key = document.getElementById('tableFilter').value;
+			let filtered = allStudents;
+			if(key){
+				let parsed = null;
+				try{ parsed = JSON.parse(key); }catch(e){ parsed = null; }
+				if(parsed && parsed.cls!==undefined){
+					const { cls, section, session } = parsed;
+					filters = { cls, section, session };
+					filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+				}else{
+					// Fallback: best-effort legacy split (session after last '-', class before first '-', middle is section)
+					const lastDash = key.lastIndexOf('-');
+					const firstDash = key.indexOf('-');
+					if(lastDash>firstDash && firstDash>0){
+						const cls = key.slice(0, firstDash).trim();
+						const session = key.slice(lastDash+1).trim();
+						const section = key.slice(firstDash+1, lastDash).trim();
+						filters = { cls, section, session };
+						filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+					}
+				}
+			}
 		// sort by roll numeric asc then IID
 		filtered = filtered.slice().sort((a,b)=>{
 			const ra=Number(a.roll), rb=Number(b.roll);
@@ -456,9 +471,9 @@
 
 	function populateFilters(){
 		const sel = document.getElementById('tableFilter'); if(!sel) return;
-		sel.innerHTML = '<option value="">Class-Section-Session</option>';
+			sel.innerHTML = '<option value="">Class-Section-Session</option>';
 		groupOptions = buildGroupOptions();
-		groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=g.name; o.textContent=g.name; sel.appendChild(o); });
+			groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=JSON.stringify({cls:g.cls, section:g.section, session:g.session}); o.textContent=g.name; sel.appendChild(o); });
 	}
 
 	// Wire filter controls (defensive)

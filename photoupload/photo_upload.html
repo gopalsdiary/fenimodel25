@@ -87,6 +87,34 @@
 
 	function computeActiveFromRow(r){
 		const s = String(r.session||'').trim();
+		// Prefer fields matching the explicit session if present
+		if(s){
+			const clsKey = `class_${s}`;
+			const secKey = `section_${s}`;
+			const rollKey = `roll_${s}`;
+			if(r[clsKey] || r[secKey] || r[rollKey]){
+				return { session:s, active_class:String(r[clsKey]||''), active_section:String(r[secKey]||''), active_roll:String(r[rollKey]||'') };
+			}
+		}
+		// Otherwise, choose the latest year that has any of class/section/roll
+		let bestYear = null; let best = { c:'', s:'', r:'' };
+		for(const k of Object.keys(r||{})){
+			const m = k.match(/^class_(\d{2,4})$/);
+			if(!m) continue;
+			const year = m[1];
+			const c = String(r[`class_${year}`]||'').trim();
+			const sec = String(r[`section_${year}`]||'').trim();
+			const rl = String(r[`roll_${year}`]||'').trim();
+			if(c || sec || rl){
+				if(bestYear===null || Number(year) > Number(bestYear)){
+					bestYear = year; best = { c, s:sec, r:rl };
+				}
+			}
+		}
+		if(bestYear!==null){
+			return { session:String(bestYear), active_class:String(best.c||''), active_section:String(best.s||''), active_roll:String(best.r||'') };
+		}
+		// Fallback to legacy
 		let active_class='', active_section='', active_roll='';
 		if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
 		else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
@@ -171,9 +199,22 @@
 		const q = (document.getElementById('search').value||'').toLowerCase().trim();
 		let filtered = allStudents;
 		if(key){
-			const [cls, section, session] = key.split('-');
-			filters = { cls, section, session };
-			filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+			let parsed=null; try{ parsed=JSON.parse(key);}catch(e){parsed=null}
+			if(parsed && parsed.cls!==undefined){
+				const { cls, section, session } = parsed;
+				filters = { cls, section, session };
+				filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+			}else{
+				// Legacy fallback parsing: first dash splits class, last dash splits session
+				const firstDash = key.indexOf('-'); const lastDash = key.lastIndexOf('-');
+				if(lastDash>firstDash && firstDash>0){
+					const cls = key.slice(0, firstDash).trim();
+					const session = key.slice(lastDash+1).trim();
+					const section = key.slice(firstDash+1, lastDash).trim();
+					filters = { cls, section, session };
+					filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+				}
+			}
 		}
 		if(q){ filtered = filtered.filter(s=> (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q)); }
 		// sort by roll numeric asc then IID
@@ -329,7 +370,7 @@
 		const sel = document.getElementById('tableFilter'); if(!sel) return;
 		sel.innerHTML = '<option value="">Class-Section-Session</option>';
 		groupOptions = buildGroupOptions();
-		groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=g.name; o.textContent=g.name; sel.appendChild(o); });
+		groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=JSON.stringify({cls:g.cls, section:g.section, session:g.session}); o.textContent=g.name; sel.appendChild(o); });
 	}
 
 	// Wire filter controls (defensive)
