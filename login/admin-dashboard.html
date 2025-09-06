@@ -295,6 +295,181 @@
             border-bottom: 1px solid #eee;
             padding-bottom: 5px;
         }
+        /* Beautiful IID panel styles - Enhanced Orange Theme */
+        .iid-panel {
+            display: none;
+            margin: 20px 0;
+            padding: 25px;
+            border: 2px solid #fed7aa;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #fff7ed 50%, #fef3c7 100%);
+            box-shadow: 0 12px 35px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+        }
+        .iid-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ea580c, #f97316, #fb923c);
+            border-radius: 16px 16px 0 0;
+        }
+        .iid-panel.active {
+            display: block;
+            animation: slideInFade 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes slideInFade {
+            from {
+                opacity: 0;
+                transform: translateY(-10px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        .iid-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        .iid-header::before {
+            content: "🎯";
+            margin-right: 10px;
+            font-size: 20px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .iid-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 18px;
+            position: relative;
+        }
+        .iid-row label {
+            font-weight: 700;
+            color: #374151;
+            white-space: nowrap;
+            min-width: 35px;
+            font-size: 15px;
+        }
+        .iid-row input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #fed7aa;
+            border-radius: 12px;
+            outline: none;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        .iid-row input:focus {
+            border-color: #ea580c;
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.15), 0 4px 12px rgba(249, 115, 22, 0.1);
+            transform: translateY(-1px);
+        }
+        .iid-row input.error {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+        }
+        .iid-row input::placeholder {
+            color: #9ca3af;
+            font-weight: 400;
+        }
+        .iid-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #ea580c 0%, #c2410c 50%, #9a3412 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: #374151;
+            padding: 12px 24px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-color: #cbd5e1;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .iid-note {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 10px;
+            border-left: 4px solid #ea580c;
+            box-shadow: 0 2px 8px rgba(249, 115, 22, 0.1);
+            position: relative;
+        }
+        .iid-note::before {
+            content: "💡";
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            font-size: 16px;
+        }
+        .iid-note p {
+            margin: 0;
+            padding-left: 24px;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -382,6 +557,26 @@
  
                     </div>
                 </div>
+
+                        <!-- Edit by IID inline panel (appears below menu) -->
+                        <div id="iidPanel" class="iid-panel">
+                            <div class="iid-header">Edit Student by IID</div>
+                            <div class="iid-row">
+                                <label for="iidInput">IID:</label>
+                                <input type="text" id="iidInput" placeholder="e.g. 106584230001" maxlength="12" />
+                            </div>
+                            <div class="iid-buttons">
+                                <button id="openIid" class="btn-primary">
+                                    <span>🔍</span> Open Edit
+                                </button>
+                                <button id="cancelIid" class="btn-secondary">
+                                    <span>✕</span> Close
+                                </button>
+                            </div>
+                            <div class="iid-note">
+                                <p>Enter the student's unique IID and click "Open Edit" to modify their details in a new tab. Make sure the IID contains only numbers.</p>
+                            </div>
+                        </div>
             </div>
         </div>
     </div>
@@ -431,6 +626,85 @@
             if(fallbackName){
                 headerCenter.textContent = fallbackName;
                 adminUsername.textContent = fallbackName;
+            }
+
+            // Wire up Edit-by-IID panel
+            const editByIidLink = Array.from(document.querySelectorAll('.dropdown-item')).find(a => /edit by iid/i.test(a.textContent||''));
+            const iidPanel = document.getElementById('iidPanel');
+            const cancelIid = document.getElementById('cancelIid');
+            const openIid = document.getElementById('openIid');
+            const iidInput = document.getElementById('iidInput');
+
+            function showPanel(){
+                if(iidPanel) {
+                    iidPanel.classList.add('active');
+                    iidInput.focus();
+                    iidInput.select();
+                }
+            }
+            function hidePanel(){
+                if(iidPanel) {
+                    iidPanel.classList.remove('active');
+                    iidInput.value = '';
+                    iidInput.classList.remove('error');
+                }
+            }
+
+            function openEdit(){
+                const iid = String(iidInput.value || '').trim();
+                if(!iid){
+                    iidInput.classList.add('error');
+                    iidInput.focus();
+                    showError('Please enter an IID');
+                    return;
+                }
+                if(!/^\d+$/.test(iid)){
+                    iidInput.classList.add('error');
+                    iidInput.focus();
+                    showError('IID must contain only numbers');
+                    return;
+                }
+                if(iid.length < 10){
+                    iidInput.classList.add('error');
+                    iidInput.focus();
+                    showError('IID seems too short. Please check the format.');
+                    return;
+                }
+                iidInput.classList.remove('error');
+                const url = `./editdetailsnew.html?iid=${encodeURIComponent(iid)}`;
+                window.open(url, '_blank', 'noopener');
+                // keep panel open for subsequent edits
+                showSuccess('Opening edit page...');
+            }
+
+            function showError(message){
+                // You can enhance this with a toast notification
+                alert(message);
+            }
+
+            function showSuccess(message){
+                // You can enhance this with a success toast
+                console.log(message);
+            }
+
+            if(editByIidLink){
+                editByIidLink.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    showPanel();
+                });
+            }
+            if(cancelIid) cancelIid.addEventListener('click', hidePanel);
+            if(openIid) openIid.addEventListener('click', openEdit);
+
+            // Keyboard support
+            if(iidInput){
+                iidInput.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter') openEdit();
+                    if(e.key === 'Escape') hidePanel();
+                });
+                iidInput.addEventListener('input', () => {
+                    iidInput.classList.remove('error');
+                });
             }
         });
     </script>
