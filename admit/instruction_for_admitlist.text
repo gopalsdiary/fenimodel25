@@ -1,0 +1,18 @@
+স্মার্ট বুদ্ধি প্রয়োগ কর। ধাপে ধাপে কর। 
+
+all data comes from  >> /0newdatabase/datalist.html  (insteed of superbase or google sheet)
+
+create class-section-session drop down from colm of datalist.html > class_section_year	
+
+যে class_section_year সিলেক্ট করা হবে, সেক্ষেত্রে শুধু তার ডাটা গুলো আছে, এমন row শো করবে
+----------------------------------------------------- 
+datalist.html > admitlist.html এর colm name match with
+
+active_class > class
+active_section > section
+active_roll > roll
+group > group
+Name > student_name_en
+Father > father_name_en
+iid > iid 
+
