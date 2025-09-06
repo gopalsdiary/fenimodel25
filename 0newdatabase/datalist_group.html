@@ -156,19 +156,34 @@
 		}
 
 		function groupByClassSection(rows){
-			// Return all rows as a single group for unified table display
-			const allRows = [...rows].sort((a,b)=>{
-				// Sort by class, section, roll, then iid
-				const ca = Number(a.class_2025) || 0, cb = Number(b.class_2025) || 0;
+			const map = new Map();
+			// Optimized grouping with single pass
+			for(const r of rows){
+				const c = r.class_2025 == null ? '' : String(r.class_2025);
+				const s = r.section_2025 == null ? '' : String(r.section_2025);
+				const sess = r.session == null ? '' : String(r.session);
+				const key = `${c}__${s}__${sess}`;
+				if(!map.has(key)) map.set(key, { class_: c, section: s, session: sess, rows: [] });
+				map.get(key).rows.push(r);
+			}
+			// Optimized sorting: pre-calculate numeric values
+			for(const g of map.values()){
+				g.rows.sort((a,b)=>{
+					const ra = Number(a.roll_2025) || 0, rb = Number(b.roll_2025) || 0;
+					if(ra !== rb) return ra - rb;
+					const ia = Number(a.iid) || 0, ib = Number(b.iid) || 0;
+					return ia - ib;
+				});
+			}
+			// Convert to array and sort groups
+			const groups = Array.from(map.values()).sort((a,b)=>{
+				const ca = Number(a.class_) || 0, cb = Number(b.class_) || 0;
 				if(ca !== cb) return ca - cb;
-				const secCmp = (a.section_2025 || '').localeCompare(b.section_2025 || '');
+				const secCmp = a.section.localeCompare(b.section);
 				if(secCmp !== 0) return secCmp;
-				const ra = Number(a.roll_2025) || 0, rb = Number(b.roll_2025) || 0;
-				if(ra !== rb) return ra - rb;
-				const ia = Number(a.iid) || 0, ib = Number(b.iid) || 0;
-				return ia - ib;
+				return a.session.localeCompare(b.session);
 			});
-			return [{ class_: 'All Classes', section: '', session: '', rows: allRows }];
+			return groups;
 		}
 
 		function escapeHtml(s){
@@ -182,96 +197,57 @@
 			// Use document fragment for better performance
 			const fragment = document.createDocumentFragment();
 			
-			// Single table for all data
-			const card = document.createElement('div');
-			card.className = 'card';
-			
-			// Card header
-			const header = document.createElement('div');
-			header.className = 'card-header';
-			const title = document.createElement('h3');
-			title.className = 'card-title';
-			title.textContent = 'All Students';
-			const badge = document.createElement('span');
-			badge.className = 'badge';
-			badge.textContent = `${groups[0].rows.length} students`;
-			header.appendChild(title);
-			header.appendChild(badge);
-			
-			// Card body with table wrapper
-			const body = document.createElement('div');
-			body.className = 'card-body';
-			const tableWrapper = document.createElement('div');
-			tableWrapper.className = 'table-wrapper';
-			const table = document.createElement('table');
-			
-			// Table header
-			const thead = document.createElement('thead');
-			const htr = document.createElement('tr');
-			const sl = document.createElement('th'); 
-			sl.className='col-sl'; 
-			sl.textContent = 'SL'; 
-			htr.appendChild(sl);
-			
-			// Dynamic columns based on session
-			const sampleRow = groups[0].rows[0];
-			const sessionValue = sampleRow ? String(sampleRow.session || '').trim() : '';
-			const is2025Session = sessionValue === '2025';
-			
-			if(is2025Session){
-				// For 2025 session, show specific columns
-				const sessionColumns = [
-					{ field: 'class_2025', label: 'Class' },
-					{ field: 'section_2025', label: 'Section' },
-					{ field: 'roll_2025', label: 'Roll' }
-				];
-				for(const col of sessionColumns){
-					const th = document.createElement('th'); 
-					th.textContent = col.label; 
-					htr.appendChild(th);
-				}
-			}else{
-				// For other sessions, show regular columns
+			for(const g of groups){
+				total += g.rows.length;
+				const card = document.createElement('div');
+				card.className = 'card';
+				
+				// Card header
+				const header = document.createElement('div');
+				header.className = 'card-header';
+				const title = document.createElement('h3');
+				title.className = 'card-title';
+				const cls = g.class_ || 'N/A';
+				const sec = g.section || 'N/A';
+				const sess = g.session || 'N/A';
+				title.textContent = `Class : ${cls}-${sec}-${sess}`;
+				const badge = document.createElement('span');
+				badge.className = 'badge';
+				badge.textContent = `${g.rows.length} students`;
+				header.appendChild(title);
+				header.appendChild(badge);
+				
+				// Card body with table wrapper
+				const body = document.createElement('div');
+				body.className = 'card-body';
+				const tableWrapper = document.createElement('div');
+				tableWrapper.className = 'table-wrapper';
+				const table = document.createElement('table');
+				
+				// Table header
+				const thead = document.createElement('thead');
+				const htr = document.createElement('tr');
+				const sl = document.createElement('th'); 
+				sl.className='col-sl'; 
+				sl.textContent = 'SL'; 
+				htr.appendChild(sl);
 				for(const col of columnSpec){
 					const th = document.createElement('th'); 
 					th.textContent = col.label || col.field; 
 					htr.appendChild(th);
 				}
-			}
-			
-			thead.appendChild(htr);
-			table.appendChild(thead);
+				thead.appendChild(htr);
+				table.appendChild(thead);
 
-			// Table body
-			const tbody = document.createElement('tbody');
-			groups[0].rows.forEach((row, idx) =>{
-				const tr = document.createElement('tr');
-				if(String(row.status||'').toUpperCase().includes('TC')) tr.className = 'status-tc';
-				const sltd = document.createElement('td'); 
-				sltd.className='col-sl'; 
-				sltd.textContent = (idx+1); 
-				tr.appendChild(sltd);
-				
-				if(is2025Session){
-					// For 2025 session, show specific columns
-					const sessionColumns = ['class_2025', 'section_2025', 'roll_2025'];
-					for(const field of sessionColumns){
-						const td = document.createElement('td');
-						const v = row[field];
-						if(field === 'iid'){
-							const link = document.createElement('a');
-							link.href = `detailsinfo.html?iid=${encodeURIComponent(v)}`;
-							link.textContent = escapeHtml(v==null?'':String(v));
-							link.style.color = '#0b74de';
-							link.style.textDecoration = 'underline';
-							td.appendChild(link);
-						}else{
-							td.textContent = escapeHtml(v==null?'':String(v));
-						}
-						tr.appendChild(td);
-					}
-				}else{
-					// For other sessions, show regular columns
+				// Table body
+				const tbody = document.createElement('tbody');
+				g.rows.forEach((row, idx) =>{
+					const tr = document.createElement('tr');
+					if(String(row.status||'').toUpperCase().includes('TC')) tr.className = 'status-tc';
+					const sltd = document.createElement('td'); 
+					sltd.className='col-sl'; 
+					sltd.textContent = (idx+1); 
+					tr.appendChild(sltd);
 					for(const col of columnSpec){
 						const td = document.createElement('td');
 						const v = row[col.field];
@@ -287,19 +263,17 @@
 						}
 						tr.appendChild(td);
 					}
-				}
-				
-				tbody.appendChild(tr);
-			});
-			table.appendChild(tbody);
-			tableWrapper.appendChild(table);
-			body.appendChild(tableWrapper);
-			card.appendChild(header);
-			card.appendChild(body);
-			fragment.appendChild(card);
-			
+					tbody.appendChild(tr);
+				});
+				table.appendChild(tbody);
+				tableWrapper.appendChild(table);
+				body.appendChild(tableWrapper);
+				card.appendChild(header);
+				card.appendChild(body);
+				fragment.appendChild(card);
+			}
 			container.appendChild(fragment);
-			statusEl.textContent = `Total Students: ${groups[0].rows.length} | Session: ${sessionValue || 'Mixed'}`;
+			statusEl.textContent = `Groups: ${groups.length} | Total: ${total}`;
 		}
 
 		async function loadAll(background=false){
