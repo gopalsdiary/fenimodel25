@@ -100,8 +100,10 @@
 
         /* Center single button container */
         .card-container.all-classes {
-            display: flex;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            justify-items: center;
         }
         .card-container.all-classes .card-button {
             width: auto; /* override 100% */
@@ -224,10 +226,9 @@
         <div class="group-card group-10">
             <h3>All class (একসাথে)</h3>
             <div class="card-container all-classes">
-                <a class="card-button" href="../0newdatabase/all_data_field.html">All Classes</a>
-            </div>
-            <div class="card-container all-classes">
-                <a class="card-button" href="../0newdatabase/datalist.html">Group & details Classes</a>
+                <a class="card-button" href="../0newdatabase/all_data_field.html">All Class (all field) </a>
+                <a class="card-button" href="../0newdatabase/datalist.html">load data Class</a>
+                <a class="card-button" href="../0newdatabase/datalist_group.html">Group & details Class</a>
             </div>
         </div>
 
