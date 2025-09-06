@@ -59,7 +59,9 @@
 		}
 	</style>
 	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+	<!-- Supabase for loading the same data as datalist.html -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<script>
 		// Build a colorful palette for the chart bars
 		function makePalette(n){
@@ -77,6 +79,83 @@
 			return { fills, borders, hovers };
 		}
 		function slugify(s){ return 's'+String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+
+		// --- Supabase config (same as other pages) ---
+		const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+		const tableName = 'student_database';
+
+		// Fetch all rows with pagination (1k per batch) similar to datalist.html
+		async function fetchAllFromSupabase(){
+			if(!supabase) throw new Error('Supabase not available');
+			let all=[]; let lastId=0; let batch=0; const batchSize=1000; let prevLastId=null;
+			while(true){
+				batch++;
+				// Minimal columns for counting and grouping
+				const cols = ['iid','class_2025','section_2025','roll_2025','status','religion','session'];
+				let { data, error } = await supabase
+					.from(tableName)
+					.select(cols.join(','))
+					.gt('iid', lastId)
+					.order('iid', { ascending:true })
+					.limit(batchSize);
+				if(error) throw error;
+				if(!data || data.length===0) break;
+				for(const r of data) all.push(r);
+				lastId = data[data.length-1].iid;
+				if(prevLastId!==null && Number(lastId)===Number(prevLastId)) break; // plateau guard
+				prevLastId = lastId;
+			}
+			return all;
+		}
+
+		function aggregateCounts(rows){
+			// Group by class_2025 + section_2025 + session
+			const map = new Map();
+			for(const r of rows){
+				const c = r.class_2025==null?'':String(r.class_2025);
+				const s = r.section_2025==null?'':String(r.section_2025);
+				const sess = r.session==null?'':String(r.session);
+				const key = `${c}__${s}__${sess}`;
+				if(!map.has(key)) map.set(key,{ class_:c, section:s, session:sess, total:0, tc:0, hindu:0, islam:0 });
+				const g = map.get(key);
+				g.total += 1;
+				const statusStr = String(r.status||'').trim().toUpperCase();
+				const isTC = statusStr.includes('TC');
+				if(isTC) g.tc += 1;
+				// Religion counts should EXCLUDE TC students
+				if(!isTC){
+					const relRaw = String(r.religion||'').trim();
+					const relL = relRaw.toLowerCase();
+					if(/^\s*hindu\b/i.test(relRaw) || /হিন্দু/i.test(relRaw) || /হিন্দু/i.test(relL)) g.hindu += 1;
+					else if(/^\s*islam\b/i.test(relRaw) || /ইসলাম/i.test(relRaw) || /ইসলাম/i.test(relL)) g.islam += 1;
+				}
+			}
+			// To array with display names
+			const arr = Array.from(map.values()).map(g=>{
+				const displayName = `Class : ${g.class_}-${g.section}-${g.session||'Session'}`;
+				return {
+					name: displayName,
+					originalName: `${g.class_}_${g.section}`,
+					session: g.session || '',
+					total: g.total,
+					tc: g.tc,
+					existing: g.total - g.tc,
+					hindu: g.hindu,
+					islam: g.islam,
+					targetId: slugify(displayName)
+				};
+			});
+			// sort by class then section
+			arr.sort((a,b)=>{
+				const ax = parseInt(String(a.originalName).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
+				const bx = parseInt(String(b.originalName).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
+				if(Number.isFinite(ax)&&Number.isFinite(bx) && ax!==bx) return ax-bx;
+				return String(a.originalName).localeCompare(String(b.originalName));
+			});
+			return arr;
+		}
 		async function loadSheetPairs(){
 			const res = await fetch('0newdatabase/sheetidname.text', { cache:'no-store' });
 			if(!res.ok) throw new Error('Failed to load sheetidname.text');
@@ -91,14 +170,20 @@
 			}
 			return pairs;
 		}
-		function csvUrl(id, sheet){
-			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
-		}
+		
+		
 		async function fetchCounts({id,name}){
 						try{
 							const url = csvUrl(id,name);
 							const results = await new Promise((resolve,reject)=>{
-								Papa.parse(url,{ download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
+								Papa.parse(url,{
+									download:true,
+									header:true,
+									skipEmptyLines:'greedy',
+									dynamicTyping:false,
+									complete:r=>resolve(r),
+									error:e=>reject(e)
+								});
 							});
 							const rows = (results && results.data) ? results.data : [];
 							const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys(rows[0]||{});
@@ -116,8 +201,8 @@
 							}
 
 							// Count hindu and islam (case-insensitive, allow Bangla words too)
-							const hinduMatches = [/^\s*hindu\b/i, /হিন্দু/i, /হিন্দু\b/];
-							const islamMatches = [/^\s*islam\b/i, /ইসলাম/i, /ইসলাম\b/];
+							const hinduMatches = [/^\s*hindu\b/i, /হিন্দু/i];
+							const islamMatches = [/^\s*islam\b/i, /ইসলাম/i];
 							let hinduCount = 0, islamCount = 0;
 							if(religKey){
 								for(const r of rows){
@@ -157,13 +242,13 @@
 			['Class name','Total student','TC count','Existing Student count','HINDU','ISLAM'].forEach(h=>{ const th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
 			thead.appendChild(trh); table.appendChild(thead);
 			const tbody = document.createElement('tbody');
-			rows.forEach((r, idx)=>{
+			(rows||[]).forEach((r, idx)=>{
 				const tr=document.createElement('tr');
 				tr.classList.add('row-anim');
 				tr.style.animationDelay = (idx*45)+'ms';
 				const td0=document.createElement('td');
 				const a=document.createElement('a'); a.href=`0newdatabase/datalist.html#${r.targetId}`; a.target='_blank'; a.rel='noopener'; a.className='link'; a.textContent=r.name; td0.appendChild(a); tr.appendChild(td0);
-				;['total','tc','existing'].forEach(k=>{ const td=document.createElement('td'); td.textContent=r[k]; tr.appendChild(td); });
+				;['total','tc','existing'].forEach(k=>{ const td=document.createElement('td'); const v = Number.isFinite(Number(r[k])) ? Number(r[k]) : 0; td.textContent=v; tr.appendChild(td); });
 				// Hindu / Islam columns (fall back to 0 if undefined)
 				const tdH = document.createElement('td'); tdH.textContent = (Number.isFinite(Number(r.hindu))?r.hindu:0); tr.appendChild(tdH);
 				const tdI = document.createElement('td'); tdI.textContent = (Number.isFinite(Number(r.islam))?r.islam:0); tr.appendChild(tdI);
@@ -176,6 +261,8 @@
 			tfoot.appendChild(trf); table.appendChild(tfoot);
 			host.innerHTML=''; host.appendChild(table);
 			status.textContent = `Loaded ${rows.length} sections.`;
+			// Render class-wise religion summary at bottom
+			renderBottomSummary(rows);
 		}
 				function renderChart(rows){
 					const wrap = document.getElementById('chartHost');
@@ -205,23 +292,101 @@
 		async function init(){
 			const status = document.getElementById('status');
 			try{
-				status.textContent = 'Loading…';
-				const pairs = await loadSheetPairs();
-				if(!pairs.length){ status.textContent='No sheets found.'; return; }
-				const results = await Promise.all(pairs.map(fetchCounts));
-				// Sort by natural class order: extract class number from original name for smart sorting
-				results.sort((a,b)=>{
-					const ax = parseInt(String(a.originalName).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
-					const bx = parseInt(String(b.originalName).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
-					if(Number.isFinite(ax)&&Number.isFinite(bx) && ax!==bx) return ax-bx;
-					return String(a.originalName).localeCompare(String(b.originalName));
-				});
-			renderTable(results);
-			renderChart(results);
+				status.textContent = 'Loading from database…';
+				try{
+					const allRows = await fetchAllFromSupabase();
+					const results = aggregateCounts(allRows);
+					renderTable(results);
+					renderChart(results);
+					status.textContent = `Loaded ${results.length} sections.`;
+				}catch(dbErr){
+					console.warn('Supabase path failed, falling back to Google Sheets CSV. Error:', dbErr);
+					status.textContent = 'Loading from Google Sheets…';
+					const pairs = await loadSheetPairs();
+					if(!pairs.length){ status.textContent='No sheets found.'; return; }
+					const results = await Promise.all(pairs.map(fetchCounts));
+					renderTable(results);
+					renderChart(results);
+					status.textContent = `Loaded ${results.length} sections.`;
+				}
 			}catch(err){
 				console.error(err);
 				status.textContent = 'Failed: '+(err && err.message || err);
 			}
+		}
+
+		// Bottom summary: per-class Hindu/Islam totals
+		function renderBottomSummary(rows){
+			const host = document.getElementById('summaryHost');
+			if(!host) return;
+			const byClass = new Map();
+			const bySession = new Map();
+			(rows||[]).forEach(r=>{
+				let cls = '';
+				const m = String(r.originalName||'').match(/^\s*(\d{1,2})/);
+				cls = m ? m[1] : String(r.originalName||'');
+				if(!byClass.has(cls)) byClass.set(cls, { hindu:0, islam:0 });
+				const agg = byClass.get(cls);
+				agg.hindu += (+r.hindu||0);
+				agg.islam += (+r.islam||0);
+				// Session totals (use existing = total - tc)
+				const sess = (r.session||'').trim() || 'Unknown';
+				if(!bySession.has(sess)) bySession.set(sess, 0);
+				bySession.set(sess, bySession.get(sess) + (+r.existing||0));
+			});
+			const items = Array.from(byClass.entries()).sort((a,b)=>{
+				const ax = parseInt(a[0],10), bx = parseInt(b[0],10);
+				if(Number.isFinite(ax) && Number.isFinite(bx) && ax!==bx) return ax-bx;
+				return String(a[0]).localeCompare(String(b[0]));
+			});
+			const frag = document.createDocumentFragment();
+			// Card 1: Religion totals  by Class
+			const card1 = document.createElement('div');
+			card1.style.cssText = 'max-width:1100px;margin:1rem auto;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px;';
+			const title1 = document.createElement('div');
+			title1.textContent = 'Religion totals (After TC) by Class';
+			title1.style.cssText = 'font-weight:700;margin-bottom:.5rem;';
+			card1.appendChild(title1);
+			// Two-column layout: Hindu (left), Islam (right)
+			const colsWrap = document.createElement('div');
+			colsWrap.style.cssText = 'display:flex;gap:16px;align-items:flex-start;justify-content:space-between;';
+			const leftCol = document.createElement('div'); leftCol.style.cssText='flex:1;';
+			const rightCol = document.createElement('div'); rightCol.style.cssText='flex:1;text-align:right;';
+			items.forEach(([cls, sums])=>{
+				// Hindu box
+				const boxH = document.createElement('div');
+				boxH.style.cssText = 'border:1px solid #e5e7eb;background:#fff;padding:8px 10px;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 0 rgba(15,23,42,0.03);';
+				boxH.textContent = `${cls}-HINDU = ${sums.hindu}`;
+				leftCol.appendChild(boxH);
+				// Islam box (right)
+				const boxI = document.createElement('div');
+				boxI.style.cssText = 'border:1px solid #e5e7eb;background:#fff;padding:8px 10px;border-radius:8px;margin-bottom:8px;box-shadow:0 1px 0 rgba(15,23,42,0.03);text-align:right;';
+				boxI.textContent = `${cls}-ISLAM = ${sums.islam}`;
+				rightCol.appendChild(boxI);
+			});
+			colsWrap.appendChild(leftCol);
+			colsWrap.appendChild(rightCol);
+			card1.appendChild(colsWrap);
+			frag.appendChild(card1);
+
+			// Card 2: Total students by Session (Existing), centered
+			const card2 = document.createElement('div');
+			card2.style.cssText = 'max-width:1100px;margin:1rem auto;background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px;text-align:center;';
+			const title2 = document.createElement('div');
+			title2.textContent = 'Total students by Session (Existing)';
+			title2.style.cssText = 'font-weight:700;margin-bottom:.5rem;';
+			card2.appendChild(title2);
+			const sessWrap = document.createElement('div');
+			sessWrap.style.cssText = 'display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;';
+			Array.from(bySession.entries()).sort((a,b)=> String(a[0]).localeCompare(String(b[0]))).forEach(([sess, total])=>{
+				const line = document.createElement('div');
+				line.textContent = `${sess} = ${total}`;
+				sessWrap.appendChild(line);
+			});
+			card2.appendChild(sessWrap);
+			frag.appendChild(card2);
+			host.innerHTML = '';
+			host.appendChild(frag);
 		}
 		window.addEventListener('DOMContentLoaded', init);
 	</script>
@@ -241,6 +406,7 @@
 				<canvas id="countChart" role="img" aria-label="শিক্ষার্থীদের যোগফল চার্ট"></canvas>
 			</div>
 		<div class="table-wrap container" id="tableHost" aria-label="Student count table"></div>
+		<div class="container" id="summaryHost" aria-label="Class-wise religion totals"></div>
 	</main>
 </body>
 </html>
