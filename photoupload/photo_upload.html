@@ -29,7 +29,6 @@
 		.status{font-size:13px}
 		.small{font-size:12px;color:#334155}
 	</style>
-	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 
@@ -37,8 +36,7 @@
 	<div class="container">
 		<h1>Photoupload — student photos</h1>
 			<div class="toolbar">
-				<label for="classFilter" class="small">Class (sheet):</label>
-				<select id="classFilter" aria-label="Class filter"><option value="">All sheets</option></select>
+				<select id="tableFilter" aria-label="Class-Section-Session"><option value="">Class-Section-Session</option></select>
 				<input id="search" type="search" placeholder="Filter name or IID…" />
 				<button id="refreshBtn" class="secondary">Refresh data</button>
 				<button id="downloadPdfBtn">Download PDF</button>
@@ -75,38 +73,42 @@
 	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 	function norm(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
 
-	// Read sheet list like the other pages
-	async function loadSheetList(){
-		const res = await fetch('../0newdatabase/sheetidname.text').catch(()=>null);
-		if(!res || !res.ok) throw new Error('Failed to load sheetidname.text');
-		const txt = await res.text();
-		const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-		const pairs=[]; let curId=null;
-		const idRe = /^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?$/i;
-		const nameRe = /^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?$/i;
-		for(const line of lines){
-			const im = idRe.exec(line); if(im){ curId = im[1]; continue; }
-			const nm = nameRe.exec(line); if(nm && curId){ pairs.push({ id:curId, name:nm[1] }); curId=null; }
+	// Data source: datalist.html cache
+	const DATALIST_CACHE_KEY = 'datalist_rows_v2';
+
+	function readDatalistCache(){
+		try{
+			const raw = localStorage.getItem(DATALIST_CACHE_KEY);
+			if(!raw) return null;
+			const obj = JSON.parse(raw);
+			if(!obj || !Array.isArray(obj.rows)) return null;
+			return obj.rows;
+		}catch(e){ return null; }
+	}
+
+	function computeActiveFromRow(r){
+		const s = String(r.session||'').trim();
+		let active_class='', active_section='', active_roll='';
+		if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
+		else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
+		return { session:s, active_class:String(active_class||''), active_section:String(active_section||''), active_roll:String(active_roll||'') };
+	}
+
+	function buildGroupOptions(){
+		const rows = readDatalistCache();
+		if(!rows) return [];
+		const seen = new Set(); const pairs=[];
+		for(const r of rows){
+			if(String(r.status||'').toUpperCase().includes('TC')) continue;
+			const a = computeActiveFromRow(r);
+			if(!a.active_roll || a.active_roll.trim()==='') continue;
+			if(!a.active_class || !a.active_section || !a.session) continue;
+			const key = `${a.active_class}-${a.active_section}-${a.session}`;
+			if(seen.has(key)) continue; seen.add(key);
+			pairs.push({ id:'cache', name:key, cls:a.active_class, section:a.active_section, session:a.session });
 		}
+		pairs.sort((x,y)=>{ const cx=Number(x.cls)||0, cy=Number(y.cls)||0; if(cx!==cy) return cx-cy; return String(x.name).localeCompare(String(y.name)); });
 		return pairs;
-	}
-
-	function csvUrl(id, sheet){
-		return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
-	}
-
-	function parseSheetMeta(name){
-		const m = String(name||'').trim().match(/^(\d{1,2})\s*[-_\s]?(.+)?$/);
-		if(!m) return {};
-		return { cls: m[1], shift: (m[2]||'').trim() };
-	}
-
-	function findKey(fields, candidates){
-		const map = new Map(fields.map(f=>[norm(f), f]));
-		for(const c of candidates){ if(map.has(norm(c))) return map.get(norm(c)); }
-		// fallback: try keys that include candidate substring
-		for(const c of candidates){ for(const k of fields){ if(norm(k).includes(norm(c))) return k; } }
-		return null;
 	}
 
 	// Load existing photo list from photo/link.csv and map basename -> url
@@ -133,65 +135,56 @@
 
 	// Application state
 	let photoIndex = new Map();
-	let allStudents = []; // {iid, name, father, roll, cls, shift, src:{id,name}}
-	let sheetPairs = []; // cached sheet list from sheetidname.text
-	let loadedSheetName = ''; // name of currently loaded sheet in allStudents
+	let allStudents = []; // {iid, name, father, roll, cls, section, session}
+	let groupOptions = []; // {name, cls, section, session}
+	let filters = { cls:'', section:'', session:'' };
 
 	// Load all sheets and build students list (only necessary fields)
 
-	async function loadAllStudents(pairs){
-		setStatus('Loading sheets...');
-		try{
-			if(!pairs) pairs = await loadSheetList();
-		}catch(e){
-			console.error('Failed to load sheet list', e);
-			setStatus('Failed to load sheet list. If you opened the page with file://, please serve via HTTP (python -m http.server)');
-			return [];
+	function loadAllStudentsFromCache(){
+		setStatus('Loading from cache…');
+		const rows = readDatalistCache();
+		if(!rows){ setStatus('Cache missing. Open 0newdatabase/datalist.html first.'); allStudents=[]; return; }
+		const out=[]; let idx=0;
+		for(const r of rows){
+			if(String(r.status||'').toUpperCase().includes('TC')) continue;
+			const a = computeActiveFromRow(r);
+			if(!a.active_roll || a.active_roll.trim()==='') continue;
+			if(!a.active_class || !a.active_section || !a.session) continue;
+			out.push({
+				_idx: idx++,
+				iid: r.iid || '',
+				name: String(r.student_name_en||''),
+				father: String(r.father_name_en||''),
+				roll: String(a.active_roll||''),
+				cls: String(a.active_class||''),
+				section: String(a.active_section||''),
+				session: String(a.session||'')
+			});
 		}
-		if(!pairs || !pairs.length){ setStatus('No sheets defined'); return []; }
-		setStatus(`Found ${pairs.length} sheets — fetching CSVs…`);
-		const students = [];
-		await Promise.all(pairs.map(async ({id,name})=>{
-			try{
-				console.log('Fetching sheet', name, id);
-				const url = csvUrl(id, name);
-				const res = await new Promise((resolve,reject)=>{
-					Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete: r=>resolve(r), error: e=>reject(e) });
-				});
-				const rows = res.data || [];
-				const fields = (res.meta && res.meta.fields) ? res.meta.fields : Object.keys(rows[0]||{});
-				// detect keys
-				const iidKey = findKey(fields, ['iid','id','studentid','sid']);
-				const nameKey = findKey(fields, ['nameen','name en','name','studentname']);
-				const fatherKey = findKey(fields, ['fathernameen','father name en','father name','father']);
-				const rollKey = findKey(fields, ['roll','rollno','CLASS ROLL']);
-				const meta = parseSheetMeta(name);
-				for(let r=0;r<rows.length;r++){
-					const row = rows[r];
-					const iid = iidKey ? (row[iidKey]||'').toString().trim() : '';
-					const nm = nameKey ? (row[nameKey]||'') : '';
-					const fa = fatherKey ? (row[fatherKey]||'') : '';
-					const roll = rollKey ? (row[rollKey]||'').toString().trim() : '';
-					students.push({ iid, name: nm, father: fa, roll, cls: meta.cls||'', shift: meta.shift||'', src:{id,name}, rowIndex: r });
-				}
-			}catch(e){ console.warn('sheet load fail', name, e); }
-		}));
-		const withIid = students.filter(s=>s.iid && String(s.iid).trim()!=='').length;
-		allStudents = students; // keep all rows so class/shift filters can be populated even when IID missing
-		setStatus(`Loaded ${students.length} rows (${withIid} with IID)`);
-		return allStudents;
+		allStudents = out;
+		setStatus(`Loaded ${allStudents.length} rows from cache`);
 	}
 
 	// Build table rows based on filters
 	function applyFilters(){
-		const sheetName = document.getElementById('classFilter').value;
+		const key = document.getElementById('tableFilter').value;
 		const q = (document.getElementById('search').value||'').toLowerCase().trim();
-		const list = allStudents.filter(s=>{
-			if(sheetName && String(s.src && s.src.name)!==sheetName) return false;
-			if(q){ return (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q); }
-			return true;
+		let filtered = allStudents;
+		if(key){
+			const [cls, section, session] = key.split('-');
+			filters = { cls, section, session };
+			filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+		}
+		if(q){ filtered = filtered.filter(s=> (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q)); }
+		// sort by roll numeric asc then IID
+		filtered = filtered.slice().sort((a,b)=>{
+			const ra=Number(a.roll), rb=Number(b.roll);
+			const va = Number.isFinite(ra)?ra:Infinity; const vb = Number.isFinite(rb)?rb:Infinity;
+			if(va!==vb) return va-vb;
+			return String(a.iid||'').localeCompare(String(b.iid||''), undefined, {numeric:true});
 		});
-		renderTable(list);
+		renderTable(filtered);
 	}
 
 	function renderTable(list){
@@ -222,10 +215,10 @@
 		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
 		const rollStr = String((s.roll && String(s.roll).trim()) || (typeof s.rowIndex !== 'undefined' ? String(s.rowIndex + 1) : '')).trim();
 			const iidDisplay = escapeHtml(iidStr);
-			const classCell = s.cls ? `${escapeHtml(s.cls)}${s.shift? ' '+escapeHtml(s.shift): ''}` : escapeHtml(s.src && s.src.name);
+			const classCell = s.cls ? `${escapeHtml(s.cls)}${s.section? ' '+escapeHtml(s.section): ''}` : '';
 			// prepare download filenames (sanitize minimally)
 			const rawClass = (s.cls && String(s.cls).trim()) || '';
-			const rawSection = (s.shift && String(s.shift).trim()) || '';
+			const rawSection = (s.section && String(s.section).trim()) || '';
 			// simple filename sanitizer: remove problematic chars and spaces
 			const safe = t => String(t||'').replace(/[^a-z0-9A-Z\-_.]/g, '').replace(/\s+/g, '');
 			const classNum = safe(rawClass);
@@ -333,72 +326,33 @@
 		});
 	}
 
-	// Populate filter dropdowns
 	function populateFilters(){
-		// Populate classFilter with sheet names (unique src.name values)
-		const sheetSet = new Set(allStudents.map(s => (s.src && s.src.name) || '').filter(Boolean));
-		const clsSel = document.getElementById('classFilter');
-		const items = Array.from(sheetSet);
-		items.sort((a,b)=> String(a).localeCompare(String(b), undefined, {sensitivity:'base'}));
-		clsSel.innerHTML = '<option value="">All sheets</option>' + items.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+		const sel = document.getElementById('tableFilter'); if(!sel) return;
+		sel.innerHTML = '<option value="">Class-Section-Session</option>';
+		groupOptions = buildGroupOptions();
+		groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=g.name; o.textContent=g.name; sel.appendChild(o); });
 	}
 
 	// Wire filter controls (defensive)
-	const classFilterEl = document.getElementById('classFilter');
+	const tableFilterEl = document.getElementById('tableFilter');
 	const searchEl = document.getElementById('search');
 	const refreshBtn = document.getElementById('refreshBtn');
-	if(classFilterEl) classFilterEl.addEventListener('change', onClassFilterChange);
+	if(tableFilterEl) tableFilterEl.addEventListener('change', ()=> applyFilters());
 	if(searchEl) searchEl.addEventListener('input', ()=>{ setTimeout(applyFilters,120) });
 	if(refreshBtn) refreshBtn.addEventListener('click', init);
 
-	async function onClassFilterChange(){
-		const sheetName = classFilterEl.value;
-		if(!sheetName){
-			// clear table and prompt user to pick a sheet
-			allStudents = [];
-			loadedSheetName = '';
-			renderTable([]);
-			setStatus('Select a sheet to load students');
-			return;
-		}
-		// if already loaded this sheet, just re-apply filters (search, etc)
-		if(loadedSheetName === sheetName){ applyFilters(); return; }
-		// find sheet pair by name
-		const pair = sheetPairs.find(p=>p.name === sheetName);
-		if(!pair){
-			setStatus('Selected sheet not found');
-			return;
-		}
-		setStatus(`Loading sheet ${sheetName}…`);
-		try{
-			// load only the selected sheet
-			await loadAllStudents([pair]);
-			loadedSheetName = sheetName;
-			setStatus(`Loaded ${allStudents.length} rows for ${sheetName}`);
-			applyFilters();
-		}catch(e){ console.error(e); setStatus('Failed to load selected sheet', e); }
-	}
+	// obsolete handler removed
 
 	// Populate class dropdown early with sheet list to help UX
-	async function populateClassFromSheetList(){
-		try{
-			const pairs = await loadSheetList();
-			sheetPairs = pairs || [];
-			const sel = document.getElementById('classFilter');
-			if(!sel) return;
-			sel.innerHTML = '<option value="">All sheets</option>' + sheetPairs.map(p=>`<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('');
-			setStatus('Select a sheet to load students');
-		}catch(e){ console.warn('Could not prefill class list', e); setStatus('Could not load sheet list'); }
-	}
+	// obsolete prefill removed
 
 	// initial load
 	async function init(){
-		setStatus('Loading photo index…');
-		photoIndex = await loadPhotoIndex();
-		setStatus(`Photos indexed: ${photoIndex.size}`);
-		// Prefill class dropdown from sheet list quickly
-		await populateClassFromSheetList();
-		setStatus('Ready');
+			setStatus('Loading photo index…');
+			photoIndex = await loadPhotoIndex();
+			loadAllStudentsFromCache();
+			populateFilters();
+			setStatus(`Photos indexed: ${photoIndex.size} — Ready`);
 	}
 
 	// start
