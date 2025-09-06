@@ -280,7 +280,13 @@
 						td.appendChild(link);
 						tr.appendChild(td);
 						// Insert class_section_year and the three active columns right after iid
-						const csY = [active_class ?? '', active_section ?? '', (row.session ?? '')].map(x => String(x ?? '')).join('-');
+						let csY = '';
+						const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
+						if(hasActiveRoll){
+							csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
+								.map(x => String(x ?? ''))
+								.join('-');
+						}
 						const tdCSY = document.createElement('td'); tdCSY.textContent = escapeHtml(csY); tr.appendChild(tdCSY);
 						const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
 						const tdAC = document.createElement('td'); tdAC.textContent = escapeHtml(active_class==null?'':String(active_class)); tr.appendChild(tdAC);
