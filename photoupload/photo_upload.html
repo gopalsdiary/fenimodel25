@@ -30,6 +30,7 @@
 		.small{font-size:12px;color:#334155}
 	</style>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -67,6 +68,12 @@
 	const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
 	const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
 	const IMGBB_ALBUM = 'student_photo';
+
+	// Supabase config (reads student_database.student_photo_url per iid)
+	const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+	const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+	const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+	const tableName = 'student_database';
 
 	// Utility
 	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -138,20 +145,22 @@
 		return pairs;
 	}
 
-	// Load existing photo list from photo/link.csv and map basename -> url
-	async function loadPhotoIndex(){
-		try{
-			const res = await fetch('../photo/link.csv', {cache:'no-store'});
-			if(!res.ok) return new Map();
-			const txt = await res.text();
-			const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-			const m = new Map();
-			for(const u of lines){
-				try{ const name = u.split('/').pop(); if(name) m.set(name.toLowerCase(), u); }
-				catch(e){}
-			}
-			return m;
-		}catch(e){ return new Map(); }
+	// Load DB photo urls from Supabase for a list of iids and store in a map
+	let dbPhotoMap = new Map(); // iid -> student_photo_url
+	async function loadDbPhotoUrlsForCache(){
+		if(!supabase) { dbPhotoMap = new Map(); return; }
+		const iids = (allStudents||[]).map(s=>s.iid).filter(Boolean);
+		const map = new Map();
+		const batchSize = 1000;
+		for(let i=0;i<iids.length;i+=batchSize){
+			const batch = iids.slice(i, i+batchSize);
+			try{
+				const { data, error } = await supabase.from(tableName).select('iid, student_photo_url').in('iid', batch);
+				if(error){ console.error('Supabase fetch error', error); continue; }
+				for(const r of data||[]){ if(r && r.iid) map.set(String(r.iid), r.student_photo_url || ''); }
+			}catch(err){ console.error('loadDbPhotoUrlsForCache error', err); }
+		}
+		dbPhotoMap = map;
 	}
 
 	// Render helpers
@@ -161,7 +170,8 @@
 	function setStatus(s, err){ statusEl.textContent = s || ''; if(err) console.error(err); }
 
 	// Application state
-	let photoIndex = new Map();
+	// link.csv no longer used on this page; use dbPhotoMap instead
+	let photoIndex = new Map(); // Keep for compatibility
 	let allStudents = []; // {iid, name, father, roll, cls, section, session}
 	let groupOptions = []; // {name, cls, section, session}
 	let filters = { cls:'', section:'', session:'' };
@@ -243,14 +253,8 @@
 
 		const rowsHtml = sorted.map(s=>{
 			const iidStr = String(s.iid).trim();
-			let thumbUrl = '';
-			const cand1 = (`avatar-${iidStr}.jpg`).toLowerCase();
-			const cand2 = (`avatar-${iidStr}.jpeg`).toLowerCase();
-			if(photoIndex.has(cand1)) thumbUrl = photoIndex.get(cand1);
-			else if(photoIndex.has(cand2)) thumbUrl = photoIndex.get(cand2);
-			else {
-				for(const [k,u] of photoIndex.entries()){ if(iidStr && k.includes(iidStr)) { thumbUrl = u; break; } }
-			}
+			// Use DB-provided URL if available
+			const thumbUrl = dbPhotoMap.get(iidStr) || '';
 			const imgHtml = thumbUrl ? `<div class="image-wrapper"><img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo"><div class="preview" style="background-image: url('${escapeHtml(thumbUrl)}')"></div></div>` : '';
 		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
 		const rollStr = String((s.roll && String(s.roll).trim()) || (typeof s.rowIndex !== 'undefined' ? String(s.rowIndex + 1) : '')).trim();
@@ -267,7 +271,7 @@
 			const avatarFile = `avatar-${iidStr}.jpg`;
 			// Class-roll: <Class>_<SECTION>-<roll>.jpg  (omit section if not present)
 			const classRollFile = `${classNum}${sectionVal ? '_' + sectionVal : ''}${rollVal ? '-'+rollVal : ''}.jpg`;
-			const hasPhoto = Boolean(thumbUrl);
+			const hasPhoto = Boolean(thumbUrl); // Check if thumbUrl is valid
 			// details link to detailsinfo.html with iid query param
 			const detailsLink = iidStr ? `<a class="small" href="/0newdatabase/detailsinfo.html?iid=${encodeURIComponent(iidStr)}" target="_blank" rel="noopener">Details</a>` : `<span class="small muted">Details</span>`;
 			// download links: use data-filename and class so we can force-download via JS (avoids opening new tab)
@@ -330,12 +334,23 @@
 					const resp = await fetch(IMGBB_UPLOAD_URL + '?key=' + encodeURIComponent(IMGBB_API_KEY), { method:'POST', body: form });
 					const j = await resp.json();
 					if(j && j.success && j.data && j.data.display_url){
-						status.textContent = 'Uploaded ✓';
+						const newUrl = j.data.display_url || j.data.url || (j.data.image && j.data.image.url) || '';
+						status.textContent = newUrl ? 'Uploaded ✓' : 'Uploaded (no URL)';
+						// Update image preview
 						const imgEl = tr.querySelector('img.thumb');
-						const newUrl = j.data.display_url || j.data.url || j.data.image && j.data.image.url;
 						if(imgEl && newUrl){ imgEl.src = newUrl; }
+						// Persist to Supabase and update local map + links
+						try{
+							if(newUrl && supabase){
+								await supabase.from(tableName).update({ student_photo_url: newUrl }).eq('iid', iid);
+								dbPhotoMap.set(String(iid), newUrl);
+								// Update download links in the row
+								const aAvatar = tr.querySelector('a.dl-avatar'); if(aAvatar) aAvatar.href = newUrl;
+								const aCR = tr.querySelector('a.dl-classroll'); if(aCR) aCR.href = newUrl;
+								status.textContent = 'Uploaded ✓ (saved to DB)';
+							}
+						}catch(dbErr){ console.error('Supabase save error', dbErr); }
 						console.log('imgbb response', j);
-						alert(`Upload done for ${iid}. URL: ${newUrl}`);
 					} else {
 						status.textContent = 'Upload failed'; console.error(j);
 					}
@@ -389,10 +404,11 @@
 	// initial load
 	async function init(){
 			setStatus('Loading photo index…');
-			photoIndex = await loadPhotoIndex();
+			setStatus('Loading DB photo urls…');
 			loadAllStudentsFromCache();
+			await loadDbPhotoUrlsForCache();
 			populateFilters();
-			setStatus(`Photos indexed: ${photoIndex.size} — Ready`);
+			setStatus(`DB photos loaded: ${dbPhotoMap.size} — Ready`);
 	}
 
 	// start
