@@ -52,94 +52,85 @@
 	</style>
 
 
-	<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 	<script>
-		// Load sheets (same approach as other pages), but sheet list is in 0newdatabase folder
-		async function loadSheetList(){
-			const res = await fetch('../0newdatabase/sheetidname.text', { cache:'no-store' });
-			if(!res.ok) throw new Error('Failed to load sheetidname.text');
-			const txt = await res.text();
-			const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-			const pairs=[]; let curId=null;
-			const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];?/i;
-			const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];?/i;
-			for(const line of lines){
-				const im=idRe.exec(line); if(im){ curId=im[1]; continue; }
-				const nm=nameRe.exec(line); if(nm && curId){ pairs.push({id:curId, name:nm[1]}); curId=null; }
-			}
-			return pairs;
-		}
-		function csvUrl(id, sheet){
-			return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
-		}
-		function parseSheetMeta(name){ const m=String(name||'').trim().match(/^(\d{1,2})[\s_\-]+(.+)$/); if(!m) return {cls:'', section:''}; return { cls:m[1], section:(m[2]||'').replace(/_/g,' ').trim() }; }
-		const norm = s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-		function pickKey(fields, candidates){ const map = new Map(fields.map(f=>[norm(f), f])); for(const k of candidates){ if(map.has(k)) return map.get(k); } return null; }
-		// Robust header guessing for name/father/roll (English + Bangla + fuzzy)
-		const normWide = s=>String(s||'').toLowerCase().replace(/[\s_\-()\u200b]+/g,'');
-		function guessField(fields, type){
-			const W = fields.map(f=>({ key:f, n:norm(f), w:normWide(f) }));
-			const dict = {
-				name: ['name','studentname','student','NAME EN','fullname','stuname','sname','nam','শিক্ষার্থীর নাম','শিক্ষার্থী নাম','শিক্ষার্থী','নাম','ছাত্রের নাম','ছাত্রীর নাম'],
-				father: ['father','fathersname','fathername','FATHER NAME EN','guardianname','parentname','পিতার নাম','বাবার নাম','অভিভাবক','অভিভাবকের নাম'],
-				roll: ['roll','rollno','rollnumber','CLASS ROLL','রোল','রোলনং','রোল নম্বর','ক্রমিক']
-			};
-			const hints = dict[type]||[];
-			for(const h of hints){ const hn=norm(h); const m=W.find(x=>x.n===hn); if(m) return m.key; }
-			for(const h of hints){ const hw=normWide(h); const m=W.find(x=>x.w.includes(hw)); if(m) return m.key; }
-			// last resort: analyze first values for textiness vs numeric
-			let best=null, bestScore=-1;
-			for(const f of fields){
-				const sample=(window.__lastRows__||[]).slice(0,20).map(r=>String(r[f]||'')).filter(Boolean);
-				const score = sample.reduce((acc,v)=>acc + (/\p{L}/u.test(v) && !/^\d+$/.test(v) ? 1:0), 0);
-				if(score>bestScore){ bestScore=score; best=f; }
-			}
-			return best || fields[0];
-		}
+		// Data source: datalist.html cache (same as admit/admitlist.html)
+		const DATALIST_CACHE_KEY = 'datalist_rows_v2';
 
-		// Sheets metadata and current students list
-		let sheets = []; // {id,name,cls,section}
-		let allStudents = []; // {name,father,roll,cls,section,sheetId,sheetName,row,iid,_idx}
-		const classSet = new Set();
-		const sectionSet = new Set();
-		let filters = { cls:'', section:'' };
+		let sheets = []; // dropdown options {id,name,cls,section,session}
+		let allStudents = []; // rendered students
+		let filters = { cls:'', section:'', session:'' };
 		let exam = 'Half Yearly  Examination';
 		let year = '2025';
 
-		function updateStatus(msg){ document.getElementById('status').textContent = msg; }
-		function fillSelectOptions(id, values, placeholder){
-			const sel = document.getElementById(id); sel.innerHTML='';
-			const opt = document.createElement('option'); opt.value=''; opt.textContent=placeholder; sel.appendChild(opt);
-			[...values].sort((a,b)=>{ const na=+a, nb=+b; if(Number.isFinite(na)&&Number.isFinite(nb)) return na-nb; return String(a).localeCompare(String(b)); }).forEach(v=>{
-				const o=document.createElement('option'); o.value=String(v); o.textContent=String(v); sel.appendChild(o);
+		function updateStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent = msg; }
+
+		function readDatalistCache(){
+			try{
+				const raw = localStorage.getItem(DATALIST_CACHE_KEY);
+				if(!raw) return null;
+				const obj = JSON.parse(raw);
+				if(!obj || !Array.isArray(obj.rows)) return null;
+				return obj.rows;
+			}catch(e){ return null; }
+		}
+
+		function computeActiveFromRow(r){
+			const s = String(r.session||'').trim();
+			let active_class='', active_section='', active_roll='';
+			if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
+			else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
+			return { session:s, active_class:String(active_class||''), active_section:String(active_section||''), active_roll:String(active_roll||'') };
+		}
+
+		function buildGroupOptions(){
+			const rows = readDatalistCache();
+			if(!rows) return [];
+			const seen = new Set(); const pairs=[];
+			for(const r of rows){
+				if(String(r.status||'').toUpperCase().includes('TC')) continue;
+				const a = computeActiveFromRow(r);
+				if(!a.active_roll || a.active_roll.trim()==='') continue;
+				if(!a.active_class || !a.active_section || !a.session) continue;
+				const key = `${a.active_class}-${a.active_section}-${a.session}`;
+				if(seen.has(key)) continue; seen.add(key);
+				pairs.push({ id:'cache', name:key, cls:a.active_class, section:a.active_section, session:a.session });
+			}
+			// Sort by class (numeric); tie-breaker by name for consistent order
+			pairs.sort((x,y)=>{
+				const cx = Number(x.cls)||0, cy = Number(y.cls)||0;
+				if(cx!==cy) return cx - cy;
+				return String(x.name).localeCompare(String(y.name));
 			});
+			return pairs;
 		}
 
 		function renderTable(){
-			const tbody = document.querySelector('#list tbody');
+			const tbody = document.querySelector('#list tbody'); if(!tbody) return;
 			tbody.innerHTML='';
-			const rows = allStudents.filter(s=>{
-				return (!filters.cls || s.cls===filters.cls) && (!filters.section || s.section.toLowerCase()===filters.section.toLowerCase());
+			// Sort by roll (numeric asc), non-numeric at the end
+			const rows = [...allStudents].sort((a,b)=>{
+				const ra = Number(a.roll), rb = Number(b.roll);
+				const va = Number.isFinite(ra) ? ra : Infinity;
+				const vb = Number.isFinite(rb) ? rb : Infinity;
+				if(va !== vb) return va - vb;
+				return String(a.roll||'').localeCompare(String(b.roll||''));
 			});
 			document.getElementById('count').textContent = `${rows.length} students`;
-					rows.forEach((s, idx)=>{
+			rows.forEach((s)=>{
 				const tr=document.createElement('tr');
 				const tdSel=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.className='row-check'; cb.dataset.index = s._idx; tdSel.appendChild(cb); tr.appendChild(tdSel);
 				const tdName=document.createElement('td'); tdName.textContent=s.name||''; tr.appendChild(tdName);
 				const tdFather=document.createElement('td'); tdFather.textContent=s.father||''; tr.appendChild(tdFather);
 				const tdClass=document.createElement('td'); tdClass.textContent=s.cls||''; tr.appendChild(tdClass);
 				const tdSection=document.createElement('td'); tdSection.textContent=s.section||''; tr.appendChild(tdSection);
-						const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
-						const tdIID=document.createElement('td'); tdIID.textContent=s.iid||''; tr.appendChild(tdIID);
-						const tdGroup=document.createElement('td'); tdGroup.textContent=s.group||''; tr.appendChild(tdGroup);
-								const tdPdf=document.createElement('td');
-								const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
-								const params = new URLSearchParams({
-									exam, year,
-									name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||''), GROUP: String(s.group||'')
-								});
-								btn.href = `print_admit.html?${params.toString()}`;
-								tdPdf.appendChild(btn); tr.appendChild(tdPdf);
+				const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
+				const tdIID=document.createElement('td'); tdIID.textContent = s.iid || ''; tr.appendChild(tdIID);
+				const tdGroup=document.createElement('td'); tdGroup.textContent = s.group || ''; tr.appendChild(tdGroup);
+				const tdPdf=document.createElement('td');
+					const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
+					const params = new URLSearchParams({ exam, year, name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||''), GROUP: String(s.group||'') });
+					btn.href = `print_admit.html?${params.toString()}`;
+					tdPdf.appendChild(btn); tr.appendChild(tdPdf);
 				tbody.appendChild(tr);
 			});
 			document.getElementById('selectAll').checked=false;
@@ -150,9 +141,9 @@
 			return allStudents.filter(s=> set.has(s._idx) );
 		}
 
-			function renderPrint(students){
-			const wrap = document.getElementById('printArea');
-			wrap.innerHTML = '';
+		function renderPrint(students){
+			const wrap = document.getElementById('printArea'); if(!wrap) return;
+			wrap.innerHTML = ''; wrap.style.display = 'block';
 			const sheet = document.createElement('div'); sheet.className='sheet';
 			const grid = document.createElement('div'); grid.className='print-grid'; sheet.appendChild(grid); wrap.appendChild(sheet);
 			students.forEach(s=>{
@@ -163,91 +154,89 @@
 				const tr = document.createElement('div'); tr.className='t roll'; tr.textContent = s.roll||''; card.appendChild(tr);
 				const te = document.createElement('div'); te.className='t exam'; te.textContent = exam; card.appendChild(te);
 				const ty = document.createElement('div'); ty.className='t year'; ty.textContent = year; card.appendChild(ty);
-					if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
+				if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
 				grid.appendChild(card);
 			});
-			// QR removed
+			// No QR for seat plan
 		}
 
-			function printSingle(s){
-				renderPrint([s]);
-				// Printing is now manual; use the Print button or Ctrl+P
+		function loadForCurrentFilter(){
+			const { cls, section, session } = filters; if(!cls || !section || !session){ return; }
+			updateStatus('Loading students from cache…');
+			allStudents = []; let idx=0;
+			const rows = readDatalistCache();
+			if(!rows){ updateStatus('Cache missing. Open 0newdatabase/datalist.html first.'); return; }
+			for(const r of rows){
+				if(String(r.status||'').toUpperCase().includes('TC')) continue;
+				const a = computeActiveFromRow(r);
+				if(!a.active_roll || a.active_roll.trim()==='') continue;
+				if(a.session !== String(session)) continue;
+				if(String(a.active_class) !== String(cls)) continue;
+				if(String(a.active_section).toLowerCase() !== String(section).toLowerCase()) continue;
+				const name = r.student_name_en || '';
+				const father = r.father_name_en || '';
+				const grp = r.group || r.GROUP || '';
+				allStudents.push({
+					_idx: idx++,
+					name: String(name||''),
+					father: String(father||''),
+					roll: String(a.active_roll||''),
+					iid: r.iid || '',
+					group: String(grp||''),
+					cls: String(a.active_class||''),
+					section: String(a.active_section||''),
+					sheetId: 'cache', sheetName: 'datalist', row: r.iid
+				});
 			}
+			renderTable();
+			updateStatus('Ready — Source: datalist cache');
+		}
 
-			async function init(){
-				try{
-					updateStatus('Loading classes…');
-					const pairs = await loadSheetList(); if(!pairs.length){ updateStatus('No sheets'); return; }
-					sheets = pairs.map(({id,name})=>{ const m=parseSheetMeta(name); if(m.cls) classSet.add(m.cls); if(m.section){ sectionSet.add(m.section); } return { id, name, cls: m.cls||'', section: m.section||'' }; });
-					fillSelectOptions('classFilter', classSet, 'Class');
-					fillSelectOptions('sectionFilter', sectionSet, 'Section');
-					document.getElementById('count').textContent = 'Select Class & Section to load';
-					updateStatus('Waiting for filters');
-				}catch(err){ console.error(err); updateStatus('Init failed'); }
+		function init(){
+			updateStatus('Loading Class-Section-Session from cache…');
+			sheets = buildGroupOptions();
+			const tableSel = document.getElementById('tableFilter');
+			if(tableSel){
+				tableSel.innerHTML='';
+				const opt = document.createElement('option'); opt.value=''; opt.textContent='Class-Section-Session'; tableSel.appendChild(opt);
+				for(const {name, cls, section, session} of sheets){ const o=document.createElement('option'); o.value=name; o.textContent=name; tableSel.appendChild(o); }
 			}
-
-			function updateSectionOptionsForClass(){
-				const cls = filters.cls;
-				if(!cls){ fillSelectOptions('sectionFilter', sectionSet, 'Section'); return; }
-				const set = new Set(sheets.filter(s=>s.cls===cls).map(s=>s.section));
-				fillSelectOptions('sectionFilter', set, 'Section');
-			}
-
-			async function loadForCurrentFilter(){
-				const { cls, section } = filters; if(!cls || !section){ return; }
-				updateStatus('Loading students…');
-				allStudents = []; let idx=0;
-				const targets = sheets.filter(s=> s.cls===cls && s.section.toLowerCase()===section.toLowerCase());
-				for(const t of targets){
-					try{
-						const url = csvUrl(t.id, t.name);
-						const res = await new Promise((resolve,reject)=>{ Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) }); });
-						const rows = (res && res.data) ? res.data : [];
-						window.__lastRows__ = rows; // for guessField sampling
-						const fields = (res && res.meta && res.meta.fields) ? res.meta.fields : Object.keys(rows[0]||{});
-						const nameKey = guessField(fields, 'name');
-						const fatherKey = guessField(fields, 'father');
-						const rollKey = guessField(fields, 'roll');
-						const iidKey = (function(){ const m=new Map(fields.map(f=>[norm(f),f])); const keys=['iid','studentid','sid','id']; for(const k of keys){ if(m.has(k)) return m.get(k);} return null; })();
-						const groupKey = (function(){ const m=new Map(fields.map(f=>[norm(f),f])); const keys=['group','grp','groupname','stream','streamname']; for(const k of keys){ if(m.has(k)) return m.get(k);} return null; })();
-						rows.forEach((r,rowIdx)=>{
-							const s = {
-								_idx: idx++,
-								name: nameKey? r[nameKey] : (r[fields[0]]||''),
-								father: fatherKey? r[fatherKey] : '',
-								roll: rollKey? r[rollKey] : '',
-								iid: iidKey? r[iidKey] : '',
-								group: groupKey? r[groupKey] : '',
-								cls, section, sheetId:t.id, sheetName:t.name, row:rowIdx
-							};
-							allStudents.push(s);
-						});
-					}catch(e){ console.error('Fetch failed for', t.name, e); }
-				}
-				renderTable();
-				updateStatus('Ready');
-			}
+			document.getElementById('count').textContent = `${sheets.length} groups found — select one`;
+			updateStatus('Waiting for selection');
+		}
 
 		window.addEventListener('DOMContentLoaded', ()=>{
 			init();
-			document.getElementById('classFilter').addEventListener('change', e=>{ filters.cls = e.target.value; updateSectionOptionsForClass(); allStudents = []; renderTable(); if(filters.cls && filters.section){ loadForCurrentFilter(); } });
-			document.getElementById('sectionFilter').addEventListener('change', e=>{ filters.section = e.target.value; allStudents = []; renderTable(); if(filters.cls && filters.section){ loadForCurrentFilter(); } });
+			const tableSel = document.getElementById('tableFilter');
+			if(tableSel){
+				tableSel.addEventListener('change', e=>{
+					const key = e.target.value;
+					const match = (sheets||[]).find(it=>it.name===key);
+					filters.cls = match? match.cls : '';
+					filters.section = match? match.section : '';
+					filters.session = match? match.session : '';
+					if(match && match.session){
+						year = String(match.session);
+						const yearSel = document.getElementById('yearSelect');
+						if(yearSel){ yearSel.value = year; }
+					}
+					allStudents = []; renderTable();
+					if(filters.cls && filters.section && filters.session){ loadForCurrentFilter(); }
+				});
+			}
 			document.getElementById('examSelect').addEventListener('change', e=>{ exam = e.target.value; });
 			document.getElementById('yearSelect').addEventListener('change', e=>{ year = e.target.value; });
 			document.getElementById('selectAll').addEventListener('change', e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked = e.target.checked; }); });
 			document.getElementById('generate').addEventListener('click', ()=>{
 				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
-				// Open bulk preview in a new tab and pass data via localStorage (shared across tabs)
 				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid, group:s.group })) };
 				const key = 'admit_bulk_' + Date.now();
 				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
-		window.open(`print_selected.html?key=${encodeURIComponent(key)}`, '_blank', 'noopener');
+				const qrParam = new URLSearchParams(location.search).get('qr') || '0';
+				window.open(`print_selected.html?key=${encodeURIComponent(key)}&qr=${encodeURIComponent(qrParam)}`, '_blank', 'noopener');
+				renderPrint(sel);
 			});
-					const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{
-						const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
-						renderPrint(sel);
-						// Printing is manual; use the Print button in the preview window
-					}); }
+			const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{ const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; } renderPrint(sel); }); }
 		});
 	</script>
 </head>
@@ -259,8 +248,7 @@
 				<div class="left-tools">
 					<label><input type="checkbox" id="selectAll"> Select all</label>
 				</div>
-				<select id="classFilter" aria-label="Class"></select>
-				<select id="sectionFilter" aria-label="Section"></select>
+				<select id="tableFilter" aria-label="Class-Section-Session"></select>
 				<select id="examSelect" aria-label="Exam">
 					<option>Half Yearly  Examination</option>
 					<option>Annual  Examination</option>
