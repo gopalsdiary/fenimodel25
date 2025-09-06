@@ -1,10 +1,16 @@
 colm name > Column Name Show 
 
 iid > iid
-class_2025 > Class 2025
-section_2025 > Section 2025
-session > Session
-roll_2025 > Roll 2025
+session > session
+
+class_2025 > class_2025
+section_2025 > section_2025
+roll_2025 > roll_2025
+
+class_2026 > class_2026
+section_2026 > section_2026
+roll_2026 > roll_2026
+
 student_name_en > Student Name English
 father_name_en > Father Name English
 group > Group
@@ -12,10 +18,3 @@ optional_subject > Optional Subject
 rfid_card_no > RFID Card No
 religion > Religion
 status > Status
-
-
-
-
-
-
-

@@ -4,7 +4,7 @@
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
 	<link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
-	<title>Class-Section Wise Lists</title>
+	<title>All Students List - Dynamic Columns</title>
 	<style>
 		html{font-size:100%}
 		body{font-family:'Kalpurush', Arial, Helvetica, sans-serif; padding:20px 10px 20px 20px; color:#1f2937; background:#f3f4f6}
@@ -33,7 +33,7 @@
 	</style>
 </head>
 <body>
-	<h2>Student List by Class & Section</h2>
+	<h2>All Students List (Dynamic Columns by Session)</h2>
 	<div class="toolbar">
 		<span id="status" class="status"></span>
 	</div>
@@ -107,7 +107,12 @@
 				
 				// Select only needed columns to reduce payload
 				const selectColsArr = (columnSpec && columnSpec.length > 0)
-					? Array.from(new Set(columnSpec.map(c => c.field).concat(['iid','class_2025','section_2025','roll_2025','status'])))
+					? Array.from(new Set(columnSpec.map(c => c.field).concat([
+						'iid',
+						'class_2025','section_2025','roll_2025',
+						'class_2026','section_2026','roll_2026',
+						'session','status'
+					])))
 						.filter(Boolean)
 						.map(c => String(c).replace(/["\s]+/g, '').trim())
 					: null;
@@ -156,8 +161,10 @@
 		}
 
 		function groupByClassSection(rows){
+			// Exclude TC-status rows from display
+			const filtered = rows.filter(r => !String(r.status||'').toUpperCase().includes('TC'));
 			// Return all rows as a single group for unified table display
-			const allRows = [...rows].sort((a,b)=>{
+			const allRows = [...filtered].sort((a,b)=>{
 				// Sort by class, section, roll, then iid
 				const ca = Number(a.class_2025) || 0, cb = Number(b.class_2025) || 0;
 				if(ca !== cb) return ca - cb;
@@ -191,6 +198,8 @@
 			header.className = 'card-header';
 			const title = document.createElement('h3');
 			title.className = 'card-title';
+			const sampleRow = groups[0].rows[0];
+			const sessionValue = sampleRow ? String(sampleRow.session || '').trim() : '';
 			title.textContent = 'All Students';
 			const badge = document.createElement('span');
 			badge.className = 'badge';
@@ -212,30 +221,20 @@
 			sl.className='col-sl'; 
 			sl.textContent = 'SL'; 
 			htr.appendChild(sl);
-			
-			// Dynamic columns based on session
-			const sampleRow = groups[0].rows[0];
-			const sessionValue = sampleRow ? String(sampleRow.session || '').trim() : '';
-			const is2025Session = sessionValue === '2025';
-			
-			if(is2025Session){
-				// For 2025 session, show specific columns
-				const sessionColumns = [
-					{ field: 'class_2025', label: 'Class' },
-					{ field: 'section_2025', label: 'Section' },
-					{ field: 'roll_2025', label: 'Roll' }
-				];
-				for(const col of sessionColumns){
-					const th = document.createElement('th'); 
-					th.textContent = col.label; 
-					htr.appendChild(th);
-				}
-			}else{
-				// For other sessions, show regular columns
-				for(const col of columnSpec){
-					const th = document.createElement('th'); 
-					th.textContent = col.label || col.field; 
-					htr.appendChild(th);
+
+			// Always show CSV columns; ensure 'iid' exists and insert active_* after it
+			let hasIid = columnSpec.some(c => c.field === 'iid');
+			// Build a working copy, injecting iid at start if missing
+			const colsForHeader = hasIid ? [...columnSpec] : [{ field: 'iid', label: 'iid' }, ...columnSpec];
+			for(const col of colsForHeader){
+				const th = document.createElement('th');
+				th.textContent = col.label || col.field;
+				htr.appendChild(th);
+				if(col.field === 'iid'){
+					// Insert the three active columns right after iid
+					const thAR = document.createElement('th'); thAR.textContent = 'active_roll'; htr.appendChild(thAR);
+					const thAC = document.createElement('th'); thAC.textContent = 'active_class'; htr.appendChild(thAC);
+					const thAS = document.createElement('th'); thAS.textContent = 'active_section'; htr.appendChild(thAS);
 				}
 			}
 			
@@ -251,42 +250,43 @@
 				sltd.className='col-sl'; 
 				sltd.textContent = (idx+1); 
 				tr.appendChild(sltd);
-				
-				if(is2025Session){
-					// For 2025 session, show specific columns
-					const sessionColumns = ['class_2025', 'section_2025', 'roll_2025'];
-					for(const field of sessionColumns){
-						const td = document.createElement('td');
-						const v = row[field];
-						if(field === 'iid'){
-							const link = document.createElement('a');
-							link.href = `detailsinfo.html?iid=${encodeURIComponent(v)}`;
-							link.textContent = escapeHtml(v==null?'':String(v));
-							link.style.color = '#0b74de';
-							link.style.textDecoration = 'underline';
-							td.appendChild(link);
-						}else{
-							td.textContent = escapeHtml(v==null?'':String(v));
-						}
+
+				// Helper to compute active values based on session thresholds
+				const sNum = Number(row.session);
+				let active_roll = '', active_class = '', active_section = '';
+				if(Number.isFinite(sNum) && sNum === 2026){
+					active_roll = row.roll_2026 ?? '';
+					active_class = row.class_2026 ?? '';
+					active_section = row.section_2026 ?? '';
+				}else if(Number.isFinite(sNum) && sNum === 2025){
+					active_roll = row.roll_2025 ?? '';
+					active_class = row.class_2025 ?? '';
+					active_section = row.section_2025 ?? '';
+				}
+
+				// Build cells from CSV spec, ensuring iid and inserting active_* right after it
+				let hasIidRow = columnSpec.some(c => c.field === 'iid');
+				const colsForRow = hasIidRow ? [...columnSpec] : [{ field: 'iid', label: 'iid' }, ...columnSpec];
+				for(const col of colsForRow){
+					const td = document.createElement('td');
+					const v = row[col.field];
+					if(col.field === 'iid'){
+						const link = document.createElement('a');
+						link.href = `detailsinfo.html?iid=${encodeURIComponent(v)}`;
+						link.textContent = escapeHtml(v==null?'':String(v));
+						link.style.color = '#0b74de';
+						link.style.textDecoration = 'underline';
+						td.appendChild(link);
 						tr.appendChild(td);
+						// Insert the three active columns right after iid
+						const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
+						const tdAC = document.createElement('td'); tdAC.textContent = escapeHtml(active_class==null?'':String(active_class)); tr.appendChild(tdAC);
+						const tdAS = document.createElement('td'); tdAS.textContent = escapeHtml(active_section==null?'':String(active_section)); tr.appendChild(tdAS);
+						continue; // iid already appended with active_*; skip generic append below
+					}else{
+						td.textContent = escapeHtml(v==null?'':String(v));
 					}
-				}else{
-					// For other sessions, show regular columns
-					for(const col of columnSpec){
-						const td = document.createElement('td');
-						const v = row[col.field];
-						if(col.field === 'iid'){
-							const link = document.createElement('a');
-							link.href = `detailsinfo.html?iid=${encodeURIComponent(v)}`;
-							link.textContent = escapeHtml(v==null?'':String(v));
-							link.style.color = '#0b74de';
-							link.style.textDecoration = 'underline';
-							td.appendChild(link);
-						}else{
-							td.textContent = escapeHtml(v==null?'':String(v));
-						}
-						tr.appendChild(td);
-					}
+					tr.appendChild(td);
 				}
 				
 				tbody.appendChild(tr);
@@ -299,7 +299,7 @@
 			fragment.appendChild(card);
 			
 			container.appendChild(fragment);
-			statusEl.textContent = `Total Students: ${groups[0].rows.length} | Session: ${sessionValue || 'Mixed'}`;
+			statusEl.textContent = `Total Students: ${groups[0].rows.length} | Session sample: ${sessionValue || 'N/A'} | Extra: active_roll/active_class/active_section`;
 		}
 
 		async function loadAll(background=false){
@@ -319,7 +319,7 @@
 					const groups = groupByClassSection(cached.rows);
 					render(groups);
 					const ageM = Math.floor((Date.now()-cached.ts)/60000);
-					statusEl.textContent = `Groups: ${groups.length} | Total: ${cached.rows.length} (offline cache, ${ageM}m old)`;
+					statusEl.textContent = `Total Students: ${cached.rows.length} (offline cache, ${ageM}m old)`;
 				}
 			}
 		}
