@@ -128,11 +128,27 @@
 								}
 							}
 
-							return { name, total: rows.length, tc: tcCount, existing: rows.length - tcCount, hindu: hinduCount, islam: islamCount, targetId: slugify(name) };
+							// Smart formatting: Convert "6_SHAPLA" to "Class : 6-SHAPLA-2025"
+							const smartName = parseSmartClassName(name);
+							return { name: smartName, originalName: name, total: rows.length, tc: tcCount, existing: rows.length - tcCount, hindu: hinduCount, islam: islamCount, targetId: slugify(smartName) };
 						}catch(err){
-							return { name, total: 0, tc: 0, existing: 0, hindu:0, islam:0, targetId: slugify(name), error: String(err && err.message || err) };
+							const smartName = parseSmartClassName(name);
+							return { name: smartName, originalName: name, total: 0, tc: 0, existing: 0, hindu:0, islam:0, targetId: slugify(smartName), error: String(err && err.message || err) };
 						}
 					}
+		
+		// Smart class name parser: "6_SHAPLA" -> "Class : 6-SHAPLA-2025"
+		function parseSmartClassName(sheetName) {
+			const currentYear = new Date().getFullYear(); // Get current year (2025)
+			const parts = sheetName.split('_');
+			if (parts.length >= 2) {
+				const classNum = parts[0];
+				const section = parts[1];
+				return `Class : ${classNum}-${section}-${currentYear}`;
+			}
+			// Fallback for unexpected format
+			return `Class : ${sheetName}-${currentYear}`;
+		}
 		function renderTable(rows){
 			const host = document.getElementById('tableHost');
 			const status = document.getElementById('status');
@@ -193,12 +209,12 @@
 				const pairs = await loadSheetPairs();
 				if(!pairs.length){ status.textContent='No sheets found.'; return; }
 				const results = await Promise.all(pairs.map(fetchCounts));
-				// Sort by natural class order if possible: extract leading number from name
+				// Sort by natural class order: extract class number from original name for smart sorting
 				results.sort((a,b)=>{
-					const ax = parseInt(String(a.name).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
-					const bx = parseInt(String(b.name).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
+					const ax = parseInt(String(a.originalName).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
+					const bx = parseInt(String(b.originalName).match(/^\s*(\d{1,2})/)?.[1]||'999',10);
 					if(Number.isFinite(ax)&&Number.isFinite(bx) && ax!==bx) return ax-bx;
-					return String(a.name).localeCompare(String(b.name));
+					return String(a.originalName).localeCompare(String(b.originalName));
 				});
 			renderTable(results);
 			renderChart(results);

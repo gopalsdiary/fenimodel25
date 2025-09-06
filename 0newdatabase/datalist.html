@@ -7,15 +7,15 @@
 	<title>Class-Section Wise Lists</title>
 	<style>
 		html{font-size:100%}
-		body{font-family:'Kalpurush', Arial, Helvetica, sans-serif; padding:20px; color:#1f2937; background:#f3f4f6}
+		body{font-family:'Kalpurush', Arial, Helvetica, sans-serif; padding:20px 10px 20px 20px; color:#1f2937; background:#f3f4f6}
 		h2{margin:0 0 12px}
 		.status{margin:4px 0 16px;color:#4b5563}
 
-		/* landscape cards stacked vertically */
-		.container{display:flex;flex-direction:column;gap:16px}
+		/* landscape cards stacked vertically, aligned to left */
+		.container{display:flex;flex-direction:column;gap:16px;align-items:flex-start}
 
-		/* card */
-		.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,0.04);width:100%;max-width:1200px;margin:0 auto}
+		/* card - left aligned, no centering */
+		.card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 1px 2px rgba(0,0,0,0.04);width:100%;max-width:none;margin:0}
 		.card-header{display:flex;justify-content:space-between;align-items:baseline;padding:12px 14px;border-bottom:1px solid #f1f5f9;background:#fafafa;border-top-left-radius:10px;border-top-right-radius:10px}
 		.card-title{font-size:18px;color:#0f172a;margin:0}
 		.badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#334155}
@@ -23,6 +23,7 @@
 		.card-body{padding:10px 12px}
 
 		table{width:100%;border-collapse:collapse;margin-top:0;table-layout:auto}
+		.table-wrapper{overflow-x:auto;width:100%}
 		th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle;white-space:nowrap}
 		th{background:#f4f4f4;position:sticky;top:0}
 		tbody tr:nth-child(odd){ background:#ffffff }
@@ -49,9 +50,9 @@
 		const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 		const tableName = 'student_database';
 
-		// Cache (30 minutes for faster perceived load)
-		const CACHE_KEY = 'datalist_rows_v1';
-		const CACHE_TTL_MS = 30*60*1000;
+		// Cache (10 minutes for faster perceived load, reduced from 30m for freshness)
+		const CACHE_KEY = 'datalist_rows_v2';
+		const CACHE_TTL_MS = 10*60*1000;
 
 		const container = document.getElementById('container');
 		const statusEl = document.getElementById('status');
@@ -94,48 +95,53 @@
 			let all = [];
 			let lastId = 0;
 			let hasMore = true;
-			const batchSize = 1000;
-			const parallel = 3; // load 3 batches in parallel
+			// Larger batch size for better performance (5x increase)
+			const batchSize = 5000;
+			
 			while(hasMore){
 				statusEl.textContent = `Loading... (${all.length} records loaded)`;
-				const promises = [];
-				for(let i=0; i<parallel && hasMore; i++){
-					promises.push(
-						supabase
-							.from(tableName)
-							.select('*')
-							.gt('iid', lastId)
-							.order('iid', { ascending: true })
-							.limit(batchSize)
-					);
-					lastId += batchSize; // approximate, adjust later
+				
+				// Select only needed columns to reduce payload
+				const selectCols = (columnSpec && columnSpec.length > 0)
+					? columnSpec.map(c => c.field).concat(['iid', 'class_2025', 'section_2025', 'roll_2025', 'status']).filter(Boolean).map(c => `"${c.replace(/"/g, '')}"`).join(',')
+					: '*';
+				
+				const { data, error } = await supabase
+					.from(tableName)
+					.select(selectCols)
+					.gt('iid', lastId)
+					.order('iid', { ascending: true })
+					.limit(batchSize);
+				
+				if(error) throw error;
+				
+				if(!data || data.length === 0){
+					hasMore = false;
+					break;
 				}
-				const results = await Promise.all(promises.map(p => p));
-				let newData = [];
-				for(const { data, error } of results){
-					if(error) throw error;
-					if(data && data.length > 0){
-						newData = newData.concat(data);
-					}
-				}
-				if(newData.length === 0){ hasMore = false; break; }
-				all = all.concat(newData);
-				lastId = newData[newData.length-1].iid || lastId;
-				if(newData.length < batchSize * parallel) hasMore = false;
+				
+				// Use push instead of concat for better performance
+				for(const row of data) all.push(row);
+				lastId = data[data.length - 1].iid;
+				
+				// If we got less than batchSize, we've reached the end
+				if(data.length < batchSize) hasMore = false;
 			}
 			return all;
 		}
 
 		function groupByClassSection(rows){
 			const map = new Map();
+			// Optimized grouping with single pass
 			for(const r of rows){
 				const c = r.class_2025 == null ? '' : String(r.class_2025);
 				const s = r.section_2025 == null ? '' : String(r.section_2025);
-				const key = `${c}__${s}`;
-				if(!map.has(key)) map.set(key, { class_: c, section: s, rows: [] });
+				const sess = r.session == null ? '' : String(r.session);
+				const key = `${c}__${s}__${sess}`;
+				if(!map.has(key)) map.set(key, { class_: c, section: s, session: sess, rows: [] });
 				map.get(key).rows.push(r);
 			}
-			// sort rows inside each group by roll if exists, else iid
+			// Optimized sorting: pre-calculate numeric values
 			for(const g of map.values()){
 				g.rows.sort((a,b)=>{
 					const ra = Number(a.roll_2025) || 0, rb = Number(b.roll_2025) || 0;
@@ -144,11 +150,13 @@
 					return ia - ib;
 				});
 			}
-			// sort groups by numeric class then section
+			// Convert to array and sort groups
 			const groups = Array.from(map.values()).sort((a,b)=>{
 				const ca = Number(a.class_) || 0, cb = Number(b.class_) || 0;
 				if(ca !== cb) return ca - cb;
-				return a.section.localeCompare(b.section);
+				const secCmp = a.section.localeCompare(b.section);
+				if(secCmp !== 0) return secCmp;
+				return a.session.localeCompare(b.session);
 			});
 			return groups;
 		}
@@ -161,35 +169,60 @@
 		function render(groups){
 			container.innerHTML = '';
 			let total = 0;
+			// Use document fragment for better performance
+			const fragment = document.createDocumentFragment();
+			
 			for(const g of groups){
 				total += g.rows.length;
-				const wrap = document.createElement('div');
-				wrap.className = 'group';
+				const card = document.createElement('div');
+				card.className = 'card';
+				
+				// Card header
+				const header = document.createElement('div');
+				header.className = 'card-header';
 				const title = document.createElement('h3');
+				title.className = 'card-title';
 				const cls = g.class_ || 'N/A';
 				const sec = g.section || 'N/A';
-				title.textContent = `Class ${cls} - Section ${sec}`;
-				const sub = document.createElement('small');
-				sub.textContent = `${g.rows.length} students`;
-				wrap.appendChild(title);
-				wrap.appendChild(sub);
-
+				const sess = g.session || 'N/A';
+				title.textContent = `Class : ${cls}-${sec}-${sess}`;
+				const badge = document.createElement('span');
+				badge.className = 'badge';
+				badge.textContent = `${g.rows.length} students`;
+				header.appendChild(title);
+				header.appendChild(badge);
+				
+				// Card body with table wrapper
+				const body = document.createElement('div');
+				body.className = 'card-body';
+				const tableWrapper = document.createElement('div');
+				tableWrapper.className = 'table-wrapper';
 				const table = document.createElement('table');
+				
+				// Table header
 				const thead = document.createElement('thead');
 				const htr = document.createElement('tr');
-				// SL + CSV-specified columns
-				const sl = document.createElement('th'); sl.className='col-sl'; sl.textContent = 'SL'; htr.appendChild(sl);
+				const sl = document.createElement('th'); 
+				sl.className='col-sl'; 
+				sl.textContent = 'SL'; 
+				htr.appendChild(sl);
 				for(const col of columnSpec){
-					const th = document.createElement('th'); th.textContent = col.label || col.field; htr.appendChild(th);
+					const th = document.createElement('th'); 
+					th.textContent = col.label || col.field; 
+					htr.appendChild(th);
 				}
 				thead.appendChild(htr);
 				table.appendChild(thead);
 
+				// Table body
 				const tbody = document.createElement('tbody');
 				g.rows.forEach((row, idx) =>{
 					const tr = document.createElement('tr');
 					if(String(row.status||'').toUpperCase().includes('TC')) tr.className = 'status-tc';
-					const sltd = document.createElement('td'); sltd.className='col-sl'; sltd.textContent = (idx+1); tr.appendChild(sltd);
+					const sltd = document.createElement('td'); 
+					sltd.className='col-sl'; 
+					sltd.textContent = (idx+1); 
+					tr.appendChild(sltd);
 					for(const col of columnSpec){
 						const td = document.createElement('td');
 						const v = row[col.field];
@@ -208,9 +241,13 @@
 					tbody.appendChild(tr);
 				});
 				table.appendChild(tbody);
-				wrap.appendChild(table);
-				container.appendChild(wrap);
+				tableWrapper.appendChild(table);
+				body.appendChild(tableWrapper);
+				card.appendChild(header);
+				card.appendChild(body);
+				fragment.appendChild(card);
 			}
+			container.appendChild(fragment);
 			statusEl.textContent = `Groups: ${groups.length} | Total: ${total}`;
 		}
 

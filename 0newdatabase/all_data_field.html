@@ -91,6 +91,12 @@
     const saveBtn = document.getElementById('saveBtn');
     const modalNotice = document.getElementById('modalNotice');
 
+  // Check if required elements exist
+  if(!tbody || !statusEl) {
+    console.error('Required DOM elements not found!');
+    console.log('tbody:', tbody, 'statusEl:', statusEl);
+  }
+
   // Refresh and filter controls removed per request
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
@@ -136,9 +142,14 @@
 
   async function loadColumnOrder(){
       try{
+        console.log('Loading column order from dataorder.csv...');
         const res = await fetch('dataorder.csv');
-        if(!res.ok) return;
+        if(!res.ok) {
+          console.warn('dataorder.csv not found, using default columns');
+          return;
+        }
         const txt = await res.text();
+        console.log('dataorder.csv content loaded');
         const lines = txt.split(/\r?\n/).filter(line => line.trim() && !line.includes('colm name'));
         lines.forEach(line => {
           const parts = line.split(' > ');
@@ -149,42 +160,89 @@
             displayNames[dbField] = display;
           }
         });
+        console.log('Column order loaded:', columnOrder.length, 'columns');
       }catch(e){
+        console.error('Error loading column order:', e);
         columnOrder = [];
         displayNames = {};
       }
     }
 
     async function loadData(background=false){
+      console.log('loadData started, background:', background);
       if(!background) statusEl.textContent = 'Loading all data...';
       try{
-        // Load column order if not loaded
-        if(columnOrder.length === 0){
-          await loadColumnOrder();
+        // Test Supabase connection first
+        console.log('Testing Supabase connection...');
+        const testQuery = await supabase
+          .from(tableName)
+          .select('iid')
+          .limit(1);
+          
+        console.log('Test query result:', testQuery);
+        if(testQuery.error) {
+          throw new Error('Supabase connection failed: ' + testQuery.error.message);
         }
         
-  // Use multiple fetch calls to get ALL data (bypass Supabase limits)
+        // Load column order if not loaded
+        if(columnOrder.length === 0){
+          console.log('Loading column order...');
+          await loadColumnOrder();
+        }
+        console.log('Column order loaded, starting data fetch...');
+        
+  // Use multiple fetch calls to get ALL data (bypass Supabase 1k per-request cap)
   let allData = [];
   let lastId = 0;
-  // larger batch size to reduce round-trip overhead (monitor memory)
-  let batchSize = 5000;
+  // Use 1000 to align with PostgREST default max rows per request
+  let batchSize = 1000;
   let hasMore = true;
+  let batchCount = 0;
+  let prevLastId = null; // plateau guard
+  const maxBatches = 10000; // generous safety limit for very large tables
         
-        while(hasMore) {
-          statusEl.textContent = `Loading... (${allData.length} records loaded)`;
+        while(hasMore && batchCount < maxBatches) {
+          batchCount++;
+          console.log(`Loading batch ${batchCount}, lastId: ${lastId}`);
+          statusEl.textContent = `Loading... (${allData.length} records loaded, batch ${batchCount})`;
           
           // select only needed columns when possible to reduce payload
-          const selectCols = (columnOrder && columnOrder.length>0)
-            ? columnOrder.concat(['iid']).filter(Boolean).map(c=> `"${c.replace(/"/g,'') }"`).join(',')
-            : '*';
-          const { data, error } = await supabase
-            .from(tableName)
-            .select(selectCols)
-            .gt('iid', lastId)
-            .order('iid', { ascending: true })
-            .limit(batchSize);
+          const selectColsArr = (columnOrder && columnOrder.length>0)
+            ? Array.from(new Set([...columnOrder, 'iid']))
+                .filter(Boolean)
+                .map(c => String(c).replace(/["\s]+/g, '').trim())
+            : null;
+          const selectArg = selectColsArr ? selectColsArr.join(',') : '*';
+          console.log('Querying with selectArg:', selectArg);
+
+          // Primary attempt with specific columns
+          let data, error;
+          try{
+            ({ data, error } = await supabase
+              .from(tableName)
+              .select(selectArg)
+              .gt('iid', lastId)
+              .order('iid', { ascending: true })
+              .limit(batchSize));
+          }catch(e){
+            console.warn('Select with specific columns threw, falling back to *:', e);
+            data = null; error = e;
+          }
+
+          // Fallback: if error due to column list, retry with '*'
+          if(error || !Array.isArray(data)){
+            console.warn('Retrying batch with select("*") due to error or invalid data. original error:', error);
+            ({ data, error } = await supabase
+              .from(tableName)
+              .select('*')
+              .gt('iid', lastId)
+              .order('iid', { ascending: true })
+              .limit(batchSize));
+          }
             
+          console.log('Query result:', { dataLength: data?.length, error });
           if(error){
+            console.error('Supabase error:', error);
             const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
             throw new Error(`${error.message} | details: ${details}`);
           }
@@ -197,21 +255,24 @@
           // append results (faster than repeated concat)
           for(const row of data) allData.push(row);
           lastId = data[data.length - 1].iid;
-          
-          // If we got less than batchSize, we've reached the end
-          if(data.length < batchSize) {
+          // Plateau guard: if lastId didn't advance, break to avoid infinite loop
+          if(prevLastId !== null && Number(lastId) === Number(prevLastId)){
+            console.warn('Pagination stalled because lastId did not advance. Stopping to avoid infinite loop.', { lastId, prevLastId });
             hasMore = false;
+            break;
           }
+          prevLastId = lastId;
         }
         
-  allRowsCache = allData;
-  renderTable(allRowsCache);
-  statusEl.textContent = `Total: ${allRowsCache.length} records (updated just now)`;
+        allRowsCache = allData;
+        renderTable(allRowsCache);
+        statusEl.textContent = `✅ Total: ${allRowsCache.length} records loaded (${batchCount} batches, all data loaded)`;
         // Persist to cache for 10 minutes use
         saveCache(allRowsCache);
       }catch(err){
         console.error('loadData error:', err);
-        statusEl.textContent = 'Data loading error';
+        console.error('Error stack:', err.stack);
+        statusEl.textContent = 'Data loading error: ' + (err.message || err);
         const msg = err && err.message ? err.message : String(err);
         const colSpan = document.querySelectorAll('#dataTable thead th').length || 1;
         tbody.innerHTML = `<tr><td colspan="${colSpan}">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
@@ -232,7 +293,7 @@
       if(!rows || rows.length === 0){
         const thead = document.querySelector('#dataTable thead');
         thead.innerHTML = '<tr><th>Columns</th></tr>';
-        tbody.innerHTML = `<tr><td colspan="${colCount}">No records found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="1">No records found</td></tr>`;
         return;
       }
 
@@ -251,8 +312,8 @@
       thead.innerHTML = '<tr><th class="col-sl">SL</th>' + keys.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '</tr>';
 
       // Render body
-      tbody.innerHTML = '';
-      const colCount = keys.length + 1; // +1 for SL column
+  tbody.innerHTML = '';
+  const colCount = keys.length + 1; // +1 for SL column
 
       rows.forEach((r, index) => {
         const tr = document.createElement('tr');
@@ -389,12 +450,13 @@
     // close modal when clicking outside panel
     editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
 
-    // initial load with smart cache
+    // initial load - directly load all data without cache
     (function smartInitial(){
-      const usedCache = showFromCacheIfFresh();
-      if(!usedCache){
-        loadData(false);
-      }
+      console.log('Smart initial started');
+      console.log('Supabase available:', typeof window.supabase !== 'undefined');
+      console.log('Status element:', statusEl);
+      // Always load fresh data, no cache check
+      loadData(false);
     })();
   </script>
 </body>
