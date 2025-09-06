@@ -6,7 +6,7 @@
 	<link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
 	<title>All Students List - Dynamic Columns</title>
 	<style>
-		html{font-size:100%}
+		html{font-size:85%}
 		body{font-family:'Kalpurush', Arial, Helvetica, sans-serif; padding:20px 10px 20px 20px; color:#1f2937; background:#f3f4f6}
 		h2{margin:0 0 12px}
 		.status{margin:4px 0 16px;color:#4b5563}
@@ -230,11 +230,12 @@
 				const th = document.createElement('th');
 				th.textContent = col.label || col.field;
 				htr.appendChild(th);
-				if(col.field === 'iid'){
+					if(col.field === 'iid'){
 					// Insert the three active columns right after iid
-					const thAR = document.createElement('th'); thAR.textContent = 'active_roll'; htr.appendChild(thAR);
-					const thAC = document.createElement('th'); thAC.textContent = 'active_class'; htr.appendChild(thAC);
-					const thAS = document.createElement('th'); thAS.textContent = 'active_section'; htr.appendChild(thAS);
+						const thCSY = document.createElement('th'); thCSY.textContent = 'class_section_year'; htr.appendChild(thCSY);
+						const thAR = document.createElement('th'); thAR.textContent = 'active_roll'; htr.appendChild(thAR);
+						const thAC = document.createElement('th'); thAC.textContent = 'active_class'; htr.appendChild(thAC);
+						const thAS = document.createElement('th'); thAS.textContent = 'active_section'; htr.appendChild(thAS);
 				}
 			}
 			
@@ -278,7 +279,9 @@
 						link.style.textDecoration = 'underline';
 						td.appendChild(link);
 						tr.appendChild(td);
-						// Insert the three active columns right after iid
+						// Insert class_section_year and the three active columns right after iid
+						const csY = [active_class ?? '', active_section ?? '', (row.session ?? '')].map(x => String(x ?? '')).join('-');
+						const tdCSY = document.createElement('td'); tdCSY.textContent = escapeHtml(csY); tr.appendChild(tdCSY);
 						const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
 						const tdAC = document.createElement('td'); tdAC.textContent = escapeHtml(active_class==null?'':String(active_class)); tr.appendChild(tdAC);
 						const tdAS = document.createElement('td'); tdAS.textContent = escapeHtml(active_section==null?'':String(active_section)); tr.appendChild(tdAS);
