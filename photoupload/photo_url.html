@@ -3,11 +3,11 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Photo upload — Download</title>
+	<title>Photo upload — Photoupload</title>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 		<style>
 		body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:#f6f7fb;color:#0b1220}
-		.container{max-width:1100px;margin:28px auto;padding:16px}
+		.container{max-width:none; margin:0 auto; padding:16px}
 		h1{margin:0 0 12px;font-size:20px}
 		.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 		select,input[type=search]{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
@@ -17,30 +17,64 @@
 			.muted.right{margin-left:auto}
 			#status{margin-top:8px}
 			thead th.photo-col{width:90px}
-			thead th.actions-col{width:260px}
+			/* actions column: compress to content */
+			thead th.actions-col, tbody td.actions-col{width:1%;white-space:nowrap}
+			/* Photo Url CSV column: no fixed width; keep smaller font */
+			thead th:nth-child(7), tbody td:nth-child(7) { font-size: 80%; }
 		table{width:100%;border-collapse:collapse;margin-top:12px;background:#fff;border-radius:8px;overflow:hidden}
 		thead th{background:#f3f6fb;padding:10px 12px;text-align:left;border-bottom:1px solid #ecf0f4}
 		tbody td{padding:10px 12px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
+		/* let table size columns based on content */
+		table{table-layout:auto}
+		/* compress small columns to minimal width */
+		thead th:nth-child(2), tbody td:nth-child(2), /* IID */
+		thead th:nth-child(3), tbody td:nth-child(3), /* Roll */
+		thead th:nth-child(4), tbody td:nth-child(4), /* Class */
+		thead th:nth-child(8), tbody td:nth-child(8)  /* Match */
+		{width:1%;white-space:nowrap}
+		/* allow long text/URLs to wrap when needed */
+		tbody td, thead th { white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+		td a, td .url-input { word-break: break-all; overflow-wrap: anywhere; }
+		/* alternate row coloring: odd rows light orange, even rows white */
+		tbody tr:nth-child(odd) td:not(.photo-col){
+			background: linear-gradient(180deg, rgba(255,244,230,0.9), rgba(255,247,236,0.8));
+			border-radius:8px;
+			box-shadow: inset 0 0 0 1px rgba(255,165,77,0.06);
+		}
+		tbody tr:nth-child(even) td:not(.photo-col){
+			background: #ffffff;
+			border-radius:8px;
+			box-shadow: none;
+		}
+		/* keep image cell contents layout intact */
+		tbody td:first-child{background:transparent;border-radius:0;box-shadow:none;padding:10px}
 		.thumb{width:72px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e6edf6}
+		/* verified-style badge for match status */
+		.match-badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:700;font-size:16px}
+		.match-badge.yes{background:#16a34a} /* green */
+		.match-badge.no{background:#ef4444}  /* red */
+		.match-badge.small{width:24px;height:24px;font-size:14px}
+		.match-badge.empty{background:transparent;color:#6b7280;border:1px solid #e6edf6;font-weight:600}
+		/* container for CSV + DB badges to keep them side-by-side */
+		.match-cell{display:flex;gap:6px;align-items:center}
 		.image-wrapper{position:relative;display:inline-block}
 		.preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:350px;height:500px;background-size:cover;background-position:center;border-radius:8px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;opacity:0;visibility:hidden;transition:opacity 0.3s ease,visibility 0.3s ease}
 		.image-wrapper:hover .preview{opacity:1;visibility:visible}
 		.uploader{display:flex;gap:8px;align-items:center}
 		.status{font-size:13px}
 		.small{font-size:12px;color:#334155}
+		.url-input { width: 100%; box-sizing: border-box; }
 	</style>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
 	<div class="container">
-		<h1>Student photos - Photo Download & upload </h1>
+		<h1>Photoupload — student photos</h1>
 		<div class="toolbar">
 				<select id="tableFilter" aria-label="Class-Section-Session"><option value="">Class-Section-Session</option></select>
-				<input id="search" type="search" placeholder="Filter name or IID…" />
-				<button id="refreshBtn" class="secondary">Refresh data</button>
 				<button id="downloadPdfBtn">Download PDF</button>
-				<a href="photo_url.html" id="urlUploadBtn" style="background-color: orange; color: white; padding:8px 10px; border-radius:8px; border:1px solid #1479d6; text-decoration:none; display:inline-block;">URL UPLOAD</a>
 				<div class="muted right">Image album: <strong>student_photo</strong></div>
 		</div>
 
@@ -48,15 +82,18 @@
 
 		<table id="studentsTable" aria-live="polite">
 			<thead>
-								<tr>
-											<th class="photo-col">Photo</th>
-										<th>IID</th>
-										<th>Roll</th>
-										<th>Class</th>
-										<th>Name (EN)</th>
-										<th>Father name (EN)</th>
-										<th class="actions-col">Actions / Upload</th>
-								</tr>
+						<tr>
+									<th class="photo-col">Photo</th>
+							<th>IID</th>
+							<th>Roll</th>
+							<th>Class</th>
+							<th>Name (EN)</th>
+							<th>Father name (EN)</th>
+							<th>Photo Url CSV</th>
+							<th>Match IID with url</th>
+							<th>Database Url</th>
+							<th class="actions-col">Actions / Upload</th>
+						</tr>
 			</thead>
 			<tbody></tbody>
 		</table>
@@ -67,6 +104,12 @@
 	const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
 	const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
 	const IMGBB_ALBUM = 'student_photo';
+
+	// Supabase config (reads/writes to student_database.student_photo_url)
+	const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+	const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+	const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+	const tableName = 'student_database';
 
 	// Utility
 	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -87,6 +130,36 @@
 
 	function computeActiveFromRow(r){
 		const s = String(r.session||'').trim();
+		// If session explicitly references a year and matching fields exist, prefer them
+		if(s){
+			const clsKey = `class_${s}`;
+			const secKey = `section_${s}`;
+			const rollKey = `roll_${s}`;
+			if(r[clsKey] || r[secKey] || r[rollKey]){
+				return { session:s, active_class:String(r[clsKey]||''), active_section:String(r[secKey]||''), active_roll:String(r[rollKey]||'') };
+			}
+		}
+		// Otherwise, scan for any class_<year> / section_<year> / roll_<year> fields and pick the latest year with data
+		let bestYear = null;
+		let best = { c: '', s: '', r: '' };
+		for(const k of Object.keys(r || {})){
+			const m = k.match(/^class_(\d{2,4})$/);
+			if(!m) continue;
+			const year = m[1];
+			const c = String(r[`class_${year}`]||'').trim();
+			const sec = String(r[`section_${year}`]||'').trim();
+			const rl = String(r[`roll_${year}`]||'').trim();
+			if(c || sec || rl){
+				if(bestYear === null || Number(year) > Number(bestYear)){
+					bestYear = year;
+					best = { c, s: sec, r: rl };
+				}
+			}
+		}
+		if(bestYear !== null){
+			return { session: String(bestYear), active_class:String(best.c||''), active_section:String(best.s||''), active_roll:String(best.r||'') };
+		}
+		// Fallback: older explicit fields
 		let active_class='', active_section='', active_roll='';
 		if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
 		else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
@@ -168,14 +241,12 @@
 	// Build table rows based on filters
 	function applyFilters(){
 		const key = document.getElementById('tableFilter').value;
-		const q = (document.getElementById('search').value||'').toLowerCase().trim();
 		let filtered = allStudents;
 		if(key){
 			const [cls, section, session] = key.split('-');
 			filters = { cls, section, session };
 			filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
 		}
-		if(q){ filtered = filtered.filter(s=> (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q)); }
 		// sort by roll numeric asc then IID
 		filtered = filtered.slice().sort((a,b)=>{
 			const ra=Number(a.roll), rb=Number(b.roll);
@@ -188,7 +259,7 @@
 
 	function renderTable(list){
 		tbody.innerHTML = '';
-		if(!list.length){ tbody.insertAdjacentHTML('beforeend','<tr><td colspan="7" class="muted small">No students found for selected filters.</td></tr>'); return; }
+			if(!list.length){ tbody.insertAdjacentHTML('beforeend','<tr><td colspan="10" class="muted small">No students found for selected filters.</td></tr>'); return; }
 
 		// sort by roll when available (numeric preferred), fallback to IID
 		const sorted = list.slice().sort((a,b)=>{
@@ -209,6 +280,15 @@
 			else if(photoIndex.has(cand2)) thumbUrl = photoIndex.get(cand2);
 			else {
 				for(const [k,u] of photoIndex.entries()){ if(iidStr && k.includes(iidStr)) { thumbUrl = u; break; } }
+			}
+			let match = false;
+			if(thumbUrl){
+				const filename = thumbUrl.split('/').pop().toLowerCase();
+				const expected1 = `avatar-${iidStr}.jpg`.toLowerCase();
+				const expected2 = `avatar-${iidStr}.png`.toLowerCase();
+				if(filename === expected1 || filename === expected2){
+					match = true;
+				}
 			}
 			const imgHtml = thumbUrl ? `<div class="image-wrapper"><img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo"><div class="preview" style="background-image: url('${escapeHtml(thumbUrl)}')"></div></div>` : '';
 		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
@@ -240,67 +320,116 @@
 				<td>${classCell}</td>
 				<td>${escapeHtml(s.name)}</td>
 				<td>${escapeHtml(s.father)}</td>
-				<td class="actions-col">
-					<div class="uploader">
-						<input type="file" accept="image/*" class="file-input" data-iid="${escapeHtml(iidStr)}">
-						<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
-						<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
-					</div>
-					<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-						${detailsLink}
-						${dlAvatar}
-						${dlClassRoll}
-					</div>
-				</td>
+				<td>${thumbUrl ? `<a href="${escapeHtml(thumbUrl)}" target="_blank">${escapeHtml(thumbUrl)}</a>` : `<input type="text" placeholder="Enter URL" class="url-input" data-iid="${escapeHtml(iidStr)}">`}</td>
+					<td>
+						<div class="match-cell">
+							<span title="CSV match" class="match-badge ${match ? 'yes' : 'no'}">${match ? '✓' : '✗'}</span>
+							<span title="DB match" class="match-badge no" data-iid-badge="${escapeHtml(iidStr)}">✗</span>
+						</div>
+					</td>
+					<td>${detailsLink}</td>
+					<td class="actions-col">
+						<div class="uploader">
+							<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
+							<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
+						</div>
+					</td>
 			</tr>`;
 		}).join('');
 
 		tbody.insertAdjacentHTML('beforeend', rowsHtml);
 
-		// wire upload handlers
-		document.querySelectorAll('.upload-btn').forEach(btn=>{
-			btn.addEventListener('click', async (e)=>{
-				const iid = btn.dataset.iid;
-				const tr = btn.closest('tr');
-				const input = tr.querySelector('.file-input');
-				const status = tr.querySelector('.status');
-				status.textContent = '';
-				if(!input || !input.files || !input.files[0]){ status.textContent = 'Choose file first'; return; }
-				const f = input.files[0];
-				const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src = URL.createObjectURL(f); });
-				const targetW = 944, targetH = 1181;
-				const canvas = document.createElement('canvas');
-				canvas.width = targetW; canvas.height = targetH;
-				const ctx = canvas.getContext('2d');
-				ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-				const ratio = Math.min(targetW/img.width, targetH/img.height);
-				const w = Math.round(img.width * ratio); const h = Math.round(img.height * ratio);
-				const x = Math.round((targetW - w)/2); const y = Math.round((targetH - h)/2);
-				ctx.drawImage(img, x, y, w, h);
-				const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-				const base64 = dataUrl.split(',')[1];
-				status.textContent = 'Uploading…';
-				try{
-					const form = new FormData();
-					form.append('key', IMGBB_API_KEY);
-					form.append('image', base64);
-					form.append('name', `avatar-${iid}.jpg`);
-					form.append('album', IMGBB_ALBUM);
-					const resp = await fetch(IMGBB_UPLOAD_URL + '?key=' + encodeURIComponent(IMGBB_API_KEY), { method:'POST', body: form });
-					const j = await resp.json();
-					if(j && j.success && j.data && j.data.display_url){
-						status.textContent = 'Uploaded ✓';
-						const imgEl = tr.querySelector('img.thumb');
-						const newUrl = j.data.display_url || j.data.url || j.data.image && j.data.image.url;
-						if(imgEl && newUrl){ imgEl.src = newUrl; }
-						console.log('imgbb response', j);
-						alert(`Upload done for ${iid}. URL: ${newUrl}`);
-					} else {
-						status.textContent = 'Upload failed'; console.error(j);
+		// after rendering rows, populate Database Url (student_photo_url) from Supabase
+		async function populateDbUrlsForRendered(){
+			if(!supabase) return;
+			const rows = Array.from(tbody.querySelectorAll('tr'));
+			const iids = rows.map(r=>r.dataset.iid).filter(Boolean);
+			if(iids.length===0) return;
+			try{
+				const { data, error } = await supabase.from(tableName).select('iid, student_photo_url').in('iid', iids);
+				if(error){ console.error('Supabase fetch error', error); return; }
+				const map = new Map();
+				for(const r of data || []) map.set(String(r.iid), r.student_photo_url || '');
+				for(const tr of rows){
+					const iid = tr.dataset.iid;
+					const dbCell = tr.querySelector('td:nth-child(9)');
+					const uploadBtn = tr.querySelector('.upload-btn');
+					const dbUrl = map.get(iid) || '';
+					if(dbCell){
+						if(dbUrl){ dbCell.innerHTML = `<a href="${escapeHtml(dbUrl)}" target="_blank" rel="noopener">${escapeHtml(dbUrl)}</a>`; }
+						else { dbCell.innerHTML = `<span class="small muted">—</span>`; }
 					}
-				}catch(err){ status.textContent='Upload error'; console.error(err); }
+					// update DB match badge
+					const dbBadge = tr.querySelector('span[data-iid-badge]');
+					if(dbBadge){
+						if(!dbUrl){ dbBadge.className = 'match-badge no'; dbBadge.textContent = '✗'; }
+						else {
+							const fname = dbUrl.split('/').pop().toLowerCase();
+							const expected1 = `avatar-${iid}`.toLowerCase() + '.jpg';
+							const expected2 = `avatar-${iid}`.toLowerCase() + '.png';
+							const isMatch = fname === expected1 || fname === expected2 || fname.includes(iid);
+							dbBadge.className = 'match-badge ' + (isMatch ? 'yes' : 'no');
+							dbBadge.textContent = isMatch ? '✓' : '✗';
+						}
+					}
+					if(uploadBtn){
+						if(dbUrl){ uploadBtn.style.display = 'none'; }
+						else { uploadBtn.style.display = ''; uploadBtn.disabled = false; }
+					}
+				}
+			}catch(err){ console.error('populateDbUrlsForRendered error', err); }
+		}
+
+		populateDbUrlsForRendered();
+
+		// wire upload handlers
+			document.querySelectorAll('.upload-btn').forEach(btn=>{
+				btn.addEventListener('click', async (e)=>{
+					e.preventDefault();
+					const iid = btn.dataset.iid;
+					const tr = btn.closest('tr');
+					const status = tr.querySelector('.status');
+					status.textContent = '';
+					if(!supabase){ status.textContent = 'Supabase not available'; return; }
+					// read Photo Url CSV from column 7 (link or input)
+					const csvCell = tr.querySelector('td:nth-child(7)');
+					let csvUrl = '';
+					if(csvCell){
+						const a = csvCell.querySelector('a');
+						if(a) csvUrl = a.href;
+						else {
+							const inp = csvCell.querySelector('input.url-input');
+							if(inp) csvUrl = inp.value.trim();
+						}
+					}
+					if(!csvUrl){ status.textContent = 'No Photo Url to save'; return; }
+					btn.disabled = true;
+					status.textContent = 'Saving…';
+					try{
+						const { data, error } = await supabase.from(tableName).update({ student_photo_url: csvUrl }).eq('iid', iid).select();
+						if(error){ throw error; }
+						// update DB cell and UI
+						const dbCell = tr.querySelector('td:nth-child(9)');
+						if(dbCell) dbCell.innerHTML = `<a href="${escapeHtml(csvUrl)}" target="_blank" rel="noopener">${escapeHtml(csvUrl)}</a>`;
+						// set DB badge to match/no-match
+						const dbBadge = tr.querySelector('span[data-iid-badge]');
+						if(dbBadge){
+							const fname = csvUrl.split('/').pop().toLowerCase();
+							const expected1 = `avatar-${iid}`.toLowerCase() + '.jpg';
+							const expected2 = `avatar-${iid}`.toLowerCase() + '.png';
+							const isMatch = fname === expected1 || fname === expected2 || fname.includes(iid);
+							dbBadge.className = 'match-badge ' + (isMatch ? 'yes' : 'no');
+							dbBadge.textContent = isMatch ? '✓' : '✗';
+						}
+						status.textContent = 'Saved ✓';
+						btn.style.display = 'none';
+					}catch(err){
+						console.error('Supabase update error', err);
+						status.textContent = 'Save failed';
+						btn.disabled = false;
+					}
+				});
 			});
-		});
 
 		// wire download handlers (force download by fetching blob then creating object URL)
 		document.querySelectorAll('.dl-link').forEach(a=>{
@@ -334,11 +463,7 @@
 
 	// Wire filter controls (defensive)
 	const tableFilterEl = document.getElementById('tableFilter');
-	const searchEl = document.getElementById('search');
-	const refreshBtn = document.getElementById('refreshBtn');
 	if(tableFilterEl) tableFilterEl.addEventListener('change', ()=> applyFilters());
-	if(searchEl) searchEl.addEventListener('input', ()=>{ setTimeout(applyFilters,120) });
-	if(refreshBtn) refreshBtn.addEventListener('click', init);
 
 	// obsolete handler removed
 
