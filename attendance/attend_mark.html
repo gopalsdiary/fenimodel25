@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mark Attendance</title>
+  <style>
+    body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;margin:0;padding:20px;background:linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);color:#1f2937;min-height:100vh}
+    .container{max-width:1200px;margin:0 auto;background:#fff;padding:40px;border-radius:16px;box-shadow:0 20px 40px rgba(249, 115, 22, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);border:1px solid #fed7aa}
+    .attendance-section{display:flex;gap:40px;align-items:flex-start}
+    .section{max-width:50%;flex:1}
+    .section h2{margin:0 0 20px;font-size:24px;color:#ea580c;text-align:center;font-weight:600}
+    .section-left{border-right:2px solid #fed7aa;padding-right:40px}
+    .section-right{padding-left:40px}
+    h1{margin:0 0 30px;font-size:32px;color:#ea580c;text-align:center;font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,0.1)}
+    .form-group{margin-bottom:25px}
+    label{display:block;margin-bottom:8px;font-weight:600;color:#374151;font-size:16px}
+    input[type="text"]{width:100%;padding:16px;border:2px solid #e5e7eb;border-radius:12px;font-size:18px;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;transition:all 0.3s ease;outline:none}
+    input[type="date"],input[type="time"]{width:100%;padding:16px;border:2px solid #e5e7eb;border-radius:12px;font-size:16px;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;transition:all 0.3s ease;outline:none}
+    input[type="date"]:focus,input[type="time"]:focus{border-color:#ea580c;box-shadow:0 0 0 3px rgba(249, 115, 22, 0.1)}
+    .datetime-group{display:flex;gap:15px}
+    .button-description{margin-bottom:15px;text-align:center;color:#6b7280;font-size:14px;font-weight:500}
+    @media (max-width:768px){.attendance-section{flex-direction:column;gap:30px}.section{max-width:100%}.section-left,.section-right{border:none;padding:0}}
+    .btn{background:linear-gradient(135deg, #ea580c 0%, #dc2626 100%);color:#fff;border:none;padding:16px 32px;border-radius:12px;cursor:pointer;font-weight:600;font-size:18px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(249, 115, 22, 0.3);width:100%}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(249, 115, 22, 0.4)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{background:linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);cursor:not-allowed;transform:none}
+    .status-message{margin-top:20px;padding:16px;border-radius:12px;text-align:center;font-weight:600;font-size:16px}
+    .success{background:#d1fae5;color:#065f46;border:1px solid #a7f3d0}
+    .error{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+    .info{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+    .card-preview{margin-top:20px;padding:20px;background:#fef7f0;border-radius:12px;border:2px solid #fed7aa;text-align:center;display:none}
+    .rfid-display{font-size:24px;font-weight:700;color:#ea580c;margin-bottom:10px}
+    .timestamp{font-size:14px;color:#6b7280}
+    .loading-spinner{display:inline-block;width:20px;height:20px;border:3px solid #f3f4f6;border-top:3px solid #ea580c;border-radius:50%;animation:spin 1s linear infinite;margin-right:10px}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎫 Mark Attendance</h1>
+
+    <div class="attendance-section">
+      <!-- Left Section: Automatic Timestamp -->
+      <div class="section section-left">
+        <h2>⚡ Auto Timestamp</h2>
+
+        <form id="autoForm">
+          <div class="form-group">
+            <label for="rfidInputAuto">🆔 Enter RFID Card Number:</label>
+            <input type="text" id="rfidInputAuto" placeholder="Scan or enter RFID card number..." required autocomplete="off">
+          </div>
+
+          <p class="button-description"> এখানে বর্তমান তারিখ এবং সময় স্বয়ংক্রিয়ভাবে রেকর্ড হবে</p>
+
+          <button type="submit" id="submitBtnAuto" class="btn">
+            ✅ Mark Attendance (Auto)
+          </button>
+        </form>
+
+        <div id="statusMessageAuto"></div>
+      </div>
+
+      <!-- Right Section: Manual Timestamp -->
+      <div class="section section-right">
+        <h2>📅 Manual Timestamp</h2>
+        <p class="section-description">Select custom date and time for attendance</p>
+
+        <form id="manualForm">
+          <div class="form-group">
+            <label for="rfidInputManual">🆔 Enter RFID Card Number:</label>
+            <input type="text" id="rfidInputManual" placeholder="Scan or enter RFID card number..." required autocomplete="off">
+          </div>
+
+          <div class="datetime-group">
+            <div class="form-group">
+              <label for="dateInput">📅 Select Date:</label>
+              <input type="date" id="dateInput" required>
+            </div>
+            <div class="form-group">
+              <label for="timeInput">⏰ Select Time:</label>
+              <input type="time" id="timeInput" required>
+            </div>
+          </div>
+
+          <button type="submit" id="submitBtnManual" class="btn">
+            ✅ Mark Attendance (Manual)
+          </button>
+        </form>
+
+        <div id="statusMessageManual"></div>
+      </div>
+    </div>
+
+    <!-- Shared Preview Section -->
+    <div id="cardPreview" class="card-preview">
+      <div class="rfid-display" id="previewRfid"></div>
+      <div class="timestamp" id="previewTimestamp"></div>
+    </div>
+  </div>
+
+  <!-- Load Supabase UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script type="module">
+    // --- CONFIG: replace with your project's values ---
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    // --------------------------------------------------
+
+    let supabase;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    // Get form elements
+    const autoForm = document.getElementById('autoForm');
+    const manualForm = document.getElementById('manualForm');
+    const rfidInputAuto = document.getElementById('rfidInputAuto');
+    const rfidInputManual = document.getElementById('rfidInputManual');
+    const dateInput = document.getElementById('dateInput');
+    const timeInput = document.getElementById('timeInput');
+    const submitBtnAuto = document.getElementById('submitBtnAuto');
+    const submitBtnManual = document.getElementById('submitBtnManual');
+    const statusMessageAuto = document.getElementById('statusMessageAuto');
+    const statusMessageManual = document.getElementById('statusMessageManual');
+    const cardPreview = document.getElementById('cardPreview');
+    const previewRfid = document.getElementById('previewRfid');
+    const previewTimestamp = document.getElementById('previewTimestamp');
+
+    function showStatus(message, type = 'info', isAuto = true) {
+      const target = isAuto ? statusMessageAuto : statusMessageManual;
+      target.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+      setTimeout(() => {
+        target.innerHTML = '';
+      }, 5000);
+    }
+
+    function showCardPreview(rfid, timestamp) {
+      previewRfid.textContent = rfid;
+      previewTimestamp.textContent = `Recorded at: ${timestamp}`;
+      cardPreview.style.display = 'block';
+    }
+
+    function formatTimestamp(date) {
+      const options = {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      };
+      return date.toLocaleString('en-US', options);
+    }
+
+    async function getNextSL(selectedDate) {
+      try {
+        const { data, error } = await supabase
+          .from('attendence_entry')
+          .select('attendence_sl')
+          .eq('attendence_date', selectedDate)
+          .order('attendence_sl', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+
+        const nextSL = data && data.length > 0 ? (data[0].attendence_sl || 0) + 1 : 1;
+        return nextSL;
+      } catch (err) {
+        console.error('Error getting next SL:', err);
+        return 1;
+      }
+    }
+
+    async function submitAttendance(rfid, date, time, isAuto = true, studentData = null) {
+      const submitBtn = isAuto ? submitBtnAuto : submitBtnManual;
+      const rfidInput = isAuto ? rfidInputAuto : rfidInputManual;
+
+      // Disable form during submission
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<span class="loading-spinner"></span>Recording...`;
+
+      try {
+        const nextSL = await getNextSL(date);
+
+        // Insert attendance record
+        const { data, error } = await supabase
+          .from('attendence_entry')
+          .insert([{
+            attendence_sl: nextSL,
+            attendence_date: date,
+            attendence_time: time,
+            rfid_card_no: rfid
+          }])
+          .select();
+
+        if (error) throw error;
+
+        // Success
+        const studentName = studentData?.student_name_en || 'Unknown Student';
+        const timestamp = isAuto ? formatTimestamp(new Date()) : `${date} ${time}`;
+        showStatus(`✅ উপস্থিতি সফলভাবে রেকর্ড করা হয়েছে! SL: ${nextSL} | ছাত্র: ${studentName}`, 'success', isAuto);
+        showCardPreview(rfid, timestamp);
+
+        // Clear form
+        rfidInput.value = '';
+        if (!isAuto) {
+          dateInput.value = '';
+          timeInput.value = '';
+        }
+        rfidInput.focus();
+
+      } catch (err) {
+        console.error('Error marking attendance:', err);
+        showStatus(`❌ Error: ${err.message || 'Failed to mark attendance'}`, 'error', isAuto);
+      } finally {
+        // Re-enable form
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = isAuto ? '✅ Mark Attendance (Auto)' : '✅ Mark Attendance (Manual)';
+      }
+    }
+
+    // Auto form submission
+    autoForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const rfid = rfidInputAuto.value.trim();
+      if (!rfid) {
+        showStatus('Please enter a valid RFID card number.', 'error', true);
+        return;
+      }
+
+      // Validate RFID card
+      const validation = await validateRfidCard(rfid);
+      if (!validation.isValid) {
+        showStatus('❌ এই RFID কার্ড নম্বরটি সার্ভারে নেই। অনুগ্রহ করে সঠিক কার্ড নম্বর দিন।', 'error', true);
+        return;
+      }
+
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().split(' ')[0];
+
+      await submitAttendance(rfid, currentDate, currentTime, true, validation.studentData);
+    });
+
+    // Manual form submission
+    manualForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const rfid = rfidInputManual.value.trim();
+      const selectedDate = dateInput.value;
+      const selectedTime = timeInput.value;
+
+      if (!rfid) {
+        showStatus('Please enter a valid RFID card number.', 'error', false);
+        return;
+      }
+
+      if (!selectedDate || !selectedTime) {
+        showStatus('Please select both date and time.', 'error', false);
+        return;
+      }
+
+      // Validate RFID card
+      const validation = await validateRfidCard(rfid);
+      if (!validation.isValid) {
+        showStatus('❌ এই RFID কার্ড নম্বরটি সার্ভারে নেই। অনুগ্রহ করে সঠিক কার্ড নম্বর দিন।', 'error', false);
+        return;
+      }
+
+      await submitAttendance(rfid, selectedDate, selectedTime, false, validation.studentData);
+    });
+
+    // Set default date for manual form
+    const today = new Date().toISOString().split('T')[0];
+    dateInput.value = today;
+
+    // Auto-focus on first RFID input
+    rfidInputAuto.focus();
+
+    // Handle Enter key for quick submission
+    rfidInputAuto.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        autoForm.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    rfidInputManual.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        manualForm.dispatchEvent(new Event('submit'));
+      }
+    });
+  </script>
+</body>
+</html>

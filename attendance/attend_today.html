@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Today's Attendance</title>
+  <style>
+    body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;margin:0;padding:20px;background:linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);color:#1f2937;min-height:100vh}
+    .container{max-width:1200px;margin:0 auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 20px 40px rgba(249, 115, 22, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);border:1px solid #fed7aa}
+    h1{margin:0 0 20px;font-size:28px;color:#ea580c;text-align:center;font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,0.1)}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;justify-content:center}
+    .btn{background:linear-gradient(135deg, #ea580c 0%, #dc2626 100%);color:#fff;border:none;padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:600;font-size:16px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(249, 115, 22, 0.3)}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(249, 115, 22, 0.4)}
+    .btn:active{transform:translateY(0)}
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+    th,td{padding:16px;text-align:left;border-bottom:1px solid #f3f4f6;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
+    th{background:linear-gradient(135deg, #ea580c 0%, #f97316 100%);color:#fff;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    tbody tr{background:#fff;transition:background 0.2s ease}
+    tbody tr:nth-child(even){background:#fef7f0}
+    tbody tr:hover{background:#fed7aa}
+    .muted{color:#9ca3af;font-size:14px;text-align:center;padding:40px}
+    .error{color:#dc2626;background:#fef2f2;padding:12px;border-radius:8px;border-left:4px solid #dc2626;margin-bottom:20px;display:none}
+    .status-badge{display:inline-block;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .status-present{background:#10b981;color:#fff}
+    .status-absent{background:#ef4444;color:#fff}
+    .date-highlight{font-weight:700;color:#ea580c}
+    .rfid-code{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:#f3f4f6;padding:4px 8px;border-radius:6px;font-size:14px}
+    .student-name{font-weight:600;color:#374151;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
+    .time-display{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px;color:#6b7280}
+    .btn-print{background: linear-gradient(135deg, #059669 0%, #047857 100%);}
+    @media print {
+      .btn, .btn-print, .controls, .print-section { display: none !important; }
+      .container { box-shadow: none; border: 1px solid #ccc; }
+      h1 { color: #000; font-size: 24px; }
+      body { background: white; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="pageTitle">📅 Today's Attendance</h1>
+    <div class="controls">
+      <button id="refresh" class="btn">🔄 Refresh</button>
+      <div id="status" class="muted">Ready</div>
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div class="table-header">
+      <div class="table-title">Attendance Records</div>
+      <div id="recordCount" class="record-count">0 records</div>
+    </div>
+
+    <table id="reportTable">
+      <thead>
+        <tr><th>SL</th><th>📅 Date</th><th>⏰ Time</th><th>🎫 RFID</th><th>🆔 IID</th><th>👤 Student Name</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="print-section">
+      <button onclick="window.print()" class="btn btn-print">🖨️ Print Report</button>
+    </div>
+  </div>
+
+  <!-- Load Supabase UMD (creates window.supabase). If not present, the module import will be used. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script type="module">
+    // --- CONFIG: replace with your project's values ---
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    // --------------------------------------------------
+
+    // Supabase client is now configured
+
+    // Prefer the UMD client created on window (admin-dashboard does this). Fall back to ESM createClient import.
+    let supabase;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    const tableBody = document.querySelector('#reportTable tbody');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+    const recordCountEl = document.getElementById('recordCount');
+
+    // Today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split('T')[0];
+    const formattedDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    // Update page title with date
+    const titleElement = document.getElementById('pageTitle');
+    if (titleElement) {
+      titleElement.textContent = `📅 ${formattedDate} Attendance`;
+    }
+
+    // Map for rfid to student data lookup
+    let rfidToData = new Map();
+
+    async function loadStudents() {
+      try {
+        const { data, error } = await supabase
+          .from('student_database')
+          .select('iid, rfid_card_no, student_name_en')
+          .not('rfid_card_no', 'is', null);
+
+        if (error) throw error;
+
+        rfidToData = new Map(data.map(row => [row.rfid_card_no, { iid: row.iid, name: row.student_name_en }]));
+      } catch (err) {
+        console.warn('Could not load student data for lookup:', err);
+      }
+    }
+
+    async function loadEntries() {
+      statusEl.textContent = 'Loading...';
+      errorEl.style.display = 'none';
+      try {
+        const { data, error } = await supabase
+          .from('attendence_entry')
+          .select('*')
+          .eq('attendence_date', today)
+          .order('attendence_sl', { ascending: false });
+
+        if (error) throw error;
+
+        tableBody.innerHTML = '';
+        if (!data || data.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="6" class="muted">No attendance records found for today. 📭</td></tr>';
+          statusEl.textContent = `No records for ${today}`;
+          recordCountEl.textContent = '0 records';
+          return;
+        }
+
+        recordCountEl.textContent = `${data.length} records`;
+
+        for (const row of data) {
+          const tr = document.createElement('tr');
+          const date = row.attendence_date ? new Date(row.attendence_date).toLocaleDateString() : '';
+          
+          // Format time properly
+          let timeDisplay = '';
+          if (row.attendence_time) {
+            const timeStr = row.attendence_time;
+            // Handle different time formats from database
+            if (timeStr.includes(':')) {
+              const [hours, minutes] = timeStr.split(':');
+              const hour24 = parseInt(hours);
+              const ampm = hour24 >= 12 ? 'PM' : 'AM';
+              const hour12 = hour24 % 12 || 12;
+              timeDisplay = `${hour12}:${minutes} ${ampm}`;
+            } else {
+              timeDisplay = timeStr;
+            }
+          }
+          
+          const studentData = rfidToData.get(row.rfid_card_no);
+          const iid = studentData?.iid || '';
+          const name = studentData?.name || '';
+          tr.innerHTML = `
+            <td>${row.attendence_sl ?? ''}</td>
+            <td class="date-highlight">${date}</td>
+            <td class="time-display">${timeDisplay}</td>
+            <td class="rfid-code">${row.rfid_card_no ?? ''}</td>
+            <td>${iid}</td>
+            <td class="student-name">${name}</td>
+          `;
+          tableBody.appendChild(tr);
+        }
+
+        statusEl.textContent = `Loaded ${data.length} attendance records for ${today} ✅`;
+      } catch (err) {
+        console.error(err);
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Error loading data: ' + (err.message || JSON.stringify(err));
+        statusEl.textContent = 'Error';
+      }
+    }
+
+    // Function to handle Assign button click
+    window.assignRfid = async function(rfid, buttonEl) {
+      const enteredIid = prompt(`Enter IID to assign RFID: ${rfid}`);
+      if (enteredIid && enteredIid.trim()) {
+        const iid = enteredIid.trim();
+        try {
+          // Check if IID exists
+          const { data: existing, error: checkError } = await supabase
+            .from('student_database')
+            .select('iid, rfid_card_no')
+            .eq('iid', iid)
+            .single();
+
+          if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
+            throw checkError;
+          }
+
+          if (!existing) {
+            alert('Error: IID not found in student database. Please enter a valid IID.');
+            return;
+          }
+
+          if (existing.rfid_card_no) {
+            const confirmOverwrite = confirm(`IID ${iid} already has RFID: ${existing.rfid_card_no}. Overwrite?`);
+            if (!confirmOverwrite) return;
+          }
+
+          // Proceed with update
+          const { error: updateError } = await supabase
+            .from('student_database')
+            .update({ rfid_card_no: rfid })
+            .eq('iid', iid);
+
+          if (updateError) throw updateError;
+
+          alert('RFID assigned successfully to IID: ' + iid);
+          // Refresh data to reflect changes
+          await loadStudents();
+          await loadEntries();
+        } catch (err) {
+          alert('Error: ' + (err.message || 'Unknown error'));
+          console.error('Assign error:', err);
+        }
+      }
+    };
+
+    document.getElementById('refresh').addEventListener('click', loadEntries);
+
+    // Initial load
+    loadStudents().then(() => loadEntries());
+  </script>
+</body>
+</html>
