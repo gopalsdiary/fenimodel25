@@ -47,6 +47,17 @@
             .brand-badge { font-size:.7rem; letter-spacing:1px; padding:.35rem .6rem; border:1px solid var(--border); border-radius:999px; background:linear-gradient(120deg,var(--bg-alt),rgba(255,255,255,.4)); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
             .mode-toggle { background:var(--bg-alt); border:1px solid var(--border); color:var(--text-soft); padding:.55rem .9rem; border-radius:10px; font-size:.75rem; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:.45rem; box-shadow:var(--shadow); transition:.35s; }
             .mode-toggle:hover { color:var(--text); }
+            /* Battery-like cache indicator */
+            .cache-wrap { display:flex; align-items:center; gap:.5rem; }
+            .cache-battery { position:relative; width:54px; height:18px; border:2px solid var(--border); border-radius:5px; background:var(--bg-alt); box-shadow:var(--shadow) inset; display:flex; align-items:center; padding:1px 2px; }
+            .cache-battery .cap { position:absolute; right:-6px; width:4px; height:10px; background:var(--border); border-radius:2px; }
+            .cache-battery .bar { display:grid; grid-template-columns:1fr 1fr; gap:2px; width:100%; height:100%; }
+            .cache-battery .seg { border-radius:2px; background:#e2e8f0; transition:background .3s ease, filter .3s ease; }
+            .cache-battery .seg.ok { background:#22c55e; }
+            .cache-battery .seg.warm { background:#f59e0b; }
+            .cache-label { font-size:.68rem; color:var(--text-soft); user-select:none; }
+            .dark .cache-battery { background:var(--bg); border-color:var(--border); }
+            .dark .cache-battery .seg { background:#334155; }
             .container { width:100%; max-width:1150px; margin:0 auto; padding:0 1.2rem 3rem; }
             .gate-card { margin:2.2rem auto 2.8rem; max-width:420px; background:var(--bg-alt); border:1px solid var(--border); border-radius:var(--radius); padding:2.25rem 2.1rem 2.4rem; box-shadow:var(--shadow); position:relative; overflow:hidden; }
             .gate-card:before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 85% 15%,rgba(99,102,241,.15),transparent 60%); pointer-events:none; }
@@ -122,7 +133,17 @@
                 <h1>Feni Model High School</h1>
                 <span class="brand-badge">RESULT · Testimonial - Transfer Certificate</span>
             </div>
-            <button class="mode-toggle" id="modeToggle" aria-label="Toggle dark mode">🌙 Theme</button>
+            <div class="cache-wrap">
+                <div class="cache-battery" id="cacheBattery" title="Data cache status">
+                    <div class="cap"></div>
+                    <div class="bar">
+                        <span class="seg" id="segAllData" title="All Data (all_data_field.html)"></span>
+                        <span class="seg" id="segDatalist" title="Datalist (datalist.html)"></span>
+                    </div>
+                </div>
+                <span class="cache-label" id="cacheLabel">Cache: —</span>
+                <button class="mode-toggle" id="modeToggle" aria-label="Toggle dark mode">🌙 Theme</button>
+            </div>
         </header>
         <div class="container">
             <section id="passwordSection" class="gate-card" aria-labelledby="gateTitle">
@@ -490,7 +511,8 @@
                     document.getElementById('passwordSection').style.display = 'none';
                     document.getElementById('examSection').style.display = 'block';
                     // Do NOT restart timeout here to avoid perpetual extension; start/refresh only on activity
-                    cacheAllDataFieldIfNeeded();
+                    // Warm caches in background
+                    ensureCaches(false);
                 } else {
                     logout();
                 }
@@ -521,12 +543,12 @@
                     }
                 }
 
-                async function cacheAllDataFieldIfNeeded(){
+                async function cacheAllDataFieldIfNeeded(force=false){
                     try{
                         const now = Date.now();
                         const exp = Number(sessionStorage.getItem(ALL_DATA_EXP_KEY) || 0);
                         const cached = sessionStorage.getItem(ALL_DATA_KEY);
-                        if(cached && exp && now < exp){
+                        if(!force && cached && exp && now < exp){
                             scheduleAllDataExpiry(exp - now);
                             return;
                         }
@@ -538,16 +560,21 @@
                         sessionStorage.setItem(ALL_DATA_EXP_KEY, String(expiresAt));
                         scheduleAllDataExpiry(ALL_DATA_TTL);
                             // Also attempt to load the real page in background so its JS can warm localStorage cache
-                            backgroundLoadAllDataFieldPageIfNeeded();
+                            backgroundLoadAllDataFieldPageIfNeeded(force);
                     }catch(e){ /* ignore */ }
                 }
 
                     // Insert a hidden iframe to actually run /0newdatabase/all_data_field.html
-                    function backgroundLoadAllDataFieldPageIfNeeded(){
+                    function backgroundLoadAllDataFieldPageIfNeeded(force=false){
                         try{
-                            // if session copy exists, or the all-data cache key exists in localStorage, skip
-                            if(sessionStorage.getItem(ALL_DATA_EXP_KEY) && sessionStorage.getItem(ALL_DATA_KEY)) return;
-                            if(localStorage.getItem('all_data_field_cache_v1')) return;
+                            // if session copy exists, or the all-data cache key exists in localStorage and fresh, skip (unless forced)
+                            if(!force && sessionStorage.getItem(ALL_DATA_EXP_KEY) && sessionStorage.getItem(ALL_DATA_KEY)) return;
+                            if(!force){
+                                const ad = localStorage.getItem('all_data_field_cache_v1');
+                                if(ad){
+                                    try{ const obj = JSON.parse(ad); if(obj && Array.isArray(obj.rows) && obj.rows.length>0 && (Date.now() - (obj.ts||0)) < 10*60*1000) return; }catch(_){/*ignore*/}
+                                }
+                            }
                             const ifr = document.createElement('iframe');
                             ifr.style.width = '1px'; ifr.style.height = '1px'; ifr.style.border = '0';
                             ifr.style.position = 'absolute'; ifr.style.left = '-9999px'; ifr.style.top = '-9999px';
@@ -558,6 +585,75 @@
                             setTimeout(()=>{ try{ ifr.remove(); }catch(e){} }, 60000);
                         }catch(e){ /* ignore */ }
                     }
+
+                // Warm-up loader for datalist.html (to populate localStorage 'datalist_rows_v2')
+                const DATALIST_CACHE_KEY = 'datalist_rows_v2';
+                const DATALIST_TTL = 10 * 60 * 1000;
+                function backgroundLoadDatalistPageIfNeeded(force=false){
+                    try{
+                        if(!force){
+                            const dl = localStorage.getItem(DATALIST_CACHE_KEY);
+                            if(dl){
+                                try{ const obj = JSON.parse(dl); if(obj && Array.isArray(obj.rows) && obj.rows.length>0 && (Date.now() - (obj.ts||0)) < DATALIST_TTL) return; }catch(_){/*ignore*/}
+                            }
+                        }
+                        const ifr = document.createElement('iframe');
+                        ifr.style.width = '1px'; ifr.style.height = '1px'; ifr.style.border = '0';
+                        ifr.style.position = 'absolute'; ifr.style.left = '-9999px'; ifr.style.top = '-9999px';
+                        ifr.loading = 'lazy';
+                        ifr.src = '0newdatabase/datalist.html';
+                        document.body.appendChild(ifr);
+                        setTimeout(()=>{ try{ ifr.remove(); }catch(e){} }, 60000);
+                    }catch(e){ /* ignore */ }
+                }
+
+                // Battery UI updater
+                function getCacheInfo(){
+                    let allOk=false, listOk=false, allRows=0, listRows=0;
+                    try{
+                        const ad = localStorage.getItem('all_data_field_cache_v1');
+                        if(ad){ const obj = JSON.parse(ad); if(obj && Array.isArray(obj.rows)){ allRows = obj.rows.length; allOk = obj.rows.length>0; } }
+                    }catch(_){ }
+                    try{
+                        const dl = localStorage.getItem(DATALIST_CACHE_KEY);
+                        if(dl){ const obj = JSON.parse(dl); if(obj && Array.isArray(obj.rows)){ listRows = obj.rows.length; listOk = obj.rows.length>0; } }
+                    }catch(_){ }
+                    return { allOk, listOk, allRows, listRows };
+                }
+                function updateCacheBattery(){
+                    const { allOk, listOk, allRows, listRows } = getCacheInfo();
+                    const segAll = document.getElementById('segAllData');
+                    const segList = document.getElementById('segDatalist');
+                    const label = document.getElementById('cacheLabel');
+                    if(segAll){ segAll.classList.toggle('ok', !!allOk); segAll.classList.toggle('warm', !allOk); }
+                    if(segList){ segList.classList.toggle('ok', !!listOk); segList.classList.toggle('warm', !listOk); }
+                    if(label){
+                        const a = allOk ? `All ✓${allRows?` (${allRows})`:''}` : 'All …';
+                        const d = listOk ? `List ✓${listRows?` (${listRows})`:''}` : 'List …';
+                        label.textContent = `Cache: ${a} | ${d}`;
+                    }
+                }
+                function ensureCaches(force=false){
+                    // Trigger both loaders
+                    cacheAllDataFieldIfNeeded(force);
+                    backgroundLoadAllDataFieldPageIfNeeded(force);
+                    backgroundLoadDatalistPageIfNeeded(force);
+                    // Start polling until both are ready, then stop
+                    if(window.__cachePoll) clearInterval(window.__cachePoll);
+                    window.__cachePoll = setInterval(()=>{
+                        updateCacheBattery();
+                        const info = getCacheInfo();
+                        if(info.allOk && info.listOk){ clearInterval(window.__cachePoll); window.__cachePoll = null; }
+                    }, 2000);
+                    // Also update immediately
+                    updateCacheBattery();
+                }
+                // React to localStorage changes from iframes
+                window.addEventListener('storage', (e)=>{
+                    if(e.key === 'all_data_field_cache_v1' || e.key === DATALIST_CACHE_KEY){
+                        updateCacheBattery();
+                    }
+                });
 
                 function initAllDataCacheOnLoad(){
                     const now = Date.now();
@@ -605,10 +701,11 @@
                             lastActivityTime = Date.now();
                             attachActivityListeners();
                             startSessionTimeout();
-                            cacheAllDataFieldIfNeeded();
+                            ensureCaches(false);
                         }
                         initSecondaryToggle();
                         document.getElementById('year').textContent = new Date().getFullYear();
+                        updateCacheBattery();
                 };
         
         // Check session validity periodically (every minute)
@@ -878,6 +975,8 @@
             setTimeout(() => {
                 showInstallPopup();
             }, 1000); // Delay 1 second to let the page load
+            // Force-load caches after login
+            ensureCaches(true);
         }
     };
     </script>
