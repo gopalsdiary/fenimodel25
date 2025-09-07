@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Attendance Report</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:18px;background:#f7fafc;color:#0f1724}
+    .container{max-width:980px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,36,.06)}
+    h1{margin:0 0 8px;font-size:20px}
+    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    .btn{background:#0b74de;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
+    th{background:#f1f5f9}
+    .muted{color:#64748b;font-size:13px}
+    .error{color:#b91c1c}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Attendance Report</h1>
+    <div class="controls">
+      <button id="refresh" class="btn">Refresh</button>
+      <div id="status" class="muted">Ready</div>
+    </div>
+
+    <div id="error" class="error" style="display:none"></div>
+
+    <table id="reportTable">
+      <thead>
+        <tr><th>SL</th><th>Date</th><th>RFID</th><th>Time</th><th>IID</th><th>Student Name</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Load Supabase UMD (creates window.supabase). If not present, the module import will be used. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script type="module">
+    // --- CONFIG: replace with your project's values ---
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    // --------------------------------------------------
+
+    // Supabase client is now configured
+
+    // Prefer the UMD client created on window (admin-dashboard does this). Fall back to ESM createClient import.
+    let supabase;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    const tableBody = document.querySelector('#reportTable tbody');
+    const statusEl = document.getElementById('status');
+    const errorEl = document.getElementById('error');
+
+    // Map for rfid to student data lookup
+    let rfidToData = new Map();
+
+    async function loadStudents() {
+      try {
+        const { data, error } = await supabase
+          .from('student_database')
+          .select('iid, rfid_card_no, student_name_en')
+          .not('rfid_card_no', 'is', null);
+
+        if (error) throw error;
+
+        rfidToData = new Map(data.map(row => [row.rfid_card_no, { iid: row.iid, name: row.student_name_en }]));
+      } catch (err) {
+        console.warn('Could not load student data for lookup:', err);
+      }
+    }
+
+    async function loadEntries() {
+      statusEl.textContent = 'Loading...';
+      errorEl.style.display = 'none';
+      try {
+        const { data, error } = await supabase
+          .from('attendence_entry')
+          .select('*')
+          .order('attendence_sl', { ascending: false })
+          .limit(500);
+
+        if (error) throw error;
+
+        tableBody.innerHTML = '';
+        if (!data || data.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="6" class="muted">No records found.</td></tr>';
+          statusEl.textContent = 'No records';
+          return;
+        }
+
+        for (const row of data) {
+          const tr = document.createElement('tr');
+          const date = row.attendence_date ? new Date(row.attendence_date).toLocaleDateString() : '';
+          const studentData = rfidToData.get(row.rfid_card_no);
+          const iid = studentData?.iid || '';
+          const name = studentData?.name || '';
+          const iidCell = iid ? iid : `<button style="background: #ff9800; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;" onclick="assignRfid('${row.rfid_card_no}', this)">Assign</button>`;
+          tr.innerHTML = `
+            <td>${row.attendence_sl ?? ''}</td>
+            <td>${date}</td>
+            <td>${row.rfid_card_no ?? ''}</td>
+            <td>${row.attendence_time ?? ''}</td>
+            <td>${iidCell}</td>
+            <td>${name}</td>
+          `;
+          tableBody.appendChild(tr);
+        }
+
+        statusEl.textContent = `Loaded ${data.length} rows`;
+      } catch (err) {
+        console.error(err);
+        errorEl.style.display = 'block';
+        errorEl.textContent = 'Error loading data: ' + (err.message || JSON.stringify(err));
+        statusEl.textContent = 'Error';
+      }
+    }
+
+    // Function to handle Assign button click
+    window.assignRfid = async function(rfid, buttonEl) {
+      const enteredIid = prompt(`Enter IID to assign RFID: ${rfid}`);
+      if (enteredIid && enteredIid.trim()) {
+        const iid = enteredIid.trim();
+        try {
+          // Check if IID exists
+          const { data: existing, error: checkError } = await supabase
+            .from('student_database')
+            .select('iid, rfid_card_no')
+            .eq('iid', iid)
+            .single();
+
+          if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
+            throw checkError;
+          }
+
+          if (!existing) {
+            alert('Error: IID not found in student database. Please enter a valid IID.');
+            return;
+          }
+
+          if (existing.rfid_card_no) {
+            const confirmOverwrite = confirm(`IID ${iid} already has RFID: ${existing.rfid_card_no}. Overwrite?`);
+            if (!confirmOverwrite) return;
+          }
+
+          // Proceed with update
+          const { error: updateError } = await supabase
+            .from('student_database')
+            .update({ rfid_card_no: rfid })
+            .eq('iid', iid);
+
+          if (updateError) throw updateError;
+
+          alert('RFID assigned successfully to IID: ' + iid);
+          // Refresh data to reflect changes
+          await loadStudents();
+          await loadEntries();
+        } catch (err) {
+          alert('Error: ' + (err.message || 'Unknown error'));
+          console.error('Assign error:', err);
+        }
+      }
+    };
+
+    document.getElementById('refresh').addEventListener('click', loadEntries);
+
+    // Initial load
+    loadStudents().then(() => loadEntries());
+  </script>
+</body>
+</html>
