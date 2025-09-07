@@ -1,0 +1,123 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Attendance System - Menu</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#f5f7fb;--card:#ffffff;--accent:#ff9800;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{font-family:'Rubik',system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:#0f1724}
+    .wrap{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:4px 0 0;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:18px}
+    .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 6px 18px rgba(15,23,36,0.06);display:flex;flex-direction:column;gap:12px;transition:transform .18s ease,box-shadow .18s ease;text-decoration:none;color:inherit}
+    .card:hover{transform:translateY(-6px);box-shadow:0 18px 36px rgba(15,23,36,0.12)}
+    .card .title{display:flex;align-items:center;gap:12px}
+    .icon{width:44px;height:44px;border-radius:10px;display:inline-grid;place-items:center;color:white;flex:0 0 44px}
+    .icon.att{background:linear-gradient(135deg,var(--accent),#fb8c00)}
+    .icon.view{background:linear-gradient(135deg,#06b6d4,#06a6d3)}
+    .icon.report{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
+    .icon.manage{background:linear-gradient(135deg,#10b981,#059669)}
+    .icon.import{background:linear-gradient(135deg,#ef4444,#dc2626)}
+    .icon.settings{background:linear-gradient(135deg,#64748b,#475569)}
+    .card h3{margin:0;font-size:16px}
+    .card p{margin:0;color:var(--muted);font-size:13px}
+    .actions{margin-top:auto;display:flex;gap:8px}
+    .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block}
+    .btn.ghost{background:transparent;border:1px solid #e6e9ee;color:var(--muted);font-weight:500}
+    footer{margin-top:22px;color:var(--muted);font-size:13px}
+    @media (max-width:420px){.wrap{padding:12px}.icon{width:40px;height:40px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+  <h1>Attendance System</h1>
+  <p class="lead">Choose an action from the menu — mark attendance, view reports or manage students.</p>
+      </div>
+      <div>
+  <a href="/" class="btn" style="background:#374151;border-radius:10px;padding:8px 12px">Dashboard</a>
+      </div>
+    </header>
+
+    <div class="grid">
+      <a class="card" href="attend_mark.html">
+        <div class="title">
+          <div class="icon att">📥</div>
+          <div>
+            <h3>Mark Attendance</h3>
+            <p>Mark today's students present in real-time.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">Open</span><span class="btn ghost">Scan RFID</span></div>
+      </a>
+
+      <a class="card" href="attend_today.html">
+        <div class="title">
+          <div class="icon view">👁️</div>
+          <div>
+            <h3>Today's Attendance</h3>
+            <p>Quickly view the present/absent list for today.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">View</span><span class="btn ghost">Print</span></div>
+      </a>
+
+      <a class="card" href="attend_report.html">
+        <div class="title">
+          <div class="icon report">📊</div>
+          <div>
+            <h3>Reports</h3>
+            <p>Filter and generate monthly or yearly attendance reports.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">Reports</span><span class="btn ghost">Export CSV</span></div>
+      </a>
+
+      <a class="card" href="manage_students.html">
+        <div class="title">
+          <div class="icon manage">👥</div>
+          <div>
+            <h3>Students Management</h3>
+            <p>Add new students or edit existing student information.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">Manage</span><span class="btn ghost">Import List</span></div>
+      </a>
+
+      <a class="card" href="import_export.html">
+        <div class="title">
+          <div class="icon import">⬆️⬇️</div>
+          <div>
+            <h3>Import / Export</h3>
+            <p>Import data via CSV or export reports.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">Import</span><span class="btn ghost">Export</span></div>
+      </a>
+
+      <a class="card" href="attend_settings.html">
+        <div class="title">
+          <div class="icon settings">⚙️</div>
+          <div>
+            <h3>Settings</h3>
+            <p>Configure time, class/section setup and other preferences.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">Settings</span><span class="btn ghost">Help</span></div>
+      </a>
+    </div>
+
+    <footer>
+  Helpful links: If any page is missing, create the files with the shown names — e.g. `attend_mark.html`, `attend_today.html`, etc.
+    </footer>
+  </div>
+</body>
+</html>
+
