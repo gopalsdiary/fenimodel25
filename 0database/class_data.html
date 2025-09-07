@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width,initial-scale=1">
+	<title>Class Data</title>
+	<style>
+		body{font-family:Arial,Helvetica,sans-serif;padding:16px;background:#f7f7fb}
+		#title{background:#fff;padding:14px 18px;border-radius:12px;box-shadow:0 8px 25px rgba(0,0,0,.06);display:block;max-width:720px;margin:0 auto 8px;text-align:center}
+		.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:10px 0;max-width:720px;margin-left:auto;margin-right:auto}
+		.search{flex:1;min-width:240px;max-width:520px}
+		.search input{width:100%;padding:10px 14px;border:1px solid #e5e7eb;border-radius:22px;outline:none;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+		.toggle-name{white-space:nowrap;margin-left:auto;display:flex;align-items:center;gap:8px}
+		#status{margin:6px 0;color:#475569;max-width:720px;margin-left:auto;margin-right:auto}
+		.card{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border-radius:12px;padding:14px 16px;margin:12px 0;border:1px solid #e5e7eb;cursor:pointer;transition:transform .06s ease, box-shadow .2s ease}
+		.card:hover{transform:translateY(-1px)}
+		.card:nth-child(3n+1){box-shadow:0 2px 12px rgba(59,130,246,.16);border-color:rgba(59,130,246,.35)}
+		.card:nth-child(3n+2){box-shadow:0 2px 12px rgba(16,185,129,.16);border-color:rgba(16,185,129,.35)}
+		.card:nth-child(3n){box-shadow:0 2px 12px rgba(245,158,11,.2);border-color:rgba(245,158,11,.35)}
+		.card .left{font-weight:700;letter-spacing:.06em;min-width:74px;color:#0f172a;text-transform:uppercase}
+		.card .center{flex:1;text-align:center}
+		.card .center .title{font-weight:700;letter-spacing:.04em;color:#0f172a}
+		.card .center .sub{margin-top:4px;font-size:12px;color:#64748b}
+		.card .right{min-width:44px;text-align:right;font-weight:800;color:#0f172a}
+		.active-compact{max-width:420px;margin:8px auto;color:#374151;font-size:13px;text-align:center;padding:6px 10px;border-radius:8px}
+	</style>
+</head>
+<body>
+	<h2 id="title">Feni Model High School</h2>
+	<div id="active-info" class="active-compact">Active: <span id="active-values">—</span></div>
+	<div class="toolbar">
+		<div class="search"><input id="search" type="text" placeholder="Search..."></div>
+		<label class="toggle-name"><input id="show-name" type="checkbox"> student name</label>
+	</div>
+	<div id="status">Loading...</div>
+	<div id="table-wrap"></div>
+
+	<script>
+		function q(name){ const u=new URLSearchParams(location.search); return u.get(name); }
+
+		// Load data produced by 0newdatabase/datalist.html (stored in localStorage under 'datalist_rows_v2').
+		function readDatalistCache(){
+			try{
+				const raw = localStorage.getItem('datalist_rows_v2');
+				if(!raw) return null;
+				const obj = JSON.parse(raw);
+				if(!obj || !Array.isArray(obj.rows)) return null;
+				return obj.rows;
+			}catch(e){ return null; }
+		}
+
+		async function ensureDatalistRows(){
+			// Try cache first
+			let rows = readDatalistCache();
+			if(rows) return rows;
+			// If not present, load the datalist page in a hidden iframe to populate cache, then poll
+			const statusEl = document.getElementById('status');
+			statusEl.textContent = 'Preparing data source (opening datalist)…';
+			let iframe = document.getElementById('datalist-preloader');
+			if(!iframe){
+				iframe = document.createElement('iframe');
+				iframe.id = 'datalist-preloader';
+				iframe.style.display = 'none';
+				iframe.src = '../0newdatabase/datalist.html';
+				document.body.appendChild(iframe);
+			}
+			// Poll up to ~30s
+			const maxWaitMs = 30000;
+			const start = Date.now();
+			while(Date.now()-start < maxWaitMs){
+				await new Promise(r=> setTimeout(r, 500));
+				rows = readDatalistCache();
+				if(rows){ statusEl.textContent = 'Data source ready (from datalist)'; return rows; }
+				statusEl.textContent = 'Waiting for datalist data…';
+			}
+			throw new Error('datalist.html did not provide data in time');
+		}
+
+		(async function(){
+			// Accept multiple param names for compatibility
+			let cls = q('active_class') || q('class') || q('cls') || '';
+			let sec = q('active_section') || q('section') || '';
+			// accept combined "class-section" in class param like "10-Morning"
+			if(cls && cls.includes('-') && !sec){
+				const parts = cls.split('-');
+				cls = (parts[0]||'').trim();
+				sec = (parts.slice(1).join('-')||'').trim();
+			}
+			let roll = q('active_roll') || q('roll') || '';
+
+			document.getElementById('active-values').textContent = `class=${cls || '—'}, section=${sec || '—'}, roll=${roll || '—'}`;
+			try{
+				const rawRows = await ensureDatalistRows();
+				// Compute active fields similar to datalist.html
+				function toActive(r){
+					const sNum = Number(r.session);
+					let active_class = '', active_section = '', active_roll = '';
+					if(Number.isFinite(sNum) && sNum === 2026){
+						active_class = r.class_2026 ?? '';
+						active_section = r.section_2026 ?? '';
+						active_roll = r.roll_2026 ?? '';
+					}else if(Number.isFinite(sNum) && sNum === 2025){
+						active_class = r.class_2025 ?? '';
+						active_section = r.section_2025 ?? '';
+						active_roll = r.roll_2025 ?? '';
+					}
+					return { ...r, active_class, active_section, active_roll };
+				}
+				const rows = rawRows.map(toActive);
+
+				function normClassToken(v){
+					const s = String(v||'').trim().toLowerCase();
+					const map = { six:6, seven:7, eight:8, nine:9, ten:10, xi:11, eleven:11, xii:12, twelve:12 };
+					if(s in map) return String(map[s]);
+					const n = parseInt(s); return isNaN(n) ? s : String(n);
+				}
+				function primarySectionToken(val){
+					const s = String(val||'').trim().toLowerCase();
+					if(!s) return '';
+					const cleaned = s.replace(/\s*-\s*/g,'-');
+					return cleaned.split(/[-\s]+/).filter(Boolean)[0] || '';
+				}
+
+				const clsNormRaw = String(cls||'').trim().toLowerCase();
+				const secNorm = String(sec||'').trim().toLowerCase();
+				const clsNorm = normClassToken(clsNormRaw);
+				const combinedParam = (!secNorm && clsNormRaw.includes('-')) ? clsNormRaw.replace(/\s+/g,'') : null;
+				const bothCombinedParam = (clsNormRaw && secNorm) ? (clsNormRaw + '-' + secNorm).replace(/\s+/g,'') : null;
+
+				const filtered = rows.filter(r=>{
+					const aClassRaw = String(r.active_class||'').trim().toLowerCase();
+					const aClass = normClassToken(aClassRaw);
+					const aSection = String(r.active_section||'').trim().toLowerCase();
+					const aSectionPrimary = primarySectionToken(aSection);
+
+					// Combined first
+					if(combinedParam){
+						if(aClassRaw){
+							const recKey = (aClassRaw + '-' + (aSectionPrimary || aSection)).replace(/\s+/g,'');
+							if(recKey === combinedParam) return true;
+						}
+						return false;
+					}
+					if(bothCombinedParam){
+						if(aClassRaw){
+							const k = (aClassRaw + '-' + (aSectionPrimary || aSection)).replace(/\s+/g,'');
+							if(k === bothCombinedParam) return true;
+						}
+					}
+
+					const clsNum = parseInt(clsNorm);
+					const aClassNum = parseInt(aClass);
+					const classMatch = cls ? ((!isNaN(clsNum) && !isNaN(aClassNum)) ? (clsNum===aClassNum) : (aClass===clsNorm)) : true;
+					let sectionMatch = true;
+					if(secNorm){
+						const tokens = aSection.replace(/\s*-\s*/g,'-').split(/[-\s]+/).filter(Boolean);
+						sectionMatch = (aSection===secNorm) || (aSectionPrimary===secNorm) || tokens.includes(secNorm);
+					}
+					let rollMatch = true;
+					if(roll){ rollMatch = String(r.active_roll||'').trim().toLowerCase() === String(roll).trim().toLowerCase(); }
+					return classMatch && sectionMatch && rollMatch;
+				});
+
+				// If roll not provided but only one record matches, use that roll as active_roll
+				if(!roll && filtered.length===1){ roll = filtered[0].active_roll || ''; document.getElementById('active-values').textContent = `class=${cls || '—'}, section=${sec || '—'}, roll=${roll || '—'}`; }
+
+				function classToWord(v){
+					const m = { '6':'SIX','7':'SEVEN','8':'EIGHT','9':'NINE','10':'TEN','xi':'ELEVEN','xii':'TWELVE' };
+					const key = String(v).trim().toLowerCase();
+					return (m[key]||String(v)).toString().toUpperCase();
+				}
+
+				// Render function (rows -> UI). Map to simple view model to reuse UI.
+				function renderCards(rows, showName){
+					const list = rows.slice().sort((a,b)=> (parseInt(a.active_roll)||0) - (parseInt(b.active_roll)||0));
+					if(list.length===0){ document.getElementById('status').textContent = 'No records found (source: datalist)'; document.getElementById('table-wrap').innerHTML = ''; return; }
+					document.getElementById('status').textContent = `${list.length} students (source: datalist)`;
+					let html = '';
+					list.forEach(f=> {
+						const left = classToWord(f.active_class||'');
+						html += `<div class="card" onclick="window.location.href='/0newdatabase/detailsinfo.html?iid=${f.iid||''}'">`;
+						html += `<div class="left">${left}</div>`;
+						html += `<div class="center"><div class="title">${(f.active_section||'').toString().toUpperCase()}</div>`;
+						if(showName) html += `<div class="sub">${(f.student_name_en||'')}</div>`;
+						html += `</div>`;
+						html += `<div class="right">${f.active_roll||''}</div>`;
+						html += `</div>`;
+					});
+					document.getElementById('table-wrap').innerHTML = html;
+				}
+
+				// Initial render + search wiring
+				const showNameCheckbox = document.getElementById('show-name');
+				const searchInput = document.getElementById('search');
+				function doRender(){
+					const qv = (searchInput.value||'').trim().toLowerCase();
+					const rowsNow = !qv ? filtered : filtered.filter(f=>
+						String(f.iid||'').toLowerCase().includes(qv) ||
+						String(f.active_roll||'').toLowerCase().includes(qv) ||
+						String(f.student_name_en||'').toLowerCase().includes(qv) ||
+						String(f.active_section||'').toLowerCase().includes(qv)
+					);
+					renderCards(rowsNow, !!showNameCheckbox.checked);
+				}
+				showNameCheckbox.addEventListener('change', doRender);
+				if(searchInput) searchInput.addEventListener('input', doRender);
+				doRender();
+			}catch(e){ document.getElementById('status').textContent = 'Load error: '+e.message; }
+		})();
+	</script>
+</body>
+</html>
