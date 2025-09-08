@@ -133,17 +133,6 @@
                 <h1>Feni Model High School</h1>
                 <span class="brand-badge">RESULT · Testimonial - Transfer Certificate</span>
             </div>
-            <div class="cache-wrap">
-                <div class="cache-battery" id="cacheBattery" title="Data cache status">
-                    <div class="cap"></div>
-                    <div class="bar">
-                        <span class="seg" id="segAllData" title="All Data (all_data_field.html)"></span>
-                        <span class="seg" id="segDatalist" title="Datalist (datalist.html)"></span>
-                    </div>
-                </div>
-                <span class="cache-label" id="cacheLabel">Cache: —</span>
-                <button class="mode-toggle" id="modeToggle" aria-label="Toggle dark mode">🌙 Theme</button>
-            </div>
         </header>
         <div class="container">
             <section id="passwordSection" class="gate-card" aria-labelledby="gateTitle">
@@ -163,9 +152,18 @@
             <section id="examSection" class="exam-section" aria-labelledby="portalTitle">
                 <div class="logout-bar">
                     <button class="mode-toggle" id="modeToggle2" onclick="toggleMode()" aria-label="Toggle dark mode (secondary)">🌓</button>
+                    <div class="cache-wrap">
+                        <div class="cache-battery" id="cacheBattery" title="Data cache status">
+                            <div class="cap"></div>
+                            <div class="bar">
+                                <span class="seg" id="segAllData" title="All Data (all_data_field.html)"></span>
+                                <span class="seg" id="segDatalist" title="Datalist (datalist.html)"></span>
+                            </div>
+                        </div>
+                        <span class="cache-label" id="cacheLabel">Cache: —</span>
+                    </div>
                     <button class="logout-btn" onclick="logout()">LOGOUT</button>
                     <button type="button" class="show-toggle" onclick="clearSessionStorage()">Clear SessionStorage</button>
-
                 </div>
                 <h2 id="portalTitle" style="margin:0 0 .25rem;font-size:1.55rem;letter-spacing:.5px;">Student Modules & Exam Modules</h2>
                 <p style="margin:.15rem 0 1.3rem;font-size:.82rem;color:var(--text-soft);max-width:680px;">Choose a module below grouped by academic year. Use a desktop computer for best printing accuracy. <strong style="color:var(--danger);">মোবাইল ফোন এড়িয়ে চলুন</strong>.</p>
@@ -688,7 +686,6 @@
                 // Theme toggle (persist)
                 function applyMode(m){ document.documentElement.classList.toggle('dark', m==='dark'); }
                 function toggleMode(){ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyMode(cur); }
-                document.getElementById('modeToggle').addEventListener('click',toggleMode);
                 // Secondary toggle if visible later
                 function initSecondaryToggle(){ const mt2=document.getElementById('modeToggle2'); if(mt2) mt2.onclick=toggleMode; }
 
