@@ -98,7 +98,7 @@
 			let lastId = 0;
 			let hasMore = true;
 			// Use 1000 to align with PostgREST per-request cap
-			const batchSize = 1000;
+			const batchSize = 10000;
 			let batchCount = 0;
 			let prevLastId = null; // plateau guard
 			const maxBatches = 10000; // generous safety cap

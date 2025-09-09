@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Download Application Form</title>
+<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f7fb;color:#1f2d3d;}header{padding:14px 20px;border-bottom:4px double #1f2d3d;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;}h1{font-size:1.35rem;margin:0;letter-spacing:.5px;text-transform:uppercase;font-weight:800;} .sub{font-size:.7rem;font-weight:600;letter-spacing:1px;color:#334155;margin-top:4px;} .top-actions{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}button, input{font-family:inherit;} .btn{cursor:pointer;border:1px solid #334155;background:#1e3a8a;color:#fff;padding:.55rem .9rem;border-radius:8px;font-size:.65rem;font-weight:600;letter-spacing:.5px;display:inline-flex;align-items:center;gap:.35rem;} .btn.outline{background:#fff;color:#1f2d3d;} .search-box{display:flex;align-items:center;gap:.4rem;background:#fff;padding:.45rem .6rem;border:1px solid #cbd5e1;border-radius:10px;} .search-box input{border:none;outline:none;font-size:.7rem;min-width:190px;} main{padding:18px 26px;max-width:900px;margin:0 auto;} #formContainer{background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 18px -4px rgba(0,0,0,.07);padding:26px 30px;border-radius:18px;min-height:400px;position:relative;}
+@media print{body{background:#fff;} header{border:none;padding:6px 0;margin-bottom:6px;} .top-actions{display:none!important;} .search-box{display:none!important;} main{padding:0;max-width:100%;} #formContainer{box-shadow:none;border:none;padding:0;} }
+</style>
+</head>
+<body>
+	<header>
+		<div>
+			<h1>Feni Model High School</h1>
+			<div class="sub">Admission Application Form</div>
+		</div>
+		<div class="top-actions">
+			<div class="search-box">
+				<input id="birthInput" placeholder="Birth Registration Number" />
+				<button class="btn outline" id="loadBtn">Load</button>
+			</div>
+			<button class="btn" id="printBtn">⬇️ Download PDF</button>
+		</div>
+	</header>
+	<main>
+		<div id="status" style="font-size:.7rem;color:#475569;margin-bottom:10px;">Enter birth registration number then click Load.</div>
+		<div id="formContainer"></div>
+	</main>
+<script>
+const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
+const SUPABASE_KEY='public-anon-key-placeholder';
+let sb=null; function init(){ if(sb) return sb; if(!window.supabase){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }; document.head.appendChild(s); } else { sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);} }
+init();
+const statusEl=document.getElementById('status');
+const birthInput=document.getElementById('birthInput');
+const formContainer=document.getElementById('formContainer');
+document.getElementById('printBtn').addEventListener('click',()=>window.print());
+document.getElementById('loadBtn').addEventListener('click',loadApplication);
+birthInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ loadApplication(); }});
+
+function setStatus(msg,type='info'){ statusEl.textContent=msg; statusEl.style.color= type==='error'? '#b91c1c':'#475569'; }
+
+async function loadApplication(){
+	const br=birthInput.value.trim();
+	if(!br){ setStatus('Enter a birth registration number first','error'); return; }
+	setStatus('Loading...'); formContainer.innerHTML='<div style="font-size:.7rem;color:#475569;">Fetching data...</div>';
+		if(!sb){ setTimeout(loadApplication,300); init(); return; }
+	try{
+		const { data, error } = await sb.from('admission_data').select('*').eq('birth_registration',br).limit(1);
+		if(error) throw error;
+		if(!data || !data.length){ setStatus('No application found for this birth registration','error'); formContainer.innerHTML=''; return; }
+		render(data[0]);
+		setStatus('Loaded application. You can download PDF.');
+	}catch(e){ console.error(e); setStatus('Error loading: '+(e.message||e),'error'); formContainer.innerHTML=''; }
+}
+
+function field(label,value){ value=value==null||value===''?'—':value; return `<div class="f"><span class="l">${label}</span><span class="v">${escapeHtml(value)}</span></div>`; }
+function escapeHtml(str){ return String(str).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+
+function render(o){
+	// Build columns with attempt to keep total rows balanced
+	formContainer.innerHTML=`<div class="sheet" id="sheetRoot">
+		<div class="sheet-head">
+			<div class="school">Feni Model High School</div>
+			<div class="subtitle">Admission Application (${o.session||''})</div>
+			<div class="meta">Birth Registration: <strong>${escapeHtml(o.birth_registration||'')}</strong></div>
+		</div>
+		<div class="cols">
+			<section>${[
+				field('Student Name (EN)',o.student_name_en),
+				field('Student Name (BN)',o.student_name_bn),
+				field('Gender',o.student_gender),
+				field('DOB',o.student_dateofbirth),
+				field('Religion',o.religion),
+				field('Blood Group',o.student_blood_group),
+				field('Birth Reg.',o.birth_registration),
+				field('Class',o.admisson_class),
+				field('Section',o.admission_section)
+			].join('')}</section>
+			<section>${[
+				field('Father Name (EN)',o.father_name_en),
+				field('Father Name (BN)',o.father_name_bn),
+				field('Father NID',o.father_nid),
+				field('Father Mobile',o.father_mobile),
+				field('Father Occupation',o.father_occupation),
+				field('Mother Name (EN)',o.mother_name_en),
+				field('Mother Mobile',o.mother_mobile),
+				field('Guardian Name (EN)',o.guardian_name_en),
+				field('Guardian Mobile',o.guardian_mobile),
+				field('Freedom Fighter Quote',o.quote_freedomfighter)
+			].join('')}</section>
+			<section>${[
+				field('Village (BN)',o.village_bn),
+				field('Village (EN)',o.village_en),
+				field('Post Office (BN)',o.postoffice_bn),
+				field('Post Office (EN)',o.postoffice_en),
+				field('Upazila (BN)',o.upazilla_bn),
+				field('Upazila (EN)',o.upazilla_en),
+				field('District (BN)',o.district_bn),
+				field('District (EN)',o.district_en),
+				field('Previous School',o.previous_school),
+				field('Previous Class Roll',o.previous_class_roll)
+			].join('')}</section>
+		</div>
+		<div class="sign-row"><div>Guardian Signature: ____________________</div><div>Student Signature: ____________________</div><div>Date: _____________</div></div>
+	</div>`;
+	ensureFitOnA4();
+}
+
+function ensureFitOnA4(){
+	const root=document.getElementById('sheetRoot');
+	if(!root) return; // approximate available height for content (A4 ~ 1122px at 96dpi minus margins)
+	requestAnimationFrame(()=>{
+		const h=root.offsetHeight; if(h>1000){ root.style.transformOrigin='top left'; const scale=1000/h; root.style.transform=`scale(${scale.toFixed(3)})`; } });
+}
+
+// dynamic styles for A4
+const style=document.createElement('style');
+style.textContent=`
+		.sheet{position:relative;font-size:12px;line-height:1.25;font-family:inherit;}
+	.sheet-head{text-align:center;margin-bottom:8px;}
+	.sheet-head .school{font-size:20px;font-weight:800;letter-spacing:.5px;}
+	.sheet-head .subtitle{font-size:12px;font-weight:600;margin-top:2px;}
+	.sheet-head .meta{font-size:11px;margin-top:4px;}
+	.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:10px;}
+	section{border:1px solid #cbd5e1;border-radius:10px;padding:8px 10px;background:#fff;}
+	.f{display:flex;font-size:11px;padding:2px 0;border-bottom:1px dashed #e2e8f0;gap:6px;}
+	.f:last-child{border-bottom:none;}
+	.f .l{flex:0 0 140px;font-weight:600;}
+	.f .v{flex:1;}
+	.sign-row{display:flex;justify-content:space-between;font-size:11px;margin-top:26px;gap:10px;}
+		@media print{ @page{size:A4;margin:14mm;} body,html{height:auto;} .sheet{page-break-inside:avoid;} }
+`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>

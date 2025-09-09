@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>New Admission Application</title>
+<link rel="icon" href="../logo2.png" />
+<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+<style>
+:root{--bg:#f5f7fb;--bg-alt:#ffffff;--text:#1f2d3d;--text-soft:#5b6675;--border:#e2e8f0;--brand:#2563eb;--danger:#dc2626;--success:#15803d;--warn:#f59e0b;--shadow:0 6px 20px -2px rgba(0,0,0,.08),0 2px 6px -1px rgba(0,0,0,.04);} 
+.dark{--bg:#0d1117;--bg-alt:#161b22;--text:#e6edf3;--text-soft:#93a4b8;--border:#273649;--shadow:0 6px 28px -4px rgba(0,0,0,.65);} 
+*{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;} body{margin:0;background:var(--bg);color:var(--text);} a{text-decoration:none;color:var(--brand);} 
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;flex-wrap:wrap;gap:1rem;} .title{margin:0;font-size:clamp(1.4rem,2.5vw,2.05rem);font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;} 
+.mode-btn{background:var(--bg-alt);border:1px solid var(--border);padding:.55rem .85rem;border-radius:10px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--text-soft);display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);} 
+.container{width:100%;max-width:1180px;margin:0 auto;padding:0 1.1rem 4rem;} 
+.form-head{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin:.2rem 0 1rem;} .badge{background:var(--brand);color:#fff;font-size:.55rem;padding:.27rem .55rem;border-radius:999px;font-weight:600;letter-spacing:.5px;} 
+.section{background:var(--bg-alt);border:1px solid var(--border);border-radius:20px;padding:1.05rem 1.15rem 1.3rem;box-shadow:var(--shadow);margin:0 0 1.25rem;position:relative;} .section h3{margin:0 0 .65rem;font-size:.83rem;letter-spacing:.6px;font-weight:700;display:flex;align-items:center;gap:.5rem;} .section h3 span.icon{font-size:1rem;} 
+.grid{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));} 
+label.field{display:flex;flex-direction:column;gap:.3rem;font-size:.6rem;font-weight:600;letter-spacing:.5px;color:var(--text-soft);} 
+label.field input, label.field select{padding:.6rem .7rem;border:1px solid var(--border);border-radius:12px;background:var(--bg);font-size:.72rem;color:var(--text);} 
+.actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.5rem;} .btn{border:none;cursor:pointer;font-weight:600;font-size:.7rem;padding:.75rem 1.15rem;border-radius:12px;display:inline-flex;align-items:center;gap:.45rem;letter-spacing:.5px;} .btn.primary{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 4px 14px -2px rgba(37,99,235,.45);} .btn.secondary{background:var(--bg-alt);border:1px solid var(--border);color:var(--text-soft);} .btn.danger{background:linear-gradient(90deg,#ef4444,#dc2626);color:#fff;} 
+.notice{margin:.85rem 0 0;font-size:.65rem;color:var(--text-soft);} .alert{display:none;margin:.9rem 0 0;padding:.75rem .85rem;border-radius:14px;font-size:.65rem;border:1px solid transparent;} .alert.success{display:block;background:#dcfce7;border-color:#86efac;color:#166534;} .alert.error{display:block;background:#fee2e2;border-color:#fecaca;color:#991b1b;} 
+.autofill{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.6rem;margin-top:.4rem;color:var(--text-soft);} .autofill label{display:flex;align-items:center;gap:.35rem;font-weight:600;} 
+footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-soft);} 
+.required::after{content:' *';color:var(--danger);} 
+@media (max-width:640px){ .grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));} }
+</style>
+</head>
+<body>
+<header style="text-align:center;padding:1rem 1.2rem;">
+  <div style="width:100%;max-width:900px;margin:0 auto;">
+    <div style="font-weight:800;font-size:1.15rem;letter-spacing:.6px;">Feni Model High School</div>
+    <h1 class="title" style="margin:.35rem 0 0">New Admission Application</h1>
+    <div style="margin-top:.6rem;">
+      <a href="download_form.html" class="mode-btn" title="Back to Dashboard">🔙 Download application</a>
+    </div>
+  </div>
+</header>
+<div class="container">
+  <div class="form-head">
+    <span class="badge">Form</span>
+    <p style="margin:0;font-size:.63rem;color:var(--text-soft)">Fill all required fields then save. Required marked with red *</p>
+  </div>
+  <!-- Admission Selection -->
+  <div class="section" id="sec-admission">
+    <h3><span class="icon">🎯</span> Admission Selection</h3>
+    <div class="grid">
+      <label class="field required">Session
+        <select id="session" required>
+          <option value="">Select</option>
+          <option>2025</option>
+          <option>2026</option>
+        </select>
+      </label>
+      <label class="field required">Admission Class
+        <select id="admisson_class" required>
+          <option value="">Select</option>
+          <option>6</option>
+          <option>7</option>
+          <option>8</option>
+          <option>9</option>
+          <option>10</option>
+        </select>
+      </label>
+      <label class="field required">Admission Section
+        <select id="admission_section" required>
+          <option value="">Select</option>
+          <option>Day</option>
+          <option>Morning</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Basic Information -->
+  <div class="section" id="sec-basic">
+    <h3><span class="icon">🧒</span> Basic Information</h3>
+    <div class="grid">
+      <label class="field required">Student Name English<input id="student_name_en" /></label>
+      <label class="field">Student Name Bangla<input id="student_name_bn" /></label>
+      <label class="field">Birth Registration<input id="birth_registration" /></label>
+      <label class="field">Student Date of Birth<input id="student_dateofbirth" type="date" /></label>
+      <label class="field">Religion<input id="religion" /></label>
+      <label class="field required">Student Gender
+        <select id="student_gender" required>
+          <option value="">Select</option>
+          <option>Male</option>
+          <option>Female</option>
+        </select>
+      </label>
+      <label class="field">Student Photo URL<input id="student_photo_url" placeholder="https://" /></label>
+      <label class="field">Blood Group
+        <select id="student_blood_group">
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Father Information -->
+  <div class="section" id="sec-father">
+    <h3><span class="icon">👨</span> Father Information</h3>
+    <div class="grid">
+      <label class="field required">Father Name English<input id="father_name_en" /></label>
+      <label class="field">Father Name Bangla<input id="father_name_bn" /></label>
+      <label class="field">Father NID<input id="father_nid" /></label>
+      <label class="field">Father Mobile<input id="father_mobile" type="tel" /></label>
+      <label class="field">Father Occupation<input id="father_occupation" /></label>
+      <label class="field">Father Date of Birth<input id="father_dob" type="date" /></label>
+      <label class="field">Father Blood Group
+        <select id="father_blood_group">
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Mother Information -->
+  <div class="section" id="sec-mother">
+    <h3><span class="icon">👩</span> Mother Information</h3>
+    <div class="grid">
+      <label class="field">Mother Name English<input id="mother_name_en" /></label>
+      <label class="field">Mother Name Bangla<input id="mother_name_bn" /></label>
+      <label class="field">Mother NID<input id="mother_nid" /></label>
+      <label class="field">Mother Mobile<input id="mother_mobile" type="tel" /></label>
+      <label class="field">Mother Occupation<input id="mother_occupation" /></label>
+      <label class="field">Mother Date of Birth<input id="mother_dob" type="date" /></label>
+      <label class="field">Mother Blood Group
+        <select id="mother_blood_group">
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Guardian Information -->
+  <div class="section" id="sec-guardian">
+    <h3><span class="icon">🛡️</span> Guardian Information</h3>
+    <div class="autofill">
+      <label><input type="checkbox" id="guardian_from_father" /> Father as Guardian</label>
+      <label><input type="checkbox" id="guardian_from_mother" /> Mother as Guardian</label>
+    </div>
+    <div class="grid" style="margin-top:.6rem;">
+      <label class="field">Guardian Name English<input id="guardian_name_en" /></label>
+      <label class="field">Guardian Name Bangla<input id="guardian_name_bn" /></label>
+      <label class="field">Guardian NID<input id="guardian_nid" /></label>
+      <label class="field">Guardian Mobile<input id="guardian_mobile" type="tel" /></label>
+      <label class="field">Guardian Occupation<input id="guardian_occupation" /></label>
+    </div>
+  </div>
+
+  <!-- Address Information -->
+  <div class="section" id="sec-address">
+    <h3><span class="icon">📍</span> Address Information</h3>
+    <div class="grid">
+      <label class="field">Village Bangla<input id="village_bn" /></label>
+      <label class="field">Village English<input id="village_en" /></label>
+      <label class="field">Post Office Bangla<input id="postoffice_bn" /></label>
+      <label class="field">Post Office English<input id="postoffice_en" /></label>
+      <label class="field">Upazila Bangla<input id="upazilla_bn" /></label>
+      <label class="field">Upazila English<input id="upazilla_en" /></label>
+      <label class="field">District Bangla<input id="district_bn" /></label>
+      <label class="field">District English<input id="district_en" /></label>
+    </div>
+  </div>
+
+  <!-- Additional Information -->
+  <div class="section" id="sec-additional">
+    <h3><span class="icon">➕</span> Additional Information</h3>
+    <div class="grid">
+      <label class="field">Previous School<input id="previous_school" /></label>
+      <label class="field">Previous Class Roll<input id="previous_class_roll" /></label>
+      <label class="field">Quote Freedom Fighter<input id="quote_freedomfighter" /></label>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="saveBtn">💾 Save</button>
+    <button class="btn secondary" id="saveNewBtn">💾➕ Save & New</button>
+    <button class="btn secondary" id="resetBtn" type="button">🔁 Reset</button>
+  </div>
+  <div id="alertBox" class="alert"></div>
+  <p class="notice">After saving you can view / edit from dashboard. Make sure sensitive data is correct.</p>
+</div>
+<footer>© <span id="year"></span> Feni Model High School · Admission</footer>
+<script>
+const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
+const SUPABASE_KEY='public-anon-key-placeholder'; // Replace in production
+const TABLE='admission_data';
+let supabaseClient=null; function initSupabase(){ if(supabaseClient) return supabaseClient; if(!window.supabase){ console.warn('Supabase lib not loaded yet'); return null;} supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); return supabaseClient; }
+// load supabase script
+(function(){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>initSupabase(); document.head.appendChild(s); })();
+
+function $(id){ return document.getElementById(id); }
+function val(id){ return $(id).value.trim(); }
+function setVal(id,v){ $(id).value=v||''; }
+function showAlert(msg,type='error'){ const box=$('alertBox'); box.className='alert '+type; box.textContent=msg; }
+function clearAlert(){ const box=$('alertBox'); box.className='alert'; box.textContent=''; }
+
+// guardian autofill
+$('guardian_from_father').addEventListener('change',()=>{ if($('guardian_from_father').checked){ copyParent('father','guardian'); $('guardian_from_mother').checked=false; } });
+$('guardian_from_mother').addEventListener('change',()=>{ if($('guardian_from_mother').checked){ copyParent('mother','guardian'); $('guardian_from_father').checked=false; } });
+function copyParent(src,dst){ const fields=['name_en','name_bn','nid','mobile','occupation']; fields.forEach(f=>{ setVal(dst+'_'+f, val(src+'_'+f)); }); }
+
+function gatherPayload(){
+  return {
+    session:val('session')||null,
+    admisson_class:val('admisson_class')||null,
+    admission_section:val('admission_section')||null,
+    student_name_en:val('student_name_en')||null,
+    student_name_bn:val('student_name_bn')||null,
+    birth_registration:val('birth_registration')||null,
+    student_dateofbirth:val('student_dateofbirth')||null,
+    religion:val('religion')||null,
+    student_gender:val('student_gender')||null,
+    student_photo_url:val('student_photo_url')||null,
+    student_blood_group:val('student_blood_group')||null,
+    father_name_en:val('father_name_en')||null,
+    father_name_bn:val('father_name_bn')||null,
+    father_nid:val('father_nid')||null,
+    father_mobile:val('father_mobile')||null,
+    father_occupation:val('father_occupation')||null,
+    father_dob:val('father_dob')||null,
+    father_blood_group:val('father_blood_group')||null,
+    mother_name_en:val('mother_name_en')||null,
+    mother_name_bn:val('mother_name_bn')||null,
+    mother_nid:val('mother_nid')||null,
+    mother_mobile:val('mother_mobile')||null,
+    mother_occupation:val('mother_occupation')||null,
+    mother_dob:val('mother_dob')||null,
+    mother_blood_group:val('mother_blood_group')||null,
+    guardian_name_en:val('guardian_name_en')||null,
+    guardian_name_bn:val('guardian_name_bn')||null,
+    guardian_nid:val('guardian_nid')||null,
+    guardian_mobile:val('guardian_mobile')||null,
+    guardian_occupation:val('guardian_occupation')||null,
+    village_bn:val('village_bn')||null,
+    village_en:val('village_en')||null,
+    postoffice_bn:val('postoffice_bn')||null,
+    postoffice_en:val('postoffice_en')||null,
+    upazilla_bn:val('upazilla_bn')||null,
+    upazilla_en:val('upazilla_en')||null,
+    district_bn:val('district_bn')||null,
+    district_en:val('district_en')||null,
+    previous_school:val('previous_school')||null,
+    previous_class_roll:val('previous_class_roll')||null,
+    quote_freedomfighter:val('quote_freedomfighter')||null
+  };
+}
+
+async function save(stay){
+  clearAlert();
+  if(!val('student_name_en')||!val('father_name_en')||!val('session')||!val('admisson_class')||!val('admission_section')||!val('student_gender')){ showAlert('Please fill all required fields (marked with *)','error'); return; }
+  const sb=initSupabase(); if(!sb){ showAlert('Supabase not ready yet','error'); return; }
+  const payload=gatherPayload();
+  try{
+    const { error } = await sb.from(TABLE).insert(payload);
+    if(error) throw error;
+    showAlert('Saved successfully','success');
+    if(!stay){ setTimeout(()=>{ window.location.href='admission_dashboard.html'; }, 900); }
+    else { // reset minimal
+      $('birth_registration').focus();
+    }
+  }catch(e){ console.error(e); showAlert('Save failed: '+(e.message||e),'error'); }
+}
+
+$('saveBtn').addEventListener('click',()=>save(false));
+$('saveNewBtn').addEventListener('click',()=>save(true));
+$('resetBtn').addEventListener('click',()=>{ document.querySelectorAll('input,select').forEach(el=>{ if(el.type!=='checkbox') el.value=''; }); clearAlert(); });
+
+function applyTheme(m){ document.documentElement.classList.toggle('dark',m==='dark'); }
+$('themeToggle').addEventListener('click',()=>{ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); });
+applyTheme(localStorage.getItem('theme')|| (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+$('year').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>

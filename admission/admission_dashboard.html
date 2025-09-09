@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admission Dashboard</title>
+<link rel="icon" href="../logo2.png" />
+<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+<style>
+:root { --bg:#f5f7fb;--bg-alt:#ffffff;--text:#1f2d3d;--text-soft:#526173;--border:#e2e8f0;--brand:#2563eb;--danger:#dc2626;--radius:18px;--shadow:0 6px 20px -2px rgba(0,0,0,.08),0 2px 6px -1px rgba(0,0,0,.04);--success:#15803d;--warn:#f59e0b; }
+.dark { --bg:#0d1117;--bg-alt:#161b22;--text:#e6edf3;--text-soft:#94a3b8;--border:#273649;--shadow:0 6px 24px -4px rgba(0,0,0,.65); }
+*{box-sizing:border-box;font-family:'Kalpurush','Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
+body{margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px;}
+header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;flex-wrap:wrap;gap:1rem;}
+.h1{font-size:clamp(1.6rem,2.5vw,2.2rem);margin:0;font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.mode-btn{background:var(--bg-alt);border:1px solid var(--border);color:var(--text-soft);padding:.55rem .9rem;border-radius:10px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);}
+.container{width:100%;max-width:1400px;margin:0 auto;padding:0 1.1rem 3rem;}
+.grid{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:1.4rem;}
+.stat{background:var(--bg-alt);border:1px solid var(--border);border-radius:16px;padding:.9rem 1rem;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.stat h3{margin:0 0 .4rem;font-size:.8rem;font-weight:600;letter-spacing:.5px;color:var(--text-soft);text-transform:uppercase;}
+.stat .val{font-size:1.4rem;font-weight:700;}
+.filters{display:flex;flex-wrap:wrap;gap:.7rem;margin:0 0 1rem;}
+.filters select,.filters input{padding:.55rem .7rem;font-size:.8rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-alt);min-width:140px;}
+.btn{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:#fff;border:none;padding:.65rem 1rem;border-radius:10px;font-size:.75rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;box-shadow:0 4px 14px -2px rgba(37,99,235,.4);} .btn.danger{background:linear-gradient(90deg,#ef4444,#dc2626);} .btn.secondary{background:var(--bg-alt);color:var(--text-soft);border:1px solid var(--border);box-shadow:none;}
+.table-wrap{background:var(--bg-alt);border:1px solid var(--border);border-radius:18px;padding:1rem;box-shadow:var(--shadow);overflow:auto;}
+table{border-collapse:collapse;width:100%;font-size:.72rem;}
+th,td{border:1px solid var(--border);padding:.45rem .5rem;text-align:left;white-space:nowrap;}
+th{background:linear-gradient(90deg,var(--bg),var(--bg-alt));position:sticky;top:0;z-index:5;font-weight:600;font-size:.66rem;letter-spacing:.5px;}
+tbody tr:hover{background:rgba(37,99,235,.06);}
+.status-bar{font-size:.65rem;color:var(--text-soft);margin:.6rem 0 0;display:flex;gap:1rem;flex-wrap:wrap;}
+.badge{font-size:.55rem;padding:.25rem .45rem;border-radius:999px;background:var(--brand);color:#fff;}
+.group-label{font-size:.65rem;font-weight:700;margin:1.2rem 0 .4rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-soft);display:flex;align-items:center;gap:.5rem;}
+.group-label span.line{flex:0 0 40px;height:2px;background:linear-gradient(90deg,var(--brand),transparent);border-radius:2px;}
+.skeleton-row{animation:pulse 1.2s ease-in-out infinite;background:linear-gradient(90deg,rgba(0,0,0,.04),rgba(0,0,0,.08),rgba(0,0,0,.04));background-size:200% 100%;height:14px;border-radius:4px;}
+@keyframes pulse{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.pagination{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-top:.6rem;}
+.pagination button{background:var(--bg-alt);border:1px solid var(--border);padding:.4rem .7rem;font-size:.65rem;border-radius:8px;cursor:pointer;}
+.pagination button.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+/* Modal */
+.modal{position:fixed;inset:0;display:none;align-items:flex-start;justify-content:center;padding:4vh 1rem;background:rgba(0,0,0,.55);z-index:1000;overflow:auto;}
+.modal.open{display:flex;}
+.modal-card{background:var(--bg-alt);width:100%;max-width:980px;border:1px solid var(--border);border-radius:22px;padding:1.3rem 1.4rem 2rem;box-shadow:0 18px 60px -8px rgba(0,0,0,.35);position:relative;}
+.close-btn{position:absolute;top:.7rem;right:.7rem;background:var(--bg);border:1px solid var(--border);border-radius:10px;width:34px;height:34px;cursor:pointer;font-weight:700;}
+.form-grid{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:.6rem;}
+.form-grid label{display:flex;flex-direction:column;font-size:.62rem;font-weight:600;letter-spacing:.5px;color:var(--text-soft);gap:.25rem;}
+.form-grid input, .form-grid select{padding:.55rem .65rem;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:.7rem;}
+.section-block{border:1px solid var(--border);padding:.85rem .9rem 1rem;border-radius:16px;background:var(--bg-alt);position:relative;}
+.section-title{margin:0 0 .4rem;font-size:.8rem;font-weight:700;letter-spacing:.6px;color:var(--text);display:flex;align-items:center;gap:.5rem;}
+.autofill-row{display:flex;gap:1rem;align-items:center;font-size:.6rem;color:var(--text-soft);margin-top:.3rem;}
+.alert{padding:.6rem .8rem;background:#fff3cd;color:#92400e;border:1px solid #fcd34d;border-radius:10px;font-size:.65rem;margin:.7rem 0 0;}
+footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-soft);}
+</style>
+</head>
+<body>
+<header>
+  <div style="display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;">
+    <h1 class="h1">Admission Dashboard</h1>
+    <span class="badge">Beta</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+    <button class="mode-btn" id="themeToggle">🌓 Theme</button>
+  <a class="btn" id="addNewBtn" href="new_admission.html" style="text-decoration:none;">➕ New Application</a>
+    <button class="btn secondary" id="exportCsvBtn">⬇️ Export CSV</button>
+  </div>
+</header>
+<div class="container">
+  <div class="grid" id="statsGrid" aria-label="Summary statistics">
+    <div class="stat"><h3>Total</h3><div class="val" id="statTotal">—</div></div>
+    <div class="stat"><h3>Male</h3><div class="val" id="statMale">—</div></div>
+    <div class="stat"><h3>Female</h3><div class="val" id="statFemale">—</div></div>
+    <div class="stat"><h3>Freedom Fighter</h3><div class="val" id="statFF">—</div></div>
+    <div class="stat"><h3>Blood Groups</h3><div class="val" id="statBlood">—</div></div>
+  </div>
+
+  <div class="filters" aria-label="Filters">
+    <select id="filterSession" title="Session">
+      <option value="">Session</option>
+    </select>
+    <select id="filterClass" title="Class">
+      <option value="">Class</option>
+    </select>
+    <select id="filterSection" title="Section">
+      <option value="">Section</option>
+    </select>
+    <input id="searchBox" placeholder="Search name / birth reg" title="Search" />
+    <button class="btn secondary" id="clearFiltersBtn">Reset</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="dataTable" aria-label="Admission data">
+      <thead><tr id="tableHeadRow"><th>SL</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+    <div class="status-bar" id="statusBar">Ready.</div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+</div>
+
+<!-- Modal for Add/Edit -->
+<div class="modal" id="formModal" aria-hidden="true" role="dialog" aria-label="Admission form dialog">
+  <div class="modal-card">
+    <button class="close-btn" id="closeModalBtn">✕</button>
+    <h2 style="margin:0 0 .2rem;font-size:1.1rem;">Admission Form</h2>
+    <p style="margin:.15rem 0 .9rem;font-size:.65rem;color:var(--text-soft);">Fill required fields. Guardian section can auto-copy Father or Mother info.</p>
+    <div id="formSections"></div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.1rem;">
+      <button class="btn" id="saveFormBtn">💾 Save</button>
+      <button class="btn secondary" id="saveAndNewBtn">💾➕ Save & New</button>
+      <button class="btn danger" id="deleteBtn" style="display:none;">🗑️ Delete</button>
+    </div>
+    <div class="alert" id="formAlert" style="display:none;"></div>
+  </div>
+</div>
+
+<footer>© <span id="year"></span> Feni Model High School · Admission Data</footer>
+<script>
+// --- Config & Constants ---
+const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co'; // TODO: externalize
+const SUPABASE_KEY = 'public-anon-key-placeholder'; // replace with anon key or secure proxy
+const TABLE = 'admission_data';
+const PAGE_SIZE = 50;
+const CACHE_KEY = 'admission_data_cache_v1';
+const CACHE_TTL = 5 * 60 * 1000; // 5m
+
+// Field metadata grouped (derived from read admission.md)
+const FIELD_GROUPS = [
+  {title:'Admission Selection', icon:'🎯', fields:[
+    ['session','Session (2025/2026)'],['admisson_class','Admission Class'],['admission_section','Admission Section (Day/Morning)']
+  ]},
+  {title:'Basic Information', icon:'🧒', fields:[
+    ['student_name_en','Student Name English*'],['student_name_bn','Student Name Bangla'],['birth_registration','Birth Registration'],['student_dateofbirth','Student Date of Birth'],['religion','Religion'],['student_gender','Student Gender'],['student_photo_url','Student Photo URL'],['student_blood_group','Blood Group']
+  ]},
+  {title:'Father Information', icon:'👨', fields:[
+    ['father_name_en','Father Name English*'],['father_name_bn','Father Name Bangla'],['father_nid','Father NID'],['father_mobile','Father Mobile'],['father_occupation','Father Occupation'],['father_dob','Father Date of Birth'],['father_blood_group','Father Blood Group']
+  ]},
+  {title:'Mother Information', icon:'👩', fields:[
+    ['mother_name_en','Mother Name English'],['mother_name_bn','Mother Name Bangla'],['mother_nid','Mother NID'],['mother_mobile','Mother Mobile'],['mother_occupation','Mother Occupation'],['mother_dob','Mother Date of Birth'],['mother_blood_group','Mother Blood Group']
+  ]},
+  {title:'Guardian Information', icon:'🛡️', fields:[
+    ['guardian_name_en','Guardian Name English'],['guardian_name_bn','Guardian Name Bangla'],['guardian_nid','Guardian NID'],['guardian_mobile','Guardian Mobile'],['guardian_occupation','Guardian Occupation']
+  ]},
+  {title:'Address Information', icon:'📍', fields:[
+    ['village_bn','Village Bangla'],['village_en','Village English'],['postoffice_bn','Post Office Bangla'],['postoffice_en','Post Office English'],['upazilla_bn','Upazila Bangla'],['upazilla_en','Upazila English'],['district_bn','District Bangla'],['district_en','District English']
+  ]},
+  {title:'Additional Information', icon:'➕', fields:[
+    ['previous_school','Previous School'],['previous_class_roll','Previous Class Roll'],['quote_freedomfighter','Quote Freedom Fighter']
+  ]}
+];
+
+// Build Supabase client (lazy load to avoid blocking first paint)
+let supabaseClient = null;
+function initSupabase(){
+  if(supabaseClient) return supabaseClient;
+  if(!window.supabase){ console.warn('Supabase lib missing'); return null; }
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  return supabaseClient;
+}
+
+// Inject script for supabase
+(function loadSupabase(){
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload=()=>{ initSupabase(); fetchAndRender(); };
+  document.head.appendChild(s);
+})();
+
+// Cache helpers
+function loadCache(){ try{ const raw=localStorage.getItem(CACHE_KEY); if(!raw) return null; const obj=JSON.parse(raw); if(Date.now()-obj.ts > CACHE_TTL) return null; return obj.rows; }catch(e){ return null; } }
+function saveCache(rows){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(), rows})); }catch(e){} }
+
+// State
+let allRows = []; let filtered = []; let currentPage=1; let editingRow=null;
+
+// Fetch
+async function fetchRows(){
+  const sb = initSupabase(); if(!sb) return [];
+  let lastId=0; let batch=1000; let out=[]; let more=true; let guard=0;
+  while(more && guard<50){
+    guard++;
+    const { data, error } = await sb.from(TABLE).select('*').gt('admission_sl', lastId).order('admission_sl', {ascending:true}).limit(batch);
+    if(error){ console.error('Fetch error', error); break; }
+    if(!data || data.length===0){ more=false; break; }
+    out = out.concat(data);
+    lastId = data[data.length-1].admission_sl;
+  }
+  return out;
+}
+
+async function fetchAndRender(force=false){
+  status('Loading data...');
+  if(!force){ const c = loadCache(); if(c){ allRows=c; applyFilters(); status(`Loaded ${allRows.length} (cache)`); // background refresh
+      setTimeout(()=>fetchAndRender(true), 200); return; } }
+  const rows = await fetchRows(); allRows = rows; saveCache(rows); applyFilters(); status(`Loaded ${rows.length} (live)`);
+}
+
+// Filters
+function applyFilters(){
+  const ses = filterSession.value.trim();
+  const cls = filterClass.value.trim();
+  const sec = filterSection.value.trim();
+  const q = searchBox.value.trim().toLowerCase();
+  filtered = allRows.filter(r => (
+    (!ses || String(r.session)===ses) &&
+    (!cls || (r.admisson_class||'')===cls) &&
+    (!sec || (r.admission_section||'')===sec) &&
+    (!q || ( (r.student_name_en||'').toLowerCase().includes(q) || (r.birth_registration||'').toLowerCase().includes(q) ))
+  ));
+  currentPage=1;
+  renderTable();
+  updateStats();
+  populateFilterOptions();
+}
+
+// Populate filter dropdowns
+function populateFilterOptions(){
+  function fill(select, values){
+    const cur = select.value;
+    const opts = ['<option value="">'+select.options[0].text+'</option>'].concat(Array.from(values).sort().map(v=>`<option value="${v}">${v}</option>`));
+    select.innerHTML = opts.join('');
+    if(Array.from(select.options).some(o=>o.value===cur)) select.value=cur; // preserve
+  }
+  const ses = new Set(), cls=new Set(), sec=new Set();
+  allRows.forEach(r=>{ if(r.session) ses.add(String(r.session)); if(r.admisson_class) cls.add(r.admisson_class); if(r.admission_section) sec.add(r.admission_section); });
+  fill(filterSession, ses); fill(filterClass, cls); fill(filterSection, sec);
+}
+
+// Table render
+function renderTable(){
+  const headRow = document.getElementById('tableHeadRow');
+  const body = document.getElementById('tableBody');
+  if(filtered.length===0){ headRow.innerHTML='<th>SL</th>'; body.innerHTML='<tr><td style="padding:.8rem;font-size:.7rem;">No data</td></tr>'; return; }
+  // dynamic columns (small subset for dashboard view)
+  const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration','student_gender','student_blood_group'];
+  headRow.innerHTML = '<th>SL</th>'+cols.map(c=>`<th>${c}</th>`).join('');
+  const start=(currentPage-1)*PAGE_SIZE;
+  const rows=filtered.slice(start,start+PAGE_SIZE);
+  let html='';
+  rows.forEach((r,i)=>{ html+='<tr data-id="'+r.admission_sl+'">'; html+='<td>'+(start+i+1)+'</td>'; cols.forEach(c=>{ html+='<td>'+(r[c]??'')+'</td>'; }); html+='</tr>'; });
+  body.innerHTML=html;
+  buildPagination();
+}
+
+function buildPagination(){
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const pag = document.getElementById('pagination');
+  let html='';
+  function btn(p,label){ return `<button ${p===currentPage?'class="active"':''} data-p="${p}">${label||p}</button>`; }
+  const windowSize=5; let start=Math.max(1,currentPage-Math.floor(windowSize/2)); let end=start+windowSize-1; if(end>totalPages){ end=totalPages; start=Math.max(1,end-windowSize+1);} 
+  if(currentPage>1) html+=btn(currentPage-1,'Prev');
+  for(let p=start;p<=end;p++) html+=btn(p);
+  if(currentPage<totalPages) html+=btn(currentPage+1,'Next');
+  pag.innerHTML=html;
+}
+
+document.getElementById('pagination').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; currentPage=Number(b.dataset.p); renderTable(); });
+
+// Stats
+function updateStats(){
+  document.getElementById('statTotal').textContent = filtered.length;
+  const male = filtered.filter(r=>String(r.student_gender||'').toLowerCase().startsWith('m')).length;
+  const female = filtered.filter(r=>String(r.student_gender||'').toLowerCase().startsWith('f')).length;
+  document.getElementById('statMale').textContent = male;
+  document.getElementById('statFemale').textContent = female;
+  const ff = filtered.filter(r=> (r.quote_freedomfighter||'').trim()!=='' ).length; document.getElementById('statFF').textContent=ff;
+  const bloodSet = new Set(filtered.map(r=>r.student_blood_group).filter(Boolean)); document.getElementById('statBlood').textContent=bloodSet.size;
+}
+
+// Form modal build
+function buildForm(row){
+  const container = document.getElementById('formSections');
+  container.innerHTML='';
+  FIELD_GROUPS.forEach(g=>{
+    const block=document.createElement('div'); block.className='section-block';
+    const h=document.createElement('h3'); h.className='section-title'; h.innerHTML=`${g.icon} ${g.title}`; block.appendChild(h);
+    const fg=document.createElement('div'); fg.className='form-grid';
+    g.fields.forEach(([name,label])=>{
+      const w=document.createElement('label'); w.innerHTML=`${label}<input name="${name}" />`; fg.appendChild(w);
+    });
+    block.appendChild(fg);
+    container.appendChild(block);
+  });
+  // Guardian autofill row
+  const guardianBlock=document.querySelector('.section-block:nth-child(5)');
+  if(guardianBlock){
+    const af=document.createElement('div'); af.className='autofill-row';
+    af.innerHTML='<label style="display:flex;align-items:center;gap:.3rem;font-weight:600;font-size:.6rem;"><input type="checkbox" id="copyFather"> Father as Guardian</label><label style="display:flex;align-items:center;gap:.3rem;font-weight:600;font-size:.6rem;"><input type="checkbox" id="copyMother"> Mother as Guardian</label>';
+    guardianBlock.appendChild(af);
+  }
+  if(row){ // populate
+    [...container.querySelectorAll('input,select,textarea')].forEach(inp=>{ const n=inp.name; if(n && n in row) inp.value=row[n]??''; });
+  }
+  // autofill logic
+  container.addEventListener('change',e=>{
+    if(e.target.id==='copyFather' || e.target.id==='copyMother'){
+      const cf=document.getElementById('copyFather').checked; const cm=document.getElementById('copyMother').checked;
+      if(cf){ copyParent('father','guardian'); }
+      if(cm){ copyParent('mother','guardian'); }
+    }
+  });
+}
+function copyParent(srcPrefix,dstPrefix){
+  const map=[['name_en'],['name_bn'],['nid'],['mobile'],['occupation']];
+  map.forEach(([suffix])=>{
+    const src=document.querySelector(`[name="${srcPrefix}_${suffix}"]`); const dst=document.querySelector(`[name="${dstPrefix}_${suffix}"]`); if(src&&dst) dst.value=src.value;
+  });
+}
+
+function openForm(row){ editingRow=row||null; buildForm(row||{}); document.getElementById('formModal').classList.add('open'); document.getElementById('formModal').setAttribute('aria-hidden','false'); document.getElementById('deleteBtn').style.display = row? 'inline-flex':'none'; }
+function closeForm(){ document.getElementById('formModal').classList.remove('open'); document.getElementById('formModal').setAttribute('aria-hidden','true'); }
+
+// Save form
+async function saveForm(stayOpen=false){
+  const formAlert=document.getElementById('formAlert'); formAlert.style.display='none';
+  const inputs=[...document.querySelectorAll('#formSections input, #formSections select, #formSections textarea')];
+  const payload={}; inputs.forEach(i=>{ if(i.name) payload[i.name]=i.value.trim()||null; });
+  // Basic validation
+  if(!payload.student_name_en || !payload.father_name_en){ formAlert.textContent='Student Name English & Father Name English are required'; formAlert.style.display='block'; return; }
+  const sb=initSupabase(); if(!sb){ formAlert.textContent='Supabase not ready'; formAlert.style.display='block'; return; }
+  try{
+    if(editingRow){
+      const { error } = await sb.from(TABLE).update(payload).eq('admission_sl', editingRow.admission_sl);
+      if(error) throw error;
+    } else {
+      const { error } = await sb.from(TABLE).insert(payload);
+      if(error) throw error;
+    }
+    formAlert.style.display='block'; formAlert.style.background='#dcfce7'; formAlert.style.color='#166534'; formAlert.style.borderColor='#86efac'; formAlert.textContent='Saved successfully';
+    setTimeout(()=>{ formAlert.style.display='none'; }, 1500);
+    fetchAndRender(true);
+    if(!stayOpen) setTimeout(closeForm, 400);
+  }catch(e){
+    console.error(e); formAlert.style.display='block'; formAlert.textContent='Save failed: '+(e.message||e);
+  }
+}
+
+// Delete
+async function deleteRow(){ if(!editingRow) return; if(!confirm('Delete this record?')) return; const sb=initSupabase(); const { error } = await sb.from(TABLE).delete().eq('admission_sl', editingRow.admission_sl); if(error){ alert('Delete failed'); return; } closeForm(); fetchAndRender(true); }
+
+// Export CSV
+function exportCsv(){ const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration']; let csv=cols.join(',')+'\n'; filtered.forEach(r=>{ csv+=cols.map(c=>`"${(r[c]??'').toString().replace(/"/g,'""')}"`).join(',')+'\n'; }); const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admission_export.csv'; a.click(); }
+
+// Utilities
+function status(msg){ document.getElementById('statusBar').textContent=msg; }
+
+// Theme
+function applyTheme(m){ document.documentElement.classList.toggle('dark', m==='dark'); }
+function toggleTheme(){ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); }
+
+// Event bindings
+addEventListener('click',e=>{
+  if(e.target.id==='addNewBtn'){ openForm(null); }
+  if(e.target.id==='closeModalBtn'){ closeForm(); }
+  if(e.target.id==='saveFormBtn'){ saveForm(false); }
+  if(e.target.id==='saveAndNewBtn'){ saveForm(true); }
+  if(e.target.id==='deleteBtn'){ deleteRow(); }
+  if(e.target.id==='exportCsvBtn'){ exportCsv(); }
+  if(e.target.id==='themeToggle'){ toggleTheme(); }
+  const tr=e.target.closest('#dataTable tbody tr'); if(tr){ const id=Number(tr.dataset.id); const row=allRows.find(r=>r.admission_sl===id); openForm(row); }
+});
+['change','keyup'].forEach(ev=>{ filterSession.addEventListener(ev,applyFilters); filterClass.addEventListener(ev,applyFilters); filterSection.addEventListener(ev,applyFilters); searchBox.addEventListener(ev, debounce(applyFilters,250)); });
+clearFiltersBtn.addEventListener('click',()=>{ filterSession.value=''; filterClass.value=''; filterSection.value=''; searchBox.value=''; applyFilters(); });
+
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); } }
+
+// Init
+applyTheme(localStorage.getItem('theme')|| (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+fetchAndRender();
+
+document.getElementById('year').textContent=new Date().getFullYear();
+</script>
+</body>
+</html>

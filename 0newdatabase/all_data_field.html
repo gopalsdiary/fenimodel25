@@ -195,7 +195,7 @@
   let allData = [];
   let lastId = 0;
   // Use 1000 to align with PostgREST default max rows per request
-  let batchSize = 1000;
+  let batchSize = 10000;
   let hasMore = true;
   let batchCount = 0;
   let prevLastId = null; // plateau guard
