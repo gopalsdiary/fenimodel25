@@ -10,6 +10,7 @@ student_dateofbirth > Student Date of Birth
 religion > Religion
 student_gender > Student Gender
 student_photo_url > Student Photo URL
+student_blood_group > Student Blood Group
 
 *Class Information 2025
 class_2025 > Class 2025
@@ -28,6 +29,7 @@ father_nid > Father NID
 father_mobile > Father Mobile
 father_occupation > Father Occupation
 father_dob > Father Date of Birth
+father_blood_group > Father Blood Group
 
 *Mother Information
 mother_name_en > Mother Name English
@@ -36,6 +38,7 @@ mother_nid > Mother NID
 mother_mobile > Mother Mobile
 mother_occupation > Mother Occupation
 mother_dob > Mother Date of Birth
+mother_blood_group > Mother Blood Group
 
 *Guardian Information
 guardian_name_en > Guardian Name English
@@ -58,6 +61,8 @@ postoffice_bn > Post Office Bangla
 postoffice_en > Post Office English
 upazilla_bn > Upazila Bangla
 upazilla_en > Upazila English
+district_bn > District Bangla
+district_en > District English
 district_bn > District Bangla
 district_en > District English
 
