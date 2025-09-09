@@ -19,6 +19,12 @@
   .btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
   .btn.primary{background:#0b74de;color:#fff;box-shadow:0 10px 24px rgba(11,116,222,0.12)}
   .btn.secondary{background:#f1f5f9;color:#334155;border:1px solid #e6eef8}
+  /* Edit/View specific tints
+    - .btn.edit: 35% orange tint (rgba(255,122,0,0.35))
+    - .btn.view: 50% blue tint (rgba(11,116,222,0.5))
+  */
+  .btn.edit{background:linear-gradient(90deg, rgba(255,122,0,0.35), rgba(255,102,0,0.35));color:#0b1724;box-shadow:0 8px 18px rgba(255,122,0,0.12)}
+  .btn.view{background:linear-gradient(90deg, rgba(11,116,222,0.5), rgba(3,82,170,0.5));color:#fff;box-shadow:0 8px 20px rgba(11,116,222,0.12)}
 
   /* Modal styles */
   .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(6,12,28,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:2500}
@@ -517,7 +523,7 @@
 
         const tdAction = document.createElement('td');
         // Edit button (existing behaviour)
-        const btnEdit = document.createElement('button'); btnEdit.className = 'btn'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
+  const btnEdit = document.createElement('button'); btnEdit.className = 'btn edit'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
         btnEdit.addEventListener('click', () => {
           const url = `editdetailsnew.html?iid=${encodeURIComponent(iid)}`;
           const w = window.open(url, '_blank');
@@ -526,7 +532,7 @@
         tdAction.appendChild(btnEdit);
 
         // View button (new) - open read-only modal
-        const btnView = document.createElement('button'); btnView.className = 'btn secondary'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.setAttribute('data-iid', iid);
+  const btnView = document.createElement('button'); btnView.className = 'btn view'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.setAttribute('data-iid', iid);
         btnView.addEventListener('click', () => { openViewByIID(iid); });
         tdAction.appendChild(btnView);
 
