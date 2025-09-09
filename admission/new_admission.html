@@ -6,12 +6,15 @@
 <title>New Admission Application</title>
 <link rel="icon" href="../logo2.png" />
 <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+
 <style>
+html{font-size:115%;}
 :root{--bg:#f5f7fb;--bg-alt:#ffffff;--text:#1f2d3d;--text-soft:#5b6675;--border:#e2e8f0;--brand:#2563eb;--danger:#dc2626;--success:#15803d;--warn:#f59e0b;--shadow:0 6px 20px -2px rgba(0,0,0,.08),0 2px 6px -1px rgba(0,0,0,.04);} 
 .dark{--bg:#0d1117;--bg-alt:#161b22;--text:#e6edf3;--text-soft:#93a4b8;--border:#273649;--shadow:0 6px 28px -4px rgba(0,0,0,.65);} 
 *{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;} body{margin:0;background:var(--bg);color:var(--text);} a{text-decoration:none;color:var(--brand);} 
 header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;flex-wrap:wrap;gap:1rem;} .title{margin:0;font-size:clamp(1.4rem,2.5vw,2.05rem);font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;} 
 .mode-btn{background:var(--bg-alt);border:1px solid var(--border);padding:.55rem .85rem;border-radius:10px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--text-soft);display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);} 
+.shadow-orange{box-shadow:0 8px 30px -6px rgba(249,115,22,.35), 0 4px 18px -4px rgba(249,115,22,.25) !important;}
 .mode-btn.orange{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 6px 18px -4px rgba(249,115,22,.32);} 
 .mode-btn.orange:hover{filter:brightness(.97);}
 .container{width:100%;max-width:1180px;margin:0 auto;padding:0 1.1rem 4rem;} 
@@ -36,7 +39,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
     <div style="font-weight:800;font-size:1.15rem;letter-spacing:.6px;">Feni Model High School</div>
     <h1 class="title" style="margin:.35rem 0 0">New Admission Application</h1>
     <div style="margin-top:.6rem;">
-  <a href="download_form.html" class="mode-btn orange" title="Back to Dashboard">🔙 Download application</a>
+  <a href="download_form.html" class="mode-btn orange shadow-orange" title="Back to Dashboard">🔙 Download application</a>
     </div>
   </div>
 </header>
@@ -54,6 +57,8 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
           <option value="">Select</option>
           <option>2025</option>
           <option>2026</option>
+          <option>2027</option>
+
         </select>
       </label>
       <label class="field required">Admission Class
@@ -169,10 +174,6 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
   <div class="section" id="sec-address">
     <h3><span class="icon">📍</span> Address Information</h3>
     <div class="grid">
-      <label class="field">Village Bangla<input id="village_bn" /></label>
-      <label class="field">Village English<input id="village_en" /></label>
-      <label class="field">Post Office Bangla<input id="postoffice_bn" /></label>
-      <label class="field">Post Office English<input id="postoffice_en" /></label>
       <label class="field required">District English
         <select id="district_en" required>
           <option value="">Select</option>
@@ -183,8 +184,30 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
           <option value="">Select</option>
         </select>
       </label>
-      <label class="field">Upazila English<input id="upazilla_en" /></label>
-      <label class="field">Upazila Bangla<input id="upazilla_bn" /></label>
+      <label class="field">Upazila English
+        <select id="upazilla_en">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Upazila Bangla
+        <select id="upazilla_bn">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Union English
+        <select id="union_en">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Union Bangla
+        <select id="union_bn">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Post Office English<input id="postoffice_en" /></label>
+      <label class="field">Post Office Bangla<input id="postoffice_bn" /></label>
+      <label class="field">Village English<input id="village_en" /></label>
+      <label class="field">Village Bangla<input id="village_bn" /></label>
     </div>
   </div>
 
@@ -194,20 +217,84 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
     <div class="grid">
       <label class="field">Previous School<input id="previous_school" /></label>
       <label class="field">Previous Class Roll<input id="previous_class_roll" /></label>
-      <label class="field">Quote Freedom Fighter<input id="quote_freedomfighter" /></label>
+      <label class="field">Quote Freedom Fighter
+        <select id="quote_freedomfighter">
+          <option value="">Select</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </label>
     </div>
   </div>
 
   <div class="actions">
   <button class="btn primary" id="saveBtn">✅ Submit</button>
-  <button class="btn secondary" id="saveNewBtn">✅➕ Submit & New</button>
+  
     <button class="btn secondary" id="resetBtn" type="button">🔁 Reset</button>
   </div>
   <div id="alertBox" class="alert"></div>
-  <p class="notice">After saving you can view / edit from dashboard. Make sure sensitive data is correct.</p>
+  <p class="notice">After saving you can view / edit. Make sure sensitive data is correct after approval you can't edit.</p>
+<footer>© <span id="year"></span> Feni Model High School · Admission</footer>
 </div>
 <footer>© <span id="year"></span> Feni Model High School · Admission</footer>
+<script src="district.text"></script>
 <script>
+
+// unions.text is in PHP array(...) format. We don't include it directly because
+// that would break the page as it's not valid JS. Instead we fetch and parse it
+// into a JS array `window.unions` before initializing the dropdown population.
+
+function parsePhpArrayText(txt){
+  const unions = [];
+  try{
+    // Match each array(...) block
+    const re = /array\s*\(([^\)]*)\)\s*,?/g;
+    let m;
+    while((m = re.exec(txt)) !== null){
+      const inside = m[1];
+      const obj = {};
+      // match key => 'value' pairs
+      const pairRe = /'([^']+)'\s*=>\s*'((?:\\'|[^'])*)'/g;
+      let p;
+      while((p = pairRe.exec(inside)) !== null){
+        obj[p[1]] = p[2];
+      }
+      if(Object.keys(obj).length){
+        unions.push({
+          id: obj.id || '',
+          upazila_id: obj.upazila_id || obj.upazila || obj.upazilaId || '',
+          name: obj.name || '',
+          bn_name: obj.bn_name || obj.bn || '',
+          url: obj.url || ''
+        });
+      }
+    }
+  }catch(e){ console.warn('parsePhpArrayText error', e); }
+  return unions;
+}
+
+// load unions.text if needed and then run population init (defined later)
+(async function ensureUnionsAndInit(){
+  if(typeof unions === 'undefined'){
+    try{
+      const txt = await fetch('unions.text').then(r=>r.text());
+      window.unions = parsePhpArrayText(txt);
+    }catch(e){ console.warn('Failed to fetch/parse unions.text', e); window.unions = []; }
+  }
+  // signal ready by leaving window.unions defined, the population code below
+  // will be invoked after its function definition.
+})();
+// expose a promise so other scripts can await unions readiness
+window.__unionsReady = (async function(){
+  // wait until window.unions is set (or timeout after 5s)
+  const start = Date.now();
+  while(typeof window.unions === 'undefined'){
+    if(Date.now() - start > 5000) { window.unions = []; break; }
+    await new Promise(r=>setTimeout(r,50));
+  }
+  return window.unions;
+})();
+
 
 const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
 const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';  
@@ -270,7 +357,9 @@ function gatherPayload(){
     district_en:val('district_en')||null,
     previous_school:val('previous_school')||null,
     previous_class_roll:val('previous_class_roll')||null,
-    quote_freedomfighter:val('quote_freedomfighter')||null
+    quote_freedomfighter:val('quote_freedomfighter')||null,
+    union_bn:val('union_bn')||null,
+    union_en:val('union_en')||null
   };
 }
 
@@ -309,7 +398,7 @@ async function save(stay){
 }
 
 $('saveBtn').addEventListener('click',()=>save(false));
-$('saveNewBtn').addEventListener('click',()=>save(true));
+// saveNewBtn removed
 $('resetBtn').addEventListener('click',()=>{ document.querySelectorAll('input,select').forEach(el=>{ if(el.type!=='checkbox') el.value=''; }); clearAlert(); });
 
 // Validate every input/select/textarea (except checkboxes) inside the form container
@@ -378,35 +467,115 @@ $('year').textContent=new Date().getFullYear();
   });
 })();
 
-// Populate district dropdowns (English + Bangla)
-;(function populateDistricts(){
-  const en = [
-    'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapai Nawabganj','Chattogram','Chuadanga','Comilla','Cox\'s Bazar','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhenaidah','Joypurhat','Jhalokati','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'
-  ];
-  const bn = [
-    'বাগেরহাট','বান্দরবান','বরগুনা','বরিশাল','ভোলা','বগুড়া','ব্রাহ্মনবাড়িয়া','চাঁদপুর','চাঁপাইনবাবগঞ্জ','চট্টগ্রাম','চুয়াডাঙ্গা','কুমিল্লা','কক্সবাজার','ঢাকা','দিনাজপুর','ফরিদপুর','ফেনী','গাইবান্ধা','গাজীপুর','গোপালগঞ্জ','হবিগঞ্জ','জামালপুর','যশোর','ঝিনাইদহ','জয়পুরহাট','ঝালকাঠী','খাগড়াছড়ি','খুলনা','কিশোরগঞ্জ','কুড়িগ্রাম','কুষ্টিয়া','লক্ষ্মীপুর','লালমনিরহাট','মাদারীপুর','মাগুরা','মানিকগঞ্জ','মেহেরপুর','মৌলভীবাজার','মুন্সীগঞ্জ','ময়মনসিংহ','নওগা','নারায়ণগঞ্জ','নরসিংদী','নাটোর','নেত্রকোনা','নীলফামারী','নোয়াখালী','পাবনা','পঞ্চগড়','পটুয়াখালী','পিরোজপুর','রাজবাড়ী','রাজশাহী','রাঙ্গামাটী','রংপুর','সাতক্ষীরা','শরীয়তপুর','শেরপুর','সিরাজগঞ্জ','সুনামগঞ্জ','সিলেট','টাংগাইল','ঠাকুরগাঁও'
-  ];
+// Populate district dropdowns (English + Bangla) and upazila mapping
+;(async function populateDistrictsAndUpazilas(){
+  // ensure unions have been loaded/parsed before building unionsByUpazila
+  if(window.__unionsReady) await window.__unionsReady;
+
+//districts & Upazillas take from district.text ** (code mover here)
+
+  // build lookup: districtId => upazila list
+  const upazilasByDistrict = {};
+  upazilas.forEach(u=>{
+    if(!upazilasByDistrict[u.district_id]) upazilasByDistrict[u.district_id]=[];
+    // avoid duplicates by upazila id
+    const exists = upazilasByDistrict[u.district_id].some(x=>x.id===u.id);
+    if(!exists) upazilasByDistrict[u.district_id].push({id:u.id,name:u.name,bn_name:u.bn_name});
+  });
+
+  // build lookup: upazilaId => union list (from UnionSeeder.php data if provided as `unions`)
+  const unionsByUpazila = {};
+  if(typeof unions !== 'undefined' && Array.isArray(unions)){
+    unions.forEach(r=>{
+      const upId = r.upazila_id || r.upazila || r.upazilaId || '';
+      if(!unionsByUpazila[upId]) unionsByUpazila[upId]=[];
+      const exists = unionsByUpazila[upId].some(x=>x.id===r.id);
+      if(!exists) unionsByUpazila[upId].push({id:r.id,name:r.name,bn_name:r.bn_name||r.bn});
+    });
+  }
 
   const selEn = document.getElementById('district_en');
   const selBn = document.getElementById('district_bn');
+  const upEn = document.getElementById('upazilla_en');
+  const upBn = document.getElementById('upazilla_bn');
+  const unionEn = document.getElementById('union_en');
+  const unionBn = document.getElementById('union_bn');
   if(!selEn || !selBn) return;
+
   const prevEn = selEn.value;
   const prevBn = selBn.value;
-  en.forEach((d)=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; selEn.appendChild(o); });
-  bn.forEach((d)=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; selBn.appendChild(o); });
-  // try restore previous values if present
+
+  // sort districts by English name (ascending) then populate district selects with id values
+  districts.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'en', {sensitivity:'base'}));
+  districts.forEach(d=>{
+    const o=document.createElement('option'); o.value=d.id; o.textContent=d.name; selEn.appendChild(o);
+    const p=document.createElement('option'); p.value=d.id; p.textContent=d.bn; selBn.appendChild(p);
+  });
   if(prevEn) selEn.value = prevEn;
   if(prevBn) selBn.value = prevBn;
-  // two-way sync: when user selects in one, update the other by matching index
+
+  // two-way sync for district selects (keep same index)
   let _syncing = false;
   selEn.addEventListener('change', ()=>{
     if(_syncing) return;
     try{ _syncing = true; selBn.selectedIndex = selEn.selectedIndex; }finally{ _syncing = false; }
+    populateUpazilas(selEn.value);
   });
   selBn.addEventListener('change', ()=>{
     if(_syncing) return;
     try{ _syncing = true; selEn.selectedIndex = selBn.selectedIndex; }finally{ _syncing = false; }
+    populateUpazilas(selBn.value);
   });
+
+  // two-way sync for upazila selects
+  let _upSync = false;
+  upEn.addEventListener('change', ()=>{ if(_upSync) return; try{ _upSync=true; upBn.selectedIndex=upEn.selectedIndex; }finally{ _upSync=false; } });
+  upBn.addEventListener('change', ()=>{ if(_upSync) return; try{ _upSync=true; upEn.selectedIndex=upBn.selectedIndex; }finally{ _upSync=false; } });
+
+  // two-way sync for union selects
+  let _unionSync = false;
+  if(unionEn && unionBn){
+    unionEn.addEventListener('change', ()=>{ if(_unionSync) return; try{ _unionSync=true; unionBn.selectedIndex=unionEn.selectedIndex; }finally{ _unionSync=false; } });
+    unionBn.addEventListener('change', ()=>{ if(_unionSync) return; try{ _unionSync=true; unionEn.selectedIndex=unionBn.selectedIndex; }finally{ _unionSync=false; } });
+  }
+
+  // populate upazilas on current selection if any
+  function populateUpazilas(districtId){
+    // clear upazila selects and add a consistent 'Select' placeholder (no hyphen)
+  [upEn, upBn].forEach(s=>{ while(s.options.length>0) s.remove(0); const def=document.createElement('option'); def.value=''; def.textContent='Select'; s.appendChild(def); });
+    // clear unions as well
+  if(unionEn && unionBn){ [unionEn, unionBn].forEach(s=>{ while(s.options.length>0) s.remove(0); const def=document.createElement('option'); def.value=''; def.textContent='Select'; s.appendChild(def); }); }
+    if(!districtId) return;
+    let list = (upazilasByDistrict[districtId]||[]).slice();
+    // sort upazilas by English name (ascending)
+    list.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'en', {sensitivity:'base'}));
+    list.forEach(u=>{
+      const oe=document.createElement('option'); oe.value=u.id; oe.textContent=u.name; upEn.appendChild(oe);
+      const ob=document.createElement('option'); ob.value=u.id; ob.textContent=u.bn_name; upBn.appendChild(ob);
+    });
+    // reset unions placeholder to 'Select' (no hyphen)
+  if(unionEn && unionBn){ const def1=document.createElement('option'); def1.value=''; def1.textContent='Select'; unionEn.appendChild(def1); const def2=document.createElement('option'); def2.value=''; def2.textContent='Select'; unionBn.appendChild(def2); }
+  }
+
+  // Populate unions for selected upazila
+  function populateUnions(upazilaId){
+    if(!unionEn || !unionBn) return;
+  [unionEn, unionBn].forEach(s=>{ while(s.options.length>0) s.remove(0); const d=document.createElement('option'); d.value=''; d.textContent='-'; s.appendChild(d); });
+    if(!upazilaId) return;
+    const list = (unionsByUpazila[upazilaId]||[]).slice();
+    list.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'en', {sensitivity:'base'}));
+    list.forEach(u=>{
+      const oe=document.createElement('option'); oe.value=u.id; oe.textContent=u.name; unionEn.appendChild(oe);
+      const ob=document.createElement('option'); ob.value=u.id; ob.textContent=u.bn_name; unionBn.appendChild(ob);
+    });
+  }
+
+  // initial population if a district was preselected
+  const curDistrict = selEn.value || selBn.value;
+  if(curDistrict) populateUpazilas(curDistrict);
+  // when upazila changes, populate unions
+  upEn.addEventListener('change', ()=>{ populateUnions(upEn.value); });
+  upBn.addEventListener('change', ()=>{ populateUnions(upBn.value); });
 })();
 </script>
 

@@ -60,6 +60,8 @@ upazilla_bn > Upazila Bangla
 upazilla_en > Upazila English
 district_bn > District Bangla
 district_en > District English
+union_en > Union English
+union_bn > Union Bangla
 
 
 *Additional Information
