@@ -111,12 +111,16 @@
 	</div>
 
 	<script>
-		// Data source: localStorage warmed by 0newdatabase/datalist.html
-		// Extra column source: localStorage warmed by 0newdatabase/all_data_field.html (matched by iid)
-
-		// Cache (10 minutes for faster perceived load, reduced from 30m for freshness)
-		const CACHE_KEY = 'datalist_rows_v2';
-		const CACHE_TTL_MS = 100*60*1000;
+		// Direct Supabase data source (localStorage cache removed)
+		const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		let supabaseClient = null;
+		(function ensureSupabase(){
+			if(window.supabase){ supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
+			else { const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>{ supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); loadAll(); }; document.head.appendChild(s); }
+		})();
+		const CACHE_KEY = null; // disabled
+		const CACHE_TTL_MS = 0; // disabled
 
 		const container = document.getElementById('container');
 		const statusEl = document.getElementById('status');
@@ -124,149 +128,23 @@
 		// Fixed columns always shown
 		const FIXED_COLS = ['iid','class_section_year','active_roll','student_name_en']; // SL is added separately
 
-		// Master dataset (all_data_field.html cache)
-		const MASTER_CACHE_KEY = 'all_data_field_cache_v1';
-		let masterRows = [];
-		let masterByIid = new Map();
-		function getMasterFromLS(){
-			try{
-				const raw = localStorage.getItem(MASTER_CACHE_KEY);
-				if(!raw) return null;
-				const obj = JSON.parse(raw);
-				if(!obj || !Array.isArray(obj.rows)) return null;
-				return obj.rows;
-			}catch(e){ return null; }
-		}
-		function indexMaster(rows){
-			masterByIid = new Map();
-			for(const r of rows||[]){
-				const iid = Number(r.iid ?? r.IID);
-				if(Number.isFinite(iid)) masterByIid.set(iid, r);
-			}
-		}
-		async function ensureMasterLoaded(){
-			if(masterRows && masterRows.length>0) return;
-			let rows = getMasterFromLS();
-			if(rows && rows.length){ masterRows = rows; indexMaster(rows); return; }
-			// warm via hidden iframe
-			await new Promise((resolve)=>{
-				let ifr = document.getElementById('__allfields_warm_iframe');
-				let created=false;
-				if(!ifr){
-					ifr = document.createElement('iframe');
-					ifr.id='__allfields_warm_iframe';
-					ifr.style.width='1px'; ifr.style.height='1px'; ifr.style.border='0';
-					ifr.style.position='absolute'; ifr.style.left='-9999px'; ifr.style.top='-9999px';
-					ifr.loading='lazy';
-					ifr.src='0newdatabase/all_data_field.html';
-					document.body.appendChild(ifr); created=true;
-				}
-				const start=Date.now(); const timeout=10000; const interval=400;
-				const timer=setInterval(()=>{
-					const r = getMasterFromLS();
-					if(r && r.length){
-						clearInterval(timer);
-						setTimeout(()=>{ try{ if(created && ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr);}catch(e){} }, 500);
-						masterRows = r; indexMaster(r); resolve();
-						return;
-					}
-					if(Date.now()-start>timeout){ clearInterval(timer); if(created){ try{ ifr.remove(); }catch(e){} } resolve(); }
-				}, interval);
-			});
-		}
-
-	// Do NOT load column spec from CSV; render fixed columns below
-	let columnSpec = []; // kept empty — not used
-
-		// Cache helpers
-		function saveCache(rows){
-			try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(), rows})); }catch(e){}
-		}
-		function loadCache(){
-			try{
-				const raw = localStorage.getItem(CACHE_KEY);
-				if(!raw) return null;
-				const obj = JSON.parse(raw);
-				if(!obj || !Array.isArray(obj.rows)) return null;
-				return obj;
-			}catch(e){ return null; }
-		}
+	// All columns fetched directly; master dataset removed.
+	let columnSpec = [];
+	let allRows = [];
 
 		async function fetchAll(){
-			// Prefer cached rows from datalist page (localStorage)
+			if(!supabaseClient){ statusEl.textContent='Supabase not ready'; return []; }
+			statusEl.textContent='Loading from database...';
 			try{
-				statusEl.textContent = 'Loading from local cache...';
-				const raw = localStorage.getItem(CACHE_KEY);
-				if(raw){
-					const obj = JSON.parse(raw);
-					if(obj && Array.isArray(obj.rows)){
-						statusEl.textContent = `Loaded ${obj.rows.length} rows from cache`;
-						return obj.rows;
-					}
-				}
-
-				// If cache missing, attempt to warm it by loading the datalist page in a hidden iframe.
-				statusEl.textContent = 'Warming cache from datalist.html...';
-				await new Promise((resolve) => {
-					// If an iframe already exists, reuse it
-					let ifr = document.getElementById('__datalist_warm_iframe');
-					let created = false;
-					if(!ifr){
-						ifr = document.createElement('iframe');
-						ifr.id = '__datalist_warm_iframe';
-						ifr.style.width = '1px'; ifr.style.height = '1px'; ifr.style.border = '0';
-						ifr.style.position = 'absolute'; ifr.style.left = '-9999px'; ifr.style.top = '-9999px';
-						ifr.loading = 'lazy';
-						ifr.src = '0newdatabase/datalist.html';
-						document.body.appendChild(ifr);
-						created = true;
-					}
-
-					// Poll localStorage for the cache to appear
-					const start = Date.now();
-					const timeout = 8000; // wait up to 8s
-					const interval = 400;
-					const timer = setInterval(()=>{
-						try{
-							const r2 = localStorage.getItem(CACHE_KEY);
-							if(r2){
-								const obj2 = JSON.parse(r2);
-								if(obj2 && Array.isArray(obj2.rows)){
-									clearInterval(timer);
-									// cleanup iframe after short delay
-									setTimeout(()=>{ try{ if(created && ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr); }catch(e){} }, 500);
-									resolve();
-									return;
-								}
-							}
-						}catch(e){ /* ignore parse errors */ }
-						if(Date.now() - start > timeout){
-							clearInterval(timer);
-							// timeout - remove iframe if we created it
-							if(created){ try{ ifr.remove(); }catch(e){} }
-							resolve();
-						}
-					}, interval);
-				});
-
-				// Try reading cache again
-				const raw2 = localStorage.getItem(CACHE_KEY);
-				if(raw2){
-					const obj2 = JSON.parse(raw2);
-					if(obj2 && Array.isArray(obj2.rows)){
-						statusEl.textContent = `Loaded ${obj2.rows.length} rows (warmed)`;
-						return obj2.rows;
-					}
-				}
-
-				// Final fallback: return empty array so UI can show 'no data'
-				statusEl.textContent = 'No datalist cache found';
-				return [];
-			}catch(e){
-				console.error('fetchAll (local) error:', e);
-				statusEl.textContent = 'Error loading data';
-				return [];
-			}
+				const { data, error } = await supabaseClient
+					.from('student_database')
+					.select('*')
+					.order('iid', { ascending:true })
+					.limit(10000);
+				if(error) throw error;
+				statusEl.textContent = `Loaded ${data.length} rows`;
+				return data;
+			}catch(err){ console.error('fetchAll error', err); statusEl.textContent='Load error'; return []; }
 		}
 
 		function groupByClassSection(rows){
@@ -303,10 +181,9 @@
 		function saveSelectedColumns(){
 			try{ localStorage.setItem(SELECTED_COLS_KEY, JSON.stringify(selectedColumns)); }catch(e){}
 		}
-		function computeAvailableColumnsFromMaster(){
+		function computeAvailableColumns(){
 			const set = new Set();
-			for(const r of masterRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
-			// remove fixed and iid (fixed list includes iid)
+			for(const r of allRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
 			FIXED_COLS.forEach(c=> set.delete(c));
 			set.delete('SL');
 			return Array.from(set).sort((a,b)=> a.localeCompare(b));
@@ -366,7 +243,7 @@
 				const sltd = document.createElement('td'); sltd.className='col-sl'; sltd.textContent=(idx+1); tr.appendChild(sltd);
 				// Fixed: iid link
 				const iidRaw = row.iid ?? row.IID ?? '';
-				const iidNum = Number(iidRaw) || 0;
+				// const iidNum = Number(iidRaw) || 0; // master removed
 				const tdIid = document.createElement('td');
 				const a = document.createElement('a'); a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; a.textContent=escapeHtml(String(iidRaw)); a.style.color='#0b74de'; a.style.textDecoration='underline';
 				tdIid.appendChild(a); tr.appendChild(tdIid);
@@ -380,16 +257,13 @@
 				const tdCSY = document.createElement('td'); tdCSY.textContent = escapeHtml(csY); tr.appendChild(tdCSY);
 				const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
 				// Fixed: student_name_en
-				const nameEn = row.student_name_en ?? (masterByIid.get(iidNum)?.student_name_en) ?? '';
+				const nameEn = row.student_name_en ?? '';
 				const tdName = document.createElement('td'); tdName.textContent = escapeHtml(nameEn); tr.appendChild(tdName);
 
-				// Extra selected columns from master
+				// Extra selected columns directly from row
 				selectedColumns.forEach(col=>{
 					const td = document.createElement('td');
-					let v;
-					const m = masterByIid.get(iidNum);
-					if(m && Object.prototype.hasOwnProperty.call(m,col)) v = m[col];
-					else v = row[col];
+					const v = row[col];
 					td.textContent = escapeHtml(v==null? '': String(v));
 					tr.appendChild(td);
 				});
@@ -487,8 +361,7 @@
 			
 			// Save latest, show column chooser, and render table based on selections
 			latestFilteredRows = filteredRows;
-			await ensureMasterLoaded();
-			const availableColumns = computeAvailableColumnsFromMaster();
+			const availableColumns = computeAvailableColumns();
 			buildColumnControls(availableColumns);
 			reRenderTable();
 			if(selectedCsyPrintEl){
@@ -500,48 +373,19 @@
 			if(ph){ ph.textContent = ''; ph.style.display='none'; }
 		}
 
-		async function loadAll(background=false){
-			if(!background) statusEl.textContent = 'Loading...';
-			try{
-					const rows = await fetchAll();
-				saveCache(rows);
-				const groups = groupByClassSection(rows);
-				await render(groups);
-			}catch(err){
-				const msg = (err && err.message) ? err.message : String(err);
-				statusEl.textContent = `Load error: ${msg}`;
-				// Try cache fallback
-				const cached = loadCache();
-				if(cached && Array.isArray(cached.rows)){
-					const groups = groupByClassSection(cached.rows);
-					await render(groups);
-					const ageM = Math.floor((Date.now()-cached.ts)/60000);
-					statusEl.textContent = `Total Students: ${cached.rows.length} (offline cache, ${ageM}m old)`;
-				}
-			}
+		async function loadAll(){
+			statusEl.textContent='Loading...';
+			allRows = await fetchAll();
+			const groups = groupByClassSection(allRows);
+			await render(groups);
 		}
 
-		// Initial: try fresh cache then revalidate
+		// Initial load direct DB
 		(async function init(){
-			const cached = loadCache();
-			await ensureMasterLoaded();
-			if(cached && (Date.now()-cached.ts) < CACHE_TTL_MS){
-				const groups = groupByClassSection(cached.rows);
-				await render(groups);
-				const ageM = Math.floor((Date.now()-cached.ts)/60000);
-				statusEl.textContent = `Groups: ${groups.length} | Total: ${cached.rows.length} (from cache, ${ageM}m old)`;
-				setTimeout(()=> loadAll(true), 0);
-			}else{
-				loadAll(false);
-			}
-			
-			// Add event listener for dropdown filter
+			await loadAll();
 			document.getElementById('classSectionYearFilter').addEventListener('change', async () => {
-				const cached = loadCache();
-				if(cached && Array.isArray(cached.rows)){
-					const groups = groupByClassSection(cached.rows);
-					await render(groups);
-				}
+				const groups = groupByClassSection(allRows);
+				await render(groups);
 			});
 		})();
 	</script>

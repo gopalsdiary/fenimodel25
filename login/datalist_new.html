@@ -60,7 +60,9 @@
   .filter-select:focus{outline:2px solid rgba(255,122,0,0.16);box-shadow:0 10px 30px rgba(255,122,0,0.08)}
 
   /* Table visuals */
-  #dataTable{background:linear-gradient(180deg,#ffffff,#fbfcff);border:1px solid #eef4fb;border-radius:12px;overflow:hidden}
+  /* Container card for table (plain box) */
+  .table-card{background:#ffffff;padding:12px;border-radius:12px;border:1px solid #e6eef8;box-shadow:0 12px 30px rgba(12,24,40,0.06);margin-top:10px}
+  #dataTable{background:transparent;border:none;border-radius:6px;overflow:hidden}
   #dataTable thead th{position:sticky;top:0;z-index:3;padding:12px 14px}
   #dataTable tbody td{padding:12px 14px;border-bottom:1px solid #f3f7fb}
   #dataTable tbody tr:hover{background:linear-gradient(90deg,#f7fbff,#ffffff)}
@@ -105,6 +107,7 @@
     </div>
   </div>
 
+  <div class="table-card">
   <table id="dataTable">
     <thead>
       <tr>
@@ -126,6 +129,7 @@
       <tr><td colspan="12">Loading...</td></tr>
     </tbody>
   </table>
+  </div>
 
   <!-- Edit modal -->
   <div id="editModal" class="modal">

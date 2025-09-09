@@ -76,7 +76,7 @@
     const tableName = 'student_database';
   // Simple 10-minute TTL cache (localStorage) with SWR behavior
   const CACHE_KEY = 'all_data_field_cache_v1';
-  const CACHE_TTL_MS = 1000000 * 60 * 1000; // 10 minutes
+  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
   const tbody = document.querySelector('#dataTable tbody');
     const statusEl = document.getElementById('status');

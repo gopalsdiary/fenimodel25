@@ -111,12 +111,34 @@
 	</div>
 
 	<script>
-		// Data source: localStorage warmed by 0newdatabase/datalist.html
-		// Extra column source: localStorage warmed by 0newdatabase/all_data_field.html (matched by iid)
-
-		// Cache (10 minutes for faster perceived load, reduced from 30m for freshness)
-		const CACHE_KEY = 'datalist_rows_v2';
-		const CACHE_TTL_MS = 100*60*1000;
+		// --- Supabase client init for update operations ---
+		// Reuse existing project credentials (same as other pages)
+		const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		let supabaseClient = null;
+		(function ensureSupabase(){
+			if(window.supabase){
+				supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+			} else {
+				// dynamically inject script if missing
+				const s = document.createElement('script');
+				s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+				s.onload = () => { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); };
+				document.head.appendChild(s);
+			}
+		})();
+		async function waitForSupabase(){
+			if(supabaseClient) return;
+			await new Promise(res=>{
+				const start=Date.now();
+				const t=setInterval(()=>{
+					if(supabaseClient || Date.now()-start>8000){ clearInterval(t); res(); }
+				},100);
+			});
+		}
+		// Data source: Direct Supabase (two-phase: lite for dropdown, filtered full for selected group)
+		const CACHE_KEY = null;
+		const CACHE_TTL_MS = 0;
 
 		const container = document.getElementById('container');
 		const statusEl = document.getElementById('status');
@@ -124,149 +146,46 @@
 		// Fixed columns always shown
 		const FIXED_COLS = ['iid','class_section_year','active_roll','student_name_en']; // SL is added separately
 
-		// Master dataset (all_data_field.html cache)
-		const MASTER_CACHE_KEY = 'all_data_field_cache_v1';
-		let masterRows = [];
-		let masterByIid = new Map();
-		function getMasterFromLS(){
+	// Master dataset removed; full data loaded on-demand for selected group
+	let columnSpec = [];
+	let liteRows = []; // minimal rows for dropdown + basic display before selection
+	let currentGroupRows = []; // full rows for selected group (with all fields)
+	let allColumns = []; // discovered columns after first full fetch
+
+		async function fetchLite(){
+			if(!supabaseClient){ return []; }
+			statusEl.textContent='Loading list (lite)...';
 			try{
-				const raw = localStorage.getItem(MASTER_CACHE_KEY);
-				if(!raw) return null;
-				const obj = JSON.parse(raw);
-				if(!obj || !Array.isArray(obj.rows)) return null;
-				return obj.rows;
-			}catch(e){ return null; }
+				const { data, error } = await supabaseClient
+					.from('student_database')
+					.select('iid,session,roll_2025,class_2025,section_2025,roll_2026,class_2026,section_2026,student_name_en,status')
+					.limit(20000);
+				if(error) throw error;
+				return data||[];
+			}catch(e){ console.error(e); statusEl.textContent='Lite load error'; return []; }
 		}
-		function indexMaster(rows){
-			masterByIid = new Map();
-			for(const r of rows||[]){
-				const iid = Number(r.iid ?? r.IID);
-				if(Number.isFinite(iid)) masterByIid.set(iid, r);
-			}
-		}
-		async function ensureMasterLoaded(){
-			if(masterRows && masterRows.length>0) return;
-			let rows = getMasterFromLS();
-			if(rows && rows.length){ masterRows = rows; indexMaster(rows); return; }
-			// warm via hidden iframe
-			await new Promise((resolve)=>{
-				let ifr = document.getElementById('__allfields_warm_iframe');
-				let created=false;
-				if(!ifr){
-					ifr = document.createElement('iframe');
-					ifr.id='__allfields_warm_iframe';
-					ifr.style.width='1px'; ifr.style.height='1px'; ifr.style.border='0';
-					ifr.style.position='absolute'; ifr.style.left='-9999px'; ifr.style.top='-9999px';
-					ifr.loading='lazy';
-					ifr.src='0newdatabase/all_data_field.html';
-					document.body.appendChild(ifr); created=true;
+		async function fetchGroupFull(csy){
+			if(!supabaseClient){ return []; }
+			statusEl.textContent='Loading group data...';
+			try{
+				if(csy==='__ALL__'){
+					const { data, error } = await supabaseClient.from('student_database').select('*').order('iid',{ascending:true}).limit(20000);
+					if(error) throw error; return data||[];
 				}
-				const start=Date.now(); const timeout=10000; const interval=400;
-				const timer=setInterval(()=>{
-					const r = getMasterFromLS();
-					if(r && r.length){
-						clearInterval(timer);
-						setTimeout(()=>{ try{ if(created && ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr);}catch(e){} }, 500);
-						masterRows = r; indexMaster(r); resolve();
-						return;
-					}
-					if(Date.now()-start>timeout){ clearInterval(timer); if(created){ try{ ifr.remove(); }catch(e){} } resolve(); }
-				}, interval);
-			});
-		}
-
-	// Do NOT load column spec from CSV; render fixed columns below
-	let columnSpec = []; // kept empty — not used
-
-		// Cache helpers
-		function saveCache(rows){
-			try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ts:Date.now(), rows})); }catch(e){}
-		}
-		function loadCache(){
-			try{
-				const raw = localStorage.getItem(CACHE_KEY);
-				if(!raw) return null;
-				const obj = JSON.parse(raw);
-				if(!obj || !Array.isArray(obj.rows)) return null;
-				return obj;
-			}catch(e){ return null; }
-		}
-
-		async function fetchAll(){
-			// Prefer cached rows from datalist page (localStorage)
-			try{
-				statusEl.textContent = 'Loading from local cache...';
-				const raw = localStorage.getItem(CACHE_KEY);
-				if(raw){
-					const obj = JSON.parse(raw);
-					if(obj && Array.isArray(obj.rows)){
-						statusEl.textContent = `Loaded ${obj.rows.length} rows from cache`;
-						return obj.rows;
-					}
-				}
-
-				// If cache missing, attempt to warm it by loading the datalist page in a hidden iframe.
-				statusEl.textContent = 'Warming cache from datalist.html...';
-				await new Promise((resolve) => {
-					// If an iframe already exists, reuse it
-					let ifr = document.getElementById('__datalist_warm_iframe');
-					let created = false;
-					if(!ifr){
-						ifr = document.createElement('iframe');
-						ifr.id = '__datalist_warm_iframe';
-						ifr.style.width = '1px'; ifr.style.height = '1px'; ifr.style.border = '0';
-						ifr.style.position = 'absolute'; ifr.style.left = '-9999px'; ifr.style.top = '-9999px';
-						ifr.loading = 'lazy';
-						ifr.src = '0newdatabase/datalist.html';
-						document.body.appendChild(ifr);
-						created = true;
-					}
-
-					// Poll localStorage for the cache to appear
-					const start = Date.now();
-					const timeout = 8000; // wait up to 8s
-					const interval = 400;
-					const timer = setInterval(()=>{
-						try{
-							const r2 = localStorage.getItem(CACHE_KEY);
-							if(r2){
-								const obj2 = JSON.parse(r2);
-								if(obj2 && Array.isArray(obj2.rows)){
-									clearInterval(timer);
-									// cleanup iframe after short delay
-									setTimeout(()=>{ try{ if(created && ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr); }catch(e){} }, 500);
-									resolve();
-									return;
-								}
-							}
-						}catch(e){ /* ignore parse errors */ }
-						if(Date.now() - start > timeout){
-							clearInterval(timer);
-							// timeout - remove iframe if we created it
-							if(created){ try{ ifr.remove(); }catch(e){} }
-							resolve();
-						}
-					}, interval);
+				// csy format: class-section-session
+				const parts = csy.split('-');
+				const cls = parts[0]||''; const sec = parts[1]||''; const ses = parts[2]||'';
+				// Need records where active (session) matches; active means for that session use matching class/section/roll
+				// We'll fetch rows with that session then filter in JS (keeps query simple)
+				const { data, error } = await supabaseClient.from('student_database').select('*').eq('session', ses).limit(20000);
+				if(error) throw error;
+				const rows = (data||[]).filter(r=>{
+					if(Number(r.session)===2026) return String(r.class_2026||'')===cls && String(r.section_2026||'')===sec;
+					if(Number(r.session)===2025) return String(r.class_2025||'')===cls && String(r.section_2025||'')===sec;
+					return false;
 				});
-
-				// Try reading cache again
-				const raw2 = localStorage.getItem(CACHE_KEY);
-				if(raw2){
-					const obj2 = JSON.parse(raw2);
-					if(obj2 && Array.isArray(obj2.rows)){
-						statusEl.textContent = `Loaded ${obj2.rows.length} rows (warmed)`;
-						return obj2.rows;
-					}
-				}
-
-				// Final fallback: return empty array so UI can show 'no data'
-				statusEl.textContent = 'No datalist cache found';
-				return [];
-			}catch(e){
-				console.error('fetchAll (local) error:', e);
-				statusEl.textContent = 'Error loading data';
-				return [];
-			}
+				return rows;
+			}catch(e){ console.error(e); statusEl.textContent='Group load error'; return []; }
 		}
 
 		function groupByClassSection(rows){
@@ -293,7 +212,9 @@
 		}
 
 		const SELECTED_COLS_KEY = 'print_data_selected_columns_v1';
+		const SELECTED_EDITABLE_KEY = 'print_data_selected_editable_v1';
 		let selectedColumns = [];
+		let selectedEditable = null; // single column that is editable (last selected)
 		let latestFilteredRows = [];
 		const columnControlsEl = document.getElementById('columnControls');
 
@@ -303,18 +224,31 @@
 		function saveSelectedColumns(){
 			try{ localStorage.setItem(SELECTED_COLS_KEY, JSON.stringify(selectedColumns)); }catch(e){}
 		}
-		function computeAvailableColumnsFromMaster(){
+		function loadSelectedEditable(){
+			try{ const raw = localStorage.getItem(SELECTED_EDITABLE_KEY); return raw? String(raw): null; }catch(e){ return null; }
+		}
+		function saveSelectedEditable(){
+			try{ if(selectedEditable) localStorage.setItem(SELECTED_EDITABLE_KEY, String(selectedEditable)); else localStorage.removeItem(SELECTED_EDITABLE_KEY); }catch(e){}
+		}
+		function computeAvailableColumns(){
+			if(allColumns.length) return allColumns;
 			const set = new Set();
-			for(const r of masterRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
-			// remove fixed and iid (fixed list includes iid)
+			for(const r of currentGroupRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
 			FIXED_COLS.forEach(c=> set.delete(c));
 			set.delete('SL');
-			return Array.from(set).sort((a,b)=> a.localeCompare(b));
+			allColumns = Array.from(set).sort((a,b)=> a.localeCompare(b));
+			return allColumns;
 		}
 		function buildColumnControls(columns){
 			if(!columnControlsEl) return;
 			// keep only selections that still exist
 			selectedColumns = (selectedColumns||[]).filter(c => columns.includes(c));
+			// ensure selectedEditable still exists and is in selectedColumns
+			if(selectedEditable && !columns.includes(selectedEditable)){
+				selectedEditable = null; saveSelectedEditable();
+			}
+			// enforce max 4 viewable columns
+			if(selectedColumns.length > 4){ selectedColumns = selectedColumns.slice(0,4); saveSelectedColumns(); }
 			columnControlsEl.style.display = columns.length? 'block':'none';
 			columnControlsEl.innerHTML = '';
 			const actions = document.createElement('div'); actions.className = 'actions';
@@ -323,23 +257,42 @@
 			actions.appendChild(btnAll); actions.appendChild(btnClear);
 			columnControlsEl.appendChild(actions);
 			const list = document.createElement('div'); list.className='list';
+			const warn = document.createElement('div'); warn.style.fontSize='11px'; warn.style.marginTop='4px'; warn.style.color='#b45309'; warn.textContent='Max 4 columns can be ticked to view; the last selected column is editable.';
 			columns.forEach(col=>{
 				const label = document.createElement('label'); label.className='col-item';
 				const cb = document.createElement('input'); cb.type='checkbox'; cb.value=col; cb.checked = selectedColumns.includes(col);
 				const txt = document.createElement('span'); txt.textContent = col;
 				label.appendChild(cb); label.appendChild(txt);
+				// editable badge
+				const badge = document.createElement('span'); badge.style.fontSize='11px'; badge.style.color='#059669'; badge.style.marginLeft='6px'; badge.textContent='(editable)';
+				if(selectedEditable !== col) badge.style.display='none';
+				label.appendChild(badge);
 				list.appendChild(label);
 			});
 			columnControlsEl.appendChild(list);
-			btnAll.onclick = ()=>{ selectedColumns = [...columns]; saveSelectedColumns(); reRenderTable(); buildColumnControls(columns); };
-			btnClear.onclick = ()=>{ selectedColumns = []; saveSelectedColumns(); reRenderTable(); buildColumnControls(columns); };
+			columnControlsEl.appendChild(warn);
+			btnAll.onclick = ()=>{ selectedColumns = [...columns].slice(0,4); selectedEditable = selectedColumns[selectedColumns.length-1] || null; saveSelectedColumns(); saveSelectedEditable(); reRenderTable(); buildColumnControls(columns); };
+			btnClear.onclick = ()=>{ selectedColumns = []; selectedEditable = null; saveSelectedColumns(); saveSelectedEditable(); reRenderTable(); buildColumnControls(columns); };
 			list.addEventListener('change', (e)=>{
 				const t = e.target;
 				if(t && t.tagName==='INPUT' && t.type==='checkbox'){
-					if(t.checked){ if(!selectedColumns.includes(t.value)) selectedColumns.push(t.value); }
-					else { selectedColumns = selectedColumns.filter(x=>x!==t.value); }
+					if(t.checked){ 
+						if(!selectedColumns.includes(t.value)){
+							if(selectedColumns.length >= 4){ t.checked=false; warn.style.color='#dc2626'; warn.textContent='Limit 4 reached'; return; }
+							selectedColumns.push(t.value);
+						}
+						// last selected becomes editable
+						selectedEditable = t.value;
+						saveSelectedEditable();
+						warn.style.color='#b45309'; warn.textContent='Max 4 columns can be ticked to view; the last selected column is editable.';
+					} else {
+						selectedColumns = selectedColumns.filter(x=>x!==t.value);
+						if(selectedEditable === t.value){ selectedEditable = selectedColumns[selectedColumns.length-1] || null; saveSelectedEditable(); }
+						warn.style.color='#b45309'; warn.textContent='Max 4 columns can be ticked to view; the last selected column is editable.';
+					}
 					saveSelectedColumns();
 					reRenderTable();
+					buildColumnControls(columns);
 				}
 			});
 		}
@@ -357,7 +310,10 @@
 			const table = document.createElement('table');
 			const thead = document.createElement('thead');
 			const htr = document.createElement('tr');
-			['SL', 'iid', 'class_section_year', 'active_roll', 'student_name_en', ...selectedColumns].forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
+			const headerCols = ['SL', 'iid', 'class_section_year', 'active_roll', 'student_name_en'];
+			selectedColumns.forEach(c => { headerCols.push(c + (selectedEditable === c ? ' (editable)' : '')); });
+			headerCols.push('Update');
+			headerCols.forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
 			thead.appendChild(htr); table.appendChild(thead);
 			const tbody = document.createElement('tbody');
 			latestFilteredRows.forEach((row, idx)=>{
@@ -366,33 +322,49 @@
 				const sltd = document.createElement('td'); sltd.className='col-sl'; sltd.textContent=(idx+1); tr.appendChild(sltd);
 				// Fixed: iid link
 				const iidRaw = row.iid ?? row.IID ?? '';
-				const iidNum = Number(iidRaw) || 0;
 				const tdIid = document.createElement('td');
 				const a = document.createElement('a'); a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; a.textContent=escapeHtml(String(iidRaw)); a.style.color='#0b74de'; a.style.textDecoration='underline';
 				tdIid.appendChild(a); tr.appendChild(tdIid);
-				// Fixed: class_section_year + active_roll
+				// Fixed: class_section_year + active_roll (now build class-section-year even if roll missing)
 				const sNum = Number(row.session);
 				let active_roll = '', active_class = '', active_section = '';
 				if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
 				else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
-				const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-				let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
+				let csY = [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-');
+				if(!active_class) csY=''; // require class at minimum
 				const tdCSY = document.createElement('td'); tdCSY.textContent = escapeHtml(csY); tr.appendChild(tdCSY);
 				const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
 				// Fixed: student_name_en
-				const nameEn = row.student_name_en ?? (masterByIid.get(iidNum)?.student_name_en) ?? '';
+				const nameEn = row.student_name_en ?? '';
 				const tdName = document.createElement('td'); tdName.textContent = escapeHtml(nameEn); tr.appendChild(tdName);
 
-				// Extra selected columns from master
+				// Render selected columns: only selectedEditable is editable; others shown as text
 				selectedColumns.forEach(col=>{
 					const td = document.createElement('td');
-					let v;
-					const m = masterByIid.get(iidNum);
-					if(m && Object.prototype.hasOwnProperty.call(m,col)) v = m[col];
-					else v = row[col];
-					td.textContent = escapeHtml(v==null? '': String(v));
+					const v = row[col];
+					const valStr = v==null? '' : String(v);
+					if(selectedEditable === col){
+						const inp = document.createElement('input');
+						inp.type='text'; inp.value=valStr; inp.setAttribute('data-field', col); inp.setAttribute('data-original', valStr); inp.setAttribute('data-iid', iidRaw);
+						inp.style.width='140px'; inp.style.boxSizing='border-box'; inp.style.padding='4px 6px'; inp.style.border='1px solid #cbd5e1'; inp.style.borderRadius='4px'; inp.style.fontSize='12px';
+						inp.addEventListener('input', ()=>{
+							const orig = inp.getAttribute('data-original') || '';
+							if(inp.value !== orig){ inp.style.background='#fff7e6'; inp.style.borderColor='#f59e0b'; }
+							else { inp.style.background='#ffffff'; inp.style.borderColor='#cbd5e1'; }
+						});
+						td.appendChild(inp);
+					} else {
+						td.textContent = escapeHtml(valStr);
+					}
 					tr.appendChild(td);
 				});
+
+				// Update button
+				const tdUpdate = document.createElement('td');
+				const btn = document.createElement('button'); btn.type='button'; btn.textContent='Update';
+				btn.style.padding='4px 8px'; btn.style.fontSize='12px'; btn.style.background='#2563eb'; btn.style.color='#fff'; btn.style.border='1px solid #1d4ed8'; btn.style.borderRadius='4px'; btn.style.cursor='pointer';
+				btn.addEventListener('click', ()=> updateRow(iidRaw, tr, btn));
+				tdUpdate.appendChild(btn); tr.appendChild(tdUpdate);
 				tbody.appendChild(tr);
 			});
 			table.appendChild(tbody);
@@ -403,6 +375,47 @@
 			statusEl.textContent = `Total Students: ${latestFilteredRows.length} | Session sample: ${sessionValue || 'N/A'}`;
 		}
 
+		async function updateRow(iidRaw, tr, btn){
+			if(!supabaseClient){ alert('Supabase not ready yet'); return; }
+			const iidNum = Number(iidRaw);
+			if(!Number.isFinite(iidNum)){ alert('Invalid IID'); return; }
+			const inputs = tr.querySelectorAll('input[data-field]');
+			const payload = {}; let changed = 0;
+			inputs.forEach(inp=>{
+				const field = inp.getAttribute('data-field');
+				const orig = inp.getAttribute('data-original') || '';
+				if(inp.value !== orig){
+					payload[field] = inp.value === '' ? null : inp.value;
+					changed++;
+				}
+			});
+			if(changed === 0){ btn.textContent='No change'; setTimeout(()=>{ btn.textContent='Update'; }, 800); return; }
+			btn.disabled = true; const oldTxt = btn.textContent; btn.textContent='Updating...'; btn.style.opacity='0.7';
+			try{
+				const { error } = await supabaseClient.from('student_database').update(payload).eq('iid', iidNum);
+				if(error) throw error;
+				// success: update originals + caches
+				inputs.forEach(inp=>{
+					const field = inp.getAttribute('data-field');
+					if(Object.prototype.hasOwnProperty.call(payload, field)){
+						inp.setAttribute('data-original', inp.value);
+						inp.style.background='#e6ffed'; inp.style.borderColor='#10b981';
+					}
+				});
+				// update current arrays
+				for(let r of latestFilteredRows){ if(Number(r.iid)===iidNum){ Object.assign(r, payload); break; } }
+				for(let r of currentGroupRows){ if(Number(r.iid)===iidNum){ Object.assign(r, payload); break; } }
+				btn.textContent='Saved'; btn.style.background='#059669'; btn.style.borderColor='#047857';
+				setTimeout(()=>{ btn.textContent='Update'; btn.style.background='#2563eb'; btn.style.borderColor='#1d4ed8'; inputs.forEach(inp=>{ if(inp.style.background==='#e6ffed'){ inp.style.background='#ffffff'; inp.style.borderColor='#cbd5e1'; } }); }, 1100);
+			}catch(err){
+				console.error('Update error', err);
+				btn.textContent='Error'; btn.style.background='#dc2626'; btn.style.borderColor='#b91c1c';
+				setTimeout(()=>{ btn.textContent=oldTxt; btn.style.background='#2563eb'; btn.style.borderColor='#1d4ed8'; }, 1600);
+			}finally{
+				btn.disabled=false; btn.style.opacity='1';
+			}
+		}
+
 		selectedColumns = loadSelectedColumns();
 
 		async function render(groups){
@@ -410,39 +423,44 @@
 			// Use document fragment for better performance
 			const fragment = document.createDocumentFragment();
 			
-			// Populate dropdown with unique class_section_year values
+			// Populate dropdown; prefer a cached stable options array if available
 			const dropdown = document.getElementById('classSectionYearFilter');
-			const uniqueCSY = new Set();
-			groups[0].rows.forEach(row => {
-				const sNum = Number(row.session);
-				let active_roll = '', active_class = '', active_section = '';
-				if(Number.isFinite(sNum) && sNum === 2026){
-					active_roll = row.roll_2026 ?? '';
-					active_class = row.class_2026 ?? '';
-					active_section = row.section_2026 ?? '';
-				}else if(Number.isFinite(sNum) && sNum === 2025){
-					active_roll = row.roll_2025 ?? '';
-					active_class = row.class_2025 ?? '';
-					active_section = row.section_2025 ?? '';
+			const prevValue = dropdown ? dropdown.value : '';
+			if(dropdown){
+				dropdown.innerHTML = '<option value="" disabled selected>Select class-section-year</option><option value="__ALL__">All</option>';
+				const opts = Array.isArray(window.__dropdownOptions) && window.__dropdownOptions.length ? window.__dropdownOptions.slice() : null;
+				if(!opts){
+					// fallback: compute from provided groups
+					const uniqueCSY = new Set();
+					groups[0].rows.forEach(row => {
+						const sNum = Number(row.session);
+						let active_class = '', active_section = '';
+						if(Number.isFinite(sNum) && sNum === 2026){
+							active_class = row.class_2026 ?? '';
+							active_section = row.section_2026 ?? '';
+						}else if(Number.isFinite(sNum) && sNum === 2025){
+							active_class = row.class_2025 ?? '';
+							active_section = row.section_2025 ?? '';
+						}
+						if(active_class){
+							const csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
+								.map(x => String(x ?? ''))
+								.join('-');
+							if(csY) uniqueCSY.add(csY);
+						}
+					});
+					window.__dropdownOptions = Array.from(uniqueCSY).sort();
+					opts = window.__dropdownOptions.slice();
 				}
-				let csY = '';
-				const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-				if(hasActiveRoll){
-					csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
-						.map(x => String(x ?? ''))
-						.join('-');
-				}
-				if(csY) uniqueCSY.add(csY);
-			});
-			const prevValue = dropdown.value;
-			dropdown.innerHTML = '<option value="" disabled selected>Select class-section-year</option><option value="__ALL__">All</option>';
-			Array.from(uniqueCSY).sort().forEach(csy => {
-				const option = document.createElement('option');
-				option.value = csy;
-				option.textContent = csy;
-				dropdown.appendChild(option);
-			});
-			if(prevValue){ dropdown.value = prevValue; }
+				// append options
+				opts.forEach(csy => {
+					const option = document.createElement('option');
+					option.value = csy;
+					option.textContent = csy;
+					dropdown.appendChild(option);
+				});
+				if(prevValue){ dropdown.value = prevValue; }
+			}
 			
 			// Apply filter
 			const selectedCSY = dropdown.value;
@@ -452,23 +470,15 @@
 			} else if(selectedCSY){
 				filteredRows = groups[0].rows.filter(row => {
 					const sNum = Number(row.session);
-					let active_roll = '', active_class = '', active_section = '';
+					let active_class = '', active_section = '';
 					if(Number.isFinite(sNum) && sNum === 2026){
-						active_roll = row.roll_2026 ?? '';
 						active_class = row.class_2026 ?? '';
 						active_section = row.section_2026 ?? '';
 					}else if(Number.isFinite(sNum) && sNum === 2025){
-						active_roll = row.roll_2025 ?? '';
 						active_class = row.class_2025 ?? '';
 						active_section = row.section_2025 ?? '';
 					}
-					let csY = '';
-					const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-					if(hasActiveRoll){
-						csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
-							.map(x => String(x ?? ''))
-							.join('-');
-					}
+					const csY = active_class ? [active_class ?? '', active_section ?? '', (row.session ?? '')].map(x=>String(x??'')).join('-') : '';
 					return csY === selectedCSY;
 				});
 			}
@@ -487,8 +497,7 @@
 			
 			// Save latest, show column chooser, and render table based on selections
 			latestFilteredRows = filteredRows;
-			await ensureMasterLoaded();
-			const availableColumns = computeAvailableColumnsFromMaster();
+			const availableColumns = computeAvailableColumns();
 			buildColumnControls(availableColumns);
 			reRenderTable();
 			if(selectedCsyPrintEl){
@@ -500,280 +509,62 @@
 			if(ph){ ph.textContent = ''; ph.style.display='none'; }
 		}
 
-		async function loadAll(background=false){
-			if(!background) statusEl.textContent = 'Loading...';
+		async function loadLite(){
+			liteRows = await fetchLite();
+			// compute and cache a stable, sorted list of class-section-year options
 			try{
-					const rows = await fetchAll();
-				saveCache(rows);
-				const groups = groupByClassSection(rows);
-				await render(groups);
-			}catch(err){
-				const msg = (err && err.message) ? err.message : String(err);
-				statusEl.textContent = `Load error: ${msg}`;
-				// Try cache fallback
-				const cached = loadCache();
-				if(cached && Array.isArray(cached.rows)){
-					const groups = groupByClassSection(cached.rows);
-					await render(groups);
-					const ageM = Math.floor((Date.now()-cached.ts)/60000);
-					statusEl.textContent = `Total Students: ${cached.rows.length} (offline cache, ${ageM}m old)`;
-				}
+				const unique = new Set();
+				liteRows.forEach(row => {
+					const sNum = Number(row.session);
+					let active_class = '', active_section = '';
+					if(Number.isFinite(sNum) && sNum === 2026){
+						active_class = row.class_2026 ?? '';
+						active_section = row.section_2026 ?? '';
+					}else if(Number.isFinite(sNum) && sNum === 2025){
+						active_class = row.class_2025 ?? '';
+						active_section = row.section_2025 ?? '';
+					}
+					if(active_class){
+						const csY = [active_class ?? '', active_section ?? '', (row.session ?? '')].map(x=>String(x??'')).join('-');
+						if(csY) unique.add(csY);
+					}
+				});
+				window.__dropdownOptions = Array.from(unique).sort();
+			}catch(e){
+				console.warn('Failed to build dropdown options from liteRows', e);
+				window.__dropdownOptions = window.__dropdownOptions || [];
 			}
+			// build groups from lite rows and render
+			const groups = groupByClassSection(liteRows);
+			await render(groups);
+			statusEl.textContent = 'Select class-section-year';
+		}
+		async function loadGroup(csy){
+			const dd = document.getElementById('classSectionYearFilter'); if(dd) dd.disabled = true;
+			currentGroupRows = await fetchGroupFull(csy);
+			// integrate into rendering by replacing rows in group structure
+			const groups = groupByClassSection(currentGroupRows);
+			allColumns = []; // reset so recompute
+			await render(groups);
+			statusEl.textContent = `Loaded group: ${csy} (${currentGroupRows.length})`;
+			if(dd) dd.disabled = false;
 		}
 
-		// Initial: try fresh cache then revalidate
+		// Init: lite first
 		(async function init(){
-			const cached = loadCache();
-			await ensureMasterLoaded();
-			if(cached && (Date.now()-cached.ts) < CACHE_TTL_MS){
-				const groups = groupByClassSection(cached.rows);
-				await render(groups);
-				const ageM = Math.floor((Date.now()-cached.ts)/60000);
-				statusEl.textContent = `Groups: ${groups.length} | Total: ${cached.rows.length} (from cache, ${ageM}m old)`;
-				setTimeout(()=> loadAll(true), 0);
-			}else{
-				loadAll(false);
-			}
-			
-			// Add event listener for dropdown filter
+			await waitForSupabase();
+			await loadLite();
 			document.getElementById('classSectionYearFilter').addEventListener('change', async () => {
-				const cached = loadCache();
-				if(cached && Array.isArray(cached.rows)){
-					const groups = groupByClassSection(cached.rows);
-					await render(groups);
+				const csy = document.getElementById('classSectionYearFilter').value;
+				if(!csy) return;
+				if(csy==='__ALL__'){
+					statusEl.textContent='Loading ALL (may be slow)...';
+					await loadGroup('__ALL__');
+				}else{
+					await loadGroup(csy);
 				}
 			});
 		})();
-	</script>
-
-	<!-- floating print button (bottom-right) -->
-	<button class="print-button" id="btnPrint" type="button" title="Print">Print</button>
-	<!-- fixed page-size selector (top-right) -->
-	<div style="position:fixed; right:16px; top:12px; z-index:10000;">
-		<select id="printPageSize" title="Page size for printing" style="padding:8px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;">
-			<option value="A4">A4</option>
-			<option value="Legal">Legal</option>
-		</select>
-	</div>
-	<script>
-		function applyPrintFit(size){
-			// Add a helper class to body for print styles
-			document.body.classList.add('print-fit');
-			// Ensure header hidden; we use title + selected text instead
-			const ph = document.getElementById('printHeader'); if(ph) ph.style.display='none';
-
-			// Smart auto-fit: compute CSS variables for font and padding
-			try{
-				const root = document.documentElement;
-				const table = document.querySelector('#container table');
-				if(table){
-					const pageWidthPx = (size === 'Legal') ? (14 * 96) : (11.69 * 96); // landscape width in px approximation
-					const marginPx = (size === 'Legal') ? (0.1 * 96) : (0.15 * 96);
-					const available = pageWidthPx - (marginPx * 2);
-					// estimate total columns
-					const colCount = table.querySelectorAll('thead th').length || 10;
-					// base desired font and padding
-					let fontPx = 11.5;
-					let padH = 6, padV = 4;
-					// heuristic width per column (in px) at base settings
-					const avgCharWidth = 6.2; // for 11.5px Kalpurush approx
-					const minColPx = 60; // minimum reasonable column width with wrapping
-					let estimatedTotal = colCount * (minColPx + (padH*2));
-					// If estimated width exceeds available, first shrink padding, then slightly font
-					if(estimatedTotal > available){
-						const over = estimatedTotal - available;
-						// reduce horizontal padding up to 2px total
-						const reducePad = Math.min(2, Math.ceil(over / colCount / 2));
-						padH = Math.max(2, padH - reducePad);
-						estimatedTotal = colCount * (minColPx + (padH*2));
-					}
-					if(estimatedTotal > available){
-						// slight font downscale, but not below 10px
-						const scale = Math.max(10, Math.round((available/estimatedTotal) * fontPx));
-						fontPx = Math.min(11.5, scale);
-					}
-					root.style.setProperty('--print-font', fontPx + 'px');
-					root.style.setProperty('--print-pad-h', padH + 'px');
-					root.style.setProperty('--print-pad-v', padV + 'px');
-				}
-			}catch(e){ /* ignore autofit errors */ }
-			// Create dynamic style tag for @page size and table fit rules
-			let dyn = document.getElementById('__print_page_style');
-			if(!dyn){ dyn = document.createElement('style'); dyn.id='__print_page_style'; document.head.appendChild(dyn); }
-			
-			const pageSizeRule = (size === 'Legal') ? 'legal landscape' : 'A4 landscape';
-			
-			// Enhanced dynamic styles for maximum data fitting
-			const dynamicStyles = `
-				@page{ 
-					size: ${pageSizeRule}; 
-					margin: ${size === 'Legal' ? '0.15cm 0.1cm' : '0.2cm 0.15cm'}; 
-				} 
-				@media print { 
-					body.print-fit { line-height: 1.2 !important; }
-					body.print-fit table{ 
-						table-layout: auto !important; 
-						width: 100% !important; 
-						border-collapse: collapse !important;
-						/* font-size controlled by CSS var on th/td */
-						border-spacing: 0 !important;
-					} 
-					body.print-fit th, body.print-fit td{ 
-						/* wrappers handled by main print CSS */
-						padding: var(--print-pad-v, 4px) var(--print-pad-h, 6px) !important;
-						line-height: 1.2 !important;
-						border: 0.5px solid #666 !important;
-						font-size: var(--print-font, 11.5px) !important;
-						vertical-align: middle !important;
-					}
-					body.print-fit th {
-						background: #e8e8e8 !important;
-						font-weight: bold !important;
-						padding: calc(var(--print-pad-v, 4px) + 1px) var(--print-pad-h, 6px) !important;
-					}
-					body.print-fit .col-sl { 
-						width: ${size === 'Legal' ? '28px' : '25px'} !important; 
-						min-width: ${size === 'Legal' ? '28px' : '25px'} !important; 
-						max-width: ${size === 'Legal' ? '28px' : '25px'} !important; 
-					}
-					body.print-fit #printHeader {
-						font-size: 12px !important;
-						padding: ${size === 'Legal' ? '5px 0' : '4px 0'} !important;
-						border-bottom: 1px solid #999 !important;
-					}
-					body.print-fit #container {
-						padding-top: ${size === 'Legal' ? '2.3cm' : '2.0cm'} !important;
-					}
-					/* Dynamic column sizing based on page size */
-					body.print-fit td:nth-child(1) { width: ${size === 'Legal' ? '28px' : '25px'} !important; max-width: ${size === 'Legal' ? '28px' : '25px'} !important; }
-					body.print-fit td:nth-child(2) { width: ${size === 'Legal' ? '50px' : '45px'} !important; max-width: ${size === 'Legal' ? '50px' : '45px'} !important; }
-					body.print-fit td:nth-child(3) { width: ${size === 'Legal' ? '80px' : '70px'} !important; max-width: ${size === 'Legal' ? '80px' : '70px'} !important; }
-					body.print-fit td:nth-child(4) { width: ${size === 'Legal' ? '40px' : '35px'} !important; max-width: ${size === 'Legal' ? '40px' : '35px'} !important; }
-					body.print-fit td:nth-child(5) { width: ${size === 'Legal' ? '120px' : '100px'} !important; max-width: ${size === 'Legal' ? '120px' : '100px'} !important; }
-				}
-			`;
-			
-			dyn.textContent = dynamicStyles;
-		}
-
-		function cleanupPrintFit(){
-			document.body.classList.remove('print-fit');
-			const dyn = document.getElementById('__print_page_style'); if(dyn && dyn.parentNode) dyn.parentNode.removeChild(dyn);
-			// Leave print header visible state to the render flow
-			try{
-				const root = document.documentElement;
-				root.style.removeProperty('--print-font');
-				root.style.removeProperty('--print-pad-h');
-				root.style.removeProperty('--print-pad-v');
-			}catch(e){}
-		}
-
-		document.getElementById('btnPrint').addEventListener('click', function(){
-			const size = document.getElementById('printPageSize').value || 'A4';
-			applyPrintFit(size);
-			// Footer is hidden during print
-			const pf = document.getElementById('printFooter'); if(pf){ pf.style.display='none'; }
-			
-			// Enhanced cleanup strategy with multiple fallbacks
-			let cleanupExecuted = false;
-			const performCleanup = () => {
-				if (cleanupExecuted) return;
-				cleanupExecuted = true;
-				try{ 
-					restoreOriginalTable(); 
-					cleanupPrintFit();
-				} catch(e) {
-					console.warn('Print cleanup error:', e);
-				}
-			};
-			
-			// Primary cleanup: onafterprint event
-			if('onafterprint' in window){
-				const originalAfterPrint = window.onafterprint;
-				window.onafterprint = function(){
-					performCleanup();
-					window.onafterprint = originalAfterPrint; // restore original handler
-				};
-			}
-			
-			// Secondary cleanup: focus event (when returning to page after print dialog)
-			const focusCleanup = () => {
-				setTimeout(performCleanup, 100);
-				window.removeEventListener('focus', focusCleanup);
-			};
-			window.addEventListener('focus', focusCleanup);
-			
-			// Tertiary cleanup: fallback timer (in case other methods fail)
-			setTimeout(() => {
-				if (!cleanupExecuted) {
-					console.log('Using fallback cleanup timer');
-					performCleanup();
-				}
-			}, 10000); // increased to 10 seconds
-			
-			window.print();
-		});
-
-		// Also listen for beforeprint/afterprint events to ensure proper print setup when user hits browser print
-		if('onbeforeprint' in window){
-			window.onbeforeprint = function(){ 
-				const pf = document.getElementById('printFooter'); 
-				if(pf) pf.style.display='none'; 
-				// Hide fixed header; we'll rely on table thead repeating
-				const ph = document.getElementById('printHeader'); 
-				if(ph) ph.style.display='none';
-			};
-			window.onafterprint = function(){ 
-				const pf = document.getElementById('printFooter'); 
-				if(pf) pf.style.display='none'; 
-				const ph = document.getElementById('printHeader'); 
-				if(ph) ph.style.display='none';
-				try{ restoreOriginalTable(); }catch(e){} 
-				cleanupPrintFit();
-			};
-		}
-
-			// Ensure print footer exists at end of body for reliable print positioning
-			(function ensureFooter(){
-				if(!document.getElementById('printFooter')){
-					const f = document.createElement('div'); f.id='printFooter'; f.className='print-footer'; f.style.display='none'; document.body.appendChild(f);
-				}
-			})();
-
-			// Pagination fallback disabled: keep a single table; rely on thead repeating across pages
-			let __pagedWrapper = null; let __originalTableParent = null; let __originalTable = null;
-			function mmToPx(mm){ return mm * 96 / 25.4; }
-			function buildTableWithRows(thead, rowNodes){
-				const tbl = document.createElement('table');
-				tbl.className = __originalTable ? __originalTable.className : '';
-				const theadClone = thead.cloneNode(true); tbl.appendChild(theadClone);
-				const tb = document.createElement('tbody'); for(const r of rowNodes){ tb.appendChild(r.cloneNode(true)); }
-				tbl.appendChild(tb); tbl.style.pageBreakAfter = 'always'; return tbl;
-			}
-			function createPagedTablesApprox(pageSize){
-				// Disabled
-				return;
-			}
-
-			// helper to run pagination and optionally update footer/headers
-			function preparePrintPagination(size){ /* disabled */ }
-			function restoreOriginalTable(){ 
-				try{ 
-					if(__pagedWrapper && __originalTable && __originalTableParent && __pagedWrapper.parentNode === __originalTableParent){ 
-						__originalTableParent.replaceChild(__originalTable, __pagedWrapper); 
-						console.log('Original table restored successfully');
-					} else {
-						console.log('Table restoration skipped - conditions not met');
-					}
-				} catch(e) { 
-					console.error('restoreOriginalTable error', e); 
-				} finally {
-					// Always reset the variables
-					__pagedWrapper = null; 
-					__originalTable = null; 
-					__originalTableParent = null; 
-				}
-			}
 	</script>
 </body>
 </html>
