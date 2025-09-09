@@ -12,6 +12,8 @@
 *{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;} body{margin:0;background:var(--bg);color:var(--text);} a{text-decoration:none;color:var(--brand);} 
 header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;flex-wrap:wrap;gap:1rem;} .title{margin:0;font-size:clamp(1.4rem,2.5vw,2.05rem);font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;} 
 .mode-btn{background:var(--bg-alt);border:1px solid var(--border);padding:.55rem .85rem;border-radius:10px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--text-soft);display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);} 
+.mode-btn.orange{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 6px 18px -4px rgba(249,115,22,.32);} 
+.mode-btn.orange:hover{filter:brightness(.97);}
 .container{width:100%;max-width:1180px;margin:0 auto;padding:0 1.1rem 4rem;} 
 .form-head{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin:.2rem 0 1rem;} .badge{background:var(--brand);color:#fff;font-size:.55rem;padding:.27rem .55rem;border-radius:999px;font-weight:600;letter-spacing:.5px;} 
 .section{background:var(--bg-alt);border:1px solid var(--border);border-radius:20px;padding:1.05rem 1.15rem 1.3rem;box-shadow:var(--shadow);margin:0 0 1.25rem;position:relative;} .section h3{margin:0 0 .65rem;font-size:.83rem;letter-spacing:.6px;font-weight:700;display:flex;align-items:center;gap:.5rem;} .section h3 span.icon{font-size:1rem;} 
@@ -32,7 +34,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
     <div style="font-weight:800;font-size:1.15rem;letter-spacing:.6px;">Feni Model High School</div>
     <h1 class="title" style="margin:.35rem 0 0">New Admission Application</h1>
     <div style="margin-top:.6rem;">
-      <a href="download_form.html" class="mode-btn" title="Back to Dashboard">🔙 Download application</a>
+  <a href="download_form.html" class="mode-btn orange" title="Back to Dashboard">🔙 Download application</a>
     </div>
   </div>
 </header>
