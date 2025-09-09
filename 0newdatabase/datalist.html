@@ -52,7 +52,7 @@
 		const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 		const tableName = 'student_database';
 
-		// Cache (10 minutes for faster perceived load, reduced from 30m for freshness)
+		// Cache (1000000 minutes for faster perceived load, reduced from 30m for freshness)
 		const CACHE_KEY = 'datalist_rows_v2';
 		const CACHE_TTL_MS = 1000000*60*1000;
 
