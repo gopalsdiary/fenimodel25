@@ -54,7 +54,7 @@
 
 		// Cache (10 minutes for faster perceived load, reduced from 30m for freshness)
 		const CACHE_KEY = 'datalist_rows_v2';
-		const CACHE_TTL_MS = 10*60*1000;
+		const CACHE_TTL_MS = 1000000*60*1000;
 
 		const container = document.getElementById('container');
 		const statusEl = document.getElementById('status');
