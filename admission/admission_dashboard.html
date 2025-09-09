@@ -116,7 +116,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 <script>
 // --- Config & Constants ---
 const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co'; // TODO: externalize
-const SUPABASE_KEY = 'public-anon-key-placeholder'; // replace with anon key or secure proxy
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 const TABLE = 'admission_data';
 const PAGE_SIZE = 50;
 const CACHE_KEY = 'admission_data_cache_v1';
@@ -151,7 +151,7 @@ const FIELD_GROUPS = [
 let supabaseClient = null;
 function initSupabase(){
   if(supabaseClient) return supabaseClient;
-  if(!window.supabase){ console.warn('Supabase lib missing'); return null; }
+  if(!window.supabase){ console.warn('Supabase lib missing'); status('Supabase library not loaded'); return null; }
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   return supabaseClient;
 }
@@ -161,6 +161,7 @@ function initSupabase(){
   const s=document.createElement('script');
   s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   s.onload=()=>{ initSupabase(); fetchAndRender(); };
+  s.onerror=()=>{ console.error('Failed to load Supabase script'); status('Failed to load Supabase library'); };
   document.head.appendChild(s);
 })();
 
@@ -173,17 +174,19 @@ let allRows = []; let filtered = []; let currentPage=1; let editingRow=null;
 
 // Fetch
 async function fetchRows(){
-  const sb = initSupabase(); if(!sb) return [];
-  let lastId=0; let batch=1000; let out=[]; let more=true; let guard=0;
-  while(more && guard<50){
-    guard++;
-    const { data, error } = await sb.from(TABLE).select('*').gt('admission_sl', lastId).order('admission_sl', {ascending:true}).limit(batch);
-    if(error){ console.error('Fetch error', error); break; }
-    if(!data || data.length===0){ more=false; break; }
-    out = out.concat(data);
-    lastId = data[data.length-1].admission_sl;
-  }
-  return out;
+  try{
+    const sb = initSupabase(); if(!sb){ status('Supabase client not initialized'); return []; }
+    let lastId=0; let batch=1000; let out=[]; let more=true; let guard=0;
+    while(more && guard<50){
+      guard++;
+      const { data, error } = await sb.from(TABLE).select('*').gt('admission_sl', lastId).order('admission_sl', {ascending:true}).limit(batch);
+      if(error){ console.error('Fetch error', error); status('Fetch error: '+(error.message||JSON.stringify(error))); break; }
+      if(!data || data.length===0){ more=false; break; }
+      out = out.concat(data);
+      lastId = data[data.length-1].admission_sl;
+    }
+    return out;
+  }catch(e){ console.error('FetchRows exception', e); status('Fetch failed: '+(e.message||e)); return []; }
 }
 
 async function fetchAndRender(force=false){
