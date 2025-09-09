@@ -25,6 +25,8 @@ label.field input, label.field select{padding:.6rem .7rem;border:1px solid var(-
 .autofill{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.6rem;margin-top:.4rem;color:var(--text-soft);} .autofill label{display:flex;align-items:center;gap:.35rem;font-weight:600;} 
 footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-soft);} 
 .required::after{content:' *';color:var(--danger);} 
+/* invalid field highlight */
+.invalid{border-color:var(--danger) !important;box-shadow:0 0 0 4px rgba(220,38,38,0.06) !important}
 @media (max-width:640px){ .grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));} }
 </style>
 </head>
@@ -173,8 +175,16 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
       <label class="field">Post Office English<input id="postoffice_en" /></label>
       <label class="field">Upazila Bangla<input id="upazilla_bn" /></label>
       <label class="field">Upazila English<input id="upazilla_en" /></label>
-      <label class="field">District Bangla<input id="district_bn" /></label>
-      <label class="field">District English<input id="district_en" /></label>
+      <label class="field required">District Bangla
+        <select id="district_bn" required>
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field required">District English
+        <select id="district_en" required>
+          <option value="">Select</option>
+        </select>
+      </label>
     </div>
   </div>
 
@@ -189,8 +199,8 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
   </div>
 
   <div class="actions">
-    <button class="btn primary" id="saveBtn">💾 Save</button>
-    <button class="btn secondary" id="saveNewBtn">💾➕ Save & New</button>
+  <button class="btn primary" id="saveBtn">✅ Submit</button>
+  <button class="btn secondary" id="saveNewBtn">✅➕ Submit & New</button>
     <button class="btn secondary" id="resetBtn" type="button">🔁 Reset</button>
   </div>
   <div id="alertBox" class="alert"></div>
@@ -198,9 +208,11 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 </div>
 <footer>© <span id="year"></span> Feni Model High School · Admission</footer>
 <script>
+
 const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
-const SUPABASE_KEY='public-anon-key-placeholder'; // Replace in production
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';  
 const TABLE='admission_data';
+
 let supabaseClient=null; function initSupabase(){ if(supabaseClient) return supabaseClient; if(!window.supabase){ console.warn('Supabase lib not loaded yet'); return null;} supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); return supabaseClient; }
 // load supabase script
 (function(){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>initSupabase(); document.head.appendChild(s); })();
@@ -262,15 +274,33 @@ function gatherPayload(){
   };
 }
 
+// Auto-set gender based on admission section
+function syncGenderWithSection(){
+  const section = $('admission_section');
+  const gender = $('student_gender');
+  if(!section || !gender) return;
+  function apply(){
+    const v = (section.value||'').toLowerCase();
+    if(v==='day') { gender.value='Male'; }
+    else if(v==='morning') { gender.value='Female'; }
+    // else leave as selected
+  }
+  section.addEventListener('change', apply);
+  // run once on load
+  apply();
+}
+syncGenderWithSection();
+
 async function save(stay){
   clearAlert();
-  if(!val('student_name_en')||!val('father_name_en')||!val('session')||!val('admisson_class')||!val('admission_section')||!val('student_gender')){ showAlert('Please fill all required fields (marked with *)','error'); return; }
+  // validate all fields before saving
+  if(!validateAll()){ return; }
   const sb=initSupabase(); if(!sb){ showAlert('Supabase not ready yet','error'); return; }
   const payload=gatherPayload();
   try{
     const { error } = await sb.from(TABLE).insert(payload);
     if(error) throw error;
-    showAlert('Saved successfully','success');
+  showAlert('Submitted successfully','success');
     if(!stay){ setTimeout(()=>{ window.location.href='admission_dashboard.html'; }, 900); }
     else { // reset minimal
       $('birth_registration').focus();
@@ -282,10 +312,103 @@ $('saveBtn').addEventListener('click',()=>save(false));
 $('saveNewBtn').addEventListener('click',()=>save(true));
 $('resetBtn').addEventListener('click',()=>{ document.querySelectorAll('input,select').forEach(el=>{ if(el.type!=='checkbox') el.value=''; }); clearAlert(); });
 
+// Validate every input/select/textarea (except checkboxes) inside the form container
+function validateAll(){
+  clearAlert();
+  const container = document.querySelector('.container');
+  if(!container) return true;
+  const controls = Array.from(container.querySelectorAll('input,select,textarea')).filter(el=>el.type!=='checkbox');
+  const missing = [];
+  controls.forEach(el=>{
+    const v = (el.value||'').toString().trim();
+    if(!v){
+      el.classList.add('invalid');
+      if(missing.indexOf(el)===-1) missing.push(el);
+    } else {
+      el.classList.remove('invalid');
+    }
+  });
+  if(missing.length){
+    const first = missing[0];
+    const label = first.closest('label.field');
+    let labelText = first.id || '';
+    if(label){
+      const labSpan = label.querySelector('.label-text');
+      if(labSpan) labelText = labSpan.textContent.replace('*','').trim();
+      else {
+        // fallback: use first text node
+        const txt = Array.from(label.childNodes).find(n=>n.nodeType===3 && n.textContent.trim());
+        labelText = txt? txt.textContent.trim(): label.innerText.trim();
+      }
+    }
+    showAlert('Fill required: '+labelText,'error');
+    try{ first.focus(); }catch(e){}
+    return false;
+  }
+  return true;
+}
+
+
+// Clear invalid class when user interacts
+document.addEventListener('input', e=>{ const t=e.target; if(t && (t.matches('input')||t.matches('select')||t.matches('textarea'))){ t.classList.remove('invalid'); } });
+document.addEventListener('change', e=>{ const t=e.target; if(t && (t.matches('input')||t.matches('select')||t.matches('textarea'))){ t.classList.remove('invalid'); } });
+
 function applyTheme(m){ document.documentElement.classList.toggle('dark',m==='dark'); }
-$('themeToggle').addEventListener('click',()=>{ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); });
+// Guard theme toggle in case the element is not present on this page
+const _themeToggleEl = $('themeToggle');
+if(_themeToggleEl){
+  _themeToggleEl.addEventListener('click',()=>{ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); });
+}
 applyTheme(localStorage.getItem('theme')|| (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 $('year').textContent=new Date().getFullYear();
+
+
+// Auto-capitalize specific English fields (Title Case) while typing বড় হাতের কাজ
+;(function autoCapitalizeFields(){
+  const ids = ['student_name_en','father_name_en','father_occupation','mother_name_en','mother_occupation','village_en','postoffice_en','upazilla_en','district_en','previous_school'];
+  function toTitleCase(s){ return s.replace(/\w\S*/g, txt=>txt.charAt(0).toUpperCase()+txt.substr(1).toLowerCase()); }
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', (e)=>{
+      const start = el.selectionStart; const end = el.selectionEnd;
+      const newVal = toTitleCase(el.value);
+      if(newVal!==el.value){ el.value=newVal; try{ el.setSelectionRange(start,end); }catch(e){} }
+    });
+  });
+})();
+
+// Populate district dropdowns (English + Bangla)
+;(function populateDistricts(){
+  const en = [
+    'Bagerhat','Bandarban','Barguna','Barishal','Bhola','Bogura','Brahmanbaria','Chandpur','Chapai Nawabganj','Chattogram','Chuadanga','Comilla','Cox\'s Bazar','Dhaka','Dinajpur','Faridpur','Feni','Gaibandha','Gazipur','Gopalganj','Habiganj','Jamalpur','Jashore','Jhenaidah','Joypurhat','Jhalokati','Khagrachhari','Khulna','Kishoreganj','Kurigram','Kushtia','Lakshmipur','Lalmonirhat','Madaripur','Magura','Manikganj','Meherpur','Moulvibazar','Munshiganj','Mymensingh','Naogaon','Narayanganj','Narsingdi','Natore','Netrokona','Nilphamari','Noakhali','Pabna','Panchagarh','Patuakhali','Pirojpur','Rajbari','Rajshahi','Rangamati','Rangpur','Satkhira','Shariatpur','Sherpur','Sirajganj','Sunamganj','Sylhet','Tangail','Thakurgaon'
+  ];
+  const bn = [
+    'বাগেরহাট','বান্দরবান','বরগুনা','বরিশাল','ভোলা','বগুড়া','ব্রাহ্মনবাড়িয়া','চাঁদপুর','চাঁপাইনবাবগঞ্জ','চট্টগ্রাম','চুয়াডাঙ্গা','কুমিল্লা','কক্সবাজার','ঢাকা','দিনাজপুর','ফরিদপুর','ফেনী','গাইবান্ধা','গাজীপুর','গোপালগঞ্জ','হবিগঞ্জ','জামালপুর','যশোর','ঝিনাইদহ','জয়পুরহাট','ঝালকাঠী','খাগড়াছড়ি','খুলনা','কিশোরগঞ্জ','কুড়িগ্রাম','কুষ্টিয়া','লক্ষ্মীপুর','লালমনিরহাট','মাদারীপুর','মাগুরা','মানিকগঞ্জ','মেহেরপুর','মৌলভীবাজার','মুন্সীগঞ্জ','ময়মনসিংহ','নওগা','নারায়ণগঞ্জ','নরসিংদী','নাটোর','নেত্রকোনা','নীলফামারী','নোয়াখালী','পাবনা','পঞ্চগড়','পটুয়াখালী','পিরোজপুর','রাজবাড়ী','রাজশাহী','রাঙ্গামাটী','রংপুর','সাতক্ষীরা','শরীয়তপুর','শেরপুর','সিরাজগঞ্জ','সুনামগঞ্জ','সিলেট','টাংগাইল','ঠাকুরগাঁও'
+  ];
+
+  const selEn = document.getElementById('district_en');
+  const selBn = document.getElementById('district_bn');
+  if(!selEn || !selBn) return;
+  const prevEn = selEn.value;
+  const prevBn = selBn.value;
+  en.forEach((d)=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; selEn.appendChild(o); });
+  bn.forEach((d)=>{ const o=document.createElement('option'); o.value=d; o.textContent=d; selBn.appendChild(o); });
+  // try restore previous values if present
+  if(prevEn) selEn.value = prevEn;
+  if(prevBn) selBn.value = prevBn;
+  // two-way sync: when user selects in one, update the other by matching index
+  let _syncing = false;
+  selEn.addEventListener('change', ()=>{
+    if(_syncing) return;
+    try{ _syncing = true; selBn.selectedIndex = selEn.selectedIndex; }finally{ _syncing = false; }
+  });
+  selBn.addEventListener('change', ()=>{
+    if(_syncing) return;
+    try{ _syncing = true; selEn.selectedIndex = selBn.selectedIndex; }finally{ _syncing = false; }
+  });
+})();
 </script>
+
 </body>
 </html>
