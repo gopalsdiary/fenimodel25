@@ -55,18 +55,17 @@ group > Group
 optional_subject > Optional Subject
 
 *Address Information
+district_bn > District Bangla
+district_en > District English
+upazilla_bn > Upazila Bangla
+upazilla_en > Upazila English
+union_bn > Union Bangla
+union_en > Union English
 village_bn > Village Bangla
 village_en > Village English
 postoffice_bn > Post Office Bangla
 postoffice_en > Post Office English
-upazilla_bn > Upazila Bangla
-upazilla_en > Upazila English
-district_bn > District Bangla
-district_en > District English
-district_bn > District Bangla
-district_en > District English
-union_bn > Union Bangla
-union_en > Union English
+
 
 *Attendance 
 rfid_card_no > RFID Card No

@@ -35,7 +35,10 @@
   .error-details{font-family:monospace;font-size:12px;color:#b42318;margin-top:6px}
 
   /* photo column */
-  .row-thumb{width:34px;height:34px;object-fit:cover;border-radius:6px;border:1px solid #eef4fb}
+  .row-thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #eef4fb;display:block}
+  /* photo cell: center and prevent table row from stretching oddly */
+  td > .row-thumb{display:block;margin:6px auto}
+  td:nth-child(3){width:76px;max-width:76px;text-align:center}
   .no-image{font-size:13px;color:#c12b2b;font-style:italic}
   /* raised z-index so photo preview sits above sticky headers */
   #photo-preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2700;width:380px;height:520px;border-radius:12px;border:2px solid rgba(10,40,80,0.06);background:#fff;padding:12px;display:none;box-shadow:0 20px 60px rgba(12,24,40,0.12)}
@@ -98,7 +101,7 @@
       <tr>
         <th class="col-sl">SL</th>
         <th>IID</th>
-        <th>Created</th>
+  <th>Photo</th>
         <th>Teacher Name</th>
         <th>Sector</th>
         <th>Designation</th>
@@ -110,7 +113,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="11">Loading...</td></tr>
+  <tr><td colspan="11">Loading...</td></tr>
     </tbody>
   </table>
 
@@ -197,6 +200,7 @@
   // auto-load all data on page load
 
   // no-op filter listeners (filters removed)
+  
   clearFilters.addEventListener('click', ()=>{ loadData(); });
   if(addTeacherBtn) addTeacherBtn.addEventListener('click', () => { openAddTeacher(); });
     cancelBtn.addEventListener('click', closeModal);
@@ -210,7 +214,7 @@
     currentIID = null;
     modalNotice.textContent = '';
     const rec = {
-      teacher_name: '', sector: '', designation: '', phone: '', email: '', teacher_nid: '', join_date: ''
+      teacher_name_en: '', teacher_name_bn: '', sector: '', designation_en: '', designation_bn: '', mobile_number_en: '', mobile_number_bn: '', email_id: '', nid_number_en: '', nid_number_bn: '', join_date: ''
     };
     renderEditFields(rec);
     editModal.style.display = 'flex';
@@ -284,7 +288,7 @@
           // build paginated query and optionally apply session filter
           let q = supabase
             .from(tableName)
-            .select('iid, created_at, teacher_name, sector, designation, phone, email, teacher_nid, join_date')
+            .select('iid, pp_photo, teacher_name_en, sector, designation_en, mobile_number_en, email_id, nid_number_en, join_date')
             .gt('iid', lastId);
           q = q.order('iid', { ascending: true }).limit(batchSize);
           const { data, error } = await q;
@@ -307,13 +311,13 @@
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-  tbody.innerHTML = `<tr><td colspan="12">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="11">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
     function renderTable(rows){
     if(!rows || rows.length === 0){
-  tbody.innerHTML = '<tr><td colspan="12">No records found</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="11">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
@@ -324,13 +328,21 @@
         const iid = (r['iid'] ?? r.iid) || '';
 
         const tdIid = document.createElement('td'); tdIid.textContent = escapeHtml(iid);
-        const tdCreated = document.createElement('td'); tdCreated.textContent = escapeHtml(r['created_at'] || r.created_at || '');
-        const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['teacher_name'] || r.teacher_name || '');
+  // photo thumbnail (pp_photo)
+  const tdPhoto = document.createElement('td');
+        const photoUrl = r['pp_photo'] || r.pp_photo || '';
+        if(photoUrl){
+          const img = document.createElement('img'); img.src = String(photoUrl); img.alt = 'Photo'; img.className = 'row-thumb';
+          tdPhoto.appendChild(img);
+        } else {
+          const span = document.createElement('div'); span.className = 'no-image'; span.textContent = '—'; tdPhoto.appendChild(span);
+        }
+  const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['teacher_name_en'] || r.teacher_name_en || '');
         const tdSector = document.createElement('td'); tdSector.textContent = escapeHtml(r['sector'] || r.sector || '');
-        const tdDesignation = document.createElement('td'); tdDesignation.textContent = escapeHtml(r['designation'] || r.designation || '');
-        const tdPhone = document.createElement('td'); tdPhone.textContent = escapeHtml(r['phone'] || r.phone || '');
-        const tdEmail = document.createElement('td'); tdEmail.textContent = escapeHtml(r['email'] || r.email || '');
-        const tdNid = document.createElement('td'); tdNid.textContent = escapeHtml(r['teacher_nid'] || r.teacher_nid || '');
+  const tdDesignation = document.createElement('td'); tdDesignation.textContent = escapeHtml(r['designation_en'] || r.designation_en || '');
+  const tdPhone = document.createElement('td'); tdPhone.textContent = escapeHtml(r['mobile_number_en'] || r.mobile_number_en || '');
+  const tdEmail = document.createElement('td'); tdEmail.textContent = escapeHtml(r['email_id'] || r.email_id || '');
+  const tdNid = document.createElement('td'); tdNid.textContent = escapeHtml(r['nid_number_en'] || r.nid_number_en || '');
         const tdJoin = document.createElement('td'); tdJoin.textContent = escapeHtml(r['join_date'] || r.join_date || '');
 
         const tdAction = document.createElement('td');
@@ -340,9 +352,9 @@
         const btnView = document.createElement('button'); btnView.className = 'btn secondary'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.addEventListener('click', ()=> openViewByIID(iid));
         tdAction.appendChild(btnView);
 
-        tr.appendChild(tdIid);
-        tr.appendChild(tdCreated);
-        tr.appendChild(tdName);
+  tr.appendChild(tdIid);
+  tr.appendChild(tdPhoto);
+  tr.appendChild(tdName);
         tr.appendChild(tdSector);
         tr.appendChild(tdDesignation);
         tr.appendChild(tdPhone);
@@ -492,8 +504,8 @@
 
     function renderEditFields(record){
       editFields.innerHTML = '';
-      // Define the order: Teacher Name, Father Name, Mother Name, Sector, Designation, Phone, Email, NID, Join Date, then others
-      const priorityOrder = ['teacher_name', 'father_name', 'mother_name', 'sector', 'designation', 'phone', 'email', 'teacher_nid', 'join_date'];
+  // Define the order: Teacher Name (EN/BN), Father/Mother (EN/BN), Sector, Designation (EN/BN), Phone (EN/BN), Email, NID (EN/BN), Join Date, then others
+  const priorityOrder = ['teacher_name_en','teacher_name_bn','father_name_en','father_name_bn','mother_name_en','mother_name_bn','sector','designation_en','designation_bn','mobile_number_en','mobile_number_bn','email_id','nid_number_en','nid_number_bn','join_date'];
       const keys = Object.keys(record);
       const orderedKeys = [];
       priorityOrder.forEach(key => {
@@ -520,7 +532,7 @@
         }
         input.value = val;
         input.setAttribute('data-field', key);
-        if(key === 'IID'){
+  if(key === 'IID' || key === 'iid'){
           input.readOnly = true;
         }
         row.appendChild(label);

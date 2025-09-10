@@ -65,7 +65,7 @@
     {id: '64', name: 'Netrokona', bn: 'নেত্রকোণা'}
   ];
 
-  // Upazila list (extracted from UpazilaSeeder.php). Keep minimal fields: id, district_id, name, bn_name
+  // Upazila list  Keep minimal fields: id, district_id, name, bn_name
   const upazilas = [
     {id:'1', district_id:'1', name:'Debidwar', bn_name:'দেবিদ্বার'},
     {id:'2', district_id:'1', name:'Barura', bn_name:'বরুড়া'},
