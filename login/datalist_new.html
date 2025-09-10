@@ -291,7 +291,7 @@
         // Build query and optionally apply session filter
         let q = supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session')
+          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok')
           .eq('class_2025', classValue);
         if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
         q = q.order('iid', { ascending: true }).limit(10000);
@@ -373,7 +373,7 @@
           // build paginated query and optionally apply session filter
           let q = supabase
             .from(tableName)
-            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session')
+            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok')
             .gt('iid', lastId);
           if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
           q = q.order('iid', { ascending: true }).limit(batchSize);

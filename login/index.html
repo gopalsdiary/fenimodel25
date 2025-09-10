@@ -6,122 +6,336 @@
     <title>Result Processing System</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* Enhanced White-mode Neumorphism */
+        :root{
+            --bg-primary: #f0f4f8; /* elegant soft background */
+            --bg-secondary: #f8fafc; /* subtle gradient end */
+            --surface: #ffffff; /* pure white surface */
+            --surface-highlight: #fefefe; /* subtle highlight */
+            --muted-text: #64748b; /* sophisticated muted color */
+            --accent-primary: #0891b2; /* refined teal */
+            --accent-secondary: #0284c7; /* complementary blue-teal */
+            --accent-tertiary: #0369a1; /* deeper accent */
+                --shadow-light: rgba(255,255,255,0.95);
+                --shadow-dark: rgba(15,23,42,0.08);
+                --shadow-accent: rgba(6,182,212,0.15);
+                /* Shadow2 mix values (drop + inner) inspired by reference)
+                    Drop: 28px 28px 50px rgba(13,39,80,0.16)
+                    Inner white: -31px -31px 43px rgba(255,255,255,0.64)
+                    Inner dark: 26px 26px 48px rgba(13,39,80,0.16)
+                */
+                --shadow2-drop: rgba(13,39,80,0.16);
+                --shadow2-inner-white: rgba(255,255,255,0.64);
+                --shadow2-inner-dark: rgba(13,39,80,0.16);
+            --border-light: rgba(255,255,255,0.8);
+            --border-dark: rgba(148,163,184,0.1);
+            --radius: 16px;
+            --radius-sm: 12px;
+        }
+
+        html,body{
+            height:100%;
+            margin:0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f5f5f5;
-        }
-        .container {
-            background-color: white;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, #f1f5f9 100%);
+            background-attachment: fixed;
+            color: #334155;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
             padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
+            position: relative;
         }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(120,119,198,0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+    .container {
+            width: 100%;
+            max-width: 440px;
+            background: linear-gradient(145deg, var(--surface) 0%, var(--surface-highlight) 100%);
+            border-radius: var(--radius);
+            padding: 32px;
+            box-sizing: border-box;
+            position: relative;
+            /* Shadow2 mix: outer drop + opposing light + inner highlight/dark */
+            box-shadow:
+                /* outer soft drop */ 28px 28px 50px var(--shadow2-drop),
+                /* opposing soft light */ -28px -28px 50px var(--shadow-light),
+                /* inner highlight and inner dark mix (gives carved look) */
+                inset -31px -31px 43px var(--shadow2-inner-white),
+                inset 26px 26px 48px var(--shadow2-inner-dark);
+            border: 1px solid rgba(255,255,255,0.7);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .container:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                32px 32px 60px var(--shadow2-drop),
+                -32px -32px 60px var(--shadow-light),
+                inset -36px -36px 50px var(--shadow2-inner-white),
+                inset 30px 30px 54px var(--shadow2-inner-dark);
+        }
+
         h1 {
             text-align: center;
-            margin-bottom: 1.5rem;
+            margin: 0 0 24px 0;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+            position: relative;
         }
-        .tab-buttons {
-            display: flex;
-            margin-bottom: 1.5rem;
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 2px;
+            opacity: 0.6;
         }
-        .tab-button {
-            flex: 1;
-            padding: 0.75rem;
-            background-color: #eee;
+
+        .tab-buttons{
+            display:flex;
+            gap:10px;
+            margin-bottom:18px;
+            justify-content:center; /* center the buttons row */
+        }
+
+        .tab-button{
+            flex: none;
+            min-width: 160px;
+            padding: 12px 24px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(145deg, #f8fafc 0%, #ffffff 100%);
             border: none;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--muted-text);
             text-align: center;
+            position: relative;
+            /* Shadow2-inspired scaled mix */
+            box-shadow:
+                10px 10px 22px var(--shadow2-drop),
+                -10px -10px 22px var(--shadow-light),
+                inset -14px -14px 20px var(--shadow2-inner-white),
+                inset 12px 12px 22px var(--shadow2-inner-dark);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(5px);
         }
-        .tab-button.active {
-            background-color: #4f46e5;
-            color: white;
+
+        .tab-button:hover {
+            transform: translateY(-1px);
+            box-shadow:
+                10px 10px 20px rgba(148,163,184,0.15),
+                -10px -10px 20px rgba(255,255,255,0.95),
+                inset 0 1px 0 rgba(255,255,255,0.7);
         }
-        .tab-content {
-            display: none;
+
+        .tab-button.active{
+            color: var(--accent-primary);
+            background: linear-gradient(145deg, #ffffff 0%, #fbfdff 100%);
+            box-shadow:
+                /* outer subtle lift */ 8px 10px 20px rgba(14,39,60,0.06),
+                /* outer light */ -8px -8px 18px rgba(255,255,255,0.95),
+                /* inner carved highlight */ inset -10px -10px 18px rgba(255,255,255,0.7),
+                inset 8px 8px 18px rgba(13,39,80,0.04);
+            transform: translateY(0);
+            font-weight:700;
         }
-        .tab-content.active {
-            display: block;
+
+        .tab-button.active:hover {
+            transform: translateY(-1px);
+            box-shadow:
+                12px 14px 28px rgba(14,39,60,0.08),
+                -12px -12px 24px rgba(255,255,255,0.95),
+                inset -12px -12px 20px rgba(255,255,255,0.75),
+                inset 10px 10px 20px rgba(13,39,80,0.05);
         }
-        .form-group {
-            margin-bottom: 1rem;
+
+        .tab-content{ display:block; }
+
+        .form-group{ margin-bottom:14px; }
+
+        label{
+            display:block;
+            margin-bottom:6px;
+            font-size:0.85rem;
+            color: #374151;
+            font-weight:600;
         }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-        }
-        input {
+
+        input[type="text"], input[type="password"]{
             width: 100%;
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: #4f46e5;
-            color: white;
+            padding: 16px 18px;
+            border-radius: var(--radius-sm);
             border: none;
-            border-radius: 4px;
-            cursor: pointer;
+            outline: none;
+            background: linear-gradient(145deg, #fefefe 0%, #ffffff 100%);
             font-size: 1rem;
-            margin-top: 1rem;
+            color: #334155;
+            box-sizing: border-box;
+            position: relative;
+            /* Shadow2-inspired scaled mix for inputs */
+            box-shadow:
+                10px 12px 24px var(--shadow2-drop),
+                -10px -12px 24px var(--shadow-light),
+                inset -12px -12px 20px var(--shadow2-inner-white),
+                inset 10px 10px 22px var(--shadow2-inner-dark);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        button:hover {
-            background-color: #4338ca;
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            box-shadow:
+                12px 12px 24px rgba(148,163,184,0.12),
+                -12px -12px 24px rgba(255,255,255,0.98),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(148,163,184,0.03),
+                0 0 0 3px rgba(8,145,178,0.1);
+            transform: translateY(-1px);
         }
-        .error-message {
-            color: #842029;
-            background-color: #f8d7da;
-            border: 1px solid #f5c2c7;
-            padding: 0.75rem;
-            border-radius: 4px;
-            margin-top: 1rem;
-            font-size: 0.9rem;
+
+        input::placeholder{ color: #9aa6b6; }
+
+        button{
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: var(--radius-sm);
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            color: white;
+            background: linear-gradient(145deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            position: relative;
+            /* Shadow2 mixed drop + inner shadows for button */
+            box-shadow:
+                /* outer drop */ 18px 18px 36px var(--shadow2-drop),
+                /* outer light */ -18px -18px 36px var(--shadow-light),
+                /* inner highlight + inner dark for carved look */
+                inset -16px -16px 28px var(--shadow2-inner-white),
+                inset 14px 14px 30px var(--shadow2-inner-dark),
+                /* subtle accent lift */ 0 10px 30px rgba(6,182,212,0.12);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(5px);
+        }
+
+        button:hover{
+            transform: translateY(-3px);
+            box-shadow:
+                22px 22px 44px var(--shadow2-drop),
+                -22px -22px 44px var(--shadow-light),
+                inset -20px -20px 36px var(--shadow2-inner-white),
+                inset 18px 18px 36px var(--shadow2-inner-dark),
+                0 14px 40px rgba(6,182,212,0.18);
+        }
+
+        button:active {
+            transform: translateY(-1px);
+            box-shadow:
+                12px 12px 24px var(--shadow2-drop),
+                -12px -12px 24px var(--shadow-light),
+                inset -10px -10px 18px var(--shadow2-inner-white),
+                inset 8px 8px 16px var(--shadow2-inner-dark),
+                0 6px 14px rgba(6,182,212,0.12);
+        }
+
+        .error-message, .success-message{
             display: none;
-        }
-        .success-message {
-            color: #0f5132;
-            background-color: #d1e7dd;
-            border: 1px solid #badbcc;
-            padding: 0.75rem;
-            border-radius: 4px;
-            margin-top: 1rem;
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
             font-size: 0.9rem;
-            display: none;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
         }
-        .message-icon {
-            margin-right: 8px;
-            vertical-align: middle;
+
+        .error-message{
+            color: #dc2626;
+            background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
+            box-shadow:
+                inset 4px 4px 8px rgba(255,255,255,0.4),
+                inset -4px -4px 8px rgba(220,38,38,0.05),
+                0 4px 12px rgba(220,38,38,0.1);
+            border-color: rgba(220,38,38,0.1);
         }
-        .unauthorized-alert {
-            animation: pulse 2s infinite;
+
+        .success-message{
+            color: #059669;
+            background: linear-gradient(145deg, #f0fdf4 0%, #dcfce7 100%);
+            box-shadow:
+                inset 4px 4px 8px rgba(255,255,255,0.4),
+                inset -4px -4px 8px rgba(5,150,105,0.05),
+                0 4px 12px rgba(5,150,105,0.1);
+            border-color: rgba(5,150,105,0.1);
         }
-        @keyframes pulse {
-            0% {
-                opacity: 1;
+
+        .message-icon{ margin-right:8px; }
+
+        .unauthorized-alert{ animation: pulse 2s infinite; }
+
+        @keyframes pulse{ 0%{ transform:scale(1);} 50%{ transform:scale(1.01);} 100%{ transform:scale(1);} }
+
+        /* Responsive */
+        @media (max-width: 480px){
+            .container {
+                padding: 24px;
+                border-radius: var(--radius-sm);
+                margin: 1rem;
             }
-            50% {
-                opacity: 0.8;
+            .tab-buttons {
+                gap: 8px;
             }
-            100% {
-                opacity: 1;
+            .tab-button {
+                min-width: 0;
+                padding: 12px 16px;
+                font-size: 0.9rem;
+            }
+            h1 {
+                font-size: 1.1rem;
+            }
+            input[type="text"], input[type="password"] {
+                padding: 14px 16px;
+                font-size: 0.95rem;
+            }
+            button {
+                padding: 14px 18px;
+                font-size: 0.95rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Database  Processing System (Super Admin) </h1>
+        <h1>Database  Processing System</h1>
         
         <div class="tab-buttons">
             <div class="tab-button active" data-tab="admin">Admin Login</div>
@@ -321,8 +535,8 @@
                 element.classList.remove('unauthorized-alert');
             }
             
-            // Show the element
-            element.style.display = 'block';
+            // Show the element (use flex for aligned icon + text)
+            element.style.display = 'flex';
             
             // Hide after 8 seconds for error messages, 3 seconds for success messages
             const timeout = element.classList.contains('error-message') ? 8000 : 3000;
@@ -331,6 +545,25 @@
                 element.classList.remove('unauthorized-alert');
             }, timeout);
         }
+
+        // Allow pressing Enter in username/password to submit the form
+        (function enableEnterSubmit(){
+            const usernameEl = document.getElementById('admin-username');
+            const passwordEl = document.getElementById('admin-password');
+            const loginBtn = document.getElementById('admin-login-button');
+
+            function trySubmitOnEnter(e){
+                if(!e) return;
+                const key = e.key || e.keyCode;
+                if(key === 'Enter' || key === 13){
+                    e.preventDefault();
+                    loginBtn.click();
+                }
+            }
+
+            if(usernameEl) usernameEl.addEventListener('keydown', trySubmitOnEnter);
+            if(passwordEl) passwordEl.addEventListener('keydown', trySubmitOnEnter);
+        })();
     </script>
 </body>
 </html>
