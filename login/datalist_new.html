@@ -95,12 +95,12 @@
   <h2>student_database — Data Overview</h2>
   <div class="top-bar">
     <div class="filters left" style="align-items:center">
+      <label for="sessionFilter" class="filter-label">Session</label>
+      <select id="sessionFilter" class="filter-select"></select>
       <label for="classFilter" class="filter-label">Class</label>
       <select id="classFilter" class="filter-select"></select>
       <label for="sectionFilter" class="filter-label">Section</label>
-  <select id="sectionFilter" class="filter-select"></select>
-  <label for="sessionFilter" class="filter-label">Session</label>
-  <select id="sessionFilter" class="filter-select"></select>
+      <select id="sectionFilter" class="filter-select"></select>
     </div>
     <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
       <button id="refreshBtn" class="btn primary">Refresh</button>
@@ -206,6 +206,18 @@
   // keep full dataset in memory for client-side filtering
   let allRowsCache = [];
 
+  // Active key resolver based on selected session (defaults to 2025)
+  function getActiveKeys(){
+    const ses = (sessionFilter && sessionFilter.value) ? String(sessionFilter.value) : '2025';
+    const valid = ses === '2026' ? '2026' : '2025';
+    return {
+      session: valid,
+      classKey: `class_${valid}`,
+      sectionKey: `section_${valid}`,
+      rollKey: `roll_${valid}`
+    };
+  }
+
     // modal elems
     const editModal = document.getElementById('editModal');
     const editFields = document.getElementById('editFields');
@@ -214,22 +226,49 @@
     const modalNotice = document.getElementById('modalNotice');
 
     refreshBtn.addEventListener('click', () => {
+      // Require session first; then class optional (loads all with session)
+      if(!sessionFilter || !sessionFilter.value){
+        statusEl.textContent = 'Pick session first';
+        tbody.innerHTML = '<tr><td colspan="13">Select session, then class and section to view data</td></tr>';
+        return;
+      }
       const cls = classFilter.value;
-      if(cls) loadDataForClass(cls);
+      if(cls) { loadDataForClass(cls); }
+      else { loadData(); }
     });
 
-  classFilter.addEventListener('change', onClassChange);
+  classFilter.addEventListener('change', () => {
+    // enforce session-first
+    if(!sessionFilter || !sessionFilter.value){
+      classFilter.value = '';
+      statusEl.textContent = 'Pick session first';
+      tbody.innerHTML = '<tr><td colspan="13">Select session first</td></tr>';
+      return;
+    }
+    onClassChange();
+  });
   sectionFilter.addEventListener('change', () => {
-    // if a class is selected, immediately load that class with the selected section
+    if(!sessionFilter || !sessionFilter.value){
+      sectionFilter.value = '';
+      statusEl.textContent = 'Pick session first';
+      tbody.innerHTML = '<tr><td colspan="13">Select session first</td></tr>';
+      return;
+    }
     if(classFilter.value){
-      // server-side fetch for class (loadDataForClass applies session filter too)
       loadDataForClass(classFilter.value);
       return;
     }
-    // if no class selected, just apply client-side filtering on existing cache
     applyFilters();
   });
-  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="13">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
+  clearFilters.addEventListener('click', ()=>{
+    // Reset all filters and cache; guide user to session-first
+    if(sessionFilter) sessionFilter.value = '';
+    classFilter.value='';
+    sectionFilter.value='';
+    allRowsCache = [];
+    tbody.innerHTML = '<tr><td colspan="13">Select session, then class and section to view data</td></tr>';
+    statusEl.textContent = 'Pick session → class → section';
+  });
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -250,7 +289,7 @@
   // data order loaded from dataorder.csv (defines preview field order and labels)
   let dataOrder = []; // array of { key, label }
 
-    async function loadPhotoLinks(){
+  async function loadPhotoLinks(){
       try{
         const res = await fetch('../photo/link.csv');
         if(!res.ok) return;
@@ -264,7 +303,7 @@
     loadPhotoLinks();
 
     // load dataorder.csv to determine preview order and labels
-    async function loadDataOrder(){
+  async function loadDataOrder(){
       try{
         // dataorder.csv is in the same `login/` folder as this page
         const res = await fetch('dataorder.csv');
@@ -292,14 +331,14 @@
     async function loadDataForClass(classValue){
       statusEl.textContent = `Loading class ${classValue}...`;
       try{
-        // Build query and optionally apply session filter
+        const { classKey, sectionKey, rollKey } = getActiveKeys();
         let q = supabase
           .from(tableName)
-          .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok')
-          .eq('class_2025', classValue);
+          .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok, class_2025, section_2025, roll_2025, class_2026, section_2026, roll_2026')
+          .eq(classKey, classValue);
         if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
-  // prefer server-side ordering by roll number
-  q = q.order('roll_2025', { ascending: true }).limit(10000);
+        if(sectionFilter && sectionFilter.value) q = q.eq(sectionKey, sectionFilter.value);
+        q = q.order(rollKey, { ascending: true }).limit(10000);
         const { data, error } = await q;
         if(error){
           const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
@@ -318,7 +357,7 @@
     }
 
     // Load class list for the dropdown (fixed classes: 6,7,8,9,10)
-    async function loadClassList(){
+  async function loadClassList(){
       try{
         // Fixed class list instead of fetching from database
         const classes = ['6', '7', '8', '9', '10'];
@@ -334,16 +373,20 @@
           o.textContent=c; 
           classFilter.appendChild(o); 
         });
-        statusEl.textContent = 'Select class to view data';
-        // initialize session filter (fixed list)
+  statusEl.textContent = 'Select session, then class';
+        // initialize session filter (fixed list, first choice is required)
         if(sessionFilter){
           sessionFilter.innerHTML = '';
-          const optAny = document.createElement('option'); optAny.value=''; optAny.textContent='All'; sessionFilter.appendChild(optAny);
+          const optAny = document.createElement('option'); optAny.value=''; optAny.textContent='Select Session'; sessionFilter.appendChild(optAny);
           ['2025','2026'].forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionFilter.appendChild(o); });
           sessionFilter.value = '';
+          // Set a single handler for session changes (defined here; avoid overriding later)
           sessionFilter.onchange = () => {
-            // if a class is selected, reload that class with session filter, else load all
-            if(classFilter.value) loadDataForClass(classFilter.value); else loadData();
+            classFilter.value = '';
+            sectionFilter.value = '';
+            allRowsCache = [];
+            tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
+            statusEl.textContent = 'Pick class and section';
           };
         }
       }catch(e){
@@ -354,19 +397,16 @@
     function onClassChange(){
       const cls = classFilter.value;
   if(!cls){ 
-    // 'All' selected - load all data (existing function)
-  tbody.innerHTML = '<tr><td colspan="13">Loading all data...</td></tr>'; 
-        statusEl.textContent='Loading all data';
-        loadData();
+    tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>'; 
+        statusEl.textContent='Pick class and section';
         return; 
       }
-      // load only when a specific class is selected
-    // reset section filter to 'All' when a new class is selected (user can then choose a section)
-    if(sectionFilter) sectionFilter.value = '';
-    loadDataForClass(cls);
+      // reset section and load class-only to populate sections
+      if(sectionFilter) sectionFilter.value = '';
+      loadDataForClass(cls);
     }
 
-    async function loadData(){
+  async function loadData(){
       // Batched fetch to load ALL rows (handles Supabase default limits)
       statusEl.textContent = 'Loading all data...';
       try{
@@ -374,17 +414,18 @@
         let allData = [];
         let lastId = 0;
         let round = 0;
-        while(true){
+  const { rollKey } = getActiveKeys();
+  while(true){
           round++;
           statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
           // build paginated query and optionally apply session filter
           let q = supabase
             .from(tableName)
-            .select('iid, class_2025, section_2025, roll_2025, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok')
+            .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok, class_2025, section_2025, roll_2025, class_2026, section_2026, roll_2026')
             .gt('iid', lastId);
           if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
-          // prefer server-side ordering by roll number for consistent display
-          q = q.order('roll_2025', { ascending: true }).limit(batchSize);
+          // server-side ordering by active roll
+          q = q.order(rollKey, { ascending: true }).limit(batchSize);
           const { data, error } = await q;
           if(error){
             const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
@@ -396,9 +437,10 @@
           if(data.length < batchSize) break; // last batch
         }
 
-        allRowsCache = allData;
-  // sort by roll number (client-side safety)
-  allRowsCache = allRowsCache.sort((a,b)=> (Number(a.roll_2025)||0) - (Number(b.roll_2025)||0));
+  allRowsCache = allData;
+  // client-side safety sort by active roll
+  const { rollKey: rk } = getActiveKeys();
+  allRowsCache = allRowsCache.sort((a,b)=> (Number(a[rk])||0) - (Number(b[rk])||0));
         populateFilterOptions(allRowsCache);
         renderTable(allRowsCache);
         statusEl.textContent = `Total: ${allRowsCache.length} records (ALL)`;
@@ -414,9 +456,10 @@
       // collect unique classes and sections from provided rows
       const classes = new Set();
       const sections = new Set();
+      const { classKey, sectionKey } = getActiveKeys();
       rows.forEach(r=>{ 
-        if(r && r.class_2025) classes.add(String(r.class_2025)); 
-        if(r && r.section_2025) sections.add(String(r.section_2025)); 
+        if(r && r[classKey]) classes.add(String(r[classKey])); 
+        if(r && r[sectionKey]) sections.add(String(r[sectionKey])); 
       });
 
   // preserve current selections where possible
@@ -442,20 +485,19 @@
 
   // ensure section change triggers filtering
   sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
-  // ensure session change triggers filtering (client-side)
-  if(sessionFilter) sessionFilter.onchange = () => { if(classFilter.value) applyFilters(); else loadData(); };
+  // don't override sessionFilter.onchange here; it's defined in loadClassList()
     }
 
     function applyFilters(){
-      const c = classFilter.value;
-      const s = sectionFilter.value;
+  const c = classFilter.value;
+  const s = sectionFilter.value;
   const ses = sessionFilter && sessionFilter.value;
-      let filtered = allRowsCache;
-      if(c) filtered = filtered.filter(r => String(r.class_2025) === c);
-      if(s) filtered = filtered.filter(r => String(r.section_2025) === s);
+  const { classKey, sectionKey, rollKey } = getActiveKeys();
+  let filtered = allRowsCache;
+  if(c) filtered = filtered.filter(r => String(r[classKey]) === c);
+  if(s) filtered = filtered.filter(r => String(r[sectionKey]) === s);
   if(ses) filtered = filtered.filter(r => String(r.session) === ses || String(r.session || '') === ses);
-  // sort by roll_2025 numerically
-  filtered = filtered.sort((a,b)=> (Number(a.roll_2025)||0) - (Number(b.roll_2025)||0));
+  filtered = filtered.sort((a,b)=> (Number(a[rollKey])||0) - (Number(b[rollKey])||0));
   renderTable(filtered);
       statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
     }
@@ -507,9 +549,10 @@
         const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
 
         const tdIid = document.createElement('td'); tdIid.textContent = escapeHtml(iid);
-        const tdClass = document.createElement('td'); tdClass.textContent = escapeHtml(r['class_2025']||'');
-        const tdSection = document.createElement('td'); tdSection.textContent = escapeHtml(r['section_2025']||'');
-        const tdRoll = document.createElement('td'); tdRoll.textContent = escapeHtml(r['roll_2025']||'');
+  const { classKey, sectionKey, rollKey } = getActiveKeys();
+  const tdClass = document.createElement('td'); tdClass.textContent = escapeHtml(r[classKey]||'');
+  const tdSection = document.createElement('td'); tdSection.textContent = escapeHtml(r[sectionKey]||'');
+  const tdRoll = document.createElement('td'); tdRoll.textContent = escapeHtml(r[rollKey]||'');
         const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['student_name_en']||'');
   const tdFatherName = document.createElement('td'); tdFatherName.textContent = escapeHtml(r['father_name_en']||'');
   const tdFatherMobile = document.createElement('td');
@@ -796,8 +839,8 @@
     // close view modal when clicking outside panel
     viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
 
-  // initial load: only populate class list, don't fetch records
-  tbody.innerHTML = '<tr><td colspan="13">Select class to view data</td></tr>';
+  // initial load: guide user to pick session first
+  tbody.innerHTML = '<tr><td colspan="13">Select session, then class and section to view data</td></tr>';
     loadClassList();
   </script>
 </body>
