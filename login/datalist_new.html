@@ -336,7 +336,8 @@
           .from(tableName)
           .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok, class_2025, section_2025, roll_2025, class_2026, section_2026, roll_2026')
           .eq(classKey, classValue);
-        if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
+  // Apply session filter only for 2025; for 2026 some rows may not have session column set yet
+  if(sessionFilter && sessionFilter.value === '2025') q = q.eq('session', '2025');
         if(sectionFilter && sectionFilter.value) q = q.eq(sectionKey, sectionFilter.value);
         q = q.order(rollKey, { ascending: true }).limit(10000);
         const { data, error } = await q;
@@ -423,7 +424,8 @@
             .from(tableName)
             .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok, class_2025, section_2025, roll_2025, class_2026, section_2026, roll_2026')
             .gt('iid', lastId);
-          if(sessionFilter && sessionFilter.value) q = q.eq('session', sessionFilter.value);
+          // Apply session filter only for 2025; for 2026 fetch broadly then filter client-side
+          if(sessionFilter && sessionFilter.value === '2025') q = q.eq('session', '2025');
           // server-side ordering by active roll
           q = q.order(rollKey, { ascending: true }).limit(batchSize);
           const { data, error } = await q;
@@ -437,9 +439,13 @@
           if(data.length < batchSize) break; // last batch
         }
 
+  // For 2026, keep only rows that actually have active session keys populated
+  const { classKey: ck, sectionKey: sk, rollKey: rk } = getActiveKeys();
+  if(sessionFilter && sessionFilter.value === '2026'){
+    allData = (allData || []).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== ''));
+  }
   allRowsCache = allData;
   // client-side safety sort by active roll
-  const { rollKey: rk } = getActiveKeys();
   allRowsCache = allRowsCache.sort((a,b)=> (Number(a[rk])||0) - (Number(b[rk])||0));
         populateFilterOptions(allRowsCache);
         renderTable(allRowsCache);
@@ -453,39 +459,31 @@
     }
 
     function populateFilterOptions(rows){
-      // collect unique classes and sections from provided rows
-      const classes = new Set();
-      const sections = new Set();
+      // Only rebuild Section options. Keep Class options intact to avoid resets.
       const { classKey, sectionKey } = getActiveKeys();
-      rows.forEach(r=>{ 
-        if(r && r[classKey]) classes.add(String(r[classKey])); 
-        if(r && r[sectionKey]) sections.add(String(r[sectionKey])); 
-      });
+      const selClass = classFilter.value;
+      const selSection = sectionFilter.value;
+      const selSession = sessionFilter && sessionFilter.value;
 
-  // preserve current selections where possible
-  const selClass = classFilter.value;
-  const selSection = sectionFilter.value;
-  const selSession = sessionFilter && sessionFilter.value;
+      // Build sections from rows, narrowed to selected class if any
+      const rowsForSections = selClass ? rows.filter(r => String(r[classKey]||'') === String(selClass)) : rows;
+      const sections = new Set();
+      rowsForSections.forEach(r => { if(r && r[sectionKey]) sections.add(String(r[sectionKey])); });
 
-      // rebuild class options only if they differ
-      const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
-      classFilter.innerHTML = '';
-      const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
-      sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
-  if(selClass) classFilter.value = selClass;
-
-      // build section options based on rows (sections are class-specific)
       sectionFilter.innerHTML = '';
       const optAnyS = document.createElement('option'); optAnyS.value=''; optAnyS.textContent='All'; sectionFilter.appendChild(optAnyS);
       const sortedSections = Array.from(sections).sort();
       sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
-  if(selSection) sectionFilter.value = selSection;
-  // if session values are present in rows, prefer keeping user's selection, otherwise keep current
-  if(sessionFilter && selSession) sessionFilter.value = selSession;
+      if(selSection && Array.from(sections).includes(selSection)) {
+        sectionFilter.value = selSection;
+      }
 
-  // ensure section change triggers filtering
-  sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
-  // don't override sessionFilter.onchange here; it's defined in loadClassList()
+      // keep user's session selection untouched
+      if(sessionFilter && selSession) sessionFilter.value = selSession;
+
+      // ensure section change triggers filtering
+      sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
+      // don't override sessionFilter.onchange here; it's defined in loadClassList()
     }
 
     function applyFilters(){
@@ -496,7 +494,12 @@
   let filtered = allRowsCache;
   if(c) filtered = filtered.filter(r => String(r[classKey]) === c);
   if(s) filtered = filtered.filter(r => String(r[sectionKey]) === s);
-  if(ses) filtered = filtered.filter(r => String(r.session) === ses || String(r.session || '') === ses);
+  if(ses === '2025'){
+    filtered = filtered.filter(r => String(r.session || '') === '2025');
+  } else if(ses === '2026'){
+    // Include rows that have any 2026 field populated even if 'session' column isn't set yet
+    filtered = filtered.filter(r => r && (r[classKey] || r[sectionKey] || r[rollKey]));
+  }
   filtered = filtered.sort((a,b)=> (Number(a[rollKey])||0) - (Number(b[rollKey])||0));
   renderTable(filtered);
       statusEl.textContent = `Total: ${filtered ? filtered.length : 0}`;
