@@ -26,6 +26,9 @@
   .btn.edit{background:linear-gradient(90deg, rgba(255,122,0,0.35), rgba(255,102,0,0.35));color:#0b1724;box-shadow:0 8px 18px rgba(255,122,0,0.12)}
   .btn.view{background:linear-gradient(90deg, rgba(11,116,222,0.5), rgba(3,82,170,0.5));color:#fff;box-shadow:0 8px 20px rgba(11,116,222,0.12)}
 
+  /* layout for action buttons inside table cell */
+  .action-cell{display:flex;gap:8px;align-items:center}
+
   /* Modal styles */
   .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(6,12,28,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:2500}
   .modal .panel{background:#fff;padding:18px;border-radius:12px;max-width:820px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(12,24,40,0.12);z-index:2600}
@@ -123,11 +126,12 @@
   <th>Photo</th>
   <th>Session</th>
         <th>Status</th>
+        <th>FullData</th>
         <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="12">Loading...</td></tr>
+      <tr><td colspan="13">Loading...</td></tr>
     </tbody>
   </table>
   </div>
@@ -221,7 +225,7 @@
     // only apply section filter when a class is selected
     if(classFilter.value) applyFilters();
   });
-  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="12">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
+  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; tbody.innerHTML = '<tr><td colspan="13">Select class to view data</td></tr>'; statusEl.textContent = 'Select class to view data'; });
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -304,7 +308,7 @@
         console.error('loadDataForClass error:', err);
         statusEl.textContent = 'Data loading error';
     const msg = err && err.message ? err.message : String(err);
-  tbody.innerHTML = `<tr><td colspan="12">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="13">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -346,7 +350,7 @@
       const cls = classFilter.value;
   if(!cls){ 
     // 'All' selected - load all data (existing function)
-  tbody.innerHTML = '<tr><td colspan="12">Loading all data...</td></tr>'; 
+  tbody.innerHTML = '<tr><td colspan="13">Loading all data...</td></tr>'; 
         statusEl.textContent='Loading all data';
         loadData();
         return; 
@@ -394,7 +398,7 @@
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-  tbody.innerHTML = `<tr><td colspan="12">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="13">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -450,7 +454,7 @@
 
     function renderTable(rows){
     if(!rows || rows.length === 0){
-  tbody.innerHTML = '<tr><td colspan="12">No records found</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="13">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
@@ -526,7 +530,13 @@
           tr.classList.add('status-tc');
         }
 
-        const tdAction = document.createElement('td');
+        // FullData flag column (show fulldata_ok or similar fields)
+        const tdFullData = document.createElement('td');
+        const fd = (r['fulldata_ok'] !== undefined) ? r['fulldata_ok'] : (r['full_data_ok'] !== undefined ? r['full_data_ok'] : '');
+        tdFullData.textContent = escapeHtml(fd === null ? '' : String(fd));
+
+  const tdAction = document.createElement('td');
+  tdAction.className = 'action-cell';
         // Edit button (existing behaviour)
   const btnEdit = document.createElement('button'); btnEdit.className = 'btn edit'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
         btnEdit.addEventListener('click', () => {
@@ -537,7 +547,7 @@
         tdAction.appendChild(btnEdit);
 
         // View button (new) - open read-only modal
-  const btnView = document.createElement('button'); btnView.className = 'btn view'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.setAttribute('data-iid', iid);
+  const btnView = document.createElement('button'); btnView.className = 'btn view'; btnView.textContent = 'View'; btnView.setAttribute('data-iid', iid);
         btnView.addEventListener('click', () => { openViewByIID(iid); });
         tdAction.appendChild(btnView);
 
@@ -551,6 +561,7 @@
   tr.appendChild(tdPhoto);
   tr.appendChild(tdSession);
   tr.appendChild(tdStatus);
+  tr.appendChild(tdFullData);
         tr.appendChild(tdAction);
 
   tbody.appendChild(tr);
@@ -778,7 +789,7 @@
     viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
 
   // initial load: only populate class list, don't fetch records
-  tbody.innerHTML = '<tr><td colspan="12">Select class to view data</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="13">Select class to view data</td></tr>';
     loadClassList();
   </script>
 </body>
