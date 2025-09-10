@@ -540,6 +540,13 @@
 			// Save latest, show column chooser, and render table based on selections
 			latestFilteredRows = filteredRows;
 			const availableColumns = computeAvailableColumns();
+			// If user has no saved selections, pick sensible defaults so table is visible immediately
+			if((!selectedColumns || selectedColumns.length===0) && Array.isArray(availableColumns) && availableColumns.length){
+				selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length));
+				// last selected becomes editable
+				selectedEditable = selectedColumns[selectedColumns.length-1] || null;
+				saveSelectedColumns(); saveSelectedEditable();
+			}
 			buildColumnControls(availableColumns);
 			reRenderTable();
 			if(selectedCsyPrintEl){
