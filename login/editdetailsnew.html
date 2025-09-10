@@ -358,8 +358,38 @@
               const displayName = fieldDisplayNames[key] || key;
               label.textContent = displayName;
               
+              // Field-specific selects (religion/gender/class/section/blood/group/freedom)
               let input;
-              if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+              const lk = String(key).toLowerCase();
+              if(lk.includes('relig') || lk === 'religion'){
+                input = document.createElement('select');
+                ['','HINDU','ISLAM','BUDDHA','CHRISTIAN'].forEach(o=>{ const el = document.createElement('option'); el.value = o; el.textContent = o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if(lk.includes('gender') || lk === 'sex' || lk.includes('student_gender')){
+                input = document.createElement('select');
+                ['','MALE','FEMALE'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if((lk === 'class' || lk.includes('class_') || lk === 'class_2025' || lk === 'class_2026' || lk === 'class ') && lk !== 'previous_class_roll'){
+                input = document.createElement('select');
+                ['','6','7','8','9','10'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if(lk.includes('section')){
+                input = document.createElement('select');
+                ['','SHAPLA','GOLAP','MORNING'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if(lk.includes('blood')){
+                input = document.createElement('select');
+                ['','A+','A-','B+','B-','AB+','AB-','O+','O-'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if(lk.includes('group') && !lk.includes('field-group')){
+                input = document.createElement('select');
+                ['','SCIENCE','BUSINESS STUDIES','HUMANITIES'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if(lk.includes('freedom') || lk.includes('freedom_fighter') || (lk.includes('quote') && lk.includes('freedom'))){
+                input = document.createElement('select');
+                ['','YES','NO'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
+              } else if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
                 input = document.createElement('textarea');
                 input.rows = 3;
               } else {
@@ -446,8 +476,38 @@
             const displayName = fieldDisplayNames[key] || key;
             label.textContent = displayName;
             
+            // Field-specific selects
             let input;
-            if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+            const lk = String(key).toLowerCase();
+            if(lk.includes('relig') || lk === 'religion'){
+              input = document.createElement('select');
+              ['','HINDU','ISLAM','BUDDHA','CHRISTIAN'].forEach(o=>{ const el = document.createElement('option'); el.value = o; el.textContent = o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('gender') || lk === 'sex' || lk.includes('student_gender')){
+              input = document.createElement('select');
+              ['','MALE','FEMALE'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if((lk === 'class' || lk.includes('class_') || lk === 'class_2025' || lk === 'class_2026' || lk === 'class ') && lk !== 'previous_class_roll'){
+              input = document.createElement('select');
+              ['','6','7','8','9','10'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('section')){
+              input = document.createElement('select');
+              ['','SHAPLA','GOLAP','MORNING'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('blood')){
+              input = document.createElement('select');
+              ['','A+','A-','B+','B-','AB+','AB-','O+','O-'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('group') && !lk.includes('field-group')){
+              input = document.createElement('select');
+              ['','SCIENCE','BUSINESS STUDIES','HUMANITIES'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('freedom') || lk.includes('freedom_fighter') || (lk.includes('quote') && lk.includes('freedom'))){
+              input = document.createElement('select');
+              ['','YES','NO'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
               input = document.createElement('textarea');
               input.rows = 3;
             } else {
@@ -470,8 +530,38 @@
             const displayName = fieldDisplayNames[key] || key;
             label.textContent = displayName + ':';
 
+            // Field-specific selects
             let input;
-            if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
+            const lk = String(key).toLowerCase();
+            if(lk.includes('relig') || lk === 'religion'){
+              input = document.createElement('select');
+              ['','HINDU','ISLAM','BUDDHA','CHRISTIAN'].forEach(o=>{ const el = document.createElement('option'); el.value = o; el.textContent = o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('gender') || lk === 'sex' || lk.includes('student_gender')){
+              input = document.createElement('select');
+              ['','MALE','FEMALE'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if((lk === 'class' || lk.includes('class_') || lk === 'class_2025' || lk === 'class_2026' || lk === 'class ') && lk !== 'previous_class_roll'){
+              input = document.createElement('select');
+              ['','6','7','8','9','10'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('section')){
+              input = document.createElement('select');
+              ['','SHAPLA','GOLAP','MORNING'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('blood')){
+              input = document.createElement('select');
+              ['','A+','A-','B+','B-','AB+','AB-','O+','O-'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('group') && !lk.includes('field-group')){
+              input = document.createElement('select');
+              ['','SCIENCE','BUSINESS STUDIES','HUMANITIES'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(lk.includes('freedom') || lk.includes('freedom_fighter') || (lk.includes('quote') && lk.includes('freedom'))){
+              input = document.createElement('select');
+              ['','YES','NO'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              input.value = val || '';
+            } else if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
               input = document.createElement('textarea');
               input.rows = 4;
             } else {
