@@ -131,6 +131,7 @@
 	// All columns fetched directly; master dataset removed.
 	let columnSpec = [];
 	let allRows = [];
+	let columnOrder = []; // preferred order from dataorder.csv
 
 		async function fetchAll(){
 			if(!supabaseClient){ statusEl.textContent='Supabase not ready'; return []; }
@@ -186,7 +187,45 @@
 			for(const r of allRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
 			FIXED_COLS.forEach(c=> set.delete(c));
 			set.delete('SL');
-			return Array.from(set).sort((a,b)=> a.localeCompare(b));
+			let cols = Array.from(set);
+			if(Array.isArray(columnOrder) && columnOrder.length){
+				cols.sort((a,b)=>{
+					const ia = columnOrder.indexOf(a);
+					const ib = columnOrder.indexOf(b);
+					if(ia === -1 && ib === -1) return a.localeCompare(b);
+					if(ia === -1) return 1;
+					if(ib === -1) return -1;
+					return ia - ib;
+				});
+			} else {
+				cols.sort((a,b)=> a.localeCompare(b));
+			}
+			return cols;
+		}
+
+		// Load and parse dataorder.csv (left side keys before '>')
+		async function loadColumnOrder(){
+			try{
+				const res = await fetch('dataorder.csv');
+				if(!res.ok) throw new Error('Failed to fetch dataorder.csv');
+				const text = await res.text();
+				const lines = text.split(/\r?\n/);
+				const order = [];
+				for(const line of lines){
+					const t = line.trim();
+					if(!t) continue;
+					if(t.startsWith('#')) continue;
+					if(t.includes('>')){
+						const parts = t.split('>');
+						const key = parts[0].trim();
+						if(key) order.push(key);
+					}
+				}
+				columnOrder = Array.from(new Set(order));
+			}catch(err){
+				console.warn('Could not load dataorder.csv, falling back to alphabetical order', err);
+				columnOrder = [];
+			}
 		}
 		function buildColumnControls(columns){
 			if(!columnControlsEl) return;
@@ -382,6 +421,8 @@
 
 		// Initial load direct DB
 		(async function init(){
+			// load preferred column order first (if available)
+			await loadColumnOrder();
 			await loadAll();
 			document.getElementById('classSectionYearFilter').addEventListener('change', async () => {
 				const groups = groupByClassSection(allRows);

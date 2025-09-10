@@ -151,6 +151,7 @@
 	let liteRows = []; // minimal rows for dropdown + basic display before selection
 	let currentGroupRows = []; // full rows for selected group (with all fields)
 	let allColumns = []; // discovered columns after first full fetch
+	let columnOrder = []; // order from dataorder.csv (field names in preferred sequence)
 
 		async function fetchLite(){
 			if(!supabaseClient){ return []; }
@@ -236,8 +237,49 @@
 			for(const r of currentGroupRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
 			FIXED_COLS.forEach(c=> set.delete(c));
 			set.delete('SL');
-			allColumns = Array.from(set).sort((a,b)=> a.localeCompare(b));
+			let cols = Array.from(set);
+			// If we loaded a preferred column order from dataorder.csv, sort by that order.
+			if(Array.isArray(columnOrder) && columnOrder.length){
+				cols.sort((a,b)=>{
+					const ia = columnOrder.indexOf(a);
+					const ib = columnOrder.indexOf(b);
+					if(ia === -1 && ib === -1) return a.localeCompare(b);
+					if(ia === -1) return 1; // unknown columns go after known ones
+					if(ib === -1) return -1;
+					return ia - ib;
+				});
+			} else {
+				cols.sort((a,b)=> a.localeCompare(b));
+			}
+			allColumns = cols;
 			return allColumns;
+		}
+
+		// Load and parse dataorder.csv (simple parser: takes left side of '>' for each mapping line)
+		async function loadColumnOrder(){
+			try{
+				const res = await fetch('dataorder.csv');
+				if(!res.ok) throw new Error('Failed to fetch dataorder.csv');
+				const text = await res.text();
+				const lines = text.split(/\r?\n/);
+				const order = [];
+				for(const line of lines){
+					const t = line.trim();
+					if(!t) continue;
+					if(t.startsWith('#')) continue;
+					// only consider lines with '>' mapping
+					if(t.includes('>')){
+						const parts = t.split('>');
+						const key = parts[0].trim();
+						if(key) order.push(key);
+					}
+				}
+				// dedupe while preserving order
+				columnOrder = Array.from(new Set(order));
+			}catch(err){
+				console.warn('Could not load dataorder.csv, falling back to alphabetical order', err);
+				columnOrder = [];
+			}
 		}
 		function buildColumnControls(columns){
 			if(!columnControlsEl) return;
@@ -553,6 +595,8 @@
 		// Init: lite first
 		(async function init(){
 			await waitForSupabase();
+			// load preferred column order (if present) then load data
+			await loadColumnOrder();
 			await loadLite();
 			document.getElementById('classSectionYearFilter').addEventListener('change', async () => {
 				const csy = document.getElementById('classSectionYearFilter').value;
