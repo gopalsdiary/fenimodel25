@@ -166,6 +166,8 @@
   function buildRows(data, headers){
     const rows=[];
     const norm = s => String(s||'').trim().toLowerCase();
+    const matched = [];
+    const unmatched = [];
     for(const obj of data){
       const sl=getVal(obj, headers,'sl');
       const name=getVal(obj, headers,'name');
@@ -223,11 +225,12 @@
       const signalSpan = document.createElement('span');
       signalSpan.innerHTML = `<span class="sig sig-name ${nameOk?'match-ok':'match-bad'}" title="Name ${nameOk?'matches':'differs'}">${nameOk?'✔':'✖'}</span> <span class="sig sig-father ${fatherOk?'match-ok':'match-bad'}" title="Father ${fatherOk?'matches':'differs'}">${fatherOk?'✔':'✖'}</span>`;
 
-  const tr=document.createElement('tr');
-  createRow(tr,[sl,iid,{element:nameLink},father,phone,bloodgroup,{element:photoElement},comment,{element:dbNameSpan},{element:dbFatherSpan},{element:signalSpan}]);
-      rows.push(tr);
+      const tr=document.createElement('tr');
+      createRow(tr,[sl,iid,{element:nameLink},father,phone,bloodgroup,{element:photoElement},comment,{element:dbNameSpan},{element:dbFatherSpan},{element:signalSpan}]);
+      if(!nameOk || !fatherOk) unmatched.push(tr); else matched.push(tr);
     }
-    return rows;
+    // return unmatched rows first so they appear at the top
+    return unmatched.concat(matched);
   }
 
     function setupFilter(allRows){ const input=document.querySelector('#search'); const apply=()=>{ const q=input.value.toLowerCase().trim(); if(!q) return renderTable(allRows); const filtered=allRows.filter(tr=>tr.textContent.toLowerCase().includes(q)); renderTable(filtered); }; input.addEventListener('input',apply); apply(); }

@@ -46,8 +46,10 @@
   .btn{padding:8px 14px;border-radius:12px;border:none;cursor:pointer;font-weight:700;background:var(--surface);box-shadow:6px 6px 14px rgba(12,24,40,0.06),-6px -6px 14px rgba(255,255,255,0.9);color:#06202a}
   .btn.primary{background:linear-gradient(180deg,var(--accent),#05a08f);color:#fff;box-shadow:0 12px 30px rgba(6,182,164,0.12)}
   .btn.secondary{background:linear-gradient(180deg,#f7f9f8,#ffffff);color:#0b2430;border:1px solid rgba(8,20,30,0.03)}
-  .btn.edit{background:linear-gradient(180deg,#fff7ef,#fff3ea);color:#b45309;box-shadow:0 8px 18px rgba(255,140,40,0.06)}
-  .btn.view{background:linear-gradient(180deg,#effbf9,#e6fbf6);color:#04504a;box-shadow:0 8px 18px rgba(6,182,164,0.06)}
+  /* Edit button: 40% orange background */
+  .btn.edit{background:rgb(255, 157, 37);color:#ffffff;box-shadow:0 8px 18px rgba(255,140,0,0.08)}
+  /* View button: 40% blue background */
+  .btn.view{background:rgba(59, 120, 252, 0.4);color:#ffffff;box-shadow:0 8px 18px rgba(37,99,235,0.08)}
 
   .action-cell{display:flex;gap:8px;align-items:center}
 
@@ -68,6 +70,24 @@
   .row-thumb{width:40px;height:40px;object-fit:cover;border-radius:8px;border:1px solid rgba(8,20,30,0.04);box-shadow:4px 6px 14px rgba(12,24,40,0.04)}
   .no-image{font-size:13px;color:#c12b2b;font-style:italic}
   #photo-preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2700;width:420px;height:520px;border-radius:14px;border:2px solid rgba(10,40,80,0.04);background:var(--surface);padding:12px;display:none;box-shadow:var(--shadow-drop)}
+
+  /* Row highlight: apply solid-ish colors to tr and td to override row gradient */
+  #dataTable tbody tr.status-tc,
+  #dataTable tbody tr.status-tc td{background-color: #ff4d4f !important; color: #fff !important}
+
+  #dataTable tbody tr.row-fulldata-ok,
+  #dataTable tbody tr.row-fulldata-ok td{background-color: #10b981 !important; color: #fff !important}
+  /* make highlighted rows full-width bands: remove row-level shadow and radius to avoid visual breaks */
+  #dataTable tbody tr.status-tc,
+  #dataTable tbody tr.row-fulldata-ok{
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  /* ensure cells don't have their own radius interfering */
+  #dataTable tbody tr.status-tc td,
+  #dataTable tbody tr.row-fulldata-ok td{
+    border-radius: 0 !important;
+  }
 
   /* status center */
   #status{position:absolute;left:50%;transform:translateX(-50%);font-weight:700;color:var(--muted)}
@@ -580,14 +600,19 @@
         const tdStatus = document.createElement('td');
         const statusText = String(r['status'] || '');
         tdStatus.textContent = escapeHtml(statusText);
-        if (statusText && statusText.toUpperCase().includes('TC')) {
-          tr.classList.add('status-tc');
-        }
 
         // FullData flag column (show fulldata_ok or similar fields)
         const tdFullData = document.createElement('td');
         const fd = (r['fulldata_ok'] !== undefined) ? r['fulldata_ok'] : (r['full_data_ok'] !== undefined ? r['full_data_ok'] : '');
         tdFullData.textContent = escapeHtml(fd === null ? '' : String(fd));
+
+        // apply row coloring: FullData 'ok' -> green (highest priority), otherwise Status containing TC -> red
+        const fdNorm = String(fd || '').trim().toLowerCase();
+        if(fdNorm === 'ok'){
+          tr.classList.add('row-fulldata-ok');
+        } else if (statusText && statusText.toUpperCase().includes('TC')) {
+          tr.classList.add('status-tc');
+        }
 
   const tdAction = document.createElement('td');
   tdAction.className = 'action-cell';
