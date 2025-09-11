@@ -75,6 +75,7 @@
 		<div class="toolbar">
 				<select id="tableFilter" aria-label="Class-Section-Session"><option value="">Class-Section-Session</option></select>
 				<button id="downloadPdfBtn">Download PDF</button>
+				<button id="uploadAllBtn" class="secondary" title="Upload all rows where Photo Url CSV matches IID">Upload All Matched</button>
 				<div class="muted right">Image album: <strong>student_photo</strong></div>
 		</div>
 
@@ -445,6 +446,68 @@
 					}
 				});
 			});
+
+		// Bulk upload: Upload all rows where CSV match badge (left badge) is 'yes' and DB not set
+		async function bulkUploadMatched(){
+			if(!supabase){ setStatus('Supabase not available'); return; }
+			const rows = Array.from(tbody.querySelectorAll('tr'));
+			// select rows where CSV badge (first .match-badge in .match-cell) has 'yes' class OR where CSV cell contains a direct link that matches iid
+			const candidates = [];
+			for(const tr of rows){
+				const iid = tr.dataset.iid;
+				if(!iid) continue;
+				const csvCell = tr.querySelector('td:nth-child(7)');
+				let csvUrl = '';
+				if(csvCell){ const a = csvCell.querySelector('a'); if(a) csvUrl = a.href; else { const inp = csvCell.querySelector('input.url-input'); if(inp) csvUrl = inp.value.trim(); } }
+				if(!csvUrl) continue; // nothing to save
+				// determine CSV match (exists a CSV photo index match) via left badge
+				const badges = tr.querySelectorAll('.match-cell .match-badge');
+				let csvBadge = null;
+				if(badges && badges.length>0) csvBadge = badges[0];
+				const dbCell = tr.querySelector('td:nth-child(9)');
+				const hasDbUrl = dbCell && dbCell.textContent && !dbCell.textContent.includes('—');
+				const csvIsYes = csvBadge && csvBadge.classList.contains('yes');
+				if(csvIsYes && !hasDbUrl){ candidates.push({ tr, iid, csvUrl }); }
+			}
+			if(candidates.length===0){ setStatus('No matched rows to upload'); return; }
+			setStatus(`Uploading ${candidates.length} matched photos…`);
+			let done = 0;
+			for(const c of candidates){
+				const { tr, iid, csvUrl } = c;
+				const status = tr.querySelector('.status');
+				const uploadBtn = tr.querySelector('.upload-btn');
+				if(status) status.textContent = 'Saving…';
+				if(uploadBtn) uploadBtn.disabled = true;
+				try{
+					const { data, error } = await supabase.from(tableName).update({ student_photo_url: csvUrl }).eq('iid', iid).select();
+					if(error) throw error;
+					// update UI
+					const dbCell = tr.querySelector('td:nth-child(9)');
+					if(dbCell) dbCell.innerHTML = `<a href="${escapeHtml(csvUrl)}" target="_blank" rel="noopener">${escapeHtml(csvUrl)}</a>`;
+					const dbBadge = tr.querySelector('span[data-iid-badge]');
+					if(dbBadge){
+						const fname = csvUrl.split('/').pop().toLowerCase();
+						const expected1 = `avatar-${iid}`.toLowerCase() + '.jpg';
+						const expected2 = `avatar-${iid}`.toLowerCase() + '.png';
+						const isMatch = fname === expected1 || fname === expected2 || fname.includes(iid);
+						dbBadge.className = 'match-badge ' + (isMatch ? 'yes' : 'no');
+						dbBadge.textContent = isMatch ? '✓' : '✗';
+					}
+					if(status) status.textContent = 'Saved ✓';
+					if(uploadBtn) uploadBtn.style.display = 'none';
+				}catch(err){
+					console.error('Bulk upload error for', iid, err);
+					if(status) status.textContent = 'Save failed';
+					if(uploadBtn) uploadBtn.disabled = false;
+				}
+				done++;
+				setStatus(`Uploading ${done}/${candidates.length}…`);
+			}
+			setStatus(`Bulk upload complete: ${done}/${candidates.length}`);
+		}
+
+		// wire upload all button
+		document.getElementById('uploadAllBtn')?.addEventListener('click', (e)=>{ e.preventDefault(); bulkUploadMatched(); });
 
 		// wire download handlers (force download by fetching blob then creating object URL)
 		document.querySelectorAll('.dl-link').forEach(a=>{
