@@ -125,8 +125,8 @@
 		const container = document.getElementById('container');
 		const statusEl = document.getElementById('status');
 
-		// Fixed columns always shown
-		const FIXED_COLS = ['iid','class_section_year','active_roll','student_name_en']; // SL is added separately
+		// Base columns (previously always shown). Now they will appear first in the checkbox list and be pre-selected on first load.
+		const BASE_COLS = ['iid','class_section_year','active_roll','student_name_en']; // SL is implicit
 
 	// All columns fetched directly; master dataset removed.
 	let columnSpec = [];
@@ -185,11 +185,11 @@
 		function computeAvailableColumns(){
 			const set = new Set();
 			for(const r of allRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
-			FIXED_COLS.forEach(c=> set.delete(c));
-			set.delete('SL');
-			let cols = Array.from(set);
+			set.delete('SL'); // pseudo column
+			// Ensure BASE_COLS appear first (even if some not present in data yet)
+			const others = Array.from(set).filter(c => !BASE_COLS.includes(c));
 			if(Array.isArray(columnOrder) && columnOrder.length){
-				cols.sort((a,b)=>{
+				others.sort((a,b)=>{
 					const ia = columnOrder.indexOf(a);
 					const ib = columnOrder.indexOf(b);
 					if(ia === -1 && ib === -1) return a.localeCompare(b);
@@ -198,9 +198,9 @@
 					return ia - ib;
 				});
 			} else {
-				cols.sort((a,b)=> a.localeCompare(b));
+				others.sort((a,b)=> a.localeCompare(b));
 			}
-			return cols;
+			return [...BASE_COLS, ...others];
 		}
 
 		// Load and parse dataorder.csv (left side keys before '>')
@@ -231,12 +231,20 @@
 			if(!columnControlsEl) return;
 			// keep only selections that still exist
 			selectedColumns = (selectedColumns||[]).filter(c => columns.includes(c));
+			// if first load (no stored selection), select base cols
+			if(!selectedColumns.length){ selectedColumns = BASE_COLS.filter(c=>columns.includes(c)); saveSelectedColumns(); }
 			columnControlsEl.style.display = columns.length? 'block':'none';
 			columnControlsEl.innerHTML = '';
 			const actions = document.createElement('div'); actions.className = 'actions';
 			const btnAll = document.createElement('button'); btnAll.type='button'; btnAll.textContent='Select all';
 			const btnClear = document.createElement('button'); btnClear.type='button'; btnClear.textContent='Clear';
+			// New: Download CSV button
+			const btnCsv = document.createElement('button'); btnCsv.type='button'; btnCsv.textContent='Download CSV';
+			// New: Download Excel button
+			const btnXls = document.createElement('button'); btnXls.type='button'; btnXls.textContent='Download EXCEL';
 			actions.appendChild(btnAll); actions.appendChild(btnClear);
+			actions.appendChild(btnCsv);
+			actions.appendChild(btnXls);
 			columnControlsEl.appendChild(actions);
 			const list = document.createElement('div'); list.className='list';
 			columns.forEach(col=>{
@@ -249,6 +257,8 @@
 			columnControlsEl.appendChild(list);
 			btnAll.onclick = ()=>{ selectedColumns = [...columns]; saveSelectedColumns(); reRenderTable(); buildColumnControls(columns); };
 			btnClear.onclick = ()=>{ selectedColumns = []; saveSelectedColumns(); reRenderTable(); buildColumnControls(columns); };
+			btnCsv.onclick = ()=>{ exportVisibleData('csv'); };
+			btnXls.onclick = ()=>{ exportVisibleData('excel'); };
 			list.addEventListener('change', (e)=>{
 				const t = e.target;
 				if(t && t.tagName==='INPUT' && t.type==='checkbox'){
@@ -258,6 +268,71 @@
 					reRenderTable();
 				}
 			});
+		}
+
+		// Generic exporter (currently CSV only; Excel support can be added later)
+		function exportVisibleData(format){
+			if(!latestFilteredRows || latestFilteredRows.length === 0){ alert('No data to export'); return; }
+			if(!selectedColumns || selectedColumns.length === 0){ alert('Select columns first'); return; }
+			// Headers: SL + selected columns
+			const headers = ['SL', ...selectedColumns];
+			if(format === 'csv'){
+				const escapeCSV = (val)=>{
+					if(val == null) return '';
+					let s = String(val).replace(/\r?\n|\r/g, ' ');
+					if(/[",\n]/.test(s)){ s = '"' + s.replace(/"/g,'""') + '"'; }
+					return s;
+				};
+				const lines = [];
+				lines.push(headers.map(escapeCSV).join(','));
+				latestFilteredRows.forEach((row, idx)=>{
+					// derive active class/section/year & roll same as render
+					const sNum = Number(row.session);
+					let active_roll = '', active_class = '', active_section = '';
+					if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
+					else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
+					const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
+					let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
+					const rowOut = [idx+1];
+					for(const col of selectedColumns){
+						if(col === 'iid') rowOut.push(row.iid ?? row.IID ?? '');
+						else if(col === 'class_section_year') rowOut.push(csY);
+						else if(col === 'active_roll') rowOut.push(active_roll ?? '');
+						else rowOut.push(row[col] == null ? '' : row[col]);
+					}
+					lines.push(rowOut.map(escapeCSV).join(','));
+				});
+				const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a'); a.href=url; a.download='students_visible.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+			}else{
+				if(format === 'excel'){
+					// Build minimal HTML table which Excel can open
+					let html = '<table><thead><tr>' + headers.map(h=>'<th>'+String(h).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</th>').join('') + '</tr></thead><tbody>';
+					latestFilteredRows.forEach((row, idx)=>{
+						const sNum = Number(row.session);
+						let active_roll = '', active_class = '', active_section = '';
+						if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
+						else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
+						const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
+						let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
+						const rowVals = [];
+						for(const col of selectedColumns){
+							if(col === 'iid') rowVals.push(row.iid ?? row.IID ?? '');
+							else if(col === 'class_section_year') rowVals.push(csY);
+							else if(col === 'active_roll') rowVals.push(active_roll ?? '');
+							else rowVals.push(row[col] == null ? '' : row[col]);
+						}
+						html += '<tr><td>'+(idx+1)+'</td>' + rowVals.map(v => '<td>'+String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</td>').join('') + '</tr>';
+					});
+					html += '</tbody></table>';
+					const blob = new Blob(['\ufeff'+html], {type:'application/vnd.ms-excel'}); // BOM helps Excel interpret UTF-8
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a'); a.href=url; a.download='students_visible.xls'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+				}else{
+					alert('Format not implemented: '+format);
+				}
+			}
 		}
 
 		function reRenderTable(){
@@ -273,39 +348,35 @@
 			const table = document.createElement('table');
 			const thead = document.createElement('thead');
 			const htr = document.createElement('tr');
-			['SL', 'iid', 'class_section_year', 'active_roll', 'student_name_en', ...selectedColumns].forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
+			['SL', ...selectedColumns].forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
 			thead.appendChild(htr); table.appendChild(thead);
 			const tbody = document.createElement('tbody');
 			latestFilteredRows.forEach((row, idx)=>{
 				const tr = document.createElement('tr');
 				if(String(row.status||'').toUpperCase().includes('TC')) tr.className = 'status-tc';
 				const sltd = document.createElement('td'); sltd.className='col-sl'; sltd.textContent=(idx+1); tr.appendChild(sltd);
-				// Fixed: iid link
-				const iidRaw = row.iid ?? row.IID ?? '';
-				// const iidNum = Number(iidRaw) || 0; // master removed
-				const tdIid = document.createElement('td');
-				const a = document.createElement('a'); a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; a.textContent=escapeHtml(String(iidRaw)); a.style.color='#0b74de'; a.style.textDecoration='underline';
-				tdIid.appendChild(a); tr.appendChild(tdIid);
-				// Fixed: class_section_year + active_roll
+				// Precompute dynamic values
 				const sNum = Number(row.session);
 				let active_roll = '', active_class = '', active_section = '';
 				if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
 				else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
 				const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
 				let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
-				const tdCSY = document.createElement('td'); tdCSY.textContent = escapeHtml(csY); tr.appendChild(tdCSY);
-				const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
-				// Fixed: student_name_en
-				const nameEn = row.student_name_en ?? '';
-				const tdName = document.createElement('td'); tdName.textContent = escapeHtml(nameEn); tr.appendChild(tdName);
-
-				// Extra selected columns directly from row
-				selectedColumns.forEach(col=>{
+				for(const col of selectedColumns){
 					const td = document.createElement('td');
-					const v = row[col];
-					td.textContent = escapeHtml(v==null? '': String(v));
+					if(col === 'iid'){
+						const iidRaw = row.iid ?? row.IID ?? '';
+						const a = document.createElement('a'); a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; a.textContent=escapeHtml(String(iidRaw)); a.style.color='#0b74de'; a.style.textDecoration='underline';
+						td.appendChild(a); tr.appendChild(td); continue;
+					} else if(col === 'class_section_year'){
+						td.textContent = escapeHtml(csY);
+					} else if(col === 'active_roll'){
+						td.textContent = escapeHtml(active_roll==null?'':String(active_roll));
+					} else {
+						const v = row[col]; td.textContent = escapeHtml(v==null?'':String(v));
+					}
 					tr.appendChild(td);
-				});
+				}
 				tbody.appendChild(tr);
 			});
 			table.appendChild(tbody);
