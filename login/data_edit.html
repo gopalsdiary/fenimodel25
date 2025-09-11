@@ -290,7 +290,7 @@
 				selectedEditable = null; saveSelectedEditable();
 			}
 			// enforce max 4 viewable columns
-			if(selectedColumns.length > 4){ selectedColumns = selectedColumns.slice(0,4); saveSelectedColumns(); }
+			if(selectedColumns.length > 8){ selectedColumns = selectedColumns.slice(0,8); saveSelectedColumns(); }
 			columnControlsEl.style.display = columns.length? 'block':'none';
 			columnControlsEl.innerHTML = '';
 			const actions = document.createElement('div'); actions.className = 'actions';
@@ -313,24 +313,24 @@
 			});
 			columnControlsEl.appendChild(list);
 			columnControlsEl.appendChild(warn);
-			btnAll.onclick = ()=>{ selectedColumns = [...columns].slice(0,4); selectedEditable = selectedColumns[selectedColumns.length-1] || null; saveSelectedColumns(); saveSelectedEditable(); reRenderTable(); buildColumnControls(columns); };
+			btnAll.onclick = ()=>{ selectedColumns = [...columns].slice(0,8); selectedEditable = selectedColumns[selectedColumns.length-1] || null; saveSelectedColumns(); saveSelectedEditable(); reRenderTable(); buildColumnControls(columns); };
 			btnClear.onclick = ()=>{ selectedColumns = []; selectedEditable = null; saveSelectedColumns(); saveSelectedEditable(); reRenderTable(); buildColumnControls(columns); };
 			list.addEventListener('change', (e)=>{
 				const t = e.target;
 				if(t && t.tagName==='INPUT' && t.type==='checkbox'){
 					if(t.checked){ 
 						if(!selectedColumns.includes(t.value)){
-							if(selectedColumns.length >= 4){ t.checked=false; warn.style.color='#dc2626'; warn.textContent='Limit 4 reached'; return; }
+							if(selectedColumns.length >= 8){ t.checked=false; warn.style.color='#dc2626'; warn.textContent='Limit 8 reached'; return; }
 							selectedColumns.push(t.value);
 						}
 						// last selected becomes editable
 						selectedEditable = t.value;
 						saveSelectedEditable();
-						warn.style.color='#b45309'; warn.textContent='Max 4 columns can be ticked to view; the last selected column is editable.';
+						warn.style.color='#b45309'; warn.textContent='Max 8 columns can be ticked to view; the last selected column is editable.';
 					} else {
 						selectedColumns = selectedColumns.filter(x=>x!==t.value);
 						if(selectedEditable === t.value){ selectedEditable = selectedColumns[selectedColumns.length-1] || null; saveSelectedEditable(); }
-						warn.style.color='#b45309'; warn.textContent='Max 4 columns can be ticked to view; the last selected column is editable.';
+						warn.style.color='#b45309'; warn.textContent='Max 8 columns can be ticked to view; the last selected column is editable.';
 					}
 					saveSelectedColumns();
 					reRenderTable();
