@@ -1,0 +1,189 @@
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
+#include <NTPClient.h>
+#include <TimeLib.h>      // Install via Arduino Library Manager
+#include <SPI.h>
+#include <MFRC522.h>
+#include <ESP8266HTTPClient.h>
+#include <ArduinoJson.h>
+#include <WiFiClientSecure.h>
+
+// RC522
+#define RST_PIN D1
+#define SS_PIN D2
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+// WiFi credentials
+const char* WIFI_SSID = "Telegraph";
+const char* WIFI_PASS = "gopalroy94";
+
+// Supabase credentials
+const char* SUPABASE_URL = "https://rtfefxghfbtirfnlbucb.supabase.co/rest/v1/attendence_entry";
+const char* SUPABASE_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w"; // Replace with your anon key
+
+// Pins
+#define BUZZER_PIN D8
+#define LED_YELLOW D3
+#define LED_RED D4
+
+// NTP Client
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "bd.pool.ntp.org", 19800, 60000); // GMT+6, update every 60 sec
+
+void setup() {
+  Serial.begin(115200);
+  SPI.begin();
+  mfrc522.PCD_Init();
+
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(LED_YELLOW, OUTPUT);
+  pinMode(LED_RED, OUTPUT);
+
+  // WiFi connect
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.println("\nWiFi Connected");
+
+  // NTP init
+  timeClient.begin();
+  timeClient.update();
+}
+
+void loop() {
+  timeClient.update();
+
+  if (!mfrc522.PICC_IsNewCardPresent()) return;
+  if (!mfrc522.PICC_ReadCardSerial()) return;
+
+  String rfidTag = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    rfidTag += String(mfrc522.uid.uidByte[i], HEX);
+  }
+  rfidTag.toUpperCase();
+  Serial.println("Card: " + rfidTag);
+
+  if (checkAndInsertAttendance(rfidTag)) {
+    digitalWrite(LED_YELLOW, HIGH);
+    tone(BUZZER_PIN, 1000, 200);
+    delay(200);
+    digitalWrite(LED_YELLOW, LOW);
+  } else {
+    digitalWrite(LED_RED, HIGH);
+    delay(500);
+    digitalWrite(LED_RED, LOW);
+  }
+  delay(1000);
+}
+
+// =================== Attendance Logic ===================
+bool checkAndInsertAttendance(String cardNo) {
+  String today = getTodayDate();
+  String nowTime = getCurrentTime();
+
+  WiFiClientSecure client;
+  HTTPClient http;
+  client.setInsecure(); // skip cert validation (simpler for testing)
+
+  // GET request: check existing entries
+  String filter = "?select=*&rfid_card_no=eq." + cardNo + "&attendence_date=eq." + today;
+  String url = String(SUPABASE_URL) + filter;
+  Serial.println("GET url: " + url);
+
+  int maxAttempts = 3;
+  int attempt = 0;
+  int httpCode = 0;
+  String payload = "";
+  while (attempt < maxAttempts) {
+    attempt++;
+    Serial.println("GET attempt " + String(attempt));
+    http.begin(client, url);
+    http.addHeader("apikey", SUPABASE_API_KEY);
+    http.addHeader("Authorization", "Bearer " + String(SUPABASE_API_KEY));
+
+    httpCode = http.GET();
+    Serial.println("GET code: " + String(httpCode));
+    if (httpCode == 200) {
+      payload = http.getString();
+      http.end();
+      break;
+    }
+    // print any response body for debugging
+    String resp = http.getString();
+    if (resp.length()) Serial.println("GET resp: " + resp);
+    http.end();
+    Serial.println("GET failed, retrying...");
+    delay(500);
+  }
+
+  if (httpCode != 200) {
+    Serial.println("GET failed after retries. code=" + String(httpCode));
+    return false;
+  }
+
+  DynamicJsonDocument doc(2048);
+  deserializeJson(doc, payload);
+  int count = doc.size();
+
+  if (count >= 2) {
+    Serial.println("Already 2 entries today");
+    return false;
+  }
+
+  if (count == 1) {
+    String lastTime = doc[0]["attendence_time"];
+    if (!isThirtyMinutesPassed(lastTime, nowTime)) {
+      Serial.println("30 minutes not passed");
+      return false;
+    }
+  }
+
+  // POST new attendance
+  String jsonData = "{\"rfid_card_no\":\"" + cardNo + "\",\"attendence_date\":\"" + today + "\",\"attendence_time\":\"" + nowTime + "\"}";
+  Serial.println("POST JSON: " + jsonData);
+
+  http.begin(client, SUPABASE_URL);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("apikey", SUPABASE_API_KEY);
+  http.addHeader("Authorization", "Bearer " + String(SUPABASE_API_KEY));
+
+  int postCode = http.POST(jsonData);
+  String response = http.getString();
+  Serial.println("POST code: " + String(postCode));
+  Serial.println("Response: " + response);
+  http.end();
+
+  return (postCode == 201);
+}
+
+// =================== Date & Time ===================
+String getTodayDate() {
+  unsigned long epoch = timeClient.getEpochTime();
+  int y = year(epoch);
+  int m = month(epoch);
+  int d = day(epoch);
+  char buf[11];
+  sprintf(buf, "%04d-%02d-%02d", y, m, d);
+  return String(buf);
+}
+
+String getCurrentTime() {
+  unsigned long epoch = timeClient.getEpochTime();
+  int h = hour(epoch);
+  int min = minute(epoch);
+  int s = second(epoch);
+  char buf[9];
+  sprintf(buf, "%02d:%02d:%02d", h, min, s);
+  return String(buf);
+}
+
+// =================== 30 Minutes Check ===================
+bool isThirtyMinutesPassed(String lastTime, String nowTime) {
+  int lh, lm, ls, nh, nm, ns;
+  sscanf(lastTime.c_str(), "%d:%d:%d", &lh, &lm, &ls);
+  sscanf(nowTime.c_str(), "%d:%d:%d", &nh, &nm, &ns);
+
+  int lastTotal = lh * 60 + lm;
+  int nowTotal = nh * 60 + nm;
+
+  return (nowTotal - lastTotal >= 30);
+}
