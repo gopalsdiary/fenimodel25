@@ -24,11 +24,12 @@
   <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
   <style>
     :root { color-scheme: light dark; }
-    body { font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f6f7f9; color: #111; }
-    .container { width: 100%; padding: 0 0.5rem; box-sizing: border-box; }
-    header { position: sticky; top: 0; background: white; padding: 0.85rem 0; border-bottom: 1px solid #e5e7eb; z-index: 10; }
-    h1 { margin: 0; font-size: 1.2rem; text-align:center; }
-    main { padding: 1rem 0 2rem; }
+  body { font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f6f7f9; color: #111; }
+  /* match indicator styles */
+  .match-ok{color:#15803d;font-weight:600;}
+  .match-bad{color:#b91c1c;font-weight:600;}
+  .sig{display:inline-block;min-width:1.1em;text-align:center;font-size:.8rem;line-height:1;}
+  .sig + .sig{margin-left:4px;}
     .toolbar { display: flex; gap: .75rem; align-items: center; margin: 0.75rem 0 1.1rem; flex-wrap:wrap; justify-content:center; }
     .nav-btn { background:#2563eb; color:#fff; text-decoration:none; padding:.55rem .9rem; font-size:.7rem; font-weight:600; border-radius:6px; letter-spacing:.4px; display:inline-block; }
     .nav-btn:hover { background:#1d4ed8; }
@@ -92,6 +93,14 @@
   </style>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Supabase client for matching names -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase credentials (same as other page) - consider moving to env / restricted key if possible
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  </script>
   <script>
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
     function getVal(row, headers, key){ const h = headers[key]; const v = h ? row[h] : ''; return v == null ? '' : String(v).trim(); }
@@ -134,8 +143,29 @@
 
     function renderTable(rows){ const tbody=document.querySelector('#tbody'); tbody.innerHTML=''; rows.forEach(r=>tbody.appendChild(r)); document.querySelector('#count').textContent=`${rows.length}`; }
 
+  // Map of iid -> { student_name_en, father_name_en }
+  let __DB_NAME_MAP = {};
+
+  async function fetchSupabaseData(iids){
+    __DB_NAME_MAP = {};
+    if(!iids || iids.length===0) return;    
+    const unique = Array.from(new Set(iids.filter(Boolean)));
+    const batchSize = 900; // stay under URL length / limit
+    for(let i=0;i<unique.length;i+=batchSize){
+      const slice = unique.slice(i,i+batchSize);
+      const { data, error } = await supabaseClient
+        .from('student_database')
+        .select('iid, student_name_en, father_name_en')
+        .in('iid', slice.map(v=>Number(v)))
+        .limit(batchSize);
+      if(error){ console.warn('Supabase fetch error', error); continue; }
+      (data||[]).forEach(r=>{ if(r && r.iid!=null) __DB_NAME_MAP[String(r.iid)] = { student_name_en: r.student_name_en||'', father_name_en: r.father_name_en||'' }; });
+    }
+  }
+
   function buildRows(data, headers){
     const rows=[];
+    const norm = s => String(s||'').trim().toLowerCase();
     for(const obj of data){
       const sl=getVal(obj, headers,'sl');
       const name=getVal(obj, headers,'name');
@@ -177,8 +207,24 @@
       if(iid) certHref = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
       else if(sl) certHref = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
       nameLink.href = certHref;
-      const tr=document.createElement('tr');
-  createRow(tr,[sl,cls,section,roll,iid,{element:nameLink},father,phone,bloodgroup,{element:photoElement},comment]);
+
+      // DB match info
+      const dbEntry = __DB_NAME_MAP[String(iid)] || { student_name_en:'', father_name_en:'' };
+      const dbName = dbEntry.student_name_en || '';
+      const dbFather = dbEntry.father_name_en || '';
+      const nameOk = dbName ? (norm(dbName) === norm(name)) : false;
+      const fatherOk = dbFather ? (norm(dbFather) === norm(father)) : false;
+
+      const dbNameSpan = document.createElement('span');
+      dbNameSpan.textContent = dbName || '-';
+      const dbFatherSpan = document.createElement('span');
+      dbFatherSpan.textContent = dbFather || '-';
+
+      const signalSpan = document.createElement('span');
+      signalSpan.innerHTML = `<span class="sig sig-name ${nameOk?'match-ok':'match-bad'}" title="Name ${nameOk?'matches':'differs'}">${nameOk?'✔':'✖'}</span> <span class="sig sig-father ${fatherOk?'match-ok':'match-bad'}" title="Father ${fatherOk?'matches':'differs'}">${fatherOk?'✔':'✖'}</span>`;
+
+  const tr=document.createElement('tr');
+  createRow(tr,[sl,iid,{element:nameLink},father,phone,bloodgroup,{element:photoElement},comment,{element:dbNameSpan},{element:dbFatherSpan},{element:signalSpan}]);
       rows.push(tr);
     }
     return rows;
@@ -207,12 +253,15 @@
 
     function logDbg(...a){ if(DEBUG) console.log('[TL]', ...a); }
 
-    function parseAndRender(results, source){
+    async function parseAndRender(results, source){
       const status=document.querySelector('#status');
       if(!results || !results.data){ throw new Error('Empty results'); }
       const fields = (results.meta && results.meta.fields) || Object.keys(results.data[0]||{});
       const headers=buildHeaderMap(fields);
       if(Object.keys(headers).length === 0){ throw new Error('Header map empty'); }
+      // collect iids first for supabase fetch
+      const iids = results.data.map(r => getVal(r, headers, 'iid')).filter(Boolean);
+      try { await fetchSupabaseData(iids); } catch(e){ console.warn('Supabase fetch failed', e); }
       const rows=buildRows(results.data, headers);
       setupFilter(rows);
       status.textContent = 'Loaded';
@@ -239,14 +288,14 @@
       logDbg('Attempt', attemptNo);
       Papa.parse(CSV_URL, {
         download:true, header:true, skipEmptyLines:true,
-        complete:(results)=>{
-          try { parseAndRender(results, 'direct'); }
+        complete:async (results)=>{
+          try { await parseAndRender(results, 'direct'); }
           catch(e){
             console.error('Primary parse render error', e);
             if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Parse error'); }
             // Last resort: manual fetch parse
             manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
-              .catch(err => { console.error('Fallback failed', err); showRetry('Failed to render data'); });
+              .catch(e2 => { console.error('Fallback parse failed', e2); showRetry('Failed to load CSV'); });
           }
         },
         error:(err)=>{
@@ -288,7 +337,6 @@
       return `<div class="cert-body">${line1}<br><br><em>${line2}</em><br><br><em>${line3}</em></div>`;
     }
     function generateAll(){
-      // Open new page that renders all certificates with full layout like verify.html
       const url = 'verify.html';
       window.open(url, '_blank');
     }
@@ -296,7 +344,6 @@
     // Load local photo links (one URL per line) and expose as window.__PHOTO_LINKS
     let PHOTO_LINKS = [];
     function loadPhotoLinks(){
-      // relative path from idcard/test_list.html to photo/link.csv
       const path = '../photo/link.csv';
       fetch(path).then(r => {
         if(!r.ok) throw new Error('no photo list');
@@ -607,10 +654,7 @@
         <table role="table" aria-label="Testimonials">
           <thead>
             <tr>
-              <th>SL</th>
-              <th>Class</th>
-              <th>Section</th>
-              <th>Roll</th>
+              <th>SL. NO</th>
               <th>iid</th>
               <th>Student Name</th>
               <th>Father's Name</th>
@@ -618,9 +662,12 @@
               <th>Blood Group</th>
               <th>Photo</th>
               <th>Comment</th>
+              <th>Database Name</th>
+              <th>Database Father</th>
+              <th>Signal</th>
             </tr>
           </thead>
-            <tbody id="tbody"></tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </div>
   <div id="allCertificates"></div>
@@ -629,5 +676,15 @@
       </div>
     </div>
   </main>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      initLoad();
+      loadPhotoLinks();
+      const b1=document.getElementById('genAllBtn');
+      const b2=document.getElementById('genAllBtnBottom');
+      if(b1) b1.addEventListener('click', generateAll);
+      if(b2) b2.addEventListener('click', generateAll);
+    });
+  </script>
 </body>
 </html>
