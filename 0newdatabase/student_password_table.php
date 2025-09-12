@@ -6,7 +6,8 @@ $supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 $anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 
 $select = 'iid,father_number,session,class_2025,section_2025,roll_2025,class_2026,section_2026,roll_2026,status';
-$endpoint = $supabaseUrl . '/rest/v1/student_database?select=' . urlencode($select) . '&order=iid';
+$limit = isset($_GET['limit']) ? intval($_GET['limit']) : 10000;
+$endpoint = $supabaseUrl . '/rest/v1/student_database?select=' . urlencode($select) . '&order=iid&limit=' . $limit;
 
 $ch = curl_init($endpoint);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -38,6 +39,15 @@ echo "<!doctype html><html><head><meta charset='utf-8'><title>Student Table (sta
 echo "<style>body{font-family:Arial,Helvetica,sans-serif;padding:12px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:6px;text-align:left}th{background:#f4f6f8}</style>";
 echo "</head><body>";
 echo "<h2>Students (static table)</h2>";
+
+// Debug endpoint: show raw JSON and endpoint if ?debug=1
+if(isset($_GET['debug']) && $_GET['debug']){
+  header('Content-Type: application/json; charset=utf-8');
+  echo json_encode(['endpoint'=>$endpoint, 'http_code'=>$httpcode, 'rows_count'=>count($data), 'data'=>$data], JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
+  exit;
+}
+
+echo "<div style='margin-bottom:8px;color:#374151'>Rows fetched: " . count($data) . " (limit={$limit})</div>";
 echo "<table><thead><tr><th>SL</th><th>iid</th><th>father_number</th><th>class_section_year</th><th>active_roll</th><th>active_class</th><th>active_section</th><th>session</th></tr></thead><tbody>";
 
 $idx = 0;
