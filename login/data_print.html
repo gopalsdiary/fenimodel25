@@ -113,7 +113,6 @@
 	</style>
 	<!-- Authentication Protection -->
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	<script src="./auth-check.js"></script>
 </head>
 <body>
 	<h1 class="school-title">FENI MODEL HIGH SCHOOL</h1>
@@ -140,9 +139,50 @@
 		const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 		const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 		let supabaseClient = null;
+
+		// Authentication check first, then initialize Supabase
+		async function initializeWithAuth(){
+			try {
+				// Quick auth check first
+				if (typeof window.supabase === 'undefined') {
+					console.warn('Supabase not loaded, redirecting to login for security');
+					window.location.href = './index.html';
+					return;
+				}
+				
+				// Create auth client using same config as page
+				const authClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+				const { data: { session }, error } = await authClient.auth.getSession();
+				
+				if (error || !session) {
+					console.log('No valid session found, redirecting to login...');
+					window.location.href = './index.html';
+					return;
+				}
+				
+				console.log('Authentication verified for user:', session.user && session.user.email ? session.user.email : '(no-email)');
+				
+				// Now that auth is verified, create main client and proceed
+				supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+				loadAll();
+				
+				// Setup auth state listener for future changes
+				authClient.auth.onAuthStateChange((event, session) => {
+					if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+						console.log('User signed out, redirecting to login...');
+						window.location.href = './index.html';
+					}
+				});
+				
+			} catch (error) {
+				console.error('Auth check failed:', error);
+				window.location.href = './index.html';
+			}
+		}
+
 		(function ensureSupabase(){
-			if(window.supabase){ supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); }
-			else { const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>{ supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); loadAll(); }; document.head.appendChild(s); }
+			if(window.supabase){ initializeWithAuth(); }
+			else { const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>{ initializeWithAuth(); }; document.head.appendChild(s); }
 		})();
 		const CACHE_KEY = null; // disabled
 		const CACHE_TTL_MS = 0; // disabled
@@ -403,7 +443,7 @@
 						const colLower = String(col||'').toLowerCase();
 						if(colLower === 'student_photo_url' || colLower.includes('photo')){
 							// clear cell
-							d.innerHTML = '';
+							td.innerHTML = '';
 							if(v && String(v).trim()){
 								const img = document.createElement('img');
 								img.className = 'thumb-img';
@@ -418,13 +458,13 @@
 								// click to open full image in new tab
 								img.style.cursor = 'pointer';
 								img.onclick = function(e){ e.stopPropagation(); if(img.src) window.open(img.src, '_blank'); };
-								d.appendChild(img);
+								td.appendChild(img);
 							} else {
 								const ph = document.createElement('span'); ph.className='thumb-placeholder'; ph.textContent='No Photo';
-								d.appendChild(ph);
+								td.appendChild(ph);
 							}
 						} else {
-							d.textContent = escapeHtml(v==null?'':String(v));
+							td.textContent = escapeHtml(v==null?'':String(v));
 						}
 					}
 					tr.appendChild(td);
