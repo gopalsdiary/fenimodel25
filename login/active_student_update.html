@@ -37,9 +37,14 @@
 <body>
   <h2>Active Students: Selected Columns</h2>
   <div>
-    <button id="loadBtn" class="btn">Load Students</button>
-    <button id="bulkUpdateBtn" class="btn bulk">Bulk Update All</button>
+    <button id="bulkUpdateBtn" class="btn bulk">Update All</button>
     <span id="status" style="margin-left:12px;color:#444"></span>
+    <!-- Pagination controls -->
+    <span style="margin-left:18px;">
+      <button id="prevPage" class="btn secondary">Prev</button>
+      <span id="pageInfo" style="margin:0 8px;">Page 1</span>
+      <button id="nextPage" class="btn">Next</button>
+    </span>
   </div>
 
   <table id="dataTable">
@@ -83,9 +88,15 @@
 
   const tbody = document.querySelector('#dataTable tbody');
     const statusEl = document.getElementById('status');
+    const prevPageBtn = document.getElementById('prevPage');
+    const nextPageBtn = document.getElementById('nextPage');
+    const pageInfo = document.getElementById('pageInfo');
 
-  // keep full dataset in memory for client-side filtering
+  // keep full dataset in memory for client-side pagination
   let allRowsCache = [];
+  const PAGE_SIZE = 500; // show first 500 in page 1
+  let currentPage = 1;
+  let loadingInProgress = false;
 
     // modal elems
     const editModal = document.getElementById('editModal');
@@ -131,7 +142,7 @@
       const age = Date.now() - cached.ts;
       if(age > CACHE_TTL_MS) return false;
   allRowsCache = cached.rows;
-  renderTable(allRowsCache);
+  renderPage(1);
       const mins = Math.max(0, Math.floor(age/60000));
       statusEl.textContent = `Total: ${allRowsCache.length} (from cache, ${mins}m old)`;
       // Kick off a background refresh (SWR) without blocking UI
@@ -143,6 +154,9 @@
 
     async function loadData(background=false){
       console.log('loadData started, background:', background);
+      loadingInProgress = true;
+      // Clear any initial placeholder so renderTable output is visible
+      try{ tbody.innerHTML = ''; }catch(e){/* ignore if DOM not ready */}
       if(!background) statusEl.textContent = 'Loading all data...';
       try{
         // Test Supabase connection first
@@ -168,17 +182,70 @@
   let batchCount = 0;
   let prevLastId = null; // plateau guard
   const maxBatches = 10000; // generous safety limit for very large tables
-        
-        while(hasMore && batchCount < maxBatches) {
-          batchCount++;
-          console.log(`Loading batch ${batchCount}, lastId: ${lastId}`);
-          statusEl.textContent = `Loading... (${allData.length} records loaded, batch ${batchCount})`;
-          
-          // select only the specified columns (include father_mobile)
-          const selectArg = 'iid, session, student_name_en, father_mobile, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
-          console.log('Querying with selectArg:', selectArg);
 
-          // Primary attempt with specific columns
+        // If this is the initial foreground load, only fetch one page (PAGE_SIZE)
+        // and leave the remainder to background fetches for responsiveness.
+        if(!background){
+          batchCount++;
+          console.log(`Initial foreground load - fetching first page, lastId: ${lastId}`);
+          statusEl.textContent = `Loading page 1...`;
+          const selectArg = 'iid, session, student_name_en, father_mobile, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
+          let data, error;
+          try{
+            ({ data, error } = await supabase
+              .from(tableName)
+              .select(selectArg)
+              .order('iid', { ascending: true })
+              .limit(PAGE_SIZE));
+          }catch(e){
+            console.warn('Initial select with specific columns threw, falling back to *:', e);
+            data = null; error = e;
+          }
+          if(error || !Array.isArray(data)){
+            console.warn('Retrying initial page with select("*") due to error or invalid data. original error:', error);
+            ({ data, error } = await supabase
+              .from(tableName)
+              .select('*')
+              .order('iid', { ascending: true })
+              .limit(PAGE_SIZE));
+          }
+          if(error) throw new Error(error.message || 'Unknown error during initial page fetch');
+          if(!data || data.length === 0){
+            hasMore = false;
+          } else {
+            for(const row of data) allData.push(row);
+            lastId = data[data.length - 1].iid;
+            prevLastId = lastId;
+            // if we fetched exactly PAGE_SIZE, assume there may be more
+            hasMore = data.length === PAGE_SIZE;
+          }
+
+          allRowsCache = allData;
+          // Render first page
+          renderPage(1);
+
+          // If more data exists, kick off background fetch
+          if(hasMore){
+            setTimeout(()=>{ loadData(true /*background*/); }, 50);
+          } else {
+            statusEl.textContent = `✅ Total: ${allRowsCache.length} records loaded (1 page, all data loaded)`;
+            saveCache(allRowsCache);
+          }
+
+          return; // foreground initial load done
+        }
+
+        // Background fetch continues from lastId; append to allData
+        // Start from last iid known in cache to avoid re-fetching the first page
+        if(background && Array.isArray(allRowsCache) && allRowsCache.length > 0){
+          lastId = Number(allRowsCache[allRowsCache.length - 1].iid) || lastId;
+        }
+        while(hasMore && batchCount < maxBatches){
+          batchCount++;
+          console.log(`Background loading batch ${batchCount}, lastId: ${lastId}`);
+          statusEl.textContent = `Loading... (${allRowsCache.length} records loaded, batch ${batchCount})`;
+
+          const selectArg = 'iid, session, student_name_en, father_mobile, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
           let data, error;
           try{
             ({ data, error } = await supabase
@@ -188,13 +255,11 @@
               .order('iid', { ascending: true })
               .limit(batchSize));
           }catch(e){
-            console.warn('Select with specific columns threw, falling back to *:', e);
+            console.warn('Select with specific columns threw, falling back to * (bg):', e);
             data = null; error = e;
           }
-
-          // Fallback: if error due to column list, retry with '*'
           if(error || !Array.isArray(data)){
-            console.warn('Retrying batch with select("*") due to error or invalid data. original error:', error);
+            console.warn('Retrying bg batch with select("*") due to error or invalid data. original error:', error);
             ({ data, error } = await supabase
               .from(tableName)
               .select('*')
@@ -202,33 +267,39 @@
               .order('iid', { ascending: true })
               .limit(batchSize));
           }
-            
-          console.log('Query result:', { dataLength: data?.length, error });
           if(error){
-            console.error('Supabase error:', error);
-            const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-            throw new Error(`${error.message} | details: ${details}`);
+            console.error('Supabase error (bg):', error);
+            break; // stop background fetch on errors
           }
-          
-          if(!data || data.length === 0) {
-            hasMore = false;
-            break;
-          }
-          
-          // append results (faster than repeated concat)
-          for(const row of data) allData.push(row);
+          if(!data || data.length === 0){ hasMore = false; break; }
+          for(const row of data){ allRowsCache.push(row); }
           lastId = data[data.length - 1].iid;
-          // Plateau guard: if lastId didn't advance, break to avoid infinite loop
           if(prevLastId !== null && Number(lastId) === Number(prevLastId)){
-            console.warn('Pagination stalled because lastId did not advance. Stopping to avoid infinite loop.', { lastId, prevLastId });
-            hasMore = false;
+            console.warn('Pagination stalled (bg). Stopping.');
             break;
           }
           prevLastId = lastId;
+          // update UI but keep current page shown
+          pageInfo.textContent = `Page ${currentPage} / ${Math.max(1, Math.ceil(allRowsCache.length / PAGE_SIZE))}`;
         }
+
+  // background complete
+  statusEl.textContent = `✅ Total: ${allRowsCache.length} records loaded (${Math.ceil(allRowsCache.length / PAGE_SIZE)} pages)`;
+  saveCache(allRowsCache);
+  loadingInProgress = false;
         
-        allRowsCache = allData;
-        renderTable(allRowsCache);
+    // allRowsCache already updated above; render current page to avoid overwriting slice
+    renderPage(currentPage);
+        // Defensive cleanup: sometimes a stale placeholder row with just 'Loading...' remains
+        // Remove it and re-render if detected.
+        try{
+          const firstRow = tbody.querySelector('tr');
+          if(firstRow && firstRow.children.length === 1 && String(firstRow.textContent || '').trim().toLowerCase() === 'loading...'){
+            console.warn('Detected stale Loading... row after render; re-rendering to clean up');
+            renderPage(currentPage);
+          }
+        }catch(e){ console.warn('Post-render cleanup failed:', e); }
+
         statusEl.textContent = `✅ Total: ${allRowsCache.length} records loaded (${batchCount} batches, all data loaded)`;
         // Persist to cache for 10 minutes use
         saveCache(allRowsCache);
@@ -243,10 +314,13 @@
         const cached = loadCache();
         if(cached && Array.isArray(cached.rows)){
         allRowsCache = cached.rows;
-          renderTable(allRowsCache);
+          renderPage(1);
           const ageM = Math.floor((Date.now()-cached.ts)/60000);
           statusEl.textContent = `Total: ${allRowsCache.length} (offline cache, ${ageM}m old)`;
         }
+      } finally {
+        // Ensure loading flag cleared on any exit path
+        loadingInProgress = false;
       }
     }
 
@@ -315,8 +389,8 @@
         } else {
           console.log('Successfully saved to active_section:', data);
           alert('Successfully updated active section!');
-          // Refresh the table to update the status indicators
-          renderTable(allRowsCache);
+          // Refresh the table to update the status indicators (keep current page)
+          renderPage(currentPage);
         }
       } catch (err) {
         console.error('updateActiveSection error:', err);
@@ -325,7 +399,7 @@
     }
 
     async function renderTable(rows){
-      if(!rows || rows.length === 0){
+    if(!rows || rows.length === 0){
         const thead = document.querySelector('#dataTable thead');
         // build header from keys so it stays in sync
   const keysEmpty = ['iid','session','student_name_en','father_mobile','class','section','roll_2025','roll_2024','roll_2023','active_class','active_section','active_roll','student_key'];
@@ -346,10 +420,10 @@
       thead.innerHTML = '<tr><th class="col-sl">SL</th>' + keys.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '<th>Update</th></tr>';
 
       // Render body
-      tbody.innerHTML = '';
+  tbody.innerHTML = '';
       const colCount = keys.length + 2; // +1 for SL column, +1 for Update column
 
-      rows.forEach((r, index) => {
+  rows.forEach((r, index) => {
         const tr = document.createElement('tr');
 
         // Add SL column first
@@ -425,10 +499,52 @@
         tbody.appendChild(tr);
       });
 
-      // All rows rendered into tbody above. Do not overwrite them with a generic Loading... row.
-      // (Previous code here accidentally replaced the first row with a Loading... placeholder.)
+      // All rows rendered into tbody above.
       console.log('renderTable completed, rows rendered:', rows.length);
     }
+
+    // Render a specific page (sliced rows)
+    function renderPage(page){
+      currentPage = Math.max(1, Number(page) || 1);
+      const total = allRowsCache.length || 0;
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if(currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageRows = allRowsCache.slice(start, start + PAGE_SIZE);
+      renderTable(pageRows);
+      pageInfo.textContent = `Page ${currentPage} / ${totalPages}`;
+      prevPageBtn.disabled = currentPage <= 1;
+      nextPageBtn.disabled = currentPage >= totalPages && !loadingInProgress;
+    }
+
+    prevPageBtn.addEventListener('click', ()=>{
+      if(currentPage > 1){ renderPage(currentPage - 1); }
+    });
+    nextPageBtn.addEventListener('click', async ()=>{
+      const total = allRowsCache.length || 0;
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if(currentPage < totalPages){ renderPage(currentPage + 1); return; }
+      // If we're at last loaded page but more data may exist, trigger background fetch
+      // Try to trigger background load then wait for at most 5s for new page
+      if(!loadingInProgress){
+        console.log('Requesting more data for next page...');
+        loadData(true);
+      }
+      const startWait = Date.now();
+      const waitTimeout = 5000; // ms
+      while(Date.now() - startWait < waitTimeout){
+        const newTotal = allRowsCache.length || 0;
+        const newTotalPages = Math.max(1, Math.ceil(newTotal / PAGE_SIZE));
+        if(newTotalPages > totalPages){
+          renderPage(currentPage + 1);
+          return;
+        }
+        // short sleep
+        await new Promise(r => setTimeout(r, 250));
+      }
+      // Timeout - inform user
+      alert('Still loading the next page. Please wait a moment and click Next again.');
+    });
 
   async function openEditByIID(iid){
       // fetch full row from DB to ensure we have all columns
@@ -650,9 +766,9 @@
         const resultMsg = `Bulk update completed!\n✅ Successfully updated: ${successCount}\n❌ Errors: ${errorCount}`;
         alert(resultMsg);
         
-        // Refresh the table to show updated status
+        // Refresh the table to show updated status (keep current page)
         if (successCount > 0) {
-          renderTable(allRowsCache);
+          renderPage(currentPage);
         }
         
         bulkUpdateBtn.textContent = originalText;
@@ -676,9 +792,7 @@
     // close modal when clicking outside panel
     editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
 
-    // Add load button event listener
-    const loadBtn = document.getElementById('loadBtn');
-    if(loadBtn) loadBtn.addEventListener('click', () => loadData(false));
+  // Note: Load Students button removed - data loads automatically after auth verification
 
     // Add bulk update button event listener
     const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
