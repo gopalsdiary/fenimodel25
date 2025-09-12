@@ -6,8 +6,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <title>Entry - Show & Edit</title>
   <style>
-    /* reduce base font size by 20% and use Kalpurush font */
-    html{font-size:100%;}
+  /* reduce base font size by 20% and use Kalpurush font */
+  html{font-size:80%;}
     body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
     table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:auto}
     th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle;white-space:nowrap}
@@ -174,8 +174,8 @@
           console.log(`Loading batch ${batchCount}, lastId: ${lastId}`);
           statusEl.textContent = `Loading... (${allData.length} records loaded, batch ${batchCount})`;
           
-          // select only the specified columns
-          const selectArg = 'iid, session, student_name_en, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
+          // select only the specified columns (include father_mobile)
+          const selectArg = 'iid, session, student_name_en, father_mobile, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
           console.log('Querying with selectArg:', selectArg);
 
           // Primary attempt with specific columns
@@ -257,7 +257,7 @@
       try {
         const { data, error } = await supabase
           .from('active_section')
-          .select('iid, active_class, active_section, active_roll, session, student_name_en')
+          .select('iid, active_class, active_section, active_roll, session, student_name_en, student_key')
           .in('iid', iids);
 
         if (error) {
@@ -287,13 +287,19 @@
         const activeRoll = session ? row[`roll_${session}`] : '';
 
         // Prepare data to save to active_section table
+        // derive student_key from father_mobile (last 6 digits)
+        const fmRaw = row['father_mobile'] || '';
+        const fmDigits = String(fmRaw).replace(/\D/g, '');
+        const studentKey = fmDigits.length > 6 ? fmDigits.slice(-6) : (fmDigits || null);
+
         const dataToSave = {
           iid: row['iid'],
           active_roll: activeRoll || null,
           active_section: activeSection || null,
           active_class: activeClass || null,
           session: row['session'] || null,
-          student_name_en: row['student_name_en'] || null
+          student_name_en: row['student_name_en'] || null,
+          student_key: studentKey
         };
 
         console.log('Saving to active_section table:', dataToSave);
@@ -321,8 +327,10 @@
     async function renderTable(rows){
       if(!rows || rows.length === 0){
         const thead = document.querySelector('#dataTable thead');
-        thead.innerHTML = '<tr><th class="col-sl">SL</th><th>iid</th><th>session</th><th>student_name_en</th><th>class</th><th>section</th><th>roll_2025</th><th>roll_2024</th><th>roll_2023</th><th>active_class</th><th>active_section</th><th>active_roll</th><th>Update</th></tr>';
-        tbody.innerHTML = `<tr><td colspan="13">No records found</td></tr>`;
+        // build header from keys so it stays in sync
+  const keysEmpty = ['iid','session','student_name_en','father_mobile','class','section','roll_2025','roll_2024','roll_2023','active_class','active_section','active_roll','student_key'];
+        thead.innerHTML = '<tr><th class="col-sl">SL</th>' + keysEmpty.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '<th>Update</th></tr>';
+        tbody.innerHTML = `<tr><td colspan="${keysEmpty.length + 2}">No records found</td></tr>`;
         return;
       }
 
@@ -331,7 +339,7 @@
       const existingData = await getExistingActiveSectionData(iids);
 
       // Fixed keys for selected columns
-      const keys = ['iid', 'session', 'student_name_en', 'class_2024', 'section_2024', 'roll_2024', 'class_2025', 'section_2025', 'roll_2025','class_2026', 'section_2026', 'roll_2026', 'active_class', 'active_section', 'active_roll'];
+  const keys = ['iid', 'session', 'student_name_en', 'father_mobile', 'class_2024', 'section_2024', 'roll_2024', 'class_2025', 'section_2025', 'roll_2025','class_2026', 'section_2026', 'roll_2026', 'active_class', 'active_section', 'active_roll', 'student_key'];
 
       // Render header with SL column and Update button
       const thead = document.querySelector('#dataTable thead');
@@ -367,6 +375,11 @@
             const session = r['session'];
             const dynamicKey = session ? `roll_${session}` : '';
             val = dynamicKey && r[dynamicKey] !== null && r[dynamicKey] !== undefined ? String(r[dynamicKey]) : '';
+          } else if (k === 'student_key') {
+            // derive student_key: last 6 digits of father_mobile (digits only)
+            const fmRaw = r['father_mobile'] || '';
+            const fmDigits = String(fmRaw).replace(/\D/g, '');
+            val = fmDigits.length > 6 ? fmDigits.slice(-6) : fmDigits;
           } else {
             val = r[k] === null || r[k] === undefined ? '' : String(r[k]);
           }
@@ -391,7 +404,9 @@
           existing.active_section === (currentActiveSection || null) &&
           existing.active_roll === (currentActiveRoll || null) &&
           existing.session === (r['session'] || null) &&
-          existing.student_name_en === (r['student_name_en'] || null);
+          existing.student_name_en === (r['student_name_en'] || null) &&
+          // compare student_key as derived from father_mobile
+          existing.student_key === ( (String(r['father_mobile']||'').replace(/\D/g,'').slice(-6)) || null );
 
         if (isUpdated) {
           updateBtn.className = 'btn updated';
@@ -542,12 +557,15 @@
           const currentActiveSection = session ? row[`section_${session}`] : '';
           const currentActiveRoll = session ? row[`roll_${session}`] : '';
           
+          // include student_key comparison (derived last 6 digits of father_mobile)
+          const rowStudentKey = (String(row['father_mobile']||'').replace(/\D/g,'').slice(-6)) || null;
           const isUpdated = existing && 
             existing.active_class === (currentActiveClass || null) &&
             existing.active_section === (currentActiveSection || null) &&
             existing.active_roll === (currentActiveRoll || null) &&
             existing.session === (row['session'] || null) &&
-            existing.student_name_en === (row['student_name_en'] || null);
+            existing.student_name_en === (row['student_name_en'] || null) &&
+            existing.student_key === rowStudentKey;
 
           if (!isUpdated) {
             recordsToUpdate.push(row);
@@ -599,7 +617,9 @@
                 active_section: activeSection || null,
                 active_class: activeClass || null,
                 session: row['session'] || null,
-                student_name_en: row['student_name_en'] || null
+                student_name_en: row['student_name_en'] || null,
+                // compute student_key from father_mobile
+                student_key: (function(){ const fm = String(row['father_mobile']||'').replace(/\D/g,''); return fm.length>6?fm.slice(-6):(fm||null); })()
               };
 
               const { error } = await supabase

@@ -276,11 +276,27 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
-        .pagination {
+        .modal-buttons {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 1rem;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+        .message {
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+        .message.success {
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
         }
         .dropdown-content {
             display: grid;
@@ -571,6 +587,7 @@
                     <a class="sidebar-btn" href="./teacherlist.html">Teacher Database</a>
                     <a class="sidebar-btn" href="data_print.html">Data Print</a>
                                         <a class="sidebar-btn" href="data_edit.html">Data Edit Colm</a>
+                    <button class="sidebar-btn" id="change-password-btn" style="width: 100%; text-align: left;">🔑 Change Password</button>
 
 
                 </div>
@@ -669,6 +686,35 @@
                                 <p>Enter the student's unique IID and click "Open Edit" to modify their details in a new tab. Make sure the IID contains only numbers.</p>
                             </div>
                         </div>
+
+                        <!-- Change Password Modal -->
+                        <div id="passwordModal" class="modal">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3>Change Password</h3>
+                                    <button class="close-btn" id="closePasswordModal">&times;</button>
+                                </div>
+                                <div id="passwordMessage" class="message" style="display: none;"></div>
+                                <form id="passwordForm">
+                                    <div class="form-group">
+                                        <label for="currentPassword">Current Password:</label>
+                                        <input type="password" id="currentPassword" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="newPassword">New Password:</label>
+                                        <input type="password" id="newPassword" required minlength="6">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirmPassword">Confirm New Password:</label>
+                                        <input type="password" id="confirmPassword" required minlength="6">
+                                    </div>
+                                    <div class="modal-buttons">
+                                        <button type="submit" class="btn">Update Password</button>
+                                        <button type="button" class="btn" id="cancelPasswordBtn">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
             </div>
         </div>
     </div>
@@ -679,26 +725,89 @@
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+        // Authentication Protection - Check if user is logged in
+        async function checkAuthentication() {
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error || !session) {
+                    // No valid session, redirect to login page
+                    console.log('No valid session found, redirecting to login...');
+                    window.location.href = './index.html';
+                    return false;
+                }
+                
+                // Valid session exists
+                console.log('Valid session found for user:', session.user.email);
+                return true;
+            } catch (error) {
+                console.error('Authentication check failed:', error);
+                window.location.href = './index.html';
+                return false;
+            }
+        }
+
+        // Listen for auth state changes
+        supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || !session) {
+                console.log('User signed out or session expired, redirecting...');
+                window.location.href = './index.html';
+            }
+        });
+
+        // Check authentication immediately when page loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            const isAuthenticated = await checkAuthentication();
+            if (!isAuthenticated) {
+                return; // Will be redirected by checkAuthentication
+            }
+            
+            // If authenticated, show the dashboard content
+            document.body.style.visibility = 'visible';
+        });
+
+        // Hide content initially until auth check is complete
+        document.body.style.visibility = 'hidden';
+
         // DOM Elements
         const logoutBtn = document.getElementById('logout-btn');
         const adminUsername = document.getElementById('admin-username');
 
-        // Logout function
+        // Logout function with confirmation
         async function logout() {
+            const confirmLogout = confirm('Are you sure you want to logout?');
+            if (!confirmLogout) return;
+            
             try {
-                await supabase.auth.signOut();
+                // Show loading state
+                logoutBtn.textContent = 'Logging out...';
+                logoutBtn.disabled = true;
+                
+                const { error } = await supabase.auth.signOut();
+                
+                if (error) {
+                    throw error;
+                }
+                
+                // Clear any local storage or session data if needed
+                sessionStorage.clear();
+                
                 // Redirect to login page after successful logout
                 window.location.href = './index.html';
             } catch (error) {
                 console.error("Logout error:", error);
-                alert('Error logging out. Please try again.');
+                alert('Error logging out: ' + error.message);
+                
+                // Reset button state
+                logoutBtn.textContent = 'Logout';
+                logoutBtn.disabled = false;
             }
         }
 
         // Add event listener for logout button
         logoutBtn.addEventListener('click', logout);
 
-        // Display admin username from Supabase auth (or URL fallback)
+        // Display admin username and setup session monitoring
         document.addEventListener('DOMContentLoaded', async () => {
             const headerCenter = document.getElementById('header-center');
             const urlParams = new URLSearchParams(window.location.search);
@@ -707,17 +816,32 @@
             try{
                 const { data: { user } } = await supabase.auth.getUser();
                 if(user){
-                    const name = (user.user_metadata && user.user_metadata.name) || user.email || fallbackName || 'Admin';
-                    headerCenter.textContent = name;
-                    adminUsername.textContent = name;
+                    const name = user.user_metadata?.full_name || user.email || fallbackName || 'Admin';
+                    headerCenter.textContent = `Welcome, ${name}`;
+                    
+                    // Setup session monitoring - check every 5 minutes
+                    setInterval(async () => {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        if (!session) {
+                            console.log('Session expired, redirecting to login...');
+                            window.location.href = './index.html';
+                        }
+                    }, 300000); // 5 minutes
+                    
                     return;
                 }
-            }catch(e){ console.warn('Could not get supabase user', e); }
+            }catch(e){ 
+                console.warn('Could not get supabase user', e); 
+                // If we can't get user, redirect to login
+                window.location.href = './index.html';
+                return;
+            }
 
-            // fallback to URL param or default
+            // fallback to URL param or default (but still check auth)
             if(fallbackName){
-                headerCenter.textContent = fallbackName;
-                adminUsername.textContent = fallbackName;
+                headerCenter.textContent = `Welcome, ${fallbackName}`;
+            } else {
+                headerCenter.textContent = 'Welcome, Admin';
             }
 
             // Wire up Edit-by-IID panel
@@ -797,6 +921,90 @@
                 iidInput.addEventListener('input', () => {
                     iidInput.classList.remove('error');
                 });
+            }
+        });
+
+        // Password Change Modal Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const changePasswordBtn = document.getElementById('change-password-btn');
+            const passwordModal = document.getElementById('passwordModal');
+            const closePasswordModal = document.getElementById('closePasswordModal');
+            const cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
+            const passwordForm = document.getElementById('passwordForm');
+            const passwordMessage = document.getElementById('passwordMessage');
+
+            // Show password modal
+            changePasswordBtn.addEventListener('click', function() {
+                passwordModal.classList.add('active');
+                passwordMessage.style.display = 'none';
+                passwordForm.reset();
+            });
+
+            // Hide password modal
+            function hidePasswordModal() {
+                passwordModal.classList.remove('active');
+                passwordMessage.style.display = 'none';
+                passwordForm.reset();
+            }
+
+            closePasswordModal.addEventListener('click', hidePasswordModal);
+            cancelPasswordBtn.addEventListener('click', hidePasswordModal);
+
+            // Close modal when clicking outside
+            passwordModal.addEventListener('click', function(e) {
+                if (e.target === passwordModal) {
+                    hidePasswordModal();
+                }
+            });
+
+            // Handle password change form submission
+            passwordForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                // Validation
+                if (newPassword !== confirmPassword) {
+                    showPasswordMessage('New passwords do not match!', 'error');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showPasswordMessage('New password must be at least 6 characters long!', 'error');
+                    return;
+                }
+
+                try {
+                    // First, verify current password by attempting to sign in
+                    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+                    if (getUserError) throw getUserError;
+
+                    // Update password
+                    const { error } = await supabase.auth.updateUser({
+                        password: newPassword
+                    });
+
+                    if (error) throw error;
+
+                    showPasswordMessage('Password updated successfully!', 'success');
+                    
+                    // Clear form after successful update
+                    setTimeout(() => {
+                        hidePasswordModal();
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Password change error:', error);
+                    showPasswordMessage('Failed to update password: ' + error.message, 'error');
+                }
+            });
+
+            function showPasswordMessage(message, type) {
+                passwordMessage.textContent = message;
+                passwordMessage.className = `message ${type}`;
+                passwordMessage.style.display = 'block';
             }
         });
     </script>
