@@ -155,11 +155,12 @@
       const slice = unique.slice(i,i+batchSize);
       const { data, error } = await supabaseClient
         .from('student_database')
-        .select('iid, student_name_en, father_name_en')
+        // include student_photo_url so we can render photos directly from DB when available
+        .select('iid, student_name_en, father_name_en, student_photo_url')
         .in('iid', slice.map(v=>Number(v)))
         .limit(batchSize);
       if(error){ console.warn('Supabase fetch error', error); continue; }
-      (data||[]).forEach(r=>{ if(r && r.iid!=null) __DB_NAME_MAP[String(r.iid)] = { student_name_en: r.student_name_en||'', father_name_en: r.father_name_en||'' }; });
+      (data||[]).forEach(r=>{ if(r && r.iid!=null) __DB_NAME_MAP[String(r.iid)] = { student_name_en: r.student_name_en||'', father_name_en: r.father_name_en||'', student_photo_url: r.student_photo_url || '' }; });
     }
   }
 
@@ -181,11 +182,16 @@
       const photo=getVal(obj, headers,'photo');
       const comment=getVal(obj, headers,'comment');
       
-      // Find matching photo from photo links
+      // Prefer student_photo_url from DB (fetched into __DB_NAME_MAP), else find matching photo from photo links
       let photoUrl = '';
-      if(window.__PHOTO_LINKS && window.__PHOTO_LINKS.length > 0 && iid){
-        photoUrl = window.__PHOTO_LINKS.find(u => u && u.includes('avatar-' + iid + '.')) || '';
+      const dbRecord = __DB_NAME_MAP[String(iid)] || {};
+      if(dbRecord && dbRecord.student_photo_url){
+        // If stored value looks like a URL, use it; otherwise keep the filename for later resolution
+        const raw = String(dbRecord.student_photo_url||'').trim();
+        if(/^https?:\/\//i.test(raw)) photoUrl = raw;
+        else photoUrl = raw; // may be a filename like avatar-123.jpg; we'll try candidates below
       }
+      // no local CSV fallback; rely on DB value and guessed public paths
       
       // Create photo element
       let photoElement = document.createElement('span');
@@ -193,11 +199,27 @@
       photoElement.className = 'photo-cell';
       if(photoUrl){
         const img = document.createElement('img');
-        img.src = photoUrl;
         img.alt = 'Student Photo';
-        img.onerror = () => { img.style.display = 'none'; photoElement.textContent = 'No Photo'; };
+        img.className = '';
+        // If photoUrl is a full URL use it directly; otherwise try resolving filename against common paths and link.csv
+        const trySrcs = [];
+        if(/^https?:\/\//i.test(photoUrl)){
+          trySrcs.push(photoUrl);
+        } else {
+          // raw filename
+          trySrcs.push(photoUrl);
+          trySrcs.push('/photo/' + photoUrl);
+          trySrcs.push('/photo/uploads/' + photoUrl);
+          trySrcs.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/student_photo/' + photoUrl);
+          trySrcs.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/photos/' + photoUrl);
+          // no CSV fallback — try only guessed paths and Supabase public URLs
+        }
+        let idx = 0;
+        img.onerror = () => { idx++; if(idx < trySrcs.length) img.src = trySrcs[idx]; else { img.style.display='none'; photoElement.textContent = 'No Photo'; } };
+        img.onload = () => { /* ok */ };
         photoElement.innerHTML = '';
         photoElement.appendChild(img);
+        img.src = trySrcs[0];
       }
       
       // Name link
@@ -211,9 +233,9 @@
       nameLink.href = certHref;
 
       // DB match info
-      const dbEntry = __DB_NAME_MAP[String(iid)] || { student_name_en:'', father_name_en:'' };
-      const dbName = dbEntry.student_name_en || '';
-      const dbFather = dbEntry.father_name_en || '';
+  const dbEntry = dbRecord || { student_name_en:'', father_name_en:'' };
+  const dbName = dbEntry.student_name_en || '';
+  const dbFather = dbEntry.father_name_en || '';
       const nameOk = dbName ? (norm(dbName) === norm(name)) : false;
       const fatherOk = dbFather ? (norm(dbFather) === norm(father)) : false;
 
@@ -344,18 +366,7 @@
       window.open(url, '_blank');
     }
 
-    // Load local photo links (one URL per line) and expose as window.__PHOTO_LINKS
-    let PHOTO_LINKS = [];
-    function loadPhotoLinks(){
-      const path = '../photo/link.csv';
-      fetch(path).then(r => {
-        if(!r.ok) throw new Error('no photo list');
-        return r.text();
-      }).then(txt => {
-        PHOTO_LINKS = txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-        window.__PHOTO_LINKS = PHOTO_LINKS;
-      }).catch(() => { PHOTO_LINKS = []; window.__PHOTO_LINKS = PHOTO_LINKS; });
-    }
+    // Photo link CSV removed: photo URLs are resolved from DB `student_photo_url` or guessed public paths.
 
     // Download PDF function with 1cm high cells and 1cm margins
     // Features:
@@ -629,7 +640,6 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       initLoad();
-      loadPhotoLinks(); // Load photo links when page loads
       const b1=document.getElementById('genAllBtn');
       const b2=document.getElementById('genAllBtnBottom');
       if(b1) b1.addEventListener('click', generateAll);
@@ -680,14 +690,7 @@
     </div>
   </main>
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      initLoad();
-      loadPhotoLinks();
-      const b1=document.getElementById('genAllBtn');
-      const b2=document.getElementById('genAllBtnBottom');
-      if(b1) b1.addEventListener('click', generateAll);
-      if(b2) b2.addEventListener('click', generateAll);
-    });
+    // another DOMContentLoaded listener removed duplication; initLoad already attached above
   </script>
 </body>
 </html>

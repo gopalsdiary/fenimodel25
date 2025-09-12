@@ -88,6 +88,28 @@
 			background:#f97316;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;box-shadow:0 4px 10px rgba(249,115,22,0.22);font-weight:600;
 		}
 		.print-button:active{ transform:translateY(1px) }
+		/* thumbnail images for student photos */
+		.thumb-img{
+			display:inline-block;
+			width:56px;
+			height:56px;
+			object-fit:cover;
+			border-radius:4px;
+			border:1px solid #ddd;
+			background:#fff;
+		}
+		.thumb-placeholder{
+			display:inline-block;
+			width:56px;
+			height:56px;
+			border-radius:4px;
+			background:#f3f4f6;
+			color:#8b8b8b;
+			text-align:center;
+			line-height:56px;
+			font-size:12px;
+			border:1px solid #eee;
+		}
 	</style>
 </head>
 <body>
@@ -373,7 +395,34 @@
 					} else if(col === 'active_roll'){
 						td.textContent = escapeHtml(active_roll==null?'':String(active_roll));
 					} else {
-						const v = row[col]; td.textContent = escapeHtml(v==null?'':String(v));
+						const v = row[col];
+						// If this column looks like a photo URL, render a thumbnail instead of raw text
+						const colLower = String(col||'').toLowerCase();
+						if(colLower === 'student_photo_url' || colLower.includes('photo')){
+							// clear cell
+							d.innerHTML = '';
+							if(v && String(v).trim()){
+								const img = document.createElement('img');
+								img.className = 'thumb-img';
+								img.alt = 'student photo';
+								img.loading = 'lazy';
+								img.src = String(v).trim();
+								// on error, replace with placeholder text
+								img.onerror = function(){
+									const ph = document.createElement('span'); ph.className='thumb-placeholder'; ph.textContent='No Photo';
+									if(img.parentNode) img.parentNode.replaceChild(ph, img);
+								};
+								// click to open full image in new tab
+								img.style.cursor = 'pointer';
+								img.onclick = function(e){ e.stopPropagation(); if(img.src) window.open(img.src, '_blank'); };
+								d.appendChild(img);
+							} else {
+								const ph = document.createElement('span'); ph.className='thumb-placeholder'; ph.textContent='No Photo';
+								d.appendChild(ph);
+							}
+						} else {
+							d.textContent = escapeHtml(v==null?'':String(v));
+						}
 					}
 					tr.appendChild(td);
 				}

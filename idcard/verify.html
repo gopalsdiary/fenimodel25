@@ -80,8 +80,13 @@
   <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <!-- PDF/export libs removed -->
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
   const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
+  // Supabase client for fetching photo URL from DB
+  const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+  const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
   // v3: sessionStorage only, 1 minute TTL, parsed rows + fields
   // Cache disabled: always fetch fresh data
 
@@ -389,30 +394,46 @@
       // Remove QR IID text
       const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = '';
 
-      // Load top-right photo from pattern using IID (fallback to SL if IID missing)
+      // Load top-right photo from DB's student_photo_url (preferred) or guessed public paths
       try {
         const photoEl = document.getElementById('topPhoto');
         if(photoEl){
           const idForPhoto = rec.iid || rec.sl || '';
-          if(idForPhoto && rec.iid){  // Only show if iid is present
-            // Prefer local photo links if available
-            let chosen = '';
-            try {
-              const links = window.__PHOTO_LINKS || PHOTO_LINKS || [];
-              // Find an URL that contains the exact iid
-              chosen = links.find(u => u && u.includes('avatar-' + rec.iid + '.')) || '';
-            } catch(e){ chosen = ''; }
-            if(!chosen){
-              // No local photo link found — do not use external fallback. Hide the photo element.
-              photoEl.style.display = 'none';
-              photoEl.removeAttribute('src');
-            } else {
-              photoEl.style.display = '';
-              photoEl.src = chosen;
-              // Hide if loading fails
-              photoEl.onerror = () => { photoEl.style.display = 'none'; photoEl.removeAttribute('src'); };
-              photoEl.onload = () => { /* keep shown */ };
-            }
+          if(idForPhoto && rec.iid && supabaseClient){
+            // Try fetching student_photo_url from Supabase for this iid
+            (async () => {
+              try {
+                const { data, error } = await supabaseClient
+                  .from('student_database')
+                  .select('student_photo_url')
+                  .eq('iid', Number(rec.iid))
+                  .limit(1)
+                  .maybeSingle();
+                if(error){ throw error; }
+                const raw = data && data.student_photo_url ? String(data.student_photo_url).trim() : '';
+                const candidates = [];
+                if(raw){
+                  if(/^https?:\/\//i.test(raw)) candidates.push(raw);
+                  else {
+                    candidates.push(raw);
+                    candidates.push('/photo/' + raw);
+                    candidates.push('/photo/uploads/' + raw);
+                    candidates.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/student_photo/' + raw);
+                    candidates.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/photos/' + raw);
+                  }
+                } else {
+                  // no DB photo — try common guessed paths using iid
+                  candidates.push('/photo/avatar-' + rec.iid + '.jpg');
+                  candidates.push('/photo/avatar-' + rec.iid + '.jpeg');
+                  candidates.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/student_photo/avatar-' + rec.iid + '.jpg');
+                }
+                let idx = 0;
+                photoEl.style.display = '';
+                photoEl.onerror = () => { idx++; if(idx < candidates.length) photoEl.src = candidates[idx]; else { photoEl.style.display = 'none'; photoEl.removeAttribute('src'); } };
+                photoEl.onload = () => { /* shown */ };
+                photoEl.src = candidates[0];
+              } catch(e){ console.warn('Photo load error', e); photoEl.style.display='none'; photoEl.removeAttribute('src'); }
+            })();
           } else {
             photoEl.style.display = 'none';
             photoEl.removeAttribute('src');
@@ -447,19 +468,7 @@
 
   
 
-  // Load local photo links (one URL per line) and expose as window.__PHOTO_LINKS
-  let PHOTO_LINKS = [];
-  function loadPhotoLinks(){
-    // relative path from idcard/verify.html to photo/link.csv
-    const path = '../photo/link.csv';
-    fetch(path).then(r => {
-      if(!r.ok) throw new Error('no photo list');
-      return r.text();
-    }).then(txt => {
-      PHOTO_LINKS = txt.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-      window.__PHOTO_LINKS = PHOTO_LINKS;
-    }).catch(() => { PHOTO_LINKS = []; window.__PHOTO_LINKS = PHOTO_LINKS; });
-  }
+  // link.csv dependency removed — photo URLs are resolved from DB `student_photo_url` or guessed public paths
 
     function renderQr(){
       const box = document.getElementById('qrBox');
