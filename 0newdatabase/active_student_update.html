@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+  <title>Entry - Show & Edit</title>
+  <style>
+    /* reduce base font size by 20% and use Kalpurush font */
+    html{font-size:100%;}
+    body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
+    table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:auto}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle;white-space:nowrap}
+    th{background:#f4f4f4}
+  /* zebra striping */
+  tbody tr:nth-child(odd){ background:#ffffff }
+  tbody tr:nth-child(even){ background:#f5f5f5 }
+    .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
+    .btn.secondary{background:#6c757d}
+    .btn.updated{background:#28a745 !important; cursor: default !important}
+    .btn.bulk{background:#ff6b35 !important; font-weight: bold !important}
+    /* modal */
+    .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+    .modal .panel{background:#fff;padding:16px;border-radius:6px;max-width:720px;width:100%;max-height:80vh;overflow:auto}
+    .field-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+    .field-row label{min-width:140px}
+    .field-row input, .field-row textarea{flex:1;padding:8px}
+    .notice{margin-top:8px;color:#a00}
+    .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
+    /* status column */
+  /* ensure TC rows override zebra */
+  tbody tr.status-tc{background-color:rgba(250, 187, 187, 0.5) !important}
+    /* SL (serial) column small */
+    .col-sl{width:56px;max-width:56px;padding:4px;text-align:center}
+  </style>
+</head>
+<body>
+  <h2>Active Students: Selected Columns</h2>
+  <div>
+    <button id="loadBtn" class="btn">Load Students</button>
+    <button id="bulkUpdateBtn" class="btn bulk">Bulk Update All</button>
+    <span id="status" style="margin-left:12px;color:#444"></span>
+  </div>
+
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <!-- Headers will be dynamically generated -->
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Loading...</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Edit modal -->
+  <div id="editModal" class="modal">
+    <div class="panel">
+      <h3>Edit Record</h3>
+
+      <!-- Dynamic fields will be rendered here -->
+      <div id="editFields"></div>
+
+      <div style="text-align:right;margin-top:12px">
+        <button id="cancelBtn" class="btn secondary">Cancel</button>
+        <button id="saveBtn" class="btn">Save</button>
+      </div>
+      <div id="modalNotice" class="notice"></div>
+    </div>
+  </div>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Use the same project URL used elsewhere in this repo
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    // For security, set supabaseKey via window.SUPABASE_ANON_KEY or input
+    const supabaseKey = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+    const tableName = 'student_database';
+  // Simple 10-minute TTL cache (localStorage) with SWR behavior
+
+  const tbody = document.querySelector('#dataTable tbody');
+    const statusEl = document.getElementById('status');
+
+  // keep full dataset in memory for client-side filtering
+  let allRowsCache = [];
+
+    // modal elems
+    const editModal = document.getElementById('editModal');
+    const editFields = document.getElementById('editFields');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const modalNotice = document.getElementById('modalNotice');
+
+  // Check if required elements exist
+  if(!tbody || !statusEl) {
+    console.error('Required DOM elements not found!');
+    console.log('tbody:', tbody, 'statusEl:', statusEl);
+  }
+
+  // Refresh and filter controls removed per request
+    cancelBtn.addEventListener('click', closeModal);
+    saveBtn.addEventListener('click', saveEdit);
+
+    // store the currently editing IID
+    let currentIID = null;
+
+    // ---- Cache helpers ----
+    function saveCache(rows){
+      try{
+        const payload = { ts: Date.now(), rows };
+        localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+      }catch(e){ /* ignore quota or serialization issues */ }
+    }
+
+    function loadCache(){
+      try{
+        const raw = localStorage.getItem(CACHE_KEY);
+        if(!raw) return null;
+        const obj = JSON.parse(raw);
+        if(!obj || !Array.isArray(obj.rows) || typeof obj.ts !== 'number') return null;
+        return obj;
+      }catch(e){ return null; }
+    }
+
+    function showFromCacheIfFresh(){
+      const cached = loadCache();
+      if(!cached) return false;
+      const age = Date.now() - cached.ts;
+      if(age > CACHE_TTL_MS) return false;
+  allRowsCache = cached.rows;
+  renderTable(allRowsCache);
+      const mins = Math.max(0, Math.floor(age/60000));
+      statusEl.textContent = `Total: ${allRowsCache.length} (from cache, ${mins}m old)`;
+      // Kick off a background refresh (SWR) without blocking UI
+      setTimeout(()=>{ loadData(true /*background*/); }, 0);
+      return true;
+    }
+
+
+
+    async function loadData(background=false){
+      console.log('loadData started, background:', background);
+      if(!background) statusEl.textContent = 'Loading all data...';
+      try{
+        // Test Supabase connection first
+        console.log('Testing Supabase connection...');
+        const testQuery = await supabase
+          .from(tableName)
+          .select('iid')
+          .limit(1);
+          
+        console.log('Test query result:', testQuery);
+        if(testQuery.error) {
+          throw new Error('Supabase connection failed: ' + testQuery.error.message);
+        }
+        
+        console.log('Starting data fetch...');
+        
+  // Use multiple fetch calls to get ALL data (bypass Supabase 1k per-request cap)
+  let allData = [];
+  let lastId = 0;
+  // Use 1000 to align with PostgREST default max rows per request
+  let batchSize = 10000;
+  let hasMore = true;
+  let batchCount = 0;
+  let prevLastId = null; // plateau guard
+  const maxBatches = 10000; // generous safety limit for very large tables
+        
+        while(hasMore && batchCount < maxBatches) {
+          batchCount++;
+          console.log(`Loading batch ${batchCount}, lastId: ${lastId}`);
+          statusEl.textContent = `Loading... (${allData.length} records loaded, batch ${batchCount})`;
+          
+          // select only the specified columns
+          const selectArg = 'iid, session, student_name_en, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
+          console.log('Querying with selectArg:', selectArg);
+
+          // Primary attempt with specific columns
+          let data, error;
+          try{
+            ({ data, error } = await supabase
+              .from(tableName)
+              .select(selectArg)
+              .gt('iid', lastId)
+              .order('iid', { ascending: true })
+              .limit(batchSize));
+          }catch(e){
+            console.warn('Select with specific columns threw, falling back to *:', e);
+            data = null; error = e;
+          }
+
+          // Fallback: if error due to column list, retry with '*'
+          if(error || !Array.isArray(data)){
+            console.warn('Retrying batch with select("*") due to error or invalid data. original error:', error);
+            ({ data, error } = await supabase
+              .from(tableName)
+              .select('*')
+              .gt('iid', lastId)
+              .order('iid', { ascending: true })
+              .limit(batchSize));
+          }
+            
+          console.log('Query result:', { dataLength: data?.length, error });
+          if(error){
+            console.error('Supabase error:', error);
+            const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+            throw new Error(`${error.message} | details: ${details}`);
+          }
+          
+          if(!data || data.length === 0) {
+            hasMore = false;
+            break;
+          }
+          
+          // append results (faster than repeated concat)
+          for(const row of data) allData.push(row);
+          lastId = data[data.length - 1].iid;
+          // Plateau guard: if lastId didn't advance, break to avoid infinite loop
+          if(prevLastId !== null && Number(lastId) === Number(prevLastId)){
+            console.warn('Pagination stalled because lastId did not advance. Stopping to avoid infinite loop.', { lastId, prevLastId });
+            hasMore = false;
+            break;
+          }
+          prevLastId = lastId;
+        }
+        
+        allRowsCache = allData;
+        renderTable(allRowsCache);
+        statusEl.textContent = `✅ Total: ${allRowsCache.length} records loaded (${batchCount} batches, all data loaded)`;
+        // Persist to cache for 10 minutes use
+        saveCache(allRowsCache);
+      }catch(err){
+        console.error('loadData error:', err);
+        console.error('Error stack:', err.stack);
+        statusEl.textContent = 'Data loading error: ' + (err.message || err);
+        const msg = err && err.message ? err.message : String(err);
+        const colSpan = document.querySelectorAll('#dataTable thead th').length || 1;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        // If we have cache, show it as fallback
+        const cached = loadCache();
+        if(cached && Array.isArray(cached.rows)){
+        allRowsCache = cached.rows;
+          renderTable(allRowsCache);
+          const ageM = Math.floor((Date.now()-cached.ts)/60000);
+          statusEl.textContent = `Total: ${allRowsCache.length} (offline cache, ${ageM}m old)`;
+        }
+      }
+    }
+
+  // Filter helpers removed per request
+
+    // Function to check existing active_section data
+    async function getExistingActiveSectionData(iids) {
+      try {
+        const { data, error } = await supabase
+          .from('active_section')
+          .select('iid, active_class, active_section, active_roll, session, student_name_en')
+          .in('iid', iids);
+
+        if (error) {
+          console.error('Error fetching existing active_section data:', error);
+          return {};
+        }
+
+        // Convert array to object with iid as key for easy lookup
+        const existingData = {};
+        data.forEach(row => {
+          existingData[row.iid] = row;
+        });
+
+        return existingData;
+      } catch (err) {
+        console.error('getExistingActiveSectionData error:', err);
+        return {};
+      }
+    }
+
+    async function updateActiveSection(row) {
+      try {
+        // Get the dynamic values for active columns
+        const session = row['session'];
+        const activeClass = session ? row[`class_${session}`] : '';
+        const activeSection = session ? row[`section_${session}`] : '';
+        const activeRoll = session ? row[`roll_${session}`] : '';
+
+        // Prepare data to save to active_section table
+        const dataToSave = {
+          iid: row['iid'],
+          active_roll: activeRoll || null,
+          active_section: activeSection || null,
+          active_class: activeClass || null,
+          session: row['session'] || null,
+          student_name_en: row['student_name_en'] || null
+        };
+
+        console.log('Saving to active_section table:', dataToSave);
+
+        // Insert or update in active_section table
+        const { data, error } = await supabase
+          .from('active_section')
+          .upsert(dataToSave, { onConflict: 'iid' });
+
+        if (error) {
+          console.error('Error saving to active_section:', error);
+          alert('Error updating active section: ' + error.message);
+        } else {
+          console.log('Successfully saved to active_section:', data);
+          alert('Successfully updated active section!');
+          // Refresh the table to update the status indicators
+          renderTable(allRowsCache);
+        }
+      } catch (err) {
+        console.error('updateActiveSection error:', err);
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function renderTable(rows){
+      if(!rows || rows.length === 0){
+        const thead = document.querySelector('#dataTable thead');
+        thead.innerHTML = '<tr><th class="col-sl">SL</th><th>iid</th><th>session</th><th>student_name_en</th><th>class</th><th>section</th><th>roll_2025</th><th>roll_2024</th><th>roll_2023</th><th>active_class</th><th>active_section</th><th>active_roll</th><th>Update</th></tr>';
+        tbody.innerHTML = `<tr><td colspan="13">No records found</td></tr>`;
+        return;
+      }
+
+      // Get all iids to check existing data
+      const iids = rows.map(r => r.iid);
+      const existingData = await getExistingActiveSectionData(iids);
+
+      // Fixed keys for selected columns
+      const keys = ['iid', 'session', 'student_name_en', 'class_2024', 'section_2024', 'roll_2024', 'class_2025', 'section_2025', 'roll_2025','class_2026', 'section_2026', 'roll_2026', 'active_class', 'active_section', 'active_roll'];
+
+      // Render header with SL column and Update button
+      const thead = document.querySelector('#dataTable thead');
+      thead.innerHTML = '<tr><th class="col-sl">SL</th>' + keys.map(k => `<th>${escapeHtml(k)}</th>`).join('') + '<th>Update</th></tr>';
+
+      // Render body
+      tbody.innerHTML = '';
+      const colCount = keys.length + 2; // +1 for SL column, +1 for Update column
+
+      rows.forEach((r, index) => {
+        const tr = document.createElement('tr');
+
+        // Add SL column first
+        const slTd = document.createElement('td');
+        slTd.className = 'col-sl';
+        slTd.textContent = index + 1;
+        tr.appendChild(slTd);
+
+        keys.forEach(k => {
+          const td = document.createElement('td');
+          let val;
+          
+          // Handle dynamic active columns based on session
+          if (k === 'active_class') {
+            const session = r['session'];
+            const dynamicKey = session ? `class_${session}` : '';
+            val = dynamicKey && r[dynamicKey] !== null && r[dynamicKey] !== undefined ? String(r[dynamicKey]) : '';
+          } else if (k === 'active_section') {
+            const session = r['session'];
+            const dynamicKey = session ? `section_${session}` : '';
+            val = dynamicKey && r[dynamicKey] !== null && r[dynamicKey] !== undefined ? String(r[dynamicKey]) : '';
+          } else if (k === 'active_roll') {
+            const session = r['session'];
+            const dynamicKey = session ? `roll_${session}` : '';
+            val = dynamicKey && r[dynamicKey] !== null && r[dynamicKey] !== undefined ? String(r[dynamicKey]) : '';
+          } else {
+            val = r[k] === null || r[k] === undefined ? '' : String(r[k]);
+          }
+          
+          td.textContent = escapeHtml(val);
+          tr.appendChild(td);
+        });
+
+        // Add Update button column with status check
+        const updateTd = document.createElement('td');
+        const updateBtn = document.createElement('button');
+        
+        // Check if data is already updated
+        const existing = existingData[r.iid];
+        const session = r['session'];
+        const currentActiveClass = session ? r[`class_${session}`] : '';
+        const currentActiveSection = session ? r[`section_${session}`] : '';
+        const currentActiveRoll = session ? r[`roll_${session}`] : '';
+        
+        const isUpdated = existing && 
+          existing.active_class === (currentActiveClass || null) &&
+          existing.active_section === (currentActiveSection || null) &&
+          existing.active_roll === (currentActiveRoll || null) &&
+          existing.session === (r['session'] || null) &&
+          existing.student_name_en === (r['student_name_en'] || null);
+
+        if (isUpdated) {
+          updateBtn.className = 'btn updated';
+          updateBtn.innerHTML = '✓ Updated';
+          updateBtn.style.backgroundColor = '#28a745';
+          updateBtn.style.color = '#fff';
+        } else {
+          updateBtn.className = 'btn';
+          updateBtn.textContent = 'Update';
+        }
+        
+        updateBtn.onclick = () => updateActiveSection(r);
+        updateTd.appendChild(updateBtn);
+        tr.appendChild(updateTd);
+
+        tbody.appendChild(tr);
+      });
+
+      // Update colspans in other places
+      const loadingRow = document.querySelector('#dataTable tbody tr');
+      if(loadingRow) loadingRow.innerHTML = `<td colspan="${colCount}">Loading...</td>`;
+    }
+
+  async function openEditByIID(iid){
+      // fetch full row from DB to ensure we have all columns
+      modalNotice.textContent = '';
+      currentIID = iid;
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+      .eq('iid', Number(iid))
+          .limit(1)
+          .single();
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        renderEditFields(data || {});
+        editModal.style.display = 'flex';
+      }catch(err){
+        console.error('openEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Failed to load record: ' + (err.message || err);
+        // fallback: if we had a row in the table view, user can still edit minimal fields (not implemented here)
+      }
+    }
+
+    function renderEditFields(record){
+      editFields.innerHTML = '';
+      // iterate keys in sorted order for predictability
+      const keys = Object.keys(record).sort();
+      keys.forEach(key => {
+        const val = record[key] === null || record[key] === undefined ? '' : record[key];
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        const label = document.createElement('label');
+        label.textContent = key + ':';
+        // decide input type: use textarea for long text fields (heuristic)
+        let input;
+        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
+          input = document.createElement('textarea');
+          input.rows = 4;
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+        }
+        input.value = val;
+        input.setAttribute('data-field', key);
+        if(key === 'IID'){
+          input.readOnly = true;
+        }
+        row.appendChild(label);
+        row.appendChild(input);
+        editFields.appendChild(row);
+      });
+    }
+
+    async function saveEdit(){
+      modalNotice.textContent = '';
+      if(!currentIID){ modalNotice.textContent = 'No record selected'; return; }
+      // build payload from inputs
+      const inputs = editFields.querySelectorAll('[data-field]');
+      const payload = {};
+      inputs.forEach(inp =>{
+        const field = inp.getAttribute('data-field');
+    if(field === 'iid' || field === 'IID') return; // don't try to update primary key
+        const v = inp.value === '' ? null : inp.value;
+        payload[field] = v;
+      });
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      try{
+        const { data, error } = await supabase
+          .from(tableName)
+          .update(payload)
+          .eq('iid', Number(currentIID));
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        modalNotice.style.color = 'green';
+        modalNotice.textContent = 'Updated successfully';
+  // refresh list and cache and close
+  await loadData(false);
+        setTimeout(()=>{ closeModal(); modalNotice.textContent = ''; }, 700);
+      }catch(err){
+        console.error('saveEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Update error: ' + (err.message || err);
+      }finally{
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    function closeModal(){
+      editModal.style.display = 'none';
+      editFields.innerHTML = '';
+      currentIID = null;
+    }
+
+    // Bulk update function to update all records that need updating
+    async function bulkUpdateActiveSection() {
+      if (!allRowsCache || allRowsCache.length === 0) {
+        alert('No data loaded. Please load students first.');
+        return;
+      }
+
+      const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
+      const originalText = bulkUpdateBtn.textContent;
+      
+      try {
+        bulkUpdateBtn.disabled = true;
+        bulkUpdateBtn.textContent = 'Checking...';
+        bulkUpdateBtn.style.backgroundColor = '#ffa500';
+        
+        // Get existing data to check what needs updating
+        const iids = allRowsCache.map(r => r.iid);
+        const existingData = await getExistingActiveSectionData(iids);
+        
+        // Find records that need updating
+        const recordsToUpdate = [];
+        allRowsCache.forEach(row => {
+          const existing = existingData[row.iid];
+          const session = row['session'];
+          const currentActiveClass = session ? row[`class_${session}`] : '';
+          const currentActiveSection = session ? row[`section_${session}`] : '';
+          const currentActiveRoll = session ? row[`roll_${session}`] : '';
+          
+          const isUpdated = existing && 
+            existing.active_class === (currentActiveClass || null) &&
+            existing.active_section === (currentActiveSection || null) &&
+            existing.active_roll === (currentActiveRoll || null) &&
+            existing.session === (row['session'] || null) &&
+            existing.student_name_en === (row['student_name_en'] || null);
+
+          if (!isUpdated) {
+            recordsToUpdate.push(row);
+          }
+        });
+
+        if (recordsToUpdate.length === 0) {
+          alert('All records are already updated!');
+          bulkUpdateBtn.textContent = originalText;
+          bulkUpdateBtn.disabled = false;
+          bulkUpdateBtn.style.backgroundColor = '';
+          return;
+        }
+
+        // Confirm bulk update
+        const confirmMsg = `Found ${recordsToUpdate.length} records that need updating. Proceed with bulk update?`;
+        if (!confirm(confirmMsg)) {
+          bulkUpdateBtn.textContent = originalText;
+          bulkUpdateBtn.disabled = false;
+          bulkUpdateBtn.style.backgroundColor = '';
+          return;
+        }
+
+        bulkUpdateBtn.textContent = `Updating... (0/${recordsToUpdate.length})`;
+        bulkUpdateBtn.style.backgroundColor = '#ff6b35';
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        // Update records in batches to avoid overwhelming the server
+        const batchSize = 50;
+        for (let i = 0; i < recordsToUpdate.length; i += batchSize) {
+          const batch = recordsToUpdate.slice(i, i + batchSize);
+          
+          // Update progress
+          bulkUpdateBtn.textContent = `Updating... (${Math.min(i + batchSize, recordsToUpdate.length)}/${recordsToUpdate.length})`;
+          
+          // Process batch
+          const promises = batch.map(async (row) => {
+            try {
+              const session = row['session'];
+              const activeClass = session ? row[`class_${session}`] : '';
+              const activeSection = session ? row[`section_${session}`] : '';
+              const activeRoll = session ? row[`roll_${session}`] : '';
+
+              const dataToSave = {
+                iid: row['iid'],
+                active_roll: activeRoll || null,
+                active_section: activeSection || null,
+                active_class: activeClass || null,
+                session: row['session'] || null,
+                student_name_en: row['student_name_en'] || null
+              };
+
+              const { error } = await supabase
+                .from('active_section')
+                .upsert(dataToSave, { onConflict: 'iid' });
+
+              if (error) {
+                console.error('Bulk update error for iid', row.iid, ':', error);
+                errorCount++;
+              } else {
+                successCount++;
+              }
+            } catch (err) {
+              console.error('Bulk update exception for iid', row.iid, ':', err);
+              errorCount++;
+            }
+          });
+
+          await Promise.all(promises);
+          
+          // Small delay between batches to be gentle on the server
+          if (i + batchSize < recordsToUpdate.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+
+        // Show results
+        const resultMsg = `Bulk update completed!\n✅ Successfully updated: ${successCount}\n❌ Errors: ${errorCount}`;
+        alert(resultMsg);
+        
+        // Refresh the table to show updated status
+        if (successCount > 0) {
+          renderTable(allRowsCache);
+        }
+        
+        bulkUpdateBtn.textContent = originalText;
+        bulkUpdateBtn.disabled = false;
+        bulkUpdateBtn.style.backgroundColor = '';
+        
+      } catch (err) {
+        console.error('Bulk update error:', err);
+        alert('Bulk update failed: ' + (err.message || err));
+        bulkUpdateBtn.textContent = originalText;
+        bulkUpdateBtn.disabled = false;
+        bulkUpdateBtn.style.backgroundColor = '';
+      }
+    }
+
+    function escapeHtml(s){
+      if(s === null || s === undefined) return '';
+      return String(s).replace(/[&<>\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // close modal when clicking outside panel
+    editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
+
+    // Add load button event listener
+    const loadBtn = document.getElementById('loadBtn');
+    if(loadBtn) loadBtn.addEventListener('click', () => loadData(false));
+
+    // Add bulk update button event listener
+    const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
+    if(bulkUpdateBtn) bulkUpdateBtn.addEventListener('click', bulkUpdateActiveSection);
+
+    // initial load - directly load all data without cache
+    (function smartInitial(){
+      console.log('Smart initial started');
+      console.log('Supabase available:', typeof window.supabase !== 'undefined');
+      console.log('Status element:', statusEl);
+      // Always load fresh data, no cache check
+      loadData(false);
+    })();
+  </script>
+</body>
+</html>
+
