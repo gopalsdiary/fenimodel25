@@ -163,7 +163,7 @@
   let allData = [];
   let lastId = 0;
   // Use 1000 to align with PostgREST default max rows per request
-  let batchSize = 10000;
+  let batchSize = 1000;
   let hasMore = true;
   let batchCount = 0;
   let prevLastId = null; // plateau guard
@@ -425,9 +425,9 @@
         tbody.appendChild(tr);
       });
 
-      // Update colspans in other places
-      const loadingRow = document.querySelector('#dataTable tbody tr');
-      if(loadingRow) loadingRow.innerHTML = `<td colspan="${colCount}">Loading...</td>`;
+      // All rows rendered into tbody above. Do not overwrite them with a generic Loading... row.
+      // (Previous code here accidentally replaced the first row with a Loading... placeholder.)
+      console.log('renderTable completed, rows rendered:', rows.length);
     }
 
   async function openEditByIID(iid){
@@ -684,13 +684,49 @@
     const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
     if(bulkUpdateBtn) bulkUpdateBtn.addEventListener('click', bulkUpdateActiveSection);
 
-    // initial load - directly load all data without cache
-    (function smartInitial(){
-      console.log('Smart initial started');
-      console.log('Supabase available:', typeof window.supabase !== 'undefined');
-      console.log('Status element:', statusEl);
-      // Always load fresh data, no cache check
-      loadData(false);
+    // Authentication check first, then data load
+    (async function smartInitialWithAuth(){
+      console.log('Smart initial with auth started');
+      
+      try {
+        // Quick auth check first
+        if (typeof window.supabase === 'undefined') {
+          console.warn('Supabase not loaded, redirecting to login for security');
+          window.location.href = './index.html';
+          return;
+        }
+        
+        // Create auth client using same config as page
+        const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const { data: { session }, error } = await authClient.auth.getSession();
+        
+        if (error || !session) {
+          console.log('No valid session found, redirecting to login...');
+          window.location.href = './index.html';
+          return;
+        }
+        
+  console.log('Authentication verified for user:', session.user && session.user.email ? session.user.email : '(no-email)');
+        
+        // Now that auth is verified, proceed with data loading
+        console.log('Supabase available:', typeof window.supabase !== 'undefined');
+        console.log('Status element:', statusEl);
+  // Always load fresh data, no cache check
+  console.log('Starting data load after auth verification...');
+  loadData(false).then(()=> console.log('Initial loadData() promise resolved')).catch(e => console.error('Initial loadData() failed:', e));
+        
+        // Setup auth state listener for future changes
+        authClient.auth.onAuthStateChange((event, session) => {
+          if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+            console.log('User signed out, redirecting to login...');
+            window.location.href = './index.html';
+          }
+        });
+        
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        window.location.href = './index.html';
+      }
     })();
   </script>
 </body>
