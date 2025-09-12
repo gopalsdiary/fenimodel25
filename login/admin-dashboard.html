@@ -565,6 +565,7 @@
         <h1>Super Admin Dashboard</h1>
         <div id="header-center" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;color:rgba(255,255,255,0.95);font-weight:700"></div>
         <div>
+            <button id="change-password-header-btn" class="logout-btn" style="margin-right: 10px;">🔑 Change Password</button>
             <button id="logout-btn" class="logout-btn">Logout</button>
         </div>
     </div>
@@ -587,7 +588,6 @@
                     <a class="sidebar-btn" href="./teacherlist.html">Teacher Database</a>
                     <a class="sidebar-btn" href="data_print.html">Data Print</a>
                                         <a class="sidebar-btn" href="data_edit.html">Data Edit Colm</a>
-                    <button class="sidebar-btn" id="change-password-btn" style="width: 100%; text-align: left;">🔑 Change Password</button>
 
 
                 </div>
@@ -926,7 +926,7 @@
 
         // Password Change Modal Functionality
         document.addEventListener('DOMContentLoaded', function() {
-            const changePasswordBtn = document.getElementById('change-password-btn');
+            const changePasswordBtn = document.getElementById('change-password-header-btn');
             const passwordModal = document.getElementById('passwordModal');
             const closePasswordModal = document.getElementById('closePasswordModal');
             const cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
