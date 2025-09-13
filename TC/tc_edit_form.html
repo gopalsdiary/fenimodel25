@@ -39,46 +39,64 @@
   const client=window.supabase.createClient(supabaseUrl,supabaseKey);
 
   function qs(id){return document.getElementById(id);}  
-  function setStatus(msg, isErr=false){const el=qs('status'); el.textContent=msg; el.classList.toggle('error', !!isErr);}  
+  function setStatus(msg, isErr=false){
+    let el=qs('status');
+    if(!el){
+      const host=qs('recordTitle') || document.querySelector('header h1');
+      if(host){
+        el=document.createElement('span');
+        el.id='status';
+        el.className='status muted';
+        host.appendChild(document.createTextNode(' '));
+        host.appendChild(el);
+      } else {
+        console.warn('Status container not found to display:', msg);
+        return;
+      }
+    }
+    el.textContent=msg;
+    el.classList.toggle('error', !!isErr);
+  }  
+  function field(name){ return document.forms.tcForm.elements[name]; }
+  function val(name){ const el=field(name); return el ? el.value.trim() : ''; }
+  function setVal(name, value){ const el=field(name); if(!el) return; el.value = value==null?'' : value; }
   function formDataToUpdate(){
-    const f=document.forms.tcForm;
     return {
-      student_name_en:f.name.value.trim(),
-      father_name_en:f.father.value.trim(),
-      mother_name_en:f.mother.value.trim(),
-      tc_class:f.tc_class.value.trim(),
-      tc_section:f.tc_section.value.trim(),
-      tc_roll:f.tc_roll.value.trim(),
-      board_registration:f.board_registration.value.trim(),
-      student_dateofbirth:f.student_dateofbirth.value.trim(),
-      paid_month:f.paid_month.value.trim(),
-      student_character:f.student_character.value.trim(),
-      next_class:f.next_class.value.trim(),
-      tc_session:f.tc_session.value.trim(),
-      issued_by:f.issued_by.value.trim(),
-      note:f.note.value.trim(),
-      father_mobile:f.father_mobile.value.trim(),
-      tc_date:f.tc_date.value.trim()
+      student_name_en: val('name'),
+      father_name_en: val('father'),
+      mother_name_en: val('mother'),
+      tc_class: val('tc_class'),
+      tc_section: val('tc_section'),
+      tc_roll: val('tc_roll'),
+      board_registration: val('board_registration'),
+      student_dateofbirth: val('student_dateofbirth'),
+      paid_month: val('paid_month'),
+      student_character: val('student_character'),
+      next_class: val('next_class'),
+      tc_session: val('tc_session'),
+      issued_by: val('issued_by'),
+      note: val('note'),
+      father_mobile: val('father_mobile'),
+      tc_date: val('tc_date')
     };
   }
   function fillForm(row){
-    const f=document.forms.tcForm;
-    f.name.value=row.student_name_en||'';
-    f.father.value=row.father_name_en||'';
-    f.mother.value=row.mother_name_en||'';
-    f.tc_class.value=row.tc_class||'';
-    f.tc_section.value=row.tc_section||'';
-    f.tc_roll.value=row.tc_roll||'';
-    f.board_registration.value=row.board_registration||'';
-    f.student_dateofbirth.value=row.student_dateofbirth||'';
-    f.paid_month.value=row.paid_month||'';
-    f.student_character.value=row.student_character||'';
-    f.next_class.value=row.next_class||'';
-    f.tc_session.value=row.tc_session||'';
-    f.issued_by.value=row.issued_by||'';
-    f.note.value=row.note||'';
-    f.father_mobile.value=row.father_mobile||'';
-    f.tc_date.value=row.tc_date||'';
+    setVal('name', row.student_name_en||'');
+    setVal('father', row.father_name_en||'');
+    setVal('mother', row.mother_name_en||'');
+    ensureSelectValue(field('tc_class'), row.tc_class||'');
+    ensureSelectValue(field('tc_section'), row.tc_section||'');
+    setVal('tc_roll', row.tc_roll||'');
+    setVal('board_registration', row.board_registration||'');
+    setVal('student_dateofbirth', row.student_dateofbirth||'');
+    ensureSelectValue(field('paid_month'), row.paid_month||'');
+    ensureSelectValue(field('student_character'), row.student_character||'');
+    ensureSelectValue(field('next_class'), row.next_class||'');
+    ensureSelectValue(field('tc_session'), row.tc_session||'');
+    ensureSelectValue(field('issued_by'), row.issued_by||'');
+    setVal('note', row.note||'');
+    setVal('father_mobile', row.father_mobile||'');
+    setVal('tc_date', row.tc_date||'');
   }
   async function loadRecord(){
     const params=new URLSearchParams(location.search);
@@ -97,16 +115,37 @@
   }
   async function handleSubmit(e){
     e.preventDefault();
-    const params=new URLSearchParams(location.search); const iid=params.get('iid'); if(!iid){setStatus('iid missing',true);return;}
-    setStatus('Updating…');
-    const payload=formDataToUpdate();
-    // Determine primary key: tc_sl maybe more stable; update by iid to keep simple
-    const { error } = await client.from(tableName).update(payload).eq('iid', iid);
-    if(error){console.error(error); setStatus('Update failed',true); return;}
-    setStatus('Saved');
+    try {
+      const params=new URLSearchParams(location.search); const iid=params.get('iid'); if(!iid){setStatus('iid missing',true);return;}
+      setStatus('Updating…');
+      const payload=formDataToUpdate();
+      const { error } = await client.from(tableName).update(payload).eq('iid', iid);
+      if(error) throw error;
+      setStatus('Saved');
+    } catch(err){ console.error('Update error', err); setStatus('Update failed', true); }
   }
   function today(){const d=new Date(); return d.toISOString().slice(0,10);}  
-  window.addEventListener('DOMContentLoaded',()=>{loadRecord(); document.forms.tcForm.addEventListener('submit',handleSubmit); if(!qs('tc_date').value) qs('tc_date').value=today();});
+  function ensureSelectValue(sel, val){ if(!sel) return; const exists=[...sel.options].some(o=>o.value===val); if(val && !exists){ const opt=document.createElement('option'); opt.value=val; opt.textContent=val; opt.dataset.added='1'; sel.appendChild(opt); } sel.value=val; }
+  function buildStaticSelectOptions(){
+    const cls=['','6','7','8','9','10'];
+    const section=['','Shapla','Golap','Morning'];
+    const character=['','good','very good','bad','very bad'];
+    const nextClass=['','6','7','8','9','10'];
+    const sessions=['','2023','2024','2025','2026'];
+    const issuedBy=['','RAZIB KUMAR PAUL','SHOWRAV DEB'];
+    fillSelect(qs('tc_class'),cls); fillSelect(qs('tc_section'),section);
+    fillSelect(qs('student_character'),character); fillSelect(qs('next_class'),nextClass);
+    fillSelect(qs('tc_session'),sessions); fillSelect(qs('issued_by'),issuedBy);
+  }
+  function buildPaidMonthOptions(){
+    const years=[2025,2026];
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const sel=qs('paid_month'); if(!sel) return; sel.innerHTML='';
+    const empty=document.createElement('option'); empty.value=''; empty.textContent=''; sel.appendChild(empty);
+    for(const y of years){ for(const m of months){ const opt=document.createElement('option'); opt.value=`${m} ${y}`; opt.textContent=`${m} ${y}`; sel.appendChild(opt);} }
+  }
+  function fillSelect(sel, arr){ if(!sel) return; sel.innerHTML=''; arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); }
+  window.addEventListener('DOMContentLoaded',()=>{buildStaticSelectOptions(); buildPaidMonthOptions(); loadRecord(); document.forms.tcForm.addEventListener('submit',handleSubmit); if(!qs('tc_date').value) qs('tc_date').value=today();});
 </script>
 </head>
 <body>
@@ -130,10 +169,10 @@
         <input name="mother" />
       </label>
       <label>Class
-        <input name="tc_class" />
+        <select name="tc_class" id="tc_class"></select>
       </label>
       <label>Section
-        <input name="tc_section" />
+        <select name="tc_section" id="tc_section"></select>
       </label>
       <label>Roll
         <input name="tc_roll" />
@@ -145,19 +184,19 @@
         <input name="student_dateofbirth" placeholder="DD-MM-YYYY" />
       </label>
       <label>Paid Upto
-        <input name="paid_month" />
+        <select name="paid_month" id="paid_month"></select>
       </label>
       <label>Character
-        <input name="student_character" />
+        <select name="student_character" id="student_character"></select>
       </label>
       <label>Next Class
-        <input name="next_class" />
+        <select name="next_class" id="next_class"></select>
       </label>
       <label>Session
-        <input name="tc_session" />
+        <select name="tc_session" id="tc_session"></select>
       </label>
       <label>Issued By
-        <input name="issued_by" />
+        <select name="issued_by" id="issued_by"></select>
       </label>
       <label>Father Mobile
         <input name="father_mobile" />
