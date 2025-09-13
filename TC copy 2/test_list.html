@@ -38,66 +38,140 @@
       .muted { color: #9aa5b1; }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-    // Supabase configuration
-    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const tableName = 'termination_table';
-    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQgl1Atq8imTVqFT0696qsx8yazfgbmm5siS7R6VLvuBbCA4BBvrZKGVdrmPRj6aPtNwAh7zJflG54_/pub?output=csv';
+    function getVal(row, headers, key){ const h = headers[key]; const v = h ? row[h] : ''; return v == null ? '' : String(v).trim(); }
 
-    const DEBUG = new URLSearchParams(location.search).has('debug');
-    function logDbg(...a){ if(DEBUG) console.log('[TC-LIST]', ...a); }
+  function buildHeaderMap(fields){
+      const map={};
+      const norm = s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'');
+      const want={
+        name:['name','studentname','fullname'],
+        father:['father','fathername','fathersname','father_s_name','fname'],
+        class:['class','cls','classname'],
+        roll:['roll','rollno','rollnumber'],
+    iid:['iid','id','studentid','sid','uniqueid'],
+    sl:['sl','serial','serialno','serialnumber','serial_no']
+      };
+      for(const f of fields){
+        const nf=norm(f);
+        for(const key of Object.keys(want)){
+          if(map[key]) continue;
+            if(want[key].some(w=>nf===norm(w))){ map[key]=f; }
+        }
+      }
+      return map;
+    }
 
     function createRow(tr, cells){
-      cells.forEach(c => { const td=document.createElement('td'); if(c && c.element) td.appendChild(c.element); else td.textContent = c ?? ''; tr.appendChild(td); });
+      cells.forEach(c => { const td = document.createElement('td'); if(c && c.element) td.appendChild(c.element); else td.textContent = c ?? ''; tr.appendChild(td); });
       return tr;
     }
-    function renderTable(rows){ const tbody=document.querySelector('#tbody'); tbody.innerHTML=''; rows.forEach(r=>tbody.appendChild(r)); document.querySelector('#count').textContent = rows.length; }
-    function buildRows(data){
+
+    function renderTable(rows){ const tbody=document.querySelector('#tbody'); tbody.innerHTML=''; rows.forEach(r=>tbody.appendChild(r)); document.querySelector('#count').textContent=`${rows.length}`; }
+
+  function buildRows(data, headers){
       const rows=[];
       for(const obj of data){
-        const sl = obj.tc_sl ?? '';
-        const name = obj.student_name_en ?? '';
-        const father = obj.father_name_en ?? '';
-        const klass = obj.tc_class ?? '';
-        const roll = obj.tc_roll ?? '';
-        const iid = obj.iid ?? '';
-  const pdfLink=document.createElement('a'); pdfLink.className='link'; pdfLink.textContent='Edit'; pdfLink.href=`./tc_edit_form.html?iid=${encodeURIComponent(iid)}`;
+    const sl=getVal(obj, headers,'sl');
+        const name=getVal(obj, headers,'name');
+        const father=getVal(obj, headers,'father');
+        const klass=getVal(obj, headers,'class');
+        const roll=getVal(obj, headers,'roll');
+        const iid=getVal(obj, headers,'iid');
+        const pdfLink=document.createElement('a'); pdfLink.className='link'; pdfLink.textContent='PDF'; pdfLink.href=`./test_view.html?iid=${encodeURIComponent(iid)}`;
         const wordLink=document.createElement('a'); wordLink.className='link'; wordLink.textContent='Word'; wordLink.href=`./certificate_word.html?iid=${encodeURIComponent(iid)}`;
         const cell=document.createElement('div'); cell.appendChild(pdfLink); const sep=document.createElement('span'); sep.className='sep'; sep.textContent='|'; cell.appendChild(sep); cell.appendChild(wordLink);
-        const tr=document.createElement('tr'); createRow(tr,[sl,name,father,klass,roll,iid,{element:cell}]); rows.push(tr);
+    const tr=document.createElement('tr'); createRow(tr,[sl,name,father,klass,roll,iid,{element:cell}]); rows.push(tr);
       }
       return rows;
     }
+
     function setupFilter(allRows){ const input=document.querySelector('#search'); const apply=()=>{ const q=input.value.toLowerCase().trim(); if(!q) return renderTable(allRows); const filtered=allRows.filter(tr=>tr.textContent.toLowerCase().includes(q)); renderTable(filtered); }; input.addEventListener('input',apply); apply(); }
 
-    async function loadData(){
-      const statusEl=document.querySelector('#status');
-      statusEl.classList.remove('error');
-      statusEl.textContent='Loading…';
-      try{
-        const { data, error } = await client.from(tableName)
-          .select('tc_sl, student_name_en, father_name_en, tc_class, tc_roll, iid')
-          .order('tc_sl', { ascending:false })
-          .limit(1000);
-        if(error) throw error;
-        logDbg('Fetched rows', data?.length||0);
-        const rows=buildRows(data||[]);
-        setupFilter(rows);
-        statusEl.textContent='Loaded';
-      }catch(e){
-        console.error('Load failed', e);
-        statusEl.textContent='Failed to load';
-        statusEl.classList.add('error');
-        if(!document.getElementById('retryBtn')){
-          const btn=document.createElement('button');
-          btn.id='retryBtn'; btn.textContent='Retry'; btn.style.marginLeft='.75rem'; btn.style.padding='.35rem .7rem'; btn.style.fontSize='.65rem'; btn.style.cursor='pointer'; btn.onclick=()=>{ btn.remove(); loadData(); }; statusEl.parentElement.appendChild(btn);
-        }
+  function loadFromCache(){ return null; }
+  function saveCache(){ /* no-op */ }
+
+    function showRetry(msg){
+      const status=document.querySelector('#status');
+      status.textContent=msg;
+      status.classList.add('error');
+      if(!document.getElementById('retryBtn')){
+        const btn=document.createElement('button');
+        btn.id='retryBtn'; btn.textContent='Retry'; btn.style.marginLeft='.75rem'; btn.style.padding='.35rem .7rem'; btn.style.fontSize='.65rem'; btn.style.cursor='pointer'; btn.onclick=()=>{ btn.remove(); initLoad(true); };
+        status.parentElement.appendChild(btn);
       }
     }
 
-    window.addEventListener('DOMContentLoaded', loadData);
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 900;
+    let attemptNo = 0;
+    const DEBUG = new URLSearchParams(location.search).has('debug');
+
+    function logDbg(...a){ if(DEBUG) console.log('[TL]', ...a); }
+
+    function parseAndRender(results, source){
+      const status=document.querySelector('#status');
+      if(!results || !results.data){ throw new Error('Empty results'); }
+      const fields = (results.meta && results.meta.fields) || Object.keys(results.data[0]||{});
+      const headers=buildHeaderMap(fields);
+      if(Object.keys(headers).length === 0){ throw new Error('Header map empty'); }
+      const rows=buildRows(results.data, headers);
+      setupFilter(rows);
+      status.textContent = 'Loaded';
+      if(DEBUG) status.textContent += ' ('+source+')';
+    }
+
+    async function manualFetchFallback(){
+      logDbg('Manual fetch fallback fetching text...');
+      const res = await fetch(CSV_URL, { cache:'no-store' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const text = await res.text();
+      return new Promise((resolve,reject)=>{
+        Papa.parse(text, { header:true, skipEmptyLines:true, complete: r=>resolve(r), error: e=>reject(e) });
+      });
+    }
+
+    function attemptLoad(){
+      attemptNo++;
+      const status=document.querySelector('#status');
+      status.classList.remove('error');
+      status.textContent = 'Loading… (Attempt '+attemptNo+'/'+MAX_ATTEMPTS+')';
+      logDbg('Attempt', attemptNo);
+      Papa.parse(CSV_URL, {
+        download:true, header:true, skipEmptyLines:true,
+        complete:(results)=>{
+          try { parseAndRender(results, 'direct'); }
+          catch(e){
+            console.error('Primary parse render error', e);
+            if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Parse error'); }
+            // Last resort: manual fetch parse
+            manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
+              .catch(err => { console.error('Fallback failed', err); showRetry('Failed to render data'); });
+          }
+        },
+        error:(err)=>{
+          console.error('Papa error', err);
+          if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Load error'); }
+          manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
+            .catch(e2 => { console.error('Fallback fetch failed', e2); showRetry('Failed to load CSV'); });
+        }
+      });
+    }
+
+    function scheduleRetry(reason){
+      const status=document.querySelector('#status');
+      status.textContent = 'Retrying… '+reason+' ('+attemptNo+'/'+MAX_ATTEMPTS+')';
+      setTimeout(attemptLoad, RETRY_DELAY_MS * attemptNo); // backoff
+    }
+
+    function initLoad(){
+      attemptNo = 0;
+      attemptLoad();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => initLoad());
   </script>
 </head>
 <body>

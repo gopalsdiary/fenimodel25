@@ -16,7 +16,7 @@
       --serial-top: 21%;
       --serial-left: 38%;
       --date-top: 21%;
-      --date-right: 7%;
+      --date-right: 3%;
       /* Left panel box (percentages relative to image) */
       --leftpanel-left: 4.5%;
       --leftpanel-right: 74%;
@@ -93,45 +93,71 @@
     }
   </style>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <!-- Supabase for data instead of Google Sheets -->
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script>
-    // Supabase configuration
-    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const tableName = 'termination_table';
-    let supabaseClient = null; // created after DOMContentLoaded to ensure script loaded
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQgl1Atq8imTVqFT0696qsx8yazfgbmm5siS7R6VLvuBbCA4BBvrZKGVdrmPRj6aPtNwAh7zJflG54_/pub?output=csv';
+  // v3: sessionStorage only, 1 minute TTL, parsed rows + fields
+  // Cache disabled: always fetch fresh data
+  const CSV_CACHE_KEY = null;
+  const CSV_CACHE_TTL_MS = 0;
+  const STORAGE = { getItem(){ return null; }, setItem(){} };
 
     const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  // Direct mapping from Supabase row keys to record
-  function getVal(obj, key){ const v = obj ? obj[key] : ''; return v == null ? '' : String(v).trim(); }
+    function normalizeFieldMap(fields){ const m = {}; (fields||[]).forEach(f => { if (!f) return; m[String(f).toLowerCase().trim()] = f; }); return m; }
+    function findHeaderByAliases(fieldMap, aliases){ const keys = Object.keys(fieldMap); for (const a of aliases){ const t = norm(a); const k = keys.find(x => norm(x)===t || norm(x).includes(t)); if (k) return fieldMap[k]; } return null; }
+    function buildCsvKeyMap(fieldMap){
+      const alias = {
+        name: ['NAME EN'],
+        father: ['father','FATHER NAME EN','fathers name','guardian','parent'],
+        mother: ['mother','mother name','MOTHER NAME EN'],
+        class: ['class','std','standard','grade','present class','presentclass'],
+        leftclass: ['leftclass','left class','last class','lastclass','left school','leftschool'],
+        leftschool: ['leftschool','left school','leftclass','left class'],
+        nextclass: ['nextclass','next class','promoted to','promotion class','promotionclass'],
+        roll: ['roll','roll no','roll number','rollno','roll_no'],
+        section: ['section','sec'],
+        registrationnumber: ['registration number','registration','reg no','regno','registration no','registrationno','registration'],
+        dob: ['dob','date of birth','birth date','dateofbirth'],
+        paidmonth: ['paidmonth','paid month','dues till','dues paid till','duestill'],
+        iid: ['iid','id'],
+        sl: ['sl','serial','serial no','serial number','serialno'],
+        date: ['date','issue date','certificate date'],
+        character: ['character','conduct','behavior','behaviour']
+  , issueby: ['issueby','issuedby','issued by','issued','issue by','issue-by','issuedbyname','issued name','issuedname']
+  , gender: ['gender','sex']
+      };
+      const csvMap = {};
+      for (const key of Object.keys(alias)){ const hdr = findHeaderByAliases(fieldMap, alias[key]); if (hdr) csvMap[key] = hdr; }
+      return csvMap;
+    }
+    function getVal(row, csvMap, key){ const hdr = csvMap[key]; const v = hdr ? row[hdr] : undefined; return v == null ? '' : String(v).trim(); }
     function byParam(n){ return new URLSearchParams(location.search).get(n) || ''; }
 
     function defaultDate(raw){ if (raw) return raw; const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); return `${dd}-${mm}-${yyyy}`; }
 
-    function buildRecord(row){
+    function buildRecord(row, csvMap){
       return {
-        name: getVal(row, 'student_name_en'),
-        father: getVal(row, 'father_name_en'),
-        mother: getVal(row, 'mother_name_en'),
-        class: getVal(row, 'tc_class'),
-        leftclass: getVal(row, 'tc_class'),
-        leftschool: getVal(row, 'tc_class'),
-        nextclass: getVal(row, 'next_class'),
-        roll: getVal(row, 'tc_roll'),
-        section: getVal(row, 'tc_section'),
-        registrationnumber: getVal(row, 'board_registration'),
-        dob: getVal(row, 'student_dateofbirth'),
-        paidmonth: getVal(row, 'paid_month'),
-        iid: getVal(row, 'iid'),
-        sl: getVal(row, 'tc_sl'),
-        date: defaultDate(getVal(row, 'tc_date')),
-        character: getVal(row, 'student_character'),
-        issueby: getVal(row, 'issued_by'),
-        gender: getVal(row, 'student_gender'),
+        name: getVal(row, csvMap, 'name'),
+        father: getVal(row, csvMap, 'father'),
+        mother: getVal(row, csvMap, 'mother'),
+        class: getVal(row, csvMap, 'class'),
+        leftclass: getVal(row, csvMap, 'leftclass') || getVal(row, csvMap, 'leftschool'),
+        leftschool: getVal(row, csvMap, 'leftschool') || getVal(row, csvMap, 'leftclass'),
+        nextclass: getVal(row, csvMap, 'nextclass'),
+        roll: getVal(row, csvMap, 'roll'),
+        section: getVal(row, csvMap, 'section'),
+        registrationnumber: getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration'),
+        dob: getVal(row, csvMap, 'dob'),
+        paidmonth: getVal(row, csvMap, 'paidmonth'),
+        iid: getVal(row, csvMap, 'iid'),
+        sl: getVal(row, csvMap, 'sl'),
+        date: defaultDate(getVal(row, csvMap, 'date')),
+        character: getVal(row, csvMap, 'character'),
+  issueby: getVal(row, csvMap, 'issueby'),
+  gender: getVal(row, csvMap, 'gender'),
       };
     }
 
@@ -143,7 +169,7 @@
   const hisHer = isFemale ? 'Her' : 'His';
   const regVal = (r.registrationnumber||'').trim() || '---';
       return (
-`This is certify that ${r.name || ''} ${childWord} of ${r.father || ''} and ${r.mother || ''} student's of Feni Model High School. ${heShe} has left the school after finishing Class ${r.leftclass || ''}. ${heShe} was studying in class ${r.class || ''}, Roll: ${r.roll || ''}, Section: ${r.section || ''} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${r.nextclass || ''}.
+`This is certify that ${r.name || ''} ${childWord} of ${r.father || ''} and ${r.mother || ''} student's of Feni Model High School. ${heShe} has left the school ${r.leftclass || ''}. ${heShe} was studying in class ${r.class || ''}, Roll: ${r.roll || ''}, Section: ${r.section || ''} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${r.nextclass || ''}.
 ${hisHer} registration number is ${regVal} and date of birth is ${r.dob || ''}.
 ${heShe} has paid the school dues till ${r.paidmonth || ''}.
 
@@ -218,31 +244,123 @@ ${hisHer} character is ¬${r.character || ''}.`
       }).join('<br/>');
     }
 
-  // Removed Google Sheets augmentation; all data expected from Supabase table now.
+    // ---- Extra source: fetch name/father/mother from 0newdatabase/all_data_field sheets by IID ----
+    async function loadSheetPairsFrom0New(){
+      // Locate the helper list used by 0newdatabase/all_data_field.html
+      // certificate_word.html lives in /TC/, so go up one level
+      const url = '../0newdatabase/sheetidname.text';
+      const res = await fetch(url, { cache: 'no-store' });
+      if(!res.ok) throw new Error('sheetidname.text load failed');
+      const txt = await res.text();
+      const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+      const idRe=/^let\s+sheetId\s*=\s*['"]([^'"]+)['"];/i;
+      const nameRe=/^let\s+sheetName\s*=\s*['"]([^'"]+)['"];/i;
+      const pairs=[]; let curId=null;
+      for(const line of lines){
+        const im=idRe.exec(line); if(im){ curId=im[1]; continue; }
+        const nm=nameRe.exec(line); if(nm && curId){ pairs.push({ id:curId, name:nm[1] }); curId=null; }
+      }
+      return pairs;
+    }
+    function sheetCsvUrl(id, sheet){
+      return `https://docs.google.com/spreadsheets/d/${encodeURIComponent(id)}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+    }
+    async function findRowInAllSheetsByIID(iid){
+      if(!iid) return null;
+      try{
+        const pairs = await loadSheetPairsFrom0New();
+        for(const {id,name} of pairs){
+          const url = sheetCsvUrl(id, name);
+          const results = await new Promise((resolve, reject)=>{
+            Papa.parse(url, { download:true, header:true, skipEmptyLines:true, complete:r=>resolve(r), error:e=>reject(e) });
+          });
+          const fields = (results && results.meta && results.meta.fields) ? results.meta.fields : Object.keys((results && results.data && results.data[0])||{});
+          const fieldMap = normalizeFieldMap(fields||[]);
+          const csvMap = buildCsvKeyMap(fieldMap);
+          const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'] || fieldMap['studentid'] || fieldMap['sid'] || fieldMap['uniqueid'];
+          const rows = (results && results.data) ? results.data : [];
+          const row = rows.find(r => String(iidHeader ? r[iidHeader] : '').trim() === String(iid).trim());
+          if(row){ return { row, csvMap }; }
+        }
+      } catch(e){ console.warn('0newdatabase lookup failed', e); }
+      return null;
+    }
+    async function augmentNameFrom0New(rec, iid){
+      try{
+        const found = await findRowInAllSheetsByIID(iid);
+        if(found){
+          const {row, csvMap} = found;
+          // Only overwrite if value exists in the source
+          const name = getVal(row, csvMap, 'name');
+          const father = getVal(row, csvMap, 'father');
+          const mother = getVal(row, csvMap, 'mother');
+          const registrationnumber = getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration');
+          rec.name = name || rec.name;
+          rec.father = father || rec.father;
+          rec.mother = mother || rec.mother;
+          rec.registrationnumber = registrationnumber || rec.registrationnumber;
+        }
+      } catch(e){ console.warn('augmentNameFrom0New failed', e); }
+      return rec;
+    }
 
-    window.addEventListener('DOMContentLoaded', async () => {
+    window.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(location.search);
+      const iidParam = (params.get('iid')||'').trim();
+      const slParam = (params.get('sl')||'').trim();
+      const ukParam = (params.get('uk')||'').trim(); // format: iid_sl
       const status = document.getElementById('status');
       status.textContent = 'Loading…';
-      try {
-        if(!window.supabase){ status.textContent='Supabase lib missing'; status.classList.add('error'); return; }
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        const params = new URLSearchParams(location.search);
-        const iidParam = (params.get('iid')||'').trim();
-        const slParam = (params.get('sl')||'').trim();
-        if(!iidParam && !slParam){ status.textContent='Need iid or sl'; status.classList.add('error'); return; }
-        // Build query
-        let query = supabaseClient.from(tableName).select('*').limit(5);
-        if(iidParam) query = query.eq('iid', iidParam);
-        if(slParam) query = query.eq('tc_sl', slParam);
-        const { data, error } = await query.order('tc_sl', { ascending:false });
-        if(error) throw error;
-        if(!data || !data.length){ status.textContent='No record found'; status.classList.add('error'); return; }
-        if(data.length>1){ status.textContent='Multiple matched; using first'; }
-        const rec = buildRecord(data[0]);
-        rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
-        renderRecord(rec);
-        status.textContent='Ready';
-      } catch(e){ console.error(e); status.textContent='Load failed'; status.classList.add('error'); }
+      loadCsvData((results) => {
+        (async () => {
+          try {
+            const fieldMap = normalizeFieldMap(results.meta.fields);
+            const csvMap = buildCsvKeyMap(fieldMap);
+            const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'];
+            const slHeader = csvMap.sl || fieldMap['sl'] || fieldMap['serial'];
+            let candidates = results.data.slice();
+            // If uk present, split and narrow early
+            if(ukParam){
+              const [ukIid, ukSl] = ukParam.split('_');
+              candidates = candidates.filter(r => {
+                const riid = String(iidHeader ? r[iidHeader] : '').trim();
+                const rsl = String(slHeader ? r[slHeader] : '').trim();
+                return (ukIid?riid===ukIid:true) && (ukSl?rsl===ukSl:true);
+              });
+            }
+            if(iidParam){
+              candidates = candidates.filter(r => String(iidHeader ? r[iidHeader] : '').trim() === iidParam);
+            }
+            if(slParam){
+              candidates = candidates.filter(r => String(slHeader ? r[slHeader] : '').trim() === slParam);
+            }
+            // If still multiple, try roll+class params
+            if(candidates.length > 1){
+              const rollParam = (params.get('roll')||'').trim();
+              const classParam = (params.get('class')||params.get('cls')||'').trim();
+              const rollHeader = csvMap.roll || fieldMap['roll'];
+              const classHeader = csvMap.class || fieldMap['class'];
+              if(rollParam){ candidates = candidates.filter(r => String(rollHeader? r[rollHeader]: '').trim() === rollParam); }
+              if(classParam){ candidates = candidates.filter(r => String(classHeader? r[classHeader]: '').trim() === classParam); }
+            }
+            if(candidates.length === 0){ status.textContent = 'No record found'; status.classList.add('error'); return; }
+            if(candidates.length > 1){ status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; status.classList.add('warn'); }
+            const row = candidates[0];
+            let rec = buildRecord(row, csvMap);
+            // Unique key for QR & share
+            rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
+            // Enrich Name/Father/Mother from 0newdatabase by IID
+            status.textContent = 'Matching by IID…';
+            rec = await augmentNameFrom0New(rec, rec.iid || iidParam);
+            renderRecord(rec);
+            status.textContent = 'Ready';
+          } catch(e){ console.error(e); status.textContent='Failed to render'; status.classList.add('error'); }
+        })();
+      }, (err) => {
+        console.error(err);
+        status.textContent = 'Failed to load CSV';
+        status.classList.add('error');
+      });
     });
 
     function renderRecord(rec){
@@ -284,7 +402,21 @@ ${hisHer} character is ¬${r.character || ''}.`
       renderQr();
     }
 
-  // Removed CSV loader
+    // Load CSV with caching + worker parsing (persisted via localStorage when available)
+    function loadCsvData(onSuccess, onError){
+      const now = Date.now();
+  // Always fresh download (cache disabled)
+      Papa.parse(CSV_URL, {
+        download:true, header:true, skipEmptyLines:true, worker:true, fastMode:true,
+        complete:(results)=>{
+          try {
+            onSuccess(results);
+          } catch(e){ onError(e); }
+        }, error:onError
+      });
+    }
+
+  function tryPersistParsed(){ /* disabled */ }
 
     function renderQr(){
       const box = document.getElementById('qrBox');
