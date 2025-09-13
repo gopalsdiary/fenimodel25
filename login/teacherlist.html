@@ -1,685 +1,426 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
-  <title>ADD - Show & Edit</title>
+  <title>Teacher List</title>
+  <link rel="icon" type="image/png" href="../pad.png" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-  /* Polished UI: improved typography, spacing, colors */
-  html{font-size:100%;}
-  body{font-family:  Helvetica, sans-serif; padding:18px;background:linear-gradient(180deg,#f6f8fb,#fbfdff);color:#0f1724}
-  /* Base elements */
-  table{width:100%;border-collapse:separate;border-spacing:0;margin-top:14px}
-  th,td{padding:6px 8px;text-align:left;font-size:0.92rem}
-  th{background:linear-gradient(180deg,#fbfdff,#f1f6fb);font-weight:700;font-size:.78rem;color:#0b1220;border-bottom:1px solid #e6eef8}
-  .col-sl{width:44px;max-width:44px;text-align:center}
-
-  /* Buttons */
-  .btn{padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
-  .btn.primary{background:#ff7a00;color:#fff;box-shadow:0 10px 24px rgba(255,122,0,0.12)}
-  .btn.secondary{background:#f8fafc;color:#334155;border:2px solid #cbd5e1;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
-
-  /* Modal styles */
-  .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(6,12,28,0.45);display:none;align-items:center;justify-content:center;padding:20px;z-index:2500}
-  .modal .panel{background:#fff;padding:18px;border-radius:12px;max-width:820px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 20px 60px rgba(12,24,40,0.12);z-index:2600}
-  #viewModal{align-items:flex-start}
-  #viewModal .panel{position:relative;border-radius:12px}
-  /* ensure close button is above sticky header */
-  #viewModal .view-close-x{position:absolute;right:14px;top:10px;background:transparent;border:none;font-size:26px;line-height:1;padding:6px 8px;cursor:pointer;color:#334155;z-index:2800}
-
-  .field-row{display:flex;gap:12px;margin-bottom:12px;align-items:center}
-  .field-row label{min-width:120px;color:#334155;font-weight:600}
-  .field-row input, .field-row textarea{flex:1;padding:10px;border-radius:8px;border:1px solid #eef4fb;background:#fff}
-  .notice{margin-top:8px;color:#b42318}
-  .error-details{font-family:monospace;font-size:12px;color:#b42318;margin-top:6px}
-
-  /* photo column */
-  .row-thumb{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #eef4fb;display:block}
-  /* photo cell: center and prevent table row from stretching oddly */
-  td > .row-thumb{display:block;margin:6px auto}
-  td:nth-child(3){width:76px;max-width:76px;text-align:center}
-  .no-image{font-size:13px;color:#c12b2b;font-style:italic}
-  /* raised z-index so photo preview sits above sticky headers */
-  #photo-preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2700;width:380px;height:520px;border-radius:12px;border:2px solid rgba(10,40,80,0.06);background:#fff;padding:12px;display:none;box-shadow:0 20px 60px rgba(12,24,40,0.12)}
-
-  /* Top bar and controls */
-  .top-bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;background:linear-gradient(180deg,#ffffff,#fbfdff);padding:14px 16px;border:1px solid #eef4fb;border-radius:12px;box-shadow:0 8px 20px rgba(14,24,40,0.04);margin-bottom:14px;position:relative}
-  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  select, input[type="text"]{padding:9px 12px;border:1px solid #e6eef8;border-radius:10px;background:#fff;font-family:inherit;font-size:.96rem;min-width:120px;color:#0b1a2b}
-  /* center the status text within top-bar */
-  #status{position:absolute;left:50%;transform:translateX(-50%);font-weight:700}
-  select:focus, input[type="text"]:focus{outline:2px solid rgba(11,116,222,0.14);box-shadow:0 8px 24px rgba(11,116,222,0.06)}
-
-  /* Orange (কমলা) accent for filters */
-  .filter-label{color:#ff7a00;font-weight:700;margin-right:6px}
-  .filter-select{border-color:rgba(255,122,0,0.18);box-shadow:0 6px 18px rgba(255,122,0,0.06)}
-  .filter-select:focus{outline:2px solid rgba(255,122,0,0.16);box-shadow:0 10px 30px rgba(255,122,0,0.08)}
-
-  /* Table visuals */
-  #dataTable{background:#ffffff;border:2px solid #ffb366;border-radius:8px;overflow:hidden;box-shadow:0 4px 6px rgba(255,179,102,0.1), 0 2px 4px rgba(255,179,102,0.06)}
-  #dataTable thead th{position:sticky;top:0;z-index:3;padding:16px 20px;background:linear-gradient(135deg,#ffb366,#ffcc80);border:1px solid #ffb366;font-weight:600;color:#ffffff}
-  #dataTable tbody td{padding:16px 20px;border:1px solid #ffb366;border-bottom:1px solid #f1f5f9}
-  #dataTable tbody tr:hover{background:#fff7ed;border-left:3px solid #ffb366;transition:background-color 0.15s ease}
-
-  /* tint entire row redder when student has TC status (strong highlight) */
-  #dataTable tbody tr.status-tc{background:#fef2f2;border-left:4px solid #ef4444}
-  .small-muted{font-size:.86rem;color:#64748b}
-
-  .loading-spinner{width:32px;height:32px;border:4px solid #edf4fb;border-top-color:#0b74de;border-radius:50%;animation:spin 1s linear infinite;margin:auto}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .fade-in{animation:fade .36s ease}
-  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-
-  @media (max-width:780px){
-    .top-bar{padding:10px}
-  th,td{padding:10px 8px}
-    .field-row{flex-direction:column;align-items:stretch}
-  #dataTable thead{display:none}
-  #dataTable, #dataTable tbody, #dataTable tr, #dataTable td{display:block;width:100%}
-  #dataTable tr{margin-bottom:12px;border-radius:10px;padding:12px;background:#fff;box-shadow:0 6px 20px rgba(12,24,40,0.04)}
-  #dataTable td{border:none;padding:8px 10px}
-  #dataTable td:before{content:attr(data-label);font-weight:700;display:block;color:#334155;margin-bottom:6px}
-  }
+    :root { --bg:#f6f8fa; --card:#ffffff; --border:#d0d7de; --accent:#0366d6; --accent-hover:#024c9e; --danger:#d73a49; --radius:6px; font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; }
+    body { margin:0; background:var(--bg); color:#24292f; }
+    header { background:#0d1117; color:#fff; padding:12px 20px; display:flex; align-items:center; justify-content:space-between; }
+    h1 { font-size:20px; margin:0; font-weight:600; }
+    .container { max-width:1500px; margin:18px auto 60px; background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px 28px; box-shadow:0 2px 4px rgba(0,0,0,.04); }
+    .toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:14px; }
+    .toolbar input[type=text]{ flex:1 1 320px; padding:8px 10px; border:1px solid var(--border); border-radius:4px; font-size:14px; }
+    .status { font-size:13px; min-height:18px; }
+    .status.ok { color:#1a7f37; }
+    .status.err { color:var(--danger); }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    thead { background:#fafbfc; position:sticky; top:0; z-index:5; }
+    th, td { border:1px solid var(--border); padding:6px 8px; text-align:left; vertical-align:middle; }
+    th { font-weight:600; font-size:13px; letter-spacing:.5px; background:#f0f3f6; }
+    tbody tr:nth-child(even){ background:#fcfcfd; }
+    tbody tr:hover { background:#fffbe6; }
+    .sl-col { width:52px; text-align:center; }
+    .iid-col { width:90px; font-weight:600; font-family:monospace; }
+    .photo-col { width:70px; }
+    .photo-col img { width:48px; height:48px; object-fit:cover; border-radius:4px; border:1px solid var(--border); background:#fff; }
+    .actions-col { width:70px; text-align:center; }
+    button { cursor:pointer; font-size:12px; line-height:1.2; padding:6px 10px; border-radius:4px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:500; }
+    button:hover { background:var(--accent-hover); }
+    button.outline { background:#fff; color:var(--accent); }
+    button.outline:hover { background:#e7f3ff; }
+    /* Modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-start; justify-content:center; overflow:auto; padding:60px 20px 40px; z-index:100; }
+    .modal { background:#fff; width:680px; max-width:100%; border-radius:var(--radius); border:1px solid var(--border); box-shadow:0 4px 18px rgba(0,0,0,.18); animation:pop .25s ease; }
+    @keyframes pop { from { transform:translateY(10px); opacity:0;} to { transform:translateY(0); opacity:1; } }
+    .modal header { background:#f6f8fa; color:#24292f; padding:14px 18px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+    .modal h2 { font-size:17px; margin:0; }
+    .modal .close-btn { background:transparent; border:none; color:#57606a; font-size:20px; padding:4px 6px; line-height:1; }
+    .modal .close-btn:hover { color:#000; }
+    form.edit-form { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:14px 16px; padding:18px; }
+    form.edit-form label { font-size:12px; text-transform:uppercase; letter-spacing:.5px; font-weight:600; color:#57606a; display:block; margin-bottom:3px; }
+    form.edit-form input { width:100%; padding:7px 8px; font-size:13px; border:1px solid var(--border); border-radius:4px; }
+    form.edit-form input:focus { outline:2px solid #84c5ff; outline-offset:0; }
+    .modal footer { display:flex; gap:10px; justify-content:flex-end; padding:12px 18px 18px; border-top:1px solid var(--border); }
+    .empty { text-align:center; padding:40px 10px; font-size:15px; color:#57606a; }
+    .loading { padding:14px 0; font-size:14px; }
+    .badge { display:inline-block; padding:2px 6px; border:1px solid var(--border); border-radius:12px; font-size:11px; background:#f6f8fa; }
+    .pill { background:#e7f3ff; border-color:#c2e0ff; color:#024c9e; }
+    .nowrap { white-space:nowrap; }
+    .muted { color:#6a737d; font-size:12px; }
+    .flex { display:flex; align-items:center; gap:6px; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
   </style>
 </head>
 <body>
-  <button id="addTeacherBtn" class="btn primary" style="float: right; border-radius:10px; padding:8px 14px; color:#fff; font-weight:700;">ADD TEACHER</button>
-  <h2>teacher_database — Overview</h2>
-  <div class="top-bar">
-    <div class="filters left" style="align-items:center">
-      <div class="small-muted">Showing all teachers</div>
+  <header>
+    <h1>Teacher List</h1>
+    <div style="font-size:13px; opacity:.85;">Supabase powered</div>
+  </header>
+  <div class="container">
+    <div class="toolbar">
+      <button type="button" id="addTeacherBtn" style="background:#1f883d; border-color:#1f883d;">ADD TEACHER</button>
+      <input id="searchBox" type="text" placeholder="Search name / sector / designation / phone / email / NID" autocomplete="off" />
+      <div class="status" id="globalStatus"></div>
     </div>
-    <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
-      <span id="status" style="margin-left:8px;color:#334155;font-weight:600"></span>
-      <button id="clearFilters" class="btn secondary" style="margin-left:8px">Reload</button>
+    <div class="table-wrap">
+      <table id="teacherTable">
+        <thead>
+          <tr>
+            <th class="sl-col">SL</th>
+            <th class="iid-col">IID</th>
+            <th class="photo-col">Photo</th>
+            <th>Name (EN)</th>
+            <th>Sector</th>
+            <th>Designation</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>NID</th>
+            <th>Join Date</th>
+            <th class="actions-col">Action</th>
+          </tr>
+        </thead>
+        <tbody id="teacherTbody">
+          <tr><td colspan="11" class="loading">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="rowCount" class="muted" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- Modal (Add Teacher Only) -->
+  <div class="modal-backdrop" id="editModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+      <header>
+        <h2 id="editTitle">Edit Teacher</h2>
+        <button class="close-btn" type="button" id="closeModal" aria-label="Close">×</button>
+      </header>
+      <form id="editForm" class="edit-form" autocomplete="off"></form>
+      <footer>
+        <div class="flex" style="margin-right:auto;">
+          <span id="modalStatus" class="status"></span>
+        </div>
+        <button type="button" id="saveBtn">Save</button>
+        <button type="button" class="outline" id="cancelBtn">Cancel</button>
+      </footer>
     </div>
   </div>
 
-  <table id="dataTable">
-    <thead>
-      <tr>
-        <th class="col-sl">SL</th>
-        <th>IID</th>
-  <th>Photo</th>
-        <th>Teacher Name</th>
-        <th>Sector</th>
-        <th>Designation</th>
-        <th>Phone</th>
-        <th>Email</th>
-        <th>NID</th>
-        <th>Join Date</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody>
-  <tr><td colspan="11">Loading...</td></tr>
-    </tbody>
-  </table>
+  <script>
+    // ---------- Config ----------
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const TABLE = 'teacher_database';
 
-  <!-- Edit modal -->
-  <div id="editModal" class="modal">
-    <div class="panel">
-      <h3>Edit Record</h3>
+    // ---------- State ----------
+    let allRows = []; // full dataset
+    let filtered = []; // after search
+  let currentEdit = null; // row object being edited
+  let addMode = false; // when true, modal is for adding
 
-      <!-- Dynamic fields will be rendered here -->
-      <div id="editFields"></div>
-
-      <div style="text-align:right;margin-top:12px">
-        <button id="cancelBtn" class="btn secondary">Cancel</button>
-        <button id="saveBtn" class="btn">Save</button>
-      </div>
-      <div id="modalNotice" class="notice"></div>
-    </div>
-  </div>
-
-  <!-- View modal (read-only) -->
-  <div id="viewModal" class="modal">
-    <div class="panel">
-      <h3>View Record</h3>
-      <button id="viewCloseX" class="view-close-x" aria-label="Close">&times;</button>
-      <div id="viewFields"></div>
-      <div style="text-align:right;margin-top:12px">
-        <button id="closeViewBtn" class="btn secondary">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Supabase client + centralized config -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<script>
-  
-  // --- Supabase Initialization (single source) ---
-  // We attempt to use any globally injected config first (window.SUPABASE_URL / window.SUPABASE_ANON_KEY)
-  // and fall back to the hard‑coded project credentials if not present.
-  // This prevents the previous double 'const supabase' declaration syntax error.
-  (window.ensureSupabaseConfig && typeof window.ensureSupabaseConfig === 'function') && window.ensureSupabaseConfig();
-
-  const _FALLBACK_SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-  const _FALLBACK_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N10.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-
-  const SUPABASE_URL = window.SUPABASE_URL || _FALLBACK_SUPABASE_URL;
-  let SUPABASE_KEY = window.SUPABASE_ANON_KEY || _FALLBACK_SUPABASE_KEY;
-
-  // Simple heuristic: anon keys are JWTs that usually have 3 dot segments.
-  function looksLikeJwt(k){ return typeof k === 'string' && k.split('.').length === 3; }
-
-  // Defer creation until after DOMContentLoaded to allow other scripts to inject config.
-  let supabase = null;
-  function initSupabase(){
-    if(supabase) return supabase;
-    if(window.SUPABASE_ANON_KEY && looksLikeJwt(window.SUPABASE_ANON_KEY)){
-      SUPABASE_KEY = window.SUPABASE_ANON_KEY;
-    }
-    if(!looksLikeJwt(SUPABASE_KEY)){
-      console.error('Supabase anon key format looks invalid.');
-      return null;
-    }
-    if(!window.supabase || !window.supabase.createClient){
-      console.error('Supabase library not loaded yet.');
-      return null;
-    }
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    return supabase;
-  }
-
-  // Helper to get a ready client or throw a user-visible message.
-  function getClientOrAbort(context){
-    const client = initSupabase();
-    if(!client){
-      console.error('Supabase not initialized for', context);
-      throw new Error('Supabase not initialized. Provide valid anon key before data can load.');
-    }
-    return client;
-  }
-
-  const tableName = 'teacher_database';
-
-  const tbody = document.querySelector('#dataTable tbody');
-  const statusEl = document.getElementById('status');
-  // filters removed for teacher list
-  const classFilter = null;
-  const sectionFilter = null;
-  const sessionFilter = null;
-  const clearFilters = document.getElementById('clearFilters');
+    // ---------- Elements ----------
+    const tbody = document.getElementById('teacherTbody');
+    const searchBox = document.getElementById('searchBox');
+    const globalStatus = document.getElementById('globalStatus');
+    const rowCountEl = document.getElementById('rowCount');
+    const modal = document.getElementById('editModal');
+    const editForm = document.getElementById('editForm');
+    const modalStatus = document.getElementById('modalStatus');
+  const saveBtn = document.getElementById('saveBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const closeModalBtn = document.getElementById('closeModal');
   const addTeacherBtn = document.getElementById('addTeacherBtn');
 
-  // photo preview
-  const photoPreview = document.createElement('div');
-  photoPreview.id = 'photo-preview';
-  const previewImg = document.createElement('img');
-  previewImg.style.width = '100%';
-  previewImg.style.height = '100%';
-  previewImg.style.objectFit = 'cover';
-  photoPreview.appendChild(previewImg);
-  document.body.appendChild(photoPreview);
-
-  tbody.addEventListener('mouseover', (e) => {
-    if(e.target.classList.contains('row-thumb')){
-      previewImg.src = e.target.src;
-      photoPreview.style.display = 'block';
-    }
-  });
-
-  tbody.addEventListener('mouseout', (e) => {
-    if(e.target.classList.contains('row-thumb')){
-      photoPreview.style.display = 'none';
-    }
-  });
-
-  // keep full dataset in memory for client-side filtering
-  let allRowsCache = [];
-
-    // modal elems
-    const editModal = document.getElementById('editModal');
-    const editFields = document.getElementById('editFields');
-    const cancelBtn = document.getElementById('cancelBtn');
-    const saveBtn = document.getElementById('saveBtn');
-    const modalNotice = document.getElementById('modalNotice');
-
-  // auto-load all data on page load
-
-  // no-op filter listeners (filters removed)
-  
-  clearFilters.addEventListener('click', ()=>{ loadData(); });
-  if(addTeacherBtn) addTeacherBtn.addEventListener('click', () => { openAddTeacher(); });
-    cancelBtn.addEventListener('click', closeModal);
-    saveBtn.addEventListener('click', saveEdit);
-
-    // store the currently editing IID
-    let currentIID = null;
-
-  // Open add-teacher modal with empty fields
-  function openAddTeacher(){
-    currentIID = null;
-    modalNotice.textContent = '';
-    const rec = {
-      teacher_name_en: '', teacher_name_bn: '', sector: '', designation_en: '', designation_bn: '', mobile_number_en: '', mobile_number_bn: '', email_id: '', nid_number_en: '', nid_number_bn: '', join_date: ''
-    };
-    renderEditFields(rec);
-    editModal.style.display = 'flex';
-  }
-
-  // view modal elems
-  const viewModal = document.getElementById('viewModal');
-  const viewFields = document.getElementById('viewFields');
-  const closeViewBtn = document.getElementById('closeViewBtn');
-  const viewCloseX = document.getElementById('viewCloseX');
-  closeViewBtn.addEventListener('click', () => { viewModal.style.display = 'none'; viewFields.innerHTML = ''; });
-  if(viewCloseX) viewCloseX.addEventListener('click', () => { viewModal.style.display = 'none'; viewFields.innerHTML = ''; });
-
-    // photo links loaded from photo/link.csv (one URL per line).
-      let photoLinks = [];
-
-  // data order loaded from dataorder.csv (defines preview field order and labels)
-  let dataOrder = []; // array of { key, label }
-
-    async function loadPhotoLinks(){
-      // Try multiple possible filenames (project has 1link.csv; legacy code expected link.csv)
-      const candidates = ['../photo/link.csv','../photo/1link.csv'];
-      for(const url of candidates){
-        try{
-          const res = await fetch(url, { cache: 'no-store' });
-          if(res && res.ok){
-            const txt = await res.text();
-            photoLinks = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-            if(photoLinks.length){
-              console.log('Loaded photo links from', url, 'count', photoLinks.length);
-              return;
-            }
-          }
-        }catch(e){
-          console.warn('Photo link load attempt failed for', url, e);
-        }
-      }
-      photoLinks = [];
-    }
-    // start loading photo links in background (non-blocking)
-    loadPhotoLinks();
-
-    // load dataorder.csv to determine preview order and labels
-    async function loadDataOrder(){
-      try{
-        // dataorder.csv is expected next to teacherlist in the login/ folder
-        const res = await fetch('dataorder.csv');
-        if(!res || !res.ok){ dataOrder = []; return; }
-        const txt = await res.text();
-        const parsed = [];
-        const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        lines.forEach(line => {
-          // support CSV with key,label or key>label style
-          let parts = [];
-          if(line.includes(',')) parts = line.split(','); else parts = line.split('>');
-          const key = parts[0] ? parts[0].trim() : '';
-          const label = parts.slice(1).join(parts.includes(',') ? ',' : '>').trim() || key;
-          if(key) parsed.push({ key, label });
-        });
-        dataOrder = parsed;
-      }catch(e){
-        console.warn('loadDataOrder failed', e);
-        dataOrder = [];
-      }
-    }
-    loadDataOrder();
-
-  async function loadData(){
-      statusEl.textContent = 'Loading (batch 0)...';
-      tbody.innerHTML = '<tr><td colspan="11">Starting load...</td></tr>';
-      try {
-        const batchSize = 500;
-        let accumulated = [];
-        let lastId = 0;
-        let batch = 0;
-        let done = false;
-        while(!done){
-          batch++;
-          statusEl.textContent = `Loading batch ${batch} (loaded ${accumulated.length})...`;
-      const supa = getClientOrAbort('loadData');
-      const { data, error } = await supa
-              .from(tableName)
-              .select('iid, pp_photo, teacher_name_en, sector, designation_en, mobile_number_en, email_id, nid_number_en, join_date')
-              .gt('iid', lastId)
-              .order('iid', { ascending: true })
-              .limit(batchSize);
-          if(error){
-            const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-            throw new Error(`${error.message} | details: ${details}`);
-          }
-          if(!data || data.length === 0){ done = true; break; }
-          accumulated = accumulated.concat(data);
-          lastId = data[data.length-1].iid || lastId;
-          // Render incrementally every batch so user sees progress
-          allRowsCache = accumulated.slice().sort((a,b)=> (Number(a.iid)||0) - (Number(b.iid)||0));
-          renderTable(allRowsCache);
-          // brief yield to allow paint
-          await new Promise(r=>setTimeout(r,30));
-          if(data.length < batchSize){ done = true; }
-        }
-        statusEl.textContent = `Total loaded: ${allRowsCache.length}`;
-      } catch(err){
-        console.error('loadData error:', err);
-        statusEl.textContent = 'Data loading error';
-        const msg = err && err.message ? err.message : String(err);
-        tbody.innerHTML = `<tr><td colspan="11">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
-      }
+    function setStatus(el, msg, type='') {
+      if(!el) return; el.textContent = msg||''; el.className='status'+(type?(' '+type):'');
     }
 
-    function renderTable(rows){
-    if(!rows || rows.length === 0){
-  tbody.innerHTML = '<tr><td colspan="11">No records found</td></tr>';
-        return;
-      }
-      tbody.innerHTML = '';
-      // Render teacher_database rows
-      rows.forEach((r, idx) => {
-        const tr = document.createElement('tr');
-        const tdSl = document.createElement('td'); tdSl.className = 'col-sl'; tdSl.textContent = idx + 1; tr.appendChild(tdSl);
-        const iid = (r['iid'] ?? r.iid) || '';
-
-        const tdIid = document.createElement('td'); tdIid.textContent = escapeHtml(iid);
-  // photo thumbnail (pp_photo)
-  const tdPhoto = document.createElement('td');
-        const photoUrl = r['pp_photo'] || r.pp_photo || '';
-        if(photoUrl){
-          const img = document.createElement('img'); img.src = String(photoUrl); img.alt = 'Photo'; img.className = 'row-thumb';
-          tdPhoto.appendChild(img);
-        } else {
-          const span = document.createElement('div'); span.className = 'no-image'; span.textContent = '—'; tdPhoto.appendChild(span);
-        }
-  const tdName = document.createElement('td'); tdName.textContent = escapeHtml(r['teacher_name_en'] || r.teacher_name_en || '');
-        const tdSector = document.createElement('td'); tdSector.textContent = escapeHtml(r['sector'] || r.sector || '');
-  const tdDesignation = document.createElement('td'); tdDesignation.textContent = escapeHtml(r['designation_en'] || r.designation_en || '');
-  const tdPhone = document.createElement('td'); tdPhone.textContent = escapeHtml(r['mobile_number_en'] || r.mobile_number_en || '');
-  const tdEmail = document.createElement('td'); tdEmail.textContent = escapeHtml(r['email_id'] || r.email_id || '');
-  const tdNid = document.createElement('td'); tdNid.textContent = escapeHtml(r['nid_number_en'] || r.nid_number_en || '');
-        const tdJoin = document.createElement('td'); tdJoin.textContent = escapeHtml(r['join_date'] || r.join_date || '');
-
-        const tdAction = document.createElement('td');
-  const btnEdit = document.createElement('button'); btnEdit.className = 'btn primary'; btnEdit.textContent = 'Edit'; btnEdit.setAttribute('data-iid', iid);
-  btnEdit.addEventListener('click', () => { openEditByIID(iid); });
-        tdAction.appendChild(btnEdit);
-        const btnView = document.createElement('button'); btnView.className = 'btn secondary'; btnView.style.marginLeft = '8px'; btnView.textContent = 'View'; btnView.addEventListener('click', ()=> openViewByIID(iid));
-        tdAction.appendChild(btnView);
-
-  tr.appendChild(tdIid);
-  tr.appendChild(tdPhoto);
-  tr.appendChild(tdName);
-        tr.appendChild(tdSector);
-        tr.appendChild(tdDesignation);
-        tr.appendChild(tdPhone);
-        tr.appendChild(tdEmail);
-        tr.appendChild(tdNid);
-        tr.appendChild(tdJoin);
-        tr.appendChild(tdAction);
-
-        tbody.appendChild(tr);
-      });
+    // ---------- Fetch & Render ----------
+    async function loadTeachers() {
+      setStatus(globalStatus, 'Loading teachers...');
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('iid, teacher_name_en, sector, designation_en, mobile_number_en, email_id, nid_number_en, join_date, pp_photo')
+        .order('iid', { ascending: true });
+      if(error){ setStatus(globalStatus, 'Error: '+error.message, 'err'); return; }
+      allRows = data || [];
+      filtered = allRows.slice();
+      renderTable();
+      setStatus(globalStatus, 'Loaded '+allRows.length+' teachers', 'ok');
     }
 
-  async function openEditByIID(iid){
-      // fetch full row from DB to ensure we have all columns
-      modalNotice.textContent = '';
-      currentIID = iid;
-      try{
-        const supa = getClientOrAbort('openEditByIID');
-        const { data, error } = await supa
-          .from(tableName)
-          .select('*')
-      .eq('iid', Number(iid))
-          .limit(1)
-          .single();
-        if(error){
-          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-          throw new Error(`${error.message} | details: ${details}`);
-        }
-        renderEditFields(data || {});
-        editModal.style.display = 'flex';
-      }catch(err){
-        console.error('openEdit error:', err);
-        modalNotice.style.color = '#a00';
-        modalNotice.textContent = 'Failed to load record: ' + (err.message || err);
-        // fallback: if we had a row in the table view, user can still edit minimal fields (not implemented here)
-      }
+    function renderTable() {
+      if(!filtered.length){ tbody.innerHTML = '<tr><td colspan="11" class="empty">No matching teachers</td></tr>'; rowCountEl.textContent='0 rows'; return; }
+      const rowsHtml = filtered.map((r, idx) => {
+        const safe = (v)=> (v==null||v==='')?'<span class="muted">—</span>':escapeHtml(v);
+        const photo = r.pp_photo ? '<img src="'+escapeAttr(r.pp_photo)+'" alt="photo" />' : '<span class="muted">No Photo</span>';
+        return `<tr data-iid="${r.iid}">
+          <td class="sl-col">${idx+1}</td>
+          <td class="iid-col">${r.iid}</td>
+          <td class="photo-col">${photo}</td>
+          <td>${safe(r.teacher_name_en)}</td>
+          <td>${safe(r.sector)}</td>
+            <td>${safe(r.designation_en)}</td>
+          <td>${safe(r.mobile_number_en)}</td>
+          <td>${safe(r.email_id)}</td>
+          <td>${safe(r.nid_number_en)}</td>
+          <td class="nowrap">${safe(r.join_date)}</td>
+          <td class="actions-col"><button type="button" data-link-edit="${r.iid}">Edit</button></td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rowsHtml;
+      rowCountEl.textContent = filtered.length + ' row'+(filtered.length!==1?'s':'');
     }
 
-    // Open a read-only view modal for a given IID
-    async function openViewByIID(iid){
-      try{
-        const supa = getClientOrAbort('openViewByIID');
-        const { data, error } = await supa
-          .from(tableName)
-          .select('*')
-          .eq('iid', Number(iid))
-          .limit(1)
-          .single();
-        if(error){
-          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
-          throw new Error(`${error.message} | details: ${details}`);
-        }
-        renderViewFields(data || {});
-        viewModal.style.display = 'flex';
-      }catch(err){
-        console.error('openView error:', err);
-        alert('Failed to load record for view: ' + (err.message || err));
-      }
+    // ---------- Search ----------
+    function applySearch() {
+      const q = searchBox.value.trim().toLowerCase();
+      if(!q){ filtered = allRows.slice(); return renderTable(); }
+      filtered = allRows.filter(r => [
+          r.teacher_name_en,
+          r.sector,
+          r.designation_en,
+          r.mobile_number_en,
+          r.email_id,
+          r.nid_number_en
+        ].some(v => (v||'').toLowerCase().includes(q))
+      );
+      renderTable();
+    }
+    let searchTimer; 
+    searchBox.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(applySearch, 250); });
+
+    // ---------- Modal Helpers ----------
+  // (Legacy) openModal kept for potential future inline editing; not used for edit now.
+  async function openModal(rowMeta){
+      // Fetch full row fresh to ensure latest data (including columns not listed in table)
+      setStatus(globalStatus, 'Loading full record for IID '+rowMeta.iid+' ...');
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .eq('iid', rowMeta.iid)
+        .single();
+      if(error){ setStatus(globalStatus,'Load failed: '+error.message,'err'); return; }
+      currentEdit = data;
+      buildDynamicForm(data);
+      modal.style.display='flex';
+      modal.setAttribute('aria-hidden','false');
+      setStatus(modalStatus, '');
+      const first = editForm.querySelector('input:not([type=hidden])');
+      if(first) first.focus();
     }
 
-    // Render record fields in read-only form (labels + values)
-    function renderViewFields(record){
-      viewFields.innerHTML = '';
-      const rendered = new Set();
-
-      // Attempt to show student photo at the top (large preview)
-      (function renderTopPhoto(){
-        // try common keys first (added pp_photo for teacher table)
-        const possibleKeys = ['pp_photo','student_photo_url','photo_url','photo','student_photo','student_photo_en'];
-        let url = '';
-        for(const k of possibleKeys){ if(record && record[k]){ url = record[k]; break; } }
-        // fallback: try iid-based lookup from photoLinks
-        const iid = record && (record.iid || record.IID || record.Iid || record['iid']);
-        if(!url && iid && Array.isArray(photoLinks) && photoLinks.length){
-          const jpg = 'avatar-' + iid + '.jpg';
-          const png = 'avatar-' + iid + '.png';
-          for(const p of photoLinks){ try{ const fn = new URL(p).pathname.split('/').pop(); if(fn === jpg || fn === png){ url = p; break; } }catch(e){} }
-        }
-        if(url){
-          const wrap = document.createElement('div');
-          wrap.style.display = 'flex';
-          wrap.style.justifyContent = 'center';
-          wrap.style.marginBottom = '12px';
-          const img = document.createElement('img');
-          img.src = String(url);
-          img.alt = 'Student photo';
-          img.style.maxWidth = '150px';
-          img.style.maxHeight = '150px';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = '10px';
-          img.style.boxShadow = '0 8px 28px rgba(12,24,40,0.12)';
-          wrap.appendChild(img);
-          viewFields.appendChild(wrap);
-          // mark photo key as rendered if it exists in record
-          for(const k of possibleKeys){ if(Object.prototype.hasOwnProperty.call(record, k)) rendered.add(k); }
-        }
-      })();
-
-      // helper to render a single key/value
-      function renderField(key, label, val){
-        const row = document.createElement('div');
-        row.className = 'field-row';
-        const lab = document.createElement('label'); lab.textContent = (label || key) + ':';
-        const container = document.createElement('div');
-        container.style.padding = '8px';
-        container.style.background = '#f9f9f9';
-        container.style.border = '1px solid #eee';
-        container.style.flex = '1';
-        container.style.whiteSpace = 'pre-wrap';
-
-        // special-case photo URL to render image
-        if(key === 'student_photo_url' && val){
-          const img = document.createElement('img');
-          img.src = String(val);
-          img.alt = 'Photo';
-          img.style.maxWidth = '220px';
-          img.style.maxHeight = '220px';
-          img.style.objectFit = 'cover';
-          container.appendChild(img);
-        } else {
-          container.textContent = val === null || val === undefined ? '' : String(val);
-        }
-
-        row.appendChild(lab);
-        row.appendChild(container);
-        viewFields.appendChild(row);
-      }
-
-      // 1) Render fields according to dataOrder.csv
-      if(Array.isArray(dataOrder) && dataOrder.length){
-        dataOrder.forEach(entry => {
-          const key = entry.key;
-          if(Object.prototype.hasOwnProperty.call(record, key)){
-            const val = record[key] === null || record[key] === undefined ? '' : record[key];
-            renderField(key, entry.label || key, val);
-            rendered.add(key);
-          }
-        });
-      }
-
-      // 2) Render any remaining fields not listed in dataOrder, alphabetically
-      const leftover = Object.keys(record).filter(k => !rendered.has(k)).sort();
-      leftover.forEach(k => {
-        const val = record[k] === null || record[k] === undefined ? '' : record[k];
-        renderField(k, k, val);
-        rendered.add(k);
-      });
+    function openAddModal(){
+      addMode = true;
+      currentEdit = null;
+      // Minimal fields for adding new teacher
+      const newRowTemplate = {
+        teacher_name_en: '',
+        sector: '',
+        designation_en: '',
+        mobile_number_en: '',
+        email_id: '',
+        nid_number_en: '',
+        join_date: '',
+        pp_photo: ''
+      };
+      buildAddForm(newRowTemplate);
+      modal.style.display='flex';
+      modal.setAttribute('aria-hidden','false');
+      setStatus(modalStatus, '');
+      const first = editForm.querySelector('input');
+      if(first) first.focus();
+      document.getElementById('editTitle').textContent='Add Teacher';
+      saveBtn.textContent='Create';
     }
-
-    function renderEditFields(record){
-      editFields.innerHTML = '';
-  // Define the order: Teacher Name (EN/BN), Father/Mother (EN/BN), Sector, Designation (EN/BN), Phone (EN/BN), Email, NID (EN/BN), Join Date, then others
-  const priorityOrder = ['teacher_name_en','teacher_name_bn','father_name_en','father_name_bn','mother_name_en','mother_name_bn','sector','designation_en','designation_bn','mobile_number_en','mobile_number_bn','email_id','nid_number_en','nid_number_bn','join_date'];
-      const keys = Object.keys(record);
-      const orderedKeys = [];
-      priorityOrder.forEach(key => {
-        if(keys.includes(key)) orderedKeys.push(key);
-      });
-      // Add remaining keys not in priority order
-      keys.forEach(key => {
-        if(!priorityOrder.includes(key)) orderedKeys.push(key);
-      });
-      orderedKeys.forEach(key => {
-        const val = record[key] === null || record[key] === undefined ? '' : record[key];
-        const row = document.createElement('div');
-        row.className = 'field-row';
-        const label = document.createElement('label');
-        label.textContent = key + ':';
-        // decide input type: use textarea for long text fields (heuristic)
-        let input;
-        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
-          input = document.createElement('textarea');
-          input.rows = 4;
-        } else {
-          input = document.createElement('input');
-          input.type = 'text';
-        }
-        input.value = val;
-        input.setAttribute('data-field', key);
-  if(key === 'IID' || key === 'iid'){
-          input.readOnly = true;
-        }
-        row.appendChild(label);
-        row.appendChild(input);
-        editFields.appendChild(row);
-      });
-    }
-
-    async function saveEdit(){
-      modalNotice.textContent = '';
-      // build payload from inputs
-      const inputs = editFields.querySelectorAll('[data-field]');
-      const payload = {};
-      inputs.forEach(inp =>{
-        const field = inp.getAttribute('data-field');
-        if(field === 'iid' || field === 'IID') return; // don't try to update primary key
-        const v = inp.value === '' ? null : inp.value;
-        payload[field] = v;
-      });
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving...';
-      try{
-        let res;
-        if(currentIID){
-          // update existing
-          const supa = getClientOrAbort('saveEditUpdate');
-          res = await supa.from(tableName).update(payload).eq('iid', Number(currentIID));
-        } else {
-          // insert new
-          const supa = getClientOrAbort('saveEditInsert');
-          res = await supa.from(tableName).insert([payload]);
-        }
-        if(res.error){
-          const details = JSON.stringify(res.error, Object.getOwnPropertyNames(res.error));
-          throw new Error(`${res.error.message} | details: ${details}`);
-        }
-        modalNotice.style.color = 'green';
-        modalNotice.textContent = currentIID ? 'Updated successfully' : 'Added successfully';
-        // refresh list and close
-        await loadData();
-        setTimeout(()=>{ closeModal(); modalNotice.textContent = ''; }, 700);
-      }catch(err){
-        console.error('saveEdit error:', err);
-        modalNotice.style.color = '#a00';
-        modalNotice.textContent = 'Save error: ' + (err.message || err);
-      }finally{
-        saveBtn.disabled = false;
-        saveBtn.textContent = 'Save';
-      }
-    }
-
     function closeModal(){
-      editModal.style.display = 'none';
-      editFields.innerHTML = '';
-      currentIID = null;
+      modal.style.display='none';
+      modal.setAttribute('aria-hidden','true');
+      currentEdit = null;
+  addMode = false;
+  document.getElementById('editTitle').textContent='Edit Teacher'; // will be replaced to Add Teacher only when addMode
+  saveBtn.textContent='Save';
+    }
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(); });
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.getAttribute('aria-hidden')==='false') closeModal(); });
+
+    // Build dynamic form with all columns
+    const FIELD_LABELS = {
+      iid:'IID',
+      teacher_name_en:'Teacher Name (EN)',
+      teacher_name_bn:'Teacher Name (BN)',
+      designation_en:'Designation (EN)',
+      designation_bn:'Designation (BN)',
+      sector:'Sector',
+      index_number:'Index Number',
+      pds_number:'PDS Number',
+      pay_code:'Pay Code',
+      basic:'Basic',
+      bank_account_number:'Bank A/C 1',
+      bank_account_number2:'Bank A/C 2',
+      subject_en:'Subject (EN)',
+      subject_bn:'Subject (BN)',
+      father_name_en:'Father Name (EN)',
+      father_name_bn:'Father Name (BN)',
+      mother_name_en:'Mother Name (EN)',
+      mother_name_bn:'Mother Name (BN)',
+      date_of_birth_en:'DOB (EN)',
+      date_of_birth_bn:'DOB (BN)',
+      nid_number_en:'NID (EN)',
+      nid_number_bn:'NID (BN)',
+      birth_certificate_number:'Birth Certificate No',
+      religion_en:'Religion (EN)',
+      religion_bn:'Religion (BN)',
+      gender_en:'Gender (EN)',
+      gender_bn:'Gender (BN)',
+      mobile_number_en:'Mobile (EN)',
+      mobile_number_bn:'Mobile (BN)',
+      email_id:'Email',
+      this_school_join_date:'This School Join Date',
+      join_date:'Join Date',
+      "1st_mpo":'1st MPO',
+      village_en:'Village (EN)',
+      village_bn:'Village (BN)',
+      post_office_en:'Post Office (EN)',
+      post_office_bn:'Post Office (BN)',
+      upazilla_en:'Upazilla (EN)',
+      upazilla_bn:'Upazilla (BN)',
+      district_en:'District (EN)',
+      district_bn:'District (BN)',
+      home_district:'Home District',
+      nid_photo:'NID Photo URL',
+      pp_photo:'Profile Photo URL',
+      created_at:'Created At'
+    };
+
+    const READ_ONLY_FIELDS = new Set(['iid','created_at']);
+
+    function buildDynamicForm(row){
+      editForm.innerHTML='';
+      Object.entries(row).forEach(([key,val])=>{
+        // Skip internal or null columns? Keep all for transparency
+        const labelTxt = FIELD_LABELS[key] || key;
+        const id = 'field_'+key;
+        const wrapper = document.createElement('div');
+        const label = document.createElement('label');
+        label.setAttribute('for', id);
+        label.textContent = labelTxt;
+        let input = document.createElement('input');
+        input.id = id;
+        input.name = key;
+        input.value = val==null?'' : val;
+        if(READ_ONLY_FIELDS.has(key)){
+          input.readOnly = true;
+          input.style.background = '#f3f4f6';
+        }
+        // date hint
+        if(/date/i.test(key) && !READ_ONLY_FIELDS.has(key)) input.placeholder='YYYY-MM-DD';
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        editForm.appendChild(wrapper);
+      });
     }
 
-    function escapeHtml(s){
-      if(s === null || s === undefined) return '';
-      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    function buildAddForm(row){
+      editForm.innerHTML='';
+      Object.entries(row).forEach(([key,val])=>{
+        const labelTxt = FIELD_LABELS[key] || key;
+        const id = 'field_'+key;
+        const wrapper = document.createElement('div');
+        const label = document.createElement('label');
+        label.setAttribute('for', id);
+        label.textContent = labelTxt;
+        const input = document.createElement('input');
+        input.id = id;
+        input.name = key;
+        input.value = val;
+        if(/date/i.test(key)) input.placeholder='YYYY-MM-DD';
+        wrapper.appendChild(label);
+        wrapper.appendChild(input);
+        editForm.appendChild(wrapper);
+      });
     }
 
-    // close modal when clicking outside panel
-    editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
+    function formDataObject(){
+      const fd = new FormData(editForm); const obj={};
+      for(const [k,v] of fd.entries()) obj[k]=v.trim();
+      return obj;
+    }
 
-    // close view modal when clicking outside panel
-    viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
-
-  // Replace eager load with auth-first flow to avoid invalid key/session race
-  (async function initAuth(){
-    tbody.innerHTML = '<tr><td colspan="11">Authenticating...</td></tr>';
-    try {
-      // poll for session (user may just have logged in on another page)
-      let attempt=0, session=null;
-      const supa = getClientOrAbort('authInit');
-      while(attempt < 20){
-        const { data:{ session: s } } = await supa.auth.getSession();
-        if(s){ session = s; break; }
-        await new Promise(r=>setTimeout(r,150));
-        attempt++;
+    function diffChanges(original, updated){
+      const changes={};
+      for(const k of Object.keys(updated)){
+        if(k==='iid') continue;
+        const origVal = original[k];
+        const newVal = updated[k];
+        if((origVal||'') !== (newVal||'')) changes[k]=newVal||null;
       }
-      if(!session){
-        tbody.innerHTML = '<tr><td colspan="11">No session. Redirecting to login...</td></tr>';
-        window.location.href = './index.html';
+      return changes;
+    }
+
+    // ---------- Update ----------
+    async function saveChanges(){
+      if(addMode){
+        setStatus(modalStatus,'Creating...');
+        saveBtn.disabled=true; cancelBtn.disabled=true;
+        const newData = formDataObject();
+        // Remove empty string -> null for cleaner DB
+        Object.keys(newData).forEach(k=>{ if(newData[k]==='') newData[k]=null; });
+        const { data, error } = await supabase.from(TABLE).insert(newData).select('*').single();
+        if(error){ setStatus(modalStatus,'Create failed: '+error.message,'err'); saveBtn.disabled=false; cancelBtn.disabled=false; return; }
+        // push new row to datasets
+        allRows.push(data);
+        applySearch();
+        setStatus(modalStatus,'Created','ok');
+        setTimeout(()=>{ closeModal(); }, 500);
+        saveBtn.disabled=false; cancelBtn.disabled=false; return;
+      }
+      if(!currentEdit){ return; }
+      setStatus(modalStatus, 'Saving...');
+      saveBtn.disabled=true; cancelBtn.disabled=true;
+  const updated = formDataObject();
+  // Ensure iid is preserved
+  updated.iid = currentEdit.iid;
+  const changes = diffChanges(currentEdit, updated);
+      if(Object.keys(changes).length===0){ setStatus(modalStatus,'No changes','ok'); saveBtn.disabled=false; cancelBtn.disabled=false; return; }
+      const { error } = await supabase.from(TABLE).update(changes).eq('iid', currentEdit.iid);
+      if(error){ setStatus(modalStatus,'Update failed: '+error.message,'err'); saveBtn.disabled=false; cancelBtn.disabled=false; return; }
+      // merge changes into currentEdit & allRows
+      Object.assign(currentEdit, changes);
+      const idx = allRows.findIndex(r=>r.iid===currentEdit.iid);
+      if(idx>-1) Object.assign(allRows[idx], changes);
+      applySearch(); // re-render respecting filter
+      setStatus(modalStatus,'Saved','ok');
+      setTimeout(()=>{ closeModal(); }, 500);
+      saveBtn.disabled=false; cancelBtn.disabled=false;
+    }
+    saveBtn.addEventListener('click', saveChanges);
+  addTeacherBtn.addEventListener('click', openAddModal);
+
+    // ---------- Delegated Edit Click ----------
+    tbody.addEventListener('click', e=>{
+      const linkBtn = e.target.closest('button[data-link-edit]');
+      if(linkBtn){
+        const iid = linkBtn.getAttribute('data-link-edit');
+        window.location.href = 'teacher_edit.html?iid=' + encodeURIComponent(iid);
         return;
       }
-      supa.auth.onAuthStateChange((evt,sess)=>{ if(evt==='SIGNED_OUT' || !sess){ window.location.href='./index.html'; }});
-      tbody.innerHTML = '<tr><td colspan="11">Loading all teacher records...</td></tr>';
-      await loadData();
-    } catch(e){
-      console.error('Auth init error', e);
-      tbody.innerHTML = '<tr><td colspan="11">Auth error. Reload page.</td></tr>';
+    });
+
+    // ---------- Utils ----------
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"] /g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',' ':' ' }[c] || c));
     }
-  })();
+    function escapeAttr(str){ return String(str).replace(/"/g,'&quot;'); }
+
+    // Initial load
+    loadTeachers();
   </script>
 </body>
 </html>

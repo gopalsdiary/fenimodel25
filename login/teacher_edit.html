@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Edit Teacher</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f8fa;color:#24292f;}
+    header{background:#0d1117;color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+    h1{margin:0;font-size:20px;font-weight:600;}
+    a.back{color:#58a6ff;text-decoration:none;font-size:13px;}
+    a.back:hover{text-decoration:underline;}
+    .wrap{max-width:1200px;margin:24px auto 80px;background:#fff;padding:22px 26px 40px;border:1px solid #d0d7de;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.05);}    
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px 20px;}
+    .grid.wide{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));}
+    label{display:block;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:#57606a;margin:0 0 4px;}
+    input,textarea{width:100%;box-sizing:border-box;padding:8px 9px;border:1px solid #d0d7de;border-radius:5px;font-size:13px;background:#fff;}
+    input:focus,textarea:focus{outline:2px solid #84c5ff;outline-offset:0;}
+    textarea{min-height:90px;resize:vertical;}
+    .readonly{background:#f3f4f6;}
+    .actions{margin-top:28px;display:flex;gap:12px;flex-wrap:wrap;}
+    button{cursor:pointer;padding:9px 18px;border-radius:5px;border:1px solid #0366d6;background:#0366d6;color:#fff;font-size:14px;font-weight:600;}
+    button:hover{background:#024c9e;}
+    button.outline{background:#fff;color:#0366d6;}
+    button.outline:hover{background:#e7f3ff;}
+    .status{margin-top:12px;font-size:14px;min-height:22px;}
+    .status.ok{color:#1a7f37;} .status.err{color:#d73a49;}
+    .two-col{display:flex;flex-wrap:wrap;gap:26px;margin-top:20px;}
+    .panel{flex:1 1 460px;min-width:360px;background:#fafbfc;padding:16px 18px 22px;border:1px solid #d8dee4;border-radius:6px;}
+    .panel h2{margin:0 0 14px;font-size:16px;font-weight:600;}
+    .photo-preview{width:120px;height:120px;border:1px solid #d0d7de;border-radius:6px;object-fit:cover;background:#fff;margin-top:4px;}
+    .muted{color:#57606a;font-size:12px;}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Edit Teacher</h1>
+    <a class="back" href="teacherlist.html">← Back to list</a>
+  </header>
+  <div class="wrap">
+    <div id="loadStatus" class="status"></div>
+    <form id="teacherForm" autocomplete="off"></form>
+    <div class="actions">
+      <button type="button" id="saveBtn">Save Changes</button>
+      <button type="button" class="outline" id="backBtn">Back</button>
+    </div>
+    <div id="formStatus" class="status"></div>
+  </div>
+
+<script>
+const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const TABLE='teacher_database';
+
+const FIELD_GROUPS = [
+  { title:'Identity', fields:['iid','teacher_name_en','teacher_name_bn','pp_photo','nid_photo'] },
+  { title:'Designation & Sector', fields:['sector','designation_en','designation_bn','subject_en','subject_bn','index_number','pds_number','pay_code','basic','1st_mpo'] },
+  { title:'Parents', fields:['father_name_en','father_name_bn','mother_name_en','mother_name_bn'] },
+  { title:'Personal', fields:['date_of_birth_en','date_of_birth_bn','gender_en','gender_bn','religion_en','religion_bn','nid_number_en','nid_number_bn','birth_certificate_number'] },
+  { title:'Contact', fields:['mobile_number_en','mobile_number_bn','email_id'] },
+  { title:'Addresses', fields:['village_en','village_bn','post_office_en','post_office_bn','upazilla_en','upazilla_bn','district_en','district_bn','home_district'] },
+  { title:'Service', fields:['this_school_join_date','join_date','created_at'] },
+];
+
+const LABELS = { iid:'IID', teacher_name_en:'Teacher Name (EN)', teacher_name_bn:'Teacher Name (BN)', pp_photo:'Profile Photo URL', nid_photo:'NID Photo URL', sector:'Sector', designation_en:'Designation (EN)', designation_bn:'Designation (BN)', subject_en:'Subject (EN)', subject_bn:'Subject (BN)', index_number:'Index Number', pds_number:'PDS Number', pay_code:'Pay Code', basic:'Basic', '1st_mpo':'1st MPO', father_name_en:'Father Name (EN)', father_name_bn:'Father Name (BN)', mother_name_en:'Mother Name (EN)', mother_name_bn:'Mother Name (BN)', date_of_birth_en:'DOB (EN)', date_of_birth_bn:'DOB (BN)', gender_en:'Gender (EN)', gender_bn:'Gender (BN)', religion_en:'Religion (EN)', religion_bn:'Religion (BN)', nid_number_en:'NID (EN)', nid_number_bn:'NID (BN)', birth_certificate_number:'Birth Certificate No', mobile_number_en:'Mobile (EN)', mobile_number_bn:'Mobile (BN)', email_id:'Email', village_en:'Village (EN)', village_bn:'Village (BN)', post_office_en:'Post Office (EN)', post_office_bn:'Post Office (BN)', upazilla_en:'Upazilla (EN)', upazilla_bn:'Upazilla (BN)', district_en:'District (EN)', district_bn:'District (BN)', home_district:'Home District', this_school_join_date:'This School Join Date', join_date:'Join Date', created_at:'Created At' };
+
+const READONLY = new Set(['iid','created_at']);
+let originalRow = null;
+
+function qs(k){return new URLSearchParams(location.search).get(k);} 
+function setStatus(el,msg,type=''){ el.textContent=msg||''; el.className='status'+(type?' '+type:''); }
+
+async function load(){
+  const iid = qs('iid');
+  if(!iid){ setStatus(loadStatus,'Missing iid parameter','err'); return; }
+  setStatus(loadStatus,'Loading teacher #'+iid+' ...');
+  const { data, error } = await supabase.from(TABLE).select('*').eq('iid', iid).single();
+  if(error){ setStatus(loadStatus,'Load failed: '+error.message,'err'); return; }
+  originalRow = data;
+  buildForm(data);
+  setStatus(loadStatus,'Loaded','ok');
+}
+
+function buildForm(row){
+  const form = document.getElementById('teacherForm');
+  form.innerHTML='';
+  FIELD_GROUPS.forEach(group=>{
+    const panel = document.createElement('section');
+    panel.className='panel';
+    const h2=document.createElement('h2'); h2.textContent=group.title; panel.appendChild(h2);
+    const grid=document.createElement('div'); grid.className='grid';
+    group.fields.forEach(field=>{
+      if(!(field in row)) return; // skip absent
+      const wrap=document.createElement('div');
+      const label=document.createElement('label'); label.htmlFor='f_'+field; label.textContent=LABELS[field]||field; wrap.appendChild(label);
+      let input;
+      if(field.includes('photo') || field==='pp_photo'){
+        input=document.createElement('input');
+      } else {
+        input=document.createElement('input');
+      }
+      input.id='f_'+field; input.name=field; input.value=row[field]??'';
+      if(/date/i.test(field) && !READONLY.has(field)) input.placeholder='YYYY-MM-DD';
+      if(READONLY.has(field)){ input.readOnly=true; input.classList.add('readonly'); }
+      wrap.appendChild(input);
+      if(field==='pp_photo' && row.pp_photo){
+        const img=document.createElement('img'); img.src=row.pp_photo; img.alt='Profile Photo'; img.className='photo-preview'; wrap.appendChild(img);
+      }
+      if(field==='nid_photo' && row.nid_photo){
+        const img=document.createElement('img'); img.src=row.nid_photo; img.alt='NID Photo'; img.className='photo-preview'; wrap.appendChild(img);
+      }
+      grid.appendChild(wrap);
+    });
+    panel.appendChild(grid);
+    form.appendChild(panel);
+  });
+}
+
+function formDataObj(){
+  const form=document.getElementById('teacherForm');
+  const inputs=[...form.querySelectorAll('input,textarea')];
+  const obj={};
+  inputs.forEach(i=>{ obj[i.name]=i.value.trim(); if(obj[i.name]==='') obj[i.name]=null; });
+  return obj;
+}
+
+function diff(orig, updated){
+  const changes={};
+  Object.keys(updated).forEach(k=>{
+    if(READONLY.has(k)) return;
+    const o = orig[k]==null?null:String(orig[k]);
+    const n = updated[k]==null?null:String(updated[k]);
+    if(o!==n) changes[k]=updated[k];
+  });
+  return changes;
+}
+
+async function save(){
+  if(!originalRow) return;
+  setStatus(formStatus,'Saving...');
+  disable(true);
+  const updated=formDataObj();
+  updated.iid=originalRow.iid; // ensure
+  const changes=diff(originalRow, updated);
+  if(Object.keys(changes).length===0){ setStatus(formStatus,'No changes','ok'); disable(false); return; }
+  const { error } = await supabase.from(TABLE).update(changes).eq('iid', originalRow.iid);
+  if(error){ setStatus(formStatus,'Update failed: '+error.message,'err'); disable(false); return; }
+  Object.assign(originalRow, changes);
+  setStatus(formStatus,'Saved','ok');
+  disable(false);
+}
+
+function disable(dis){
+  document.getElementById('saveBtn').disabled=dis;
+}
+
+function resetForm(){ if(!originalRow) return; buildForm(originalRow); setStatus(formStatus,'Form reset'); }
+
+document.getElementById('saveBtn').addEventListener('click', save);
+const formStatus=document.getElementById('formStatus');
+const loadStatus=document.getElementById('loadStatus');
+
+
+document.getElementById('backBtn').addEventListener('click', ()=>{ location.href='teacherlist.html'; });
+
+load();
+</script>
+</body>
+</html>
