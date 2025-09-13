@@ -187,16 +187,51 @@
 
   // keep full dataset in memory for client-side filtering
   let allRowsCache = [];
+  // cache existing session-specific columns discovered at runtime
+  let existingSessionCols = {
+    classes: new Set(), // e.g., 'class_2024'
+    sections: new Set(),
+    rolls: new Set()
+  };
 
-  // Active key resolver based on selected session (defaults to 2025)
+  // Discover which session columns actually exist (run once)
+  async function discoverSessionColumns(){
+    try {
+      const { data, error } = await supabase.from(tableName).select('*').limit(1);
+      if(error) { console.warn('discoverSessionColumns error', error); return; }
+      const sample = data && data[0] ? Object.keys(data[0]) : [];
+      sample.forEach(k=>{
+        if(/^class_\d{4}$/.test(k)) existingSessionCols.classes.add(k);
+        if(/^section_\d{4}$/.test(k)) existingSessionCols.sections.add(k);
+        if(/^roll_\d{4}$/.test(k)) existingSessionCols.rolls.add(k);
+      });
+    } catch(e){ console.warn('discoverSessionColumns failed', e); }
+  }
+
+  function buildSelectCols(){
+    // Base columns always safe
+    const base = ['iid','student_name_en','father_name_en','father_mobile','student_photo_url','status','session','fulldata_ok'];
+    const sessions = ['2024','2025','2026','2027'];
+    sessions.forEach(s=>{
+      if(existingSessionCols.classes.has('class_'+s)) base.push('class_'+s);
+      if(existingSessionCols.sections.has('section_'+s)) base.push('section_'+s);
+      if(existingSessionCols.rolls.has('roll_'+s)) base.push('roll_'+s);
+    });
+    return base.join(', ');
+  }
+
+  // Active key resolver (supports 2024-2027; default 2025)
   function getActiveKeys(){
     const ses = (sessionFilter && sessionFilter.value) ? String(sessionFilter.value) : '2025';
-    const valid = ses === '2026' ? '2026' : '2025';
+    const classKey = `class_${ses}`;
+    const sectionKey = `section_${ses}`;
+    const rollKey = `roll_${ses}`;
     return {
-      session: valid,
-      classKey: `class_${valid}`,
-      sectionKey: `section_${valid}`,
-      rollKey: `roll_${valid}`
+      session: ses,
+      classKey,
+      sectionKey,
+      rollKey,
+      available: existingSessionCols.classes.has(classKey) && existingSessionCols.sections.has(sectionKey) && existingSessionCols.rolls.has(rollKey)
     };
   }
 
@@ -313,13 +348,19 @@
     async function loadDataForClass(classValue){
       statusEl.textContent = `Loading class ${classValue}...`;
       try{
-        const { classKey, sectionKey, rollKey } = getActiveKeys();
-        let q = supabase
-          .from(tableName)
-          .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok, class_2025, section_2025, roll_2025, class_2026, section_2026, roll_2026')
-          .eq(classKey, classValue);
-  // Apply session filter only for 2025; for 2026 some rows may not have session column set yet
-  if(sessionFilter && sessionFilter.value === '2025') q = q.eq('session', '2025');
+        const { classKey, sectionKey, rollKey, session, available } = getActiveKeys();
+        if(!available){
+          tbody.innerHTML = `<tr><td colspan="13">Selected session columns not found in table.</td></tr>`;
+          statusEl.textContent = 'Session columns missing';
+          return;
+        }
+        // Select all possible session-specific columns to support display across sessions
+        const selectCols = buildSelectCols();
+        let q = supabase.from(tableName).select(selectCols).eq(classKey, classValue);
+        if(sessionFilter && sessionFilter.value){
+          // Filter by session column if present
+          q = q.eq('session', sessionFilter.value);
+        }
         if(sectionFilter && sectionFilter.value) q = q.eq(sectionKey, sectionFilter.value);
         q = q.order(rollKey, { ascending: true }).limit(10000);
         const { data, error } = await q;
@@ -339,41 +380,83 @@
       }
     }
 
-    // Load class list for the dropdown (fixed classes: 6,7,8,9,10)
-  async function loadClassList(){
-      try{
-        // Fixed class list instead of fetching from database
-        const classes = ['6', '7', '8', '9', '10'];
-        classFilter.innerHTML = '';
-  // first option: All (empty value means no class filter)
-  const opt = document.createElement('option'); 
-  opt.value=''; 
-  opt.textContent='All'; 
-  classFilter.appendChild(opt);
-        classes.forEach(c=>{ 
-          const o=document.createElement('option'); 
-          o.value=c; 
-          o.textContent=c; 
-          classFilter.appendChild(o); 
-        });
-  statusEl.textContent = 'Select session, then class';
-        // initialize session filter (fixed list, first choice is required)
+    // Dynamic class list based on selected session (2024-2027)
+    async function loadClassList(){
+      try {
         if(sessionFilter){
           sessionFilter.innerHTML = '';
-          const optAny = document.createElement('option'); optAny.value=''; optAny.textContent='Select Session'; sessionFilter.appendChild(optAny);
-          ['2025','2026'].forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionFilter.appendChild(o); });
-          sessionFilter.value = '';
-          // Set a single handler for session changes (defined here; avoid overriding later)
-          sessionFilter.onchange = () => {
-            classFilter.value = '';
-            sectionFilter.value = '';
-            allRowsCache = [];
-            tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
-            statusEl.textContent = 'Pick class and section';
-          };
+            const optAny = document.createElement('option'); optAny.value=''; optAny.textContent='Select Session'; sessionFilter.appendChild(optAny);
+            ['2024','2025','2026','2027'].forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionFilter.appendChild(o); });
+            sessionFilter.value = '';
+            sessionFilter.onchange = () => {
+              classFilter.innerHTML = '<option value="">All</option>';
+              sectionFilter.innerHTML = '<option value="">All</option>';
+              allRowsCache = [];
+              tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
+              statusEl.textContent = 'Pick class and section';
+              dynamicLoadClasses();
+            };
         }
-      }catch(e){
+        classFilter.innerHTML = '<option value="">All</option>';
+        sectionFilter.innerHTML = '<option value="">All</option>';
+        statusEl.textContent = 'Select session, then class';
+      } catch(e){
         console.warn('loadClassList failed', e);
+      }
+    }
+
+    async function dynamicLoadClasses(){
+      const ses = sessionFilter.value;
+      if(!ses){ return; }
+      const { classKey, available } = getActiveKeys();
+      if(!available){
+        statusEl.textContent = 'No class column for session';
+        classFilter.innerHTML = '<option value="">N/A</option>';
+        return;
+      }
+      try {
+        statusEl.textContent = 'Loading classes...';
+        const { data, error } = await supabase
+          .from(tableName)
+          .select(`${classKey}`)
+          .not(classKey, 'is', null);
+        if(error) throw error;
+        const set = new Set();
+        (data||[]).forEach(r=>{ if(r[classKey]!==undefined && r[classKey]!==null && String(r[classKey]).trim()!=='') set.add(String(r[classKey])); });
+        const list = Array.from(set).sort((a,b)=>Number(a)-Number(b));
+        classFilter.innerHTML = '<option value="">All</option>' + list.map(c=>`<option value="${c}">${c}</option>`).join('');
+        statusEl.textContent = 'Pick class and section';
+      } catch(err){
+        console.warn('dynamicLoadClasses error', err);
+        statusEl.textContent = 'Class load error';
+      }
+    }
+
+    async function dynamicLoadSections(){
+      const ses = sessionFilter.value;
+      const cls = classFilter.value;
+      if(!ses || !cls){ return; }
+      const { classKey, sectionKey, available } = getActiveKeys();
+      if(!available){
+        sectionFilter.innerHTML = '<option value="">N/A</option>';
+        return;
+      }
+      try {
+        statusEl.textContent = 'Loading sections...';
+        const { data, error } = await supabase
+          .from(tableName)
+          .select(`${sectionKey}, ${classKey}`)
+          .eq(classKey, cls)
+          .not(sectionKey, 'is', null);
+        if(error) throw error;
+        const set = new Set();
+        (data||[]).forEach(r=>{ if(r[sectionKey]!==undefined && r[sectionKey]!==null && String(r[sectionKey]).trim()!=='') set.add(String(r[sectionKey])); });
+        const list = Array.from(set).sort();
+        sectionFilter.innerHTML = '<option value="">All</option>' + list.map(s=>`<option value="${s}">${s}</option>`).join('');
+        statusEl.textContent = 'Sections loaded';
+      } catch(err){
+        console.warn('dynamicLoadSections error', err);
+        statusEl.textContent = 'Section load error';
       }
     }
 
@@ -386,6 +469,7 @@
       }
       // reset section and load class-only to populate sections
       if(sectionFilter) sectionFilter.value = '';
+      dynamicLoadSections();
       loadDataForClass(cls);
     }
 
@@ -397,17 +481,22 @@
         let allData = [];
         let lastId = 0;
         let round = 0;
-  const { rollKey } = getActiveKeys();
+  const { rollKey, classKey: activeClassKey, available } = getActiveKeys();
+  if(!available){
+    statusEl.textContent = 'Session columns missing';
+    tbody.innerHTML = '<tr><td colspan="13">Selected session columns not found.</td></tr>';
+    return;
+  }
   while(true){
           round++;
           statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
           // build paginated query and optionally apply session filter
-          let q = supabase
-            .from(tableName)
-            .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, status, session, fulldata_ok, class_2025, section_2025, roll_2025, class_2026, section_2026, roll_2026')
+          let q = supabase.from(tableName)
+            .select(buildSelectCols())
             .gt('iid', lastId);
-          // Apply session filter only for 2025; for 2026 fetch broadly then filter client-side
-          if(sessionFilter && sessionFilter.value === '2025') q = q.eq('session', '2025');
+          if(sessionFilter && sessionFilter.value){
+            q = q.eq('session', sessionFilter.value);
+          }
           // server-side ordering by active roll
           q = q.order(rollKey, { ascending: true }).limit(batchSize);
           const { data, error } = await q;
@@ -420,15 +509,10 @@
           lastId = data[data.length-1].iid || lastId;
           if(data.length < batchSize) break; // last batch
         }
-
-  // For 2026, keep only rows that actually have active session keys populated
   const { classKey: ck, sectionKey: sk, rollKey: rk } = getActiveKeys();
-  if(sessionFilter && sessionFilter.value === '2026'){
-    allData = (allData || []).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== ''));
-  }
-  allRowsCache = allData;
-  // client-side safety sort by active roll
-  allRowsCache = allRowsCache.sort((a,b)=> (Number(a[rk])||0) - (Number(b[rk])||0));
+  // Filter out rows missing the active session's class value to reduce noise
+  allData = (allData || []).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== ''));
+  allRowsCache = allData.sort((a,b)=> (Number(a[rk])||0) - (Number(b[rk])||0));
         populateFilterOptions(allRowsCache);
         renderTable(allRowsCache);
         statusEl.textContent = `Total: ${allRowsCache.length} records (ALL)`;
@@ -472,7 +556,12 @@
   const c = classFilter.value;
   const s = sectionFilter.value;
   const ses = sessionFilter && sessionFilter.value;
-  const { classKey, sectionKey, rollKey } = getActiveKeys();
+  const { classKey, sectionKey, rollKey, available: availFilter } = getActiveKeys();
+  if(!availFilter){
+    tbody.innerHTML = '<tr><td colspan="13">Session columns not found.</td></tr>';
+    statusEl.textContent = 'Session columns missing';
+    return;
+  }
   let filtered = allRowsCache;
   if(c) filtered = filtered.filter(r => String(r[classKey]) === c);
   if(s) filtered = filtered.filter(r => String(r[sectionKey]) === s);
@@ -534,7 +623,11 @@
         const iid = (r['iid'] ?? r.iid ?? r['IID'] ?? r.IID) || '';
 
         const tdIid = document.createElement('td'); tdIid.textContent = escapeHtml(iid);
-  const { classKey, sectionKey, rollKey } = getActiveKeys();
+  const { classKey, sectionKey, rollKey, available: availRender } = getActiveKeys();
+  if(!availRender){
+    tbody.innerHTML = '<tr><td colspan="13">Session columns missing.</td></tr>';
+    return;
+  }
   const tdClass = document.createElement('td'); tdClass.textContent = escapeHtml(r[classKey]||'');
   const tdSection = document.createElement('td'); tdSection.textContent = escapeHtml(r[sectionKey]||'');
   const tdRoll = document.createElement('td'); tdRoll.textContent = escapeHtml(r[rollKey]||'');
@@ -805,7 +898,7 @@
 
   // initial load: guide user to pick session first
   tbody.innerHTML = '<tr><td colspan="13">Select session, then class and section to view data</td></tr>';
-    loadClassList();
+  (async ()=>{ await discoverSessionColumns(); loadClassList(); })();
   </script>
   
   <!-- Authentication Protection - Load after page initialization -->
