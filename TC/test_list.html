@@ -111,8 +111,8 @@
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
         <span class="muted">Rows: <span id="count">0</span></span>
-        <a class="nav-btn" href="../index.html">Home</a>
-  <a class="nav-btn secondary" href="./tcentryform.html">TC Entry Form</a>
+  <a class="nav-btn" href="../index.html">Home</a>
+  <button type="button" id="openEntryBtn" class="nav-btn secondary" style="border:0;cursor:pointer;">TC Entry Form</button>
   <a class="nav-btn" href="https://docs.google.com/spreadsheets/d/1uifvfe8y9eStq4diqD40SrMIc29GUIkHb0xY80r-NLY/edit?gid=1173319178#gid=1173319178" target="_blank" rel="noopener noreferrer">Database ↗</a>
 <div style="width:100%;max-width:760px;margin:0 0 .85rem;padding:.75rem 1rem;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;font-size:.8rem;line-height:1.3;border-radius:10px;font-weight:600;box-shadow:0 2px 6px -2px rgba(0,0,0,.08);">
 			তথ্য এন্ট্রি করার সময়, সাবধাণতা অবলম্বণ করুন, ভুল হলে সংশোধন করতে ডাটাবেস ম্যানেজারের সাথে যোগাযোগ করতে হবে, যা সময় সাপেক্ষ।
@@ -140,5 +140,170 @@
       </div>
     </div>
   </main>
+  <!-- Modal for TC Entry Form -->
+  <div id="tcModal" aria-hidden="true" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:200;">
+    <div role="dialog" aria-modal="true" aria-labelledby="tcModalTitle" style="background:#fff;border-radius:14px;max-width:560px;width:100%;padding:1rem 1.15rem;box-shadow:0 10px 38px -8px rgba(0,0,0,.35);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;position:relative;">
+      <button type="button" id="closeTcModal" aria-label="Close" style="position:absolute;top:8px;right:8px;background:#e2e8f0;border:1px solid #cbd5e1;border-radius:6px;padding:.25rem .5rem;font-size:.65rem;font-weight:600;cursor:pointer;">✕</button>
+      <h2 id="tcModalTitle" style="margin:.25rem 0 1rem;font-size:1rem;">New Transfer Certificate Entry</h2>
+      <div id="tcModalStatus" style="font-size:.7rem;margin:-.5rem 0 .75rem;color:#6b7280;">Enter IID & Load student info</div>
+      <form id="tcEntryForm" autocomplete="off">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem .85rem;align-items:start;">
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">
+            IID
+            <div style="display:flex;gap:.4rem;">
+              <input name="iid" id="iidInput" required style="flex:1;padding:.55rem .6rem;border:1px solid #d1d5db;border-radius:8px;" />
+              <button type="button" id="loadIIDBtn" style="background:#2563eb;color:#fff;border:0;border-radius:8px;padding:.55rem .75rem;font-size:.65rem;font-weight:600;cursor:pointer;">Load</button>
+            </div>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Session
+            <input name="tc_session" id="tc_session" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Class
+            <input name="tc_class" id="tc_class" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Section
+            <input name="tc_section" id="tc_section" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Roll
+            <input name="tc_roll" id="tc_roll" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Student Name
+            <input name="student_name_en" id="student_name_en" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Father Name
+            <input name="father_name_en" id="father_name_en" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Mother Name
+            <input name="mother_name_en" id="mother_name_en" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Date of Birth
+            <input name="student_dateofbirth" id="student_dateofbirth" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Paid Upto
+            <input name="paid_month" id="paid_month" placeholder="e.g. December 2025" />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Character
+            <select name="student_character" id="student_character">
+              <option value=""></option>
+              <option>good</option>
+              <option>very good</option>
+              <option>bad</option>
+              <option>very bad</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Next Class
+            <select name="next_class" id="next_class">
+              <option value=""></option>
+              <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">TC Date
+            <input name="tc_date" id="tc_date" />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Issued By
+            <select name="issued_by" id="issued_by">
+              <option value=""></option>
+              <option>RAZIB KUMAR PAUL</option>
+              <option>SHOWRAV DEB</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Father Mobile
+            <input name="father_mobile" id="father_mobile" />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Note
+            <textarea name="note" id="note" style="min-height:60px;resize:vertical;"></textarea>
+          </label>
+        </div>
+        <div style="display:flex;gap:.7rem;margin-top:1rem;flex-wrap:wrap;">
+          <button type="submit" class="nav-btn" style="background:#16a34a;">Save</button>
+          <button type="button" id="resetTcForm" class="nav-btn" style="background:#6b7280;">Reset</button>
+        </div>
+      </form>
+      <div style="margin-top:.9rem;font-size:.6rem;line-height:1.3;color:#6b7280;">
+        After saving, close window and refresh list if needed.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Modal / TC Entry logic
+    const studentTable = 'student_database'; // assumed table name
+    const modal = document.getElementById('tcModal');
+    const openBtn = document.getElementById('openEntryBtn');
+    const closeBtn = document.getElementById('closeTcModal');
+    const loadIIDBtn = document.getElementById('loadIIDBtn');
+    const entryStatus = document.getElementById('tcModalStatus');
+    const form = document.getElementById('tcEntryForm');
+    function showModal(){ modal.style.display='flex'; entryStatus.textContent='Enter IID & Load student info'; document.getElementById('iidInput').focus(); setTodayIfEmpty(); }
+    function hideModal(){ modal.style.display='none'; form.reset(); }
+    function setTodayIfEmpty(){ const td=document.getElementById('tc_date'); if(td && !td.value){ const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); td.value=`${dd}-${mm}-${yyyy}`; } }
+    openBtn?.addEventListener('click', showModal);
+    closeBtn?.addEventListener('click', hideModal);
+    modal?.addEventListener('click', e=>{ if(e.target===modal) hideModal(); });
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.style.display==='flex') hideModal(); });
+    async function loadStudent(){
+      const iid = document.getElementById('iidInput').value.trim();
+      if(!iid){ entryStatus.textContent='Provide IID'; entryStatus.style.color='#b91c1c'; return; }
+      entryStatus.textContent='Loading…'; entryStatus.style.color='';
+      try {
+        const { data, error } = await client.from(studentTable).select('*').eq('iid', iid).limit(1);
+        if(error) throw error;
+        if(!data || !data.length){ entryStatus.textContent='Not found'; entryStatus.style.color='#b91c1c'; return; }
+        const row = data[0];
+        // Map fields
+        const session = row.session || row.tc_session || '';
+        document.getElementById('tc_session').value = session;
+        // Attempt dynamic class/section/roll detection by session-specific columns
+        const cls = row[`class_${session}`] || row.class || row.tc_class || '';
+        const sec = row[`section_${session}`] || row.section || row.tc_section || '';
+        const roll = row[`roll_${session}`] || row.roll || row.tc_roll || '';
+        document.getElementById('tc_class').value = cls;
+        document.getElementById('tc_section').value = sec;
+        document.getElementById('tc_roll').value = roll;
+        document.getElementById('student_name_en').value = row.student_name_en || row.name_en || row.name || '';
+        document.getElementById('father_name_en').value = row.father_name_en || row.father || '';
+        document.getElementById('mother_name_en').value = row.mother_name_en || row.mother || '';
+        document.getElementById('student_dateofbirth').value = row.student_dateofbirth || row.dob || '';
+        document.getElementById('father_mobile').value = row.father_mobile || row.guardian_mobile || '';
+        entryStatus.textContent='Loaded. Fill remaining fields & Save';
+      } catch(e){ console.error(e); entryStatus.textContent='Load failed'; entryStatus.style.color='#b91c1c'; }
+    }
+    loadIIDBtn?.addEventListener('click', loadStudent);
+    document.getElementById('iidInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); loadStudent(); }});
+    document.getElementById('resetTcForm')?.addEventListener('click', ()=>{ const keepIID=document.getElementById('iidInput').value; form.reset(); document.getElementById('iidInput').value=keepIID; entryStatus.textContent='Form reset'; setTodayIfEmpty(); });
+    form?.addEventListener('submit', async e=>{
+      e.preventDefault();
+      entryStatus.textContent='Saving…'; entryStatus.style.color='';
+      const payload = {
+        iid: form.iid.value.trim(),
+        tc_session: form.tc_session.value.trim(),
+        tc_class: form.tc_class.value.trim(),
+        tc_section: form.tc_section.value.trim(),
+        tc_roll: form.tc_roll.value.trim(),
+        student_name_en: form.student_name_en.value.trim(),
+        father_name_en: form.father_name_en.value.trim(),
+        mother_name_en: form.mother_name_en.value.trim(),
+        student_dateofbirth: form.student_dateofbirth.value.trim(),
+        paid_month: form.paid_month.value.trim(),
+        student_character: form.student_character.value.trim(),
+        next_class: form.next_class.value.trim(),
+        tc_date: form.tc_date.value.trim(),
+        issued_by: form.issued_by.value.trim(),
+        father_mobile: form.father_mobile.value.trim(),
+        note: form.note.value.trim()
+      };
+      if(!payload.iid){ entryStatus.textContent='IID required'; entryStatus.style.color='#b91c1c'; return; }
+      if(!payload.tc_date){ entryStatus.textContent='TC Date required'; entryStatus.style.color='#b91c1c'; return; }
+      try {
+        // Check existing
+        const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
+        if(existErr) throw existErr;
+        if(existing && existing.length){ entryStatus.textContent='Already exists (iid)'; entryStatus.style.color='#b91c1c'; return; }
+        const { error } = await client.from(tableName).insert(payload);
+        if(error) throw error;
+        entryStatus.textContent='Saved ✔'; entryStatus.style.color='#15803d';
+      } catch(err){ console.error(err); entryStatus.textContent='Save failed'; entryStatus.style.color='#b91c1c'; }
+    });
+  </script>
 </body>
 </html>
