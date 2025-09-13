@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -145,13 +146,54 @@
     </div>
   </div>
 
-  <!-- Supabase client -->
+  <!-- Supabase client + centralized config -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    // Use the same project URL/key used elsewhere in this repo
-    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N10.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+<script>
+  
+  // --- Supabase Initialization (single source) ---
+  // We attempt to use any globally injected config first (window.SUPABASE_URL / window.SUPABASE_ANON_KEY)
+  // and fall back to the hard‑coded project credentials if not present.
+  // This prevents the previous double 'const supabase' declaration syntax error.
+  (window.ensureSupabaseConfig && typeof window.ensureSupabaseConfig === 'function') && window.ensureSupabaseConfig();
+
+  const _FALLBACK_SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+  const _FALLBACK_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N10.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+
+  const SUPABASE_URL = window.SUPABASE_URL || _FALLBACK_SUPABASE_URL;
+  let SUPABASE_KEY = window.SUPABASE_ANON_KEY || _FALLBACK_SUPABASE_KEY;
+
+  // Simple heuristic: anon keys are JWTs that usually have 3 dot segments.
+  function looksLikeJwt(k){ return typeof k === 'string' && k.split('.').length === 3; }
+
+  // Defer creation until after DOMContentLoaded to allow other scripts to inject config.
+  let supabase = null;
+  function initSupabase(){
+    if(supabase) return supabase;
+    if(window.SUPABASE_ANON_KEY && looksLikeJwt(window.SUPABASE_ANON_KEY)){
+      SUPABASE_KEY = window.SUPABASE_ANON_KEY;
+    }
+    if(!looksLikeJwt(SUPABASE_KEY)){
+      console.error('Supabase anon key format looks invalid.');
+      return null;
+    }
+    if(!window.supabase || !window.supabase.createClient){
+      console.error('Supabase library not loaded yet.');
+      return null;
+    }
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    return supabase;
+  }
+
+  // Helper to get a ready client or throw a user-visible message.
+  function getClientOrAbort(context){
+    const client = initSupabase();
+    if(!client){
+      console.error('Supabase not initialized for', context);
+      throw new Error('Supabase not initialized. Provide valid anon key before data can load.');
+    }
+    return client;
+  }
 
   const tableName = 'teacher_database';
 
@@ -235,16 +277,24 @@
   let dataOrder = []; // array of { key, label }
 
     async function loadPhotoLinks(){
-      try{
-        // relative path from login/ to the photo list
-        const res = await fetch('../photo/link.csv');
-        if(!res || !res.ok) return;
-        const txt = await res.text();
-        photoLinks = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-      }catch(e){
-        console.warn('loadPhotoLinks failed', e);
-        photoLinks = [];
+      // Try multiple possible filenames (project has 1link.csv; legacy code expected link.csv)
+      const candidates = ['../photo/link.csv','../photo/1link.csv'];
+      for(const url of candidates){
+        try{
+          const res = await fetch(url, { cache: 'no-store' });
+          if(res && res.ok){
+            const txt = await res.text();
+            photoLinks = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+            if(photoLinks.length){
+              console.log('Loaded photo links from', url, 'count', photoLinks.length);
+              return;
+            }
+          }
+        }catch(e){
+          console.warn('Photo link load attempt failed for', url, e);
+        }
       }
+      photoLinks = [];
     }
     // start loading photo links in background (non-blocking)
     loadPhotoLinks();
@@ -275,43 +325,44 @@
     loadDataOrder();
 
   async function loadData(){
-      // Batched fetch to load ALL rows (handles Supabase default limits)
-      statusEl.textContent = 'Loading all data...';
-      try{
-        const batchSize = 1000;
-        let allData = [];
+      statusEl.textContent = 'Loading (batch 0)...';
+      tbody.innerHTML = '<tr><td colspan="11">Starting load...</td></tr>';
+      try {
+        const batchSize = 500;
+        let accumulated = [];
         let lastId = 0;
-        let round = 0;
-  while(true){
-          round++;
-          statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
-          // build paginated query and optionally apply session filter
-          let q = supabase
-            .from(tableName)
-            .select('iid, pp_photo, teacher_name_en, sector, designation_en, mobile_number_en, email_id, nid_number_en, join_date')
-            .gt('iid', lastId);
-          q = q.order('iid', { ascending: true }).limit(batchSize);
-          const { data, error } = await q;
+        let batch = 0;
+        let done = false;
+        while(!done){
+          batch++;
+          statusEl.textContent = `Loading batch ${batch} (loaded ${accumulated.length})...`;
+      const supa = getClientOrAbort('loadData');
+      const { data, error } = await supa
+              .from(tableName)
+              .select('iid, pp_photo, teacher_name_en, sector, designation_en, mobile_number_en, email_id, nid_number_en, join_date')
+              .gt('iid', lastId)
+              .order('iid', { ascending: true })
+              .limit(batchSize);
           if(error){
             const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
             throw new Error(`${error.message} | details: ${details}`);
           }
-          if(!data || data.length === 0) break;
-          allData = allData.concat(data);
+          if(!data || data.length === 0){ done = true; break; }
+          accumulated = accumulated.concat(data);
           lastId = data[data.length-1].iid || lastId;
-          if(data.length < batchSize) break; // last batch
+          // Render incrementally every batch so user sees progress
+          allRowsCache = accumulated.slice().sort((a,b)=> (Number(a.iid)||0) - (Number(b.iid)||0));
+          renderTable(allRowsCache);
+          // brief yield to allow paint
+          await new Promise(r=>setTimeout(r,30));
+          if(data.length < batchSize){ done = true; }
         }
-
-        allRowsCache = allData;
-  // sort by iid
-  allRowsCache = allRowsCache.sort((a,b)=> (Number(a.iid)||0) - (Number(b.iid)||0));
-        renderTable(allRowsCache);
-        statusEl.textContent = `Total: ${allRowsCache.length} records (ALL)`;
-      }catch(err){
+        statusEl.textContent = `Total loaded: ${allRowsCache.length}`;
+      } catch(err){
         console.error('loadData error:', err);
         statusEl.textContent = 'Data loading error';
         const msg = err && err.message ? err.message : String(err);
-  tbody.innerHTML = `<tr><td colspan="11">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="11">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
       }
     }
 
@@ -372,7 +423,8 @@
       modalNotice.textContent = '';
       currentIID = iid;
       try{
-        const { data, error } = await supabase
+        const supa = getClientOrAbort('openEditByIID');
+        const { data, error } = await supa
           .from(tableName)
           .select('*')
       .eq('iid', Number(iid))
@@ -395,7 +447,8 @@
     // Open a read-only view modal for a given IID
     async function openViewByIID(iid){
       try{
-        const { data, error } = await supabase
+        const supa = getClientOrAbort('openViewByIID');
+        const { data, error } = await supa
           .from(tableName)
           .select('*')
           .eq('iid', Number(iid))
@@ -420,8 +473,8 @@
 
       // Attempt to show student photo at the top (large preview)
       (function renderTopPhoto(){
-        // try common keys first
-        const possibleKeys = ['student_photo_url','photo_url','photo','student_photo','student_photo_en'];
+        // try common keys first (added pp_photo for teacher table)
+        const possibleKeys = ['pp_photo','student_photo_url','photo_url','photo','student_photo','student_photo_en'];
         let url = '';
         for(const k of possibleKeys){ if(record && record[k]){ url = record[k]; break; } }
         // fallback: try iid-based lookup from photoLinks
@@ -558,10 +611,12 @@
         let res;
         if(currentIID){
           // update existing
-          res = await supabase.from(tableName).update(payload).eq('iid', Number(currentIID));
+          const supa = getClientOrAbort('saveEditUpdate');
+          res = await supa.from(tableName).update(payload).eq('iid', Number(currentIID));
         } else {
           // insert new
-          res = await supabase.from(tableName).insert([payload]);
+          const supa = getClientOrAbort('saveEditInsert');
+          res = await supa.from(tableName).insert([payload]);
         }
         if(res.error){
           const details = JSON.stringify(res.error, Object.getOwnPropertyNames(res.error));
@@ -590,7 +645,7 @@
 
     function escapeHtml(s){
       if(s === null || s === undefined) return '';
-      return String(s).replace(/[&<>\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[c]));
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
     // close modal when clicking outside panel
@@ -599,14 +654,33 @@
     // close view modal when clicking outside panel
     viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
 
-  // initial load: fetch and show all teacher records
-  tbody.innerHTML = '<tr><td colspan="11">Loading all teacher records...</td></tr>';
-  // load class list (harmless) and then fetch all data
-  loadData();
+  // Replace eager load with auth-first flow to avoid invalid key/session race
+  (async function initAuth(){
+    tbody.innerHTML = '<tr><td colspan="11">Authenticating...</td></tr>';
+    try {
+      // poll for session (user may just have logged in on another page)
+      let attempt=0, session=null;
+      const supa = getClientOrAbort('authInit');
+      while(attempt < 20){
+        const { data:{ session: s } } = await supa.auth.getSession();
+        if(s){ session = s; break; }
+        await new Promise(r=>setTimeout(r,150));
+        attempt++;
+      }
+      if(!session){
+        tbody.innerHTML = '<tr><td colspan="11">No session. Redirecting to login...</td></tr>';
+        window.location.href = './index.html';
+        return;
+      }
+      supa.auth.onAuthStateChange((evt,sess)=>{ if(evt==='SIGNED_OUT' || !sess){ window.location.href='./index.html'; }});
+      tbody.innerHTML = '<tr><td colspan="11">Loading all teacher records...</td></tr>';
+      await loadData();
+    } catch(e){
+      console.error('Auth init error', e);
+      tbody.innerHTML = '<tr><td colspan="11">Auth error. Reload page.</td></tr>';
+    }
+  })();
   </script>
-  
-  <!-- Authentication Protection - Load after page initialization -->
-  <script src="./auth-check.js"></script>
 </body>
 </html>
 
