@@ -104,9 +104,8 @@
   <header>
     <div class="container">
       <h1>Transfer Certificate List <span class="muted status" id="status"></span></h1>
-      <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted">TC এন্ট্রিকরার পর প্রসেসিং এর জন্য, ৫ মিনিট অপেক্ষা করুণ। word button > download</p>
+      <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted">TC এন্ট্রিকরার সাথে সাথে এন্টি হয়ে যাবে। তাই সাবধাণতা অবলম্বণ করুণ  word button > download</p>
             <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted">ইস্যু করা Transfer Certificate এর তালিকা</p>
-            <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted">Father & Mother Name না দেখালে, ডাটা বেসে আপডেট করুন</p>
 
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
@@ -299,9 +298,28 @@
         const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
         if(existErr) throw existErr;
         if(existing && existing.length){ entryStatus.textContent='Already exists (iid)'; entryStatus.style.color='#b91c1c'; return; }
-        const { error } = await client.from(tableName).insert(payload);
+        const { data: inserted, error } = await client.from(tableName).insert(payload).select('tc_sl, tc_date, iid').single();
         if(error) throw error;
-        entryStatus.textContent='Saved ✔'; entryStatus.style.color='#15803d';
+        // After successful insert update student_database: status='TC', tc_date, and tc_sl -> tc_date field per request mapping
+        if(inserted){
+          const updatePayload = {
+            status: 'TC',               // mark student as having TC
+            tc_date: inserted.tc_date || payload.tc_date || null, // copy date
+            tc_no: inserted.tc_sl || null // store termination serial as tc_no (tc_sl == tc_no)
+          };
+          try {
+            const { error: stuErr } = await client.from(studentTable).update(updatePayload).eq('iid', payload.iid);
+            if(stuErr) throw stuErr;
+            entryStatus.textContent='Saved ✔ (Student updated)'; entryStatus.style.color='#15803d';
+            // Auto-close modal shortly after success
+            setTimeout(()=>{ try{ hideModal(); }catch(_e){} }, 800);
+          } catch(uErr){
+            console.warn('Student table update warn', uErr);
+            entryStatus.textContent='Saved (student update failed)'; entryStatus.style.color='#d97706';
+          }
+        } else {
+          entryStatus.textContent='Saved ✔'; entryStatus.style.color='#15803d';
+        }
       } catch(err){ console.error(err); entryStatus.textContent='Save failed'; entryStatus.style.color='#b91c1c'; }
     });
   </script>
