@@ -42,6 +42,12 @@
             margin: 0;
             font-size: 1.5rem;
         }
+        /* Welcome text in header (center) */
+        #header-center {
+            color: var(--accent); /* orange theme color */
+            font-weight: 800;
+            letter-spacing: 0.2px;
+        }
         .logout-btn {
             background: var(--surface);
             border: none;
@@ -483,8 +489,14 @@
             gap: 12px;
             margin-bottom: 15px;
         }
-        .btn-primary {
-            background: linear-gradient(135deg, #ea580c 0%, #c2410c 50%, #9a3412 100%);
+        .iid-buttons .btn-primary { background: #2d89ef; color: #fff; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; }
+        .iid-buttons .btn-secondary { background: #eee; color: #333; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; }
+
+        /* Custom styling for Open Edit (primary) and Cancel buttons per user's request */
+        .btn-open-edit, .btn-primary.custom-orange {
+            background: #ef6c00; /* orange */
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(239,108,0,0.25);
             color: white;
             padding: 8px 16px;
             border: none;
@@ -496,6 +508,15 @@
             box-shadow: 0 4px 10px rgba(249, 115, 22, 0.28);
             position: relative;
             overflow: hidden;
+        }
+
+        .btn-cancel, .btn-secondary.custom-cancel {
+            background: #fff; /* keep background white/neutral */
+            color: #000; /* black font for cancel */
+            border: 1px solid #e6e6e6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
         }
         .btn-primary::before {
             content: '';
@@ -563,7 +584,7 @@
 <body>
     <div class="header">
         <h1>Super Admin Dashboard</h1>
-        <div id="header-center" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;color:rgba(255,255,255,0.95);font-weight:700"></div>
+    <div id="header-center" style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;"></div>
         <div>
             <button id="change-password-header-btn" class="logout-btn" style="margin-right: 10px;">🔑 Change Password</button>
             <button id="logout-btn" class="logout-btn">Logout</button>
@@ -679,10 +700,10 @@
                                 <input type="text" id="iidInput" placeholder="e.g. 106584230001" maxlength="12" />
                             </div>
                             <div class="iid-buttons">
-                                <button id="openIid" class="btn-primary">
+                                <button id="openIid" class="btn-primary btn-open-edit">
                                     <span>🔍</span> Open Edit
                                 </button>
-                                <button id="cancelIid" class="btn-secondary">
+                                <button id="cancelIid" class="btn-secondary btn-cancel">
                                     <span>✕</span> Close
                                 </button>
                             </div>
@@ -717,6 +738,24 @@
                                         <button type="button" class="btn" id="cancelPasswordBtn">Cancel</button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+
+                        <!-- Edit by IID Modal (popup) -->
+                        <div id="editIidModal" class="modal">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h3>Edit by IID</h3>
+                                    <button class="close-btn" id="closeEditIidModal">&times;</button>
+                                </div>
+                                <div class="form-group">
+                                    <label for="iidInputModal">IID</label>
+                                    <input type="text" id="iidInputModal" placeholder="e.g. 106584230001" maxlength="12" />
+                                </div>
+                                <div class="modal-buttons">
+                                    <button type="button" class="btn btn-primary custom-orange" id="openIidModalBtn">Open Edit</button>
+                                    <button type="button" class="btn custom-cancel" id="cancelEditIidBtn">Cancel</button>
+                                </div>
                             </div>
                         </div>
             </div>
@@ -817,11 +856,13 @@
             const urlParams = new URLSearchParams(window.location.search);
             const fallbackName = urlParams.get('name') || urlParams.get('admin') || '';
 
+            let hasUser = false;
             try{
                 const { data: { user } } = await supabase.auth.getUser();
                 if(user){
                     const name = user.user_metadata?.full_name || user.email || fallbackName || 'Admin';
                     headerCenter.textContent = `Welcome, ${name}`;
+                    hasUser = true;
                     
                     // Setup session monitoring - check every 5 minutes
                     setInterval(async () => {
@@ -831,8 +872,6 @@
                             window.location.href = './index.html';
                         }
                     }, 300000); // 5 minutes
-                    
-                    return;
                 }
             }catch(e){ 
                 console.warn('Could not get supabase user', e); 
@@ -841,25 +880,47 @@
                 return;
             }
 
-            // fallback to URL param or default (but still check auth)
-            if(fallbackName){
-                headerCenter.textContent = `Welcome, ${fallbackName}`;
-            } else {
-                headerCenter.textContent = 'Welcome, Admin';
+            // fallback to URL param or default (only if user not available)
+            if(!hasUser){
+                if(fallbackName){
+                    headerCenter.textContent = `Welcome, ${fallbackName}`;
+                } else {
+                    headerCenter.textContent = 'Welcome, Admin';
+                }
             }
 
-            // Wire up Edit-by-IID panel
+            // Wire up Edit-by-IID (modal + keep inline panel for fallback)
             const editByIidLink = Array.from(document.querySelectorAll('.dropdown-item')).find(a => /edit by iid/i.test(a.textContent||''));
+            // Inline panel (legacy)
             const iidPanel = document.getElementById('iidPanel');
             const cancelIid = document.getElementById('cancelIid');
             const openIid = document.getElementById('openIid');
             const iidInput = document.getElementById('iidInput');
+            // Modal elements (new)
+            const editIidModal = document.getElementById('editIidModal');
+            const iidInputModal = document.getElementById('iidInputModal');
+            const openIidModalBtn = document.getElementById('openIidModalBtn');
+            const closeEditIidModal = document.getElementById('closeEditIidModal');
+            const cancelEditIidBtn = document.getElementById('cancelEditIidBtn');
 
             function showPanel(){
                 if(iidPanel) {
                     iidPanel.classList.add('active');
                     iidInput.focus();
                     iidInput.select();
+                }
+            }
+            function openIidModal(){
+                if(editIidModal){
+                    editIidModal.classList.add('active');
+                    // focus input after a small tick to ensure visible
+                    setTimeout(()=>{ iidInputModal && iidInputModal.focus(); iidInputModal && iidInputModal.select(); }, 0);
+                }
+            }
+            function closeIidModal(){
+                if(editIidModal){
+                    editIidModal.classList.remove('active');
+                    if(iidInputModal){ iidInputModal.value = ''; iidInputModal.classList.remove('error'); }
                 }
             }
             function hidePanel(){
@@ -871,30 +932,33 @@
             }
 
             function openEdit(){
-                const iid = String(iidInput.value || '').trim();
+                const sourceEl = (this && this.id === 'openIidModalBtn') ? iidInputModal : iidInput;
+                const iid = String((sourceEl && sourceEl.value) || '').trim();
                 if(!iid){
-                    iidInput.classList.add('error');
-                    iidInput.focus();
+                    sourceEl && sourceEl.classList.add('error');
+                    sourceEl && sourceEl.focus();
                     showError('Please enter an IID');
                     return;
                 }
                 if(!/^\d+$/.test(iid)){
-                    iidInput.classList.add('error');
-                    iidInput.focus();
+                    sourceEl && sourceEl.classList.add('error');
+                    sourceEl && sourceEl.focus();
                     showError('IID must contain only numbers');
                     return;
                 }
                 if(iid.length < 10){
-                    iidInput.classList.add('error');
-                    iidInput.focus();
+                    sourceEl && sourceEl.classList.add('error');
+                    sourceEl && sourceEl.focus();
                     showError('IID seems too short. Please check the format.');
                     return;
                 }
-                iidInput.classList.remove('error');
+                sourceEl && sourceEl.classList.remove('error');
                 const url = `./editdetailsnew.html?iid=${encodeURIComponent(iid)}`;
                 window.open(url, '_blank', 'noopener');
                 // keep panel open for subsequent edits
                 showSuccess('Opening edit page...');
+                // and close modal if used
+                if(sourceEl === iidInputModal){ closeIidModal(); }
             }
 
             function showError(message){
@@ -910,11 +974,15 @@
             if(editByIidLink){
                 editByIidLink.addEventListener('click', (ev) => {
                     ev.preventDefault();
-                    showPanel();
+                    // Prefer modal UX
+                    openIidModal();
                 });
             }
             if(cancelIid) cancelIid.addEventListener('click', hidePanel);
             if(openIid) openIid.addEventListener('click', openEdit);
+            if(openIidModalBtn) openIidModalBtn.addEventListener('click', openEdit);
+            if(closeEditIidModal) closeEditIidModal.addEventListener('click', closeIidModal);
+            if(cancelEditIidBtn) cancelEditIidBtn.addEventListener('click', closeIidModal);
 
             // Keyboard support
             if(iidInput){
@@ -924,6 +992,22 @@
                 });
                 iidInput.addEventListener('input', () => {
                     iidInput.classList.remove('error');
+                });
+            }
+            if(iidInputModal){
+                iidInputModal.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter') openEdit.call(openIidModalBtn);
+                    if(e.key === 'Escape') closeIidModal();
+                });
+                iidInputModal.addEventListener('input', () => {
+                    iidInputModal.classList.remove('error');
+                });
+            }
+
+            // Close modal when clicking outside content
+            if(editIidModal){
+                editIidModal.addEventListener('click', (e) => {
+                    if(e.target === editIidModal){ closeIidModal(); }
                 });
             }
         });
