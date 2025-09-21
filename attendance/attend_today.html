@@ -28,6 +28,8 @@
     .student-name{font-weight:600;color:#374151;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
     .time-display{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px;color:#6b7280}
     .btn-print{background: linear-gradient(135deg, #059669 0%, #047857 100%);}
+    .btn-assign{background:#f59e0b;color:#111827;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px}
+    .btn-assign:hover{background:#f59e0bcc}
     @media print {
       .btn, .btn-print, .controls, .print-section { display: none !important; }
       .container { box-shadow: none; border: 1px solid #ccc; }
@@ -165,12 +167,13 @@
           const studentData = rfidToData.get(row.rfid_card_no);
           const iid = studentData?.iid || '';
           const name = studentData?.name || '';
+          const iidCell = iid ? iid : `<button class="btn-assign" onclick="assignRfid('${row.rfid_card_no}', this)">Assign</button>`;
           tr.innerHTML = `
             <td>${row.attendence_sl ?? ''}</td>
             <td class="date-highlight">${date}</td>
             <td class="time-display">${timeDisplay}</td>
             <td class="rfid-code">${row.rfid_card_no ?? ''}</td>
-            <td>${iid}</td>
+            <td>${iidCell}</td>
             <td class="student-name">${name}</td>
           `;
           tableBody.appendChild(tr);
