@@ -144,7 +144,7 @@
       setStatus(globalStatus, 'Loading teachers...');
       const { data, error } = await supabase
         .from(TABLE)
-        .select('iid, teacher_name_en, sector, designation_en, mobile_number_en, email_id, nid_number_en, join_date, pp_photo')
+        .select('iid, teacher_name_en, sector, designation_en, mobile_number_en, teacher_email_id, nid_number_en, join_date, pp_photo')
         .order('iid', { ascending: true });
       if(error){ setStatus(globalStatus, 'Error: '+error.message, 'err'); return; }
       allRows = data || [];
@@ -166,7 +166,7 @@
           <td>${safe(r.sector)}</td>
             <td>${safe(r.designation_en)}</td>
           <td>${safe(r.mobile_number_en)}</td>
-          <td>${safe(r.email_id)}</td>
+          <td>${safe(r.teacher_email_id)}</td>
           <td>${safe(r.nid_number_en)}</td>
           <td class="nowrap">${safe(r.join_date)}</td>
           <td class="actions-col"><button type="button" data-link-edit="${r.iid}">Edit</button></td>
@@ -185,7 +185,7 @@
           r.sector,
           r.designation_en,
           r.mobile_number_en,
-          r.email_id,
+          r.teacher_email_id,
           r.nid_number_en
         ].some(v => (v||'').toLowerCase().includes(q))
       );
@@ -223,7 +223,7 @@
         sector: '',
         designation_en: '',
         mobile_number_en: '',
-        email_id: '',
+        teacher_email_id: '',
         nid_number_en: '',
         join_date: '',
         pp_photo: ''
@@ -281,7 +281,7 @@
       gender_bn:'Gender (BN)',
       mobile_number_en:'Mobile (EN)',
       mobile_number_bn:'Mobile (BN)',
-      email_id:'Email',
+      teacher_email_id:'Email',
       this_school_join_date:'This School Join Date',
       join_date:'Join Date',
       "1st_mpo":'1st MPO',
