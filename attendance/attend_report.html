@@ -29,7 +29,7 @@
 
     <table id="reportTable">
       <thead>
-        <tr><th>SL</th><th>Date</th><th>RFID</th><th>Time</th><th>IID</th><th>Student Name</th></tr>
+        <tr><th>SL</th><th>Date</th><th>RFID</th><th>Time</th><th>IID</th><th>Student Name</th><th>Class</th><th>Section</th><th>Roll</th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -66,12 +66,21 @@
       try {
         const { data, error } = await supabase
           .from('student_database')
-          .select('iid, rfid_card_no, student_name_en')
+          .select('iid, rfid_card_no, student_name_en, class_2025, section_2025, roll_2025')
           .not('rfid_card_no', 'is', null);
 
         if (error) throw error;
 
-        rfidToData = new Map(data.map(row => [row.rfid_card_no, { iid: row.iid, name: row.student_name_en }]));
+        rfidToData = new Map(data.map(row => [
+          row.rfid_card_no, 
+          { 
+            iid: row.iid, 
+            name: row.student_name_en,
+            class: row.class_2025,
+            section: row.section_2025,
+            roll: row.roll_2025
+          }
+        ]));
       } catch (err) {
         console.warn('Could not load student data for lookup:', err);
       }
@@ -91,7 +100,7 @@
 
         tableBody.innerHTML = '';
         if (!data || data.length === 0) {
-          tableBody.innerHTML = '<tr><td colspan="6" class="muted">No records found.</td></tr>';
+          tableBody.innerHTML = '<tr><td colspan="9" class="muted">No records found.</td></tr>';
           statusEl.textContent = 'No records';
           return;
         }
@@ -102,6 +111,9 @@
           const studentData = rfidToData.get(row.rfid_card_no);
           const iid = studentData?.iid || '';
           const name = studentData?.name || '';
+          const studentClass = studentData?.class || '';
+          const section = studentData?.section || '';
+          const roll = studentData?.roll || '';
           const iidCell = iid ? iid : `<button style="background: #ff9800; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;" onclick="assignRfid('${row.rfid_card_no}', this)">Assign</button>`;
           tr.innerHTML = `
             <td>${row.attendence_sl ?? ''}</td>
@@ -110,6 +122,9 @@
             <td>${row.attendence_time ?? ''}</td>
             <td>${iidCell}</td>
             <td>${name}</td>
+            <td>${studentClass}</td>
+            <td>${section}</td>
+            <td>${roll}</td>
           `;
           tableBody.appendChild(tr);
         }
