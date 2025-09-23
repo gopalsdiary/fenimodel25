@@ -99,6 +99,12 @@
             .group-2025 { background:linear-gradient(135deg,rgba(16,185,129,.15),rgba(16,185,129,.05)); border-color:rgba(16,185,129,.35); }
             .group-2024 { background:linear-gradient(135deg,rgba(99,102,241,.18),rgba(99,102,241,.06)); border-color:rgba(99,102,241,.40); }
             .group-docs { background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(245,158,11,.07)); border-color:rgba(245,158,11,.45); margin-top:2.2rem; }
+            /* New grouped sections */
+            .group-db { background:linear-gradient(135deg,rgba(14,165,233,.18),rgba(14,165,233,.06)); border-color:rgba(14,165,233,.40); }
+            .group-exams { background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(34,197,94,.06)); border-color:rgba(34,197,94,.40); }
+            .group-student { background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(124,58,237,.06)); border-color:rgba(124,58,237,.40); }
+            .group-admin { background:linear-gradient(135deg,rgba(220,38,38,.18),rgba(220,38,38,.06)); border-color:rgba(220,38,38,.40); }
+            .group-ext { background:linear-gradient(135deg,rgba(5,150,105,.18),rgba(5,150,105,.06)); border-color:rgba(5,150,105,.40); }
             .group-2025 .year-head span.line { background:linear-gradient(90deg,#10b981,transparent); }
             .group-2024 .year-head span.line { background:linear-gradient(90deg,#6366f1,transparent); }
             .group-docs .section-head span { background:linear-gradient(90deg,#f59e0b,transparent)!important; }
@@ -172,30 +178,38 @@
                     .year-head { display:flex; align-items:center; gap:.65rem; font-size:1rem; font-weight:600; letter-spacing:.6px; color:var(--text-soft); text-transform:uppercase; margin:0 0 .75rem; }
                     .year-head span.line { flex:0 0 42px; height:2px; background:linear-gradient(90deg,var(--brand),transparent); border-radius:2px; }
                 </style>
-                <!-- Top quick links -->
-                <div class="grid" role="list" aria-label="Top quick links">
-                    <a role="listitem" href="0database/data.html" class="card-link year-2025" aria-label="Student Database - class wise (Feni Model)">
-                        <span class="tag green">2025</span>
-                        <span class="card-icon">🧮</span>
-                        <span class="card-title">Student Database - class wise (ফেনী মডেল)</span>
-                        <span class="card-desc">Mid‑session performance (open module).</span>
-                    </a>
-                    <a role="listitem" href="https://modelteachersdata.netlify.app/" class="card-link" aria-label="Teachers information">
-                        <span class="tag">Teachers</span>
-                        <span class="card-icon">👩‍🏫</span>
-                        <span class="card-title">Teachers information</span>
-                        <span class="card-desc">Faculty directory and staff details.</span>
-                    </a>
-                    <a role="listitem" href="student_count.html" class="card-link" aria-label="Student count summary">
-                        <span class="tag">Count</span>
-                        <span class="card-icon">📈</span>
-                        <span class="card-title">শিক্ষার্থীদের যোগফল (সারাংশ)</span>
-                        <span class="card-desc">Section‑wise totals with links to the detailed list.</span>
-                    </a>
+                <!-- Database Management Group -->
+                <div class="year-group group-db" id="group-db">
+                    <h3 class="section-head" style="margin:0 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
+                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#0ea5e9,transparent);"></span> Database Management
+                    </h3>
+                    <div class="grid subgrid" role="list" aria-label="Database Management" style="--min:260px;">
+                        <a role="listitem" href="0database/data.html" class="card-link year-2025" aria-label="Student Database - class wise (Feni Model)">
+                            <span class="tag green">2025</span>
+                            <span class="card-icon">🧮</span>
+                            <span class="card-title">Student Database - class wise (ফেনী মডেল)</span>
+                            <span class="card-desc">Mid‑session performance (open module).</span>
+                        </a>
+                        <a role="listitem" href="https://modelteachersdata.netlify.app/" class="card-link" aria-label="Teachers information">
+                            <span class="tag">Teachers</span>
+                            <span class="card-icon">👩‍🏫</span>
+                            <span class="card-title">Teachers information</span>
+                            <span class="card-desc">Faculty directory and staff details.</span>
+                        </a>
+                        <a role="listitem" href="student_count.html" class="card-link" aria-label="Student count summary">
+                            <span class="tag">Count</span>
+                            <span class="card-icon">📈</span>
+                            <span class="card-title">শিক্ষার্থীদের যোগফল (সারাংশ)</span>
+                            <span class="card-desc">Section‑wise totals with links to the detailed list.</span>
+                        </a>
+                    </div>
                 </div>
-                <div class="year-group" id="year-2025">
-                    <h3 class="year-head"><span class="line"></span> 2025 Examination</h3>
-                    <div class="grid" role="list" aria-label="2025 Examination Modules">
+                <!-- Examination Results & Processing -->
+                <div class="year-group group-exams" id="group-exams">
+                    <h3 class="section-head" style="margin:1.2rem 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
+                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#22c55e,transparent);"></span> Examination Results & Processing
+                    </h3>
+                    <div class="grid subgrid" role="list" aria-label="2025 Examination Modules" style="--min:260px;">
                         <a role="listitem" href="terminal25 sheet/index.html" class="card-link year-2025" aria-label="Half Yearly Examination 2025">
                             <span class="tag green">2025</span>
                             <span class="card-icon">🧮</span>
@@ -220,11 +234,7 @@
                             <span class="card-title">student login </span>
                             <span class="card-desc">Student login module.</span>
                         </a>
-                    </div>
-                </div>
-                <div class="year-group" id="year-2024">
-                    <h3 class="year-head"><span class="line"></span> 2024 Examination</h3>
-                    <div class="grid" role="list" aria-label="2024 Examination Modules">
+                        <!-- 2024 -->
                         <a role="listitem" href="ann24/index.html" class="card-link year-2024" aria-label="Annual Examination 2024 (Another School)">
                             <span class="tag alt">2024</span>
                             <span class="card-icon">📊</span>
@@ -239,90 +249,122 @@
                         </a>
                     </div>
                 </div>
+                <!-- Certificates & Documents -->
                 <div class="year-group group-docs" id="group-docs">
-                    <h3 class="section-head" style="margin:0 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
-                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#f59e0b,transparent);"></span> Certificates & Testimonials
+                    <h3 class="section-head" style="margin:1.2rem 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
+                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#f59e0b,transparent);"></span> Certificates & Documents
                     </h3>
                     <div class="grid subgrid" role="list" id="certGrid" style="--min:260px;">
-                                <a role="listitem" href="TC/test_list.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">TC</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title">Transfer Certificates</span>
-                                    <span class="card-desc">Lookup & verify issued transfer certificates.</span>
-                                </a>
-                                <a role="listitem" href="ssc_testomonial/test_list.html" class="card-link" aria-label="SSC Testimonial module">
-                                    <span class="tag alt">SSC 2025</span>
-                                    <span class="card-icon">🎓</span>
-                                    <span class="card-title">SSC Testimonials (এস.এস.সি -প্রশংসা পত্র) </span>
-                                    <span class="card-desc">Session‑wise testimonial verification list.</span>
-                                </a>
-                                <a role="listitem" href="Protoyon/test_list.html" class="card-link" aria-label="School Testimonial module">
-                                    <span class="tag alt">School প্রত্যয়ন</span>
-                                    <span class="card-icon">🎓</span>
-                                    <span class="card-title">প্রত্যয়ন পত্র (স্কুল) </span> 
-                                    <span class="card-desc">ID‑wise testimonial verification list.</span>
-                                </a>
+                        <a role="listitem" href="TC/test_list.html" class="card-link" aria-label="Transfer Certificate module">
+                            <span class="tag">TC</span>
+                            <span class="card-icon">📑</span>
+                            <span class="card-title">Transfer Certificates</span>
+                            <span class="card-desc">Lookup & verify issued transfer certificates.</span>
+                        </a>
+                        <a role="listitem" href="ssc_testomonial/test_list.html" class="card-link" aria-label="SSC Testimonial module">
+                            <span class="tag alt">SSC 2025</span>
+                            <span class="card-icon">🎓</span>
+                            <span class="card-title">SSC Testimonials (এস.এস.সি -প্রশংসা পত্র)</span>
+                            <span class="card-desc">Session‑wise testimonial verification list.</span>
+                        </a>
+                        <a role="listitem" href="Protoyon/test_list.html" class="card-link" aria-label="School Testimonial module">
+                            <span class="tag alt">School প্রত্যয়ন</span>
+                            <span class="card-icon">🎓</span>
+                            <span class="card-title">প্রত্যয়ন পত্র (স্কুল)</span>
+                            <span class="card-desc">ID‑wise testimonial verification list.</span>
+                        </a>
+                        <a role="listitem" href="admit/admitlist.html" class="card-link" aria-label="Admit Card module">
+                            <span class="tag">Admit Card</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">পরীক্ষার প্রবেশপত্র (Admit Card)</span>
+                            <span class="card-desc">তৈরি করুণ Admit cards</span>
+                        </a>
+                        <a role="listitem" href="seatplan/admitlist.html" class="card-link" aria-label="Seat Plan module">
+                            <span class="tag">Seat</span>
+                            <span class="card-icon">🪑</span>
+                            <span class="card-title">সীট প্ল্যান (Seat plan)</span>
+                            <span class="card-desc">Create seat plans.</span>
+                        </a>
                     </div>
-            
                 </div>
-                
-             <div class="grid subgrid" role="list" id="certGrid" style="--min:260px;">
-                                <a role="listitem" href="admit/admitlist.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">Admit Card</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title">পরীক্ষার প্রবেশপত্র (Admit Card)</span>
-                                    <span class="card-desc">তৈরি করুণ Admit cards </span>
-                                </a>
-                                <a role="listitem" href="seatplan/admitlist.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">Seat</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> সীট প্ল্যান (Seat plan)</span>
-                                    <span class="card-desc">Create  seat plans.</span>
-                                </a>
-                                <a role="listitem" href="photo/downloder.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">Photo</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> student photo (Bulk show)</span>
-                                    <span class="card-desc">Lookup   issued photo.</span>
-                                </a>
-                                <a role="listitem" href="idcard/test_list.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">id card</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> student id card</span>
-                                    <span class="card-desc">Lookup & verify issued id card.</span>
-                                </a>
-                                 <a role="listitem" href="sms/regular_excel_sms.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">SMS</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title">SMS List and Management</span>
-                                    <span class="card-desc">Lookup & see sended SMS.</span>
-                                </a>
-                                <a role="listitem" href="photoupload/photo_upload.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag">Photo</span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> student photo Upload</span>
-                                    <span class="card-desc">Lookup  issued photo.</span>
-                                </a>
-                                <a role="listitem" href="attendance/attendence_dashboard.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag"> Attendance </span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> Attendance System </span>
-                                    <span class="card-desc">Lookup  issued Attendance.</span>
-                                </a>
-                                <a role="listitem" href="https://modelresult.netlify.app/resultprocessing/login.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag"> Attendance </span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> New Result Processing </span>
-                                    <span class="card-desc">For teachers </span>
-                                </a>
-                                 <a role="listitem" href="login/index.html" class="card-link" aria-label="Transfer Certificate module">
-                                    <span class="tag"> Super Admin  </span>
-                                    <span class="card-icon">📑</span>
-                                    <span class="card-title"> Super Admin Dashboard </span>
-                                    <span class="card-desc">Edit Database</span>
-                                </a>
+
+                <!-- Student Services -->
+                <div class="year-group group-student" id="group-student">
+                    <h3 class="section-head" style="margin:1.2rem 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
+                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#7c3aed,transparent);"></span> Student Services
+                    </h3>
+                    <div class="grid subgrid" role="list" id="studentGrid" style="--min:260px;">
+                        <a role="listitem" href="attendance/attendence_dashboard.html" class="card-link" aria-label="Attendance System">
+                            <span class="tag">Attendance</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Attendance System</span>
+                            <span class="card-desc">Student attendance tracking & reports.</span>
+                        </a>
+                        <a role="listitem" href="photo/downloder.html" class="card-link" aria-label="Student Photos">
+                            <span class="tag">Photo</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Student photo (Bulk show)</span>
+                            <span class="card-desc">Lookup issued photo.</span>
+                        </a>
+                        <a role="listitem" href="photoupload/photo_upload.html" class="card-link" aria-label="Photo Upload">
+                            <span class="tag">Upload</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Student photo Upload</span>
+                            <span class="card-desc">Upload student photos.</span>
+                        </a>
+                        <a role="listitem" href="idcard/test_list.html" class="card-link" aria-label="ID Cards">
+                            <span class="tag">ID Card</span>
+                            <span class="card-icon">🆔</span>
+                            <span class="card-title">Student ID card</span>
+                            <span class="card-desc">Lookup & verify issued id card.</span>
+                        </a>
+                        <a role="listitem" href="sms/regular_excel_sms.html" class="card-link" aria-label="SMS Management">
+                            <span class="tag">SMS</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">SMS List and Management</span>
+                            <span class="card-desc">Lookup & see sent SMS.</span>
+                        </a>
+                        <a role="listitem" href="admission/admission_dashboard.html" class="card-link" aria-label="Admission System">
+                            <span class="tag">Admission</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Admission system</span>
+                            <span class="card-desc">Student admission management.</span>
+                        </a>
                     </div>
-                    <nav class="top-nav">
+                </div>
+
+                <!-- Administrative Tools -->
+                <div class="year-group group-admin" id="group-admin">
+                    <h3 class="section-head" style="margin:1.2rem 0 .9rem;font-size:1.05rem;letter-spacing:.8px;text-transform:uppercase;color:var(--text-soft);display:flex;align-items:center;gap:.55rem;">
+                        <span style="width:38px;height:2px;background:linear-gradient(90deg,#dc2626,transparent);"></span> Administrative Tools
+                    </h3>
+                    <div class="grid subgrid" role="list" id="adminGrid" style="--min:260px;">
+                        
+                        <a role="listitem" href="https://modelresult.netlify.app/resultprocessing/login.html" class="card-link" aria-label="Result Processing">
+                            <span class="tag">Results</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Pre-tes Result Processing</span>
+                            <span class="card-desc">For teachers</span>
+                        </a>
+                        <a role="listitem" href="#" class="card-link" aria-label="Accounting Module">
+                            <span class="tag alt">Accounting</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">অ্যাকাউন্টিং মডিউল</span>
+                            <span class="card-desc">রিপোর্ট জেনারেটর</span>
+                        </a>
+                        <a role="listitem" href="login/index.html" class="card-link" aria-label="Super Admin Dashboard">
+                            <span class="tag">Super Admin</span>
+                            <span class="card-icon">�</span>
+                            <span class="card-title">Super Admin Dashboard</span>
+                            <span class="card-desc">Edit Database</span>
+                        </a>
+                    </div>
+                </div>
+
+                
+                     
+
+            <nav class="top-nav">
                 <ul> 
                     <li><a href="https://fmhs.edu.bd/">Web site </a></li>
                     <li><a href="https://www.shikkhanobish.com/">Web Admin </a></li>
@@ -334,8 +376,6 @@
                     <li><a href="/help.html">Help and Support</a></li>
                 </ul>
             </nav>
-                    </div>
-                     
 
                 <p class="note">© <span id="year"></span> Feni Model High School · Auto session timeout enabled · Unauthorized access prohibited.</p>
             </section>
