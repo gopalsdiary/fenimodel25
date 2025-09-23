@@ -18,6 +18,7 @@
     .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
     .btn.secondary{background:#6c757d}
     .btn.updated{background:#28a745 !important; cursor: default !important}
+  .row-update-status{font-weight:600;font-size:13px;margin-left:8px}
     .btn.bulk{background:#ff6b35 !important; font-weight: bold !important}
     /* modal */
     .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
@@ -352,7 +353,7 @@
       }
     }
 
-    async function updateActiveSection(row) {
+    async function updateActiveSection(row, btnEl) {
       try {
         // Get the dynamic values for active columns
         const session = row['session'];
@@ -385,16 +386,36 @@
 
         if (error) {
           console.error('Error saving to active_section:', error);
-          alert('Error updating active section: ' + error.message);
+          // Show inline error next to button if available
+          if(btnEl){
+            const s = btnEl.nextElementSibling; // statusSpan
+            if(s){ s.textContent = 'Error'; s.style.color = '#a00'; }
+          } else {
+            alert('Error updating active section: ' + error.message);
+          }
         } else {
           console.log('Successfully saved to active_section:', data);
-          alert('Successfully updated active section!');
-          // Refresh the table to update the status indicators (keep current page)
+          // Update the UI inline: mark button as Updated and show green text
+          if(btnEl){
+            btnEl.className = 'btn updated';
+            btnEl.innerHTML = '✓ Updated';
+            btnEl.style.backgroundColor = '#28a745';
+            btnEl.style.color = '#fff';
+            btnEl.disabled = true;
+            const s = btnEl.nextElementSibling; // statusSpan
+            if(s){ s.textContent = 'Updated'; s.style.color = '#28a745'; }
+          }
+          // Refresh the table status indicators (keeps current page)
           renderPage(currentPage);
         }
       } catch (err) {
         console.error('updateActiveSection error:', err);
-        alert('Error: ' + err.message);
+        if(btnEl){
+          const s = btnEl.nextElementSibling;
+          if(s){ s.textContent = 'Error'; s.style.color = '#a00'; }
+        } else {
+          alert('Error: ' + err.message);
+        }
       }
     }
 
@@ -462,9 +483,12 @@
           tr.appendChild(td);
         });
 
-        // Add Update button column with status check
-        const updateTd = document.createElement('td');
-        const updateBtn = document.createElement('button');
+  // Add Update button column with status check and an inline status span
+  const updateTd = document.createElement('td');
+  const updateBtn = document.createElement('button');
+  const statusSpan = document.createElement('span');
+  statusSpan.className = 'row-update-status';
+  statusSpan.style.marginLeft = '8px';
         
         // Check if data is already updated
         const existing = existingData[r.iid];
@@ -487,13 +511,21 @@
           updateBtn.innerHTML = '✓ Updated';
           updateBtn.style.backgroundColor = '#28a745';
           updateBtn.style.color = '#fff';
+          updateBtn.disabled = true;
+          statusSpan.textContent = 'Updated';
+          statusSpan.style.color = '#28a745';
         } else {
           updateBtn.className = 'btn';
           updateBtn.textContent = 'Update';
         }
-        
-        updateBtn.onclick = () => updateActiveSection(r);
+
+        // Wire click to pass the button element so UI can be updated in-place
+        updateBtn.addEventListener('click', (e) => {
+          updateActiveSection(r, e.currentTarget);
+        });
+
         updateTd.appendChild(updateBtn);
+        updateTd.appendChild(statusSpan);
         tr.appendChild(updateTd);
 
         tbody.appendChild(tr);
@@ -645,7 +677,7 @@
       currentIID = null;
     }
 
-    // Bulk update function to update all records that need updating
+    // Bulk update function to update only the currently visible page's records
     async function bulkUpdateActiveSection() {
       if (!allRowsCache || allRowsCache.length === 0) {
         alert('No data loaded. Please load students first.');
@@ -654,28 +686,38 @@
 
       const bulkUpdateBtn = document.getElementById('bulkUpdateBtn');
       const originalText = bulkUpdateBtn.textContent;
-      
+
       try {
         bulkUpdateBtn.disabled = true;
         bulkUpdateBtn.textContent = 'Checking...';
         bulkUpdateBtn.style.backgroundColor = '#ffa500';
-        
-        // Get existing data to check what needs updating
-        const iids = allRowsCache.map(r => r.iid);
-        const existingData = await getExistingActiveSectionData(iids);
-        
-        // Find records that need updating
+
+        // Determine visible page rows only
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const pageRows = allRowsCache.slice(start, start + PAGE_SIZE);
+        if (!pageRows || pageRows.length === 0) {
+          alert('No rows visible on this page to update.');
+          bulkUpdateBtn.textContent = originalText;
+          bulkUpdateBtn.disabled = false;
+          bulkUpdateBtn.style.backgroundColor = '';
+          return;
+        }
+
+        // Get existing data for visible rows only
+        const pageIids = pageRows.map(r => r.iid);
+        const existingData = await getExistingActiveSectionData(pageIids);
+
+        // Find visible records that need updating
         const recordsToUpdate = [];
-        allRowsCache.forEach(row => {
+        pageRows.forEach(row => {
           const existing = existingData[row.iid];
           const session = row['session'];
           const currentActiveClass = session ? row[`class_${session}`] : '';
           const currentActiveSection = session ? row[`section_${session}`] : '';
           const currentActiveRoll = session ? row[`roll_${session}`] : '';
-          
-          // include student_key comparison (derived last 6 digits of father_mobile)
+
           const rowStudentKey = (String(row['father_mobile']||'').replace(/\D/g,'').slice(-6)) || null;
-          const isUpdated = existing && 
+          const isUpdated = existing &&
             existing.active_class === (currentActiveClass || null) &&
             existing.active_section === (currentActiveSection || null) &&
             existing.active_roll === (currentActiveRoll || null) &&
@@ -683,21 +725,18 @@
             existing.student_name_en === (row['student_name_en'] || null) &&
             existing.student_key === rowStudentKey;
 
-          if (!isUpdated) {
-            recordsToUpdate.push(row);
-          }
+          if (!isUpdated) recordsToUpdate.push(row);
         });
 
         if (recordsToUpdate.length === 0) {
-          alert('All records are already updated!');
+          alert('All visible rows are already updated!');
           bulkUpdateBtn.textContent = originalText;
           bulkUpdateBtn.disabled = false;
           bulkUpdateBtn.style.backgroundColor = '';
           return;
         }
 
-        // Confirm bulk update
-        const confirmMsg = `Found ${recordsToUpdate.length} records that need updating. Proceed with bulk update?`;
+        const confirmMsg = `Found ${recordsToUpdate.length} visible records that need updating. Proceed?`;
         if (!confirm(confirmMsg)) {
           bulkUpdateBtn.textContent = originalText;
           bulkUpdateBtn.disabled = false;
@@ -705,21 +744,34 @@
           return;
         }
 
-        bulkUpdateBtn.textContent = `Updating... (0/${recordsToUpdate.length})`;
+        bulkUpdateBtn.textContent = `Updating visible rows... (0/${recordsToUpdate.length})`;
         bulkUpdateBtn.style.backgroundColor = '#ff6b35';
-        
+
         let successCount = 0;
         let errorCount = 0;
-        
-        // Update records in batches to avoid overwhelming the server
+
+        // Helper to find the update button element for a given iid in the current table
+        function findButtonForIid(iid){
+          try{
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            for(const tr of rows){
+              const iidCell = tr.querySelector('td:nth-child(2)');
+              if(iidCell && iidCell.textContent.trim() === String(iid)){
+                const btn = tr.querySelector('button');
+                const status = tr.querySelector('.row-update-status');
+                return { btn, status };
+              }
+            }
+          }catch(e){/* ignore */}
+          return { btn: null, status: null };
+        }
+
+        // Update records in batches
         const batchSize = 50;
         for (let i = 0; i < recordsToUpdate.length; i += batchSize) {
           const batch = recordsToUpdate.slice(i, i + batchSize);
-          
-          // Update progress
-          bulkUpdateBtn.textContent = `Updating... (${Math.min(i + batchSize, recordsToUpdate.length)}/${recordsToUpdate.length})`;
-          
-          // Process batch
+          bulkUpdateBtn.textContent = `Updating visible rows... (${Math.min(i + batchSize, recordsToUpdate.length)}/${recordsToUpdate.length})`;
+
           const promises = batch.map(async (row) => {
             try {
               const session = row['session'];
@@ -734,7 +786,6 @@
                 active_class: activeClass || null,
                 session: row['session'] || null,
                 student_name_en: row['student_name_en'] || null,
-                // compute student_key from father_mobile
                 student_key: (function(){ const fm = String(row['father_mobile']||'').replace(/\D/g,''); return fm.length>6?fm.slice(-6):(fm||null); })()
               };
 
@@ -742,39 +793,49 @@
                 .from('active_section')
                 .upsert(dataToSave, { onConflict: 'iid' });
 
+              const { btn, status } = findButtonForIid(row.iid);
+
               if (error) {
                 console.error('Bulk update error for iid', row.iid, ':', error);
                 errorCount++;
+                if(status){ status.textContent = 'Error'; status.style.color = '#a00'; }
               } else {
                 successCount++;
+                if(btn){
+                  btn.className = 'btn updated';
+                  btn.innerHTML = '✓ Updated';
+                  btn.style.backgroundColor = '#28a745';
+                  btn.style.color = '#fff';
+                  btn.disabled = true;
+                }
+                if(status){ status.textContent = 'Updated'; status.style.color = '#28a745'; }
               }
             } catch (err) {
               console.error('Bulk update exception for iid', row.iid, ':', err);
               errorCount++;
+              const { status } = findButtonForIid(row.iid);
+              if(status){ status.textContent = 'Error'; status.style.color = '#a00'; }
             }
           });
 
           await Promise.all(promises);
-          
-          // Small delay between batches to be gentle on the server
+
+          // Small delay between batches
           if (i + batchSize < recordsToUpdate.length) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
 
-        // Show results
-        const resultMsg = `Bulk update completed!\n✅ Successfully updated: ${successCount}\n❌ Errors: ${errorCount}`;
+        const resultMsg = `Bulk update (visible page) completed!\n✅ Successfully updated: ${successCount}\n❌ Errors: ${errorCount}`;
         alert(resultMsg);
-        
-        // Refresh the table to show updated status (keep current page)
-        if (successCount > 0) {
-          renderPage(currentPage);
-        }
-        
+
+        // Refresh the page to ensure consistency
+        if (successCount > 0) renderPage(currentPage);
+
         bulkUpdateBtn.textContent = originalText;
         bulkUpdateBtn.disabled = false;
         bulkUpdateBtn.style.backgroundColor = '';
-        
+
       } catch (err) {
         console.error('Bulk update error:', err);
         alert('Bulk update failed: ' + (err.message || err));
