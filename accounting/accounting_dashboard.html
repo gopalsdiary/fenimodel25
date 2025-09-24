@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🏦 বাংলাদেশ অ্যাকাউন্টিং ড্যাশবোর্ড</title>
+  <style>
+    :root{
+      --primary:#1e40af; --secondary:#0891b2; --success:#059669; --warning:#d97706; --danger:#dc2626;
+      --bg:#f8fafc; --card:#ffffff; --border:#e2e8f0; --text:#1e293b; --muted:#64748b; --accent:#3b82f6;
+      --grid-gap:16px; --border-radius:12px; --shadow:0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    *{box-sizing:border-box; margin:0; padding:0}
+    body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif; background:var(--bg); color:var(--text); line-height:1.5}
+    .container{max-width:1400px; margin:0 auto; padding:20px}
+    
+    /* Header */
+    .header{background:linear-gradient(135deg,var(--primary),var(--secondary)); color:white; padding:24px; border-radius:var(--border-radius); margin-bottom:24px; box-shadow:var(--shadow)}
+    .header h1{font-size:28px; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:12px}
+    .header-meta{display:flex; justify-content:space-between; align-items:center; font-size:14px; opacity:0.9}
+    .user-info{display:flex; align-items:center; gap:12px}
+    
+    /* Toolbar */
+    .toolbar{background:var(--card); padding:16px; border-radius:var(--border-radius); margin-bottom:24px; box-shadow:var(--shadow); display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+    .toolbar .btn{background:var(--accent); color:white; border:none; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:500; transition:all 0.2s}
+    .toolbar .btn:hover{background:#2563eb; transform:translateY(-1px)}
+    .toolbar .btn.active{background:var(--success); box-shadow:0 2px 4px rgba(5,150,105,0.3)}
+    .toolbar .form-control{padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px}
+    .toolbar select.form-control{min-width:120px}
+    .checkbox-label{display:flex; align-items:center; gap:6px; color:var(--muted); font-size:14px}
+    
+    /* Grid System */
+    .grid{display:grid; grid-template-columns:repeat(12,1fr); gap:var(--grid-gap); margin-bottom:24px}
+    .col-3{grid-column:span 3} .col-4{grid-column:span 4} .col-6{grid-column:span 6} .col-8{grid-column:span 8} .col-12{grid-column:span 12}
+    
+    /* Cards */
+    .card{background:var(--card); padding:20px; border-radius:var(--border-radius); box-shadow:var(--shadow); border:1px solid var(--border)}
+    .card-header{display:flex; justify-content:space-between; align-items:center; margin-bottom:16px}
+    .card-title{font-size:16px; font-weight:600; color:var(--text)}
+    .card-subtitle{font-size:12px; color:var(--muted); margin-top:4px}
+    
+    /* KPI Cards */
+    .kpi-card{text-align:center; position:relative; overflow:hidden}
+    .kpi-card::before{content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,var(--success),var(--accent))}
+    .kpi-value{font-size:28px; font-weight:700; color:var(--primary); margin:8px 0}
+    .kpi-label{font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px}
+    .kpi-change{font-size:12px; margin-top:8px; padding:4px 8px; border-radius:12px}
+    .kpi-change.positive{background:#dcfce7; color:#16a34a}
+    .kpi-change.negative{background:#fef2f2; color:#dc2626}
+    
+    /* Table */
+    .table-container{overflow-x:auto}
+    table{width:100%; border-collapse:collapse}
+    th,td{padding:12px; text-align:left; border-bottom:1px solid var(--border); font-size:14px}
+    th{background:#f8fafc; font-weight:600; color:var(--text); position:sticky; top:0}
+    tr:hover{background:#f8fafc}
+    .amount{text-align:right; font-weight:500}
+    .positive{color:var(--success)} .negative{color:var(--danger)}
+    
+    /* Chart Container */
+    .chart-container{position:relative; height:300px}
+    
+    /* Action Buttons */
+    .actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:16px}
+    .action-btn{background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:8px; cursor:pointer; font-size:14px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; transition:all 0.2s}
+    .action-btn:hover{background:#2563eb; transform:translateY(-1px)}
+    .action-btn.secondary{background:var(--muted); color:white}
+    .action-btn.success{background:var(--success)}
+    .action-btn.warning{background:var(--warning)}
+    .action-btn.danger{background:var(--danger)}
+    .action-btn:disabled{opacity:0.5; cursor:not-allowed}
+    
+    /* Status Indicators */
+    .status{padding:4px 8px; border-radius:12px; font-size:11px; font-weight:500; text-transform:uppercase}
+    .status.active{background:#dcfce7; color:#16a34a}
+    .status.pending{background:#fef3c7; color:#d97706}
+    .status.overdue{background:#fef2f2; color:#dc2626}
+    
+    /* Responsive */
+    @media (max-width: 1024px){
+      .col-3{grid-column:span 6} .col-8{grid-column:span 12} .col-4{grid-column:span 12}
+    }
+    @media (max-width: 640px){
+      .col-3,.col-4,.col-6,.col-8{grid-column:span 12}
+      .toolbar{flex-direction:column; align-items:stretch}
+      .header-meta{flex-direction:column; align-items:flex-start; gap:8px}
+    }
+    
+    /* Utilities */
+    .text-center{text-align:center} .text-right{text-align:right} .text-muted{color:var(--muted)}
+    .mb-4{margin-bottom:16px} .mt-4{margin-top:16px}
+    .hidden{display:none}
+    .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🏦  অ্যাকাউন্টিং সিস্টেম</h1>
+      <div class="header-meta">
+        <div> বাংলাদেশ সময়: <span id="currentTime"></span></div>
+        <div class="user-info">
+          <span>👤 <span id="userArea">Loading...</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="btn" data-range="today">আজ</button>
+      <button class="btn active" data-range="month">চলতি মাস</button>
+      <button class="btn" data-range="quarter">কোয়ার্টার</button>
+      <button class="btn" data-range="year">অর্থবছর</button>
+      
+      <div style="border-left:1px solid var(--border); height:24px; margin:0 8px"></div>
+      
+      <label for="fromDate" class="sr-only">From date</label>
+      <input type="date" id="fromDate" class="form-control" title="শুরুর তারিখ">
+      <label for="toDate" class="sr-only">To date</label>
+      <input type="date" id="toDate" class="form-control" title="শেষের তারিখ">
+      
+      <label for="campus" class="sr-only">Campus</label>
+      <select id="campus" class="form-control" title="ক্যাম্পাস নির্বাচন">
+        <option value="">সব ক্যাম্পাস</option>
+        <option value="main">মূল ক্যাম্পাস</option>
+        <option value="branch1">শাখা-১</option>
+        <option value="branch2">শাখা-২</option>
+      </select>
+      
+      <label class="checkbox-label">
+        <input type="checkbox" id="bnDigits"> বাংলা সংখ্যা
+      </label>
+      
+      <button id="refreshBtn" class="btn secondary" title="তথ্য রিফ্রেশ করুন">🔄 রিফ্রেশ</button>
+    </div>
+
+    <!-- Data Source Banner -->
+    <div id="dataBanner" class="card mb-4 hidden" style="background:#fef3c7; border-color:#f59e0b; color:#92400e">
+      ⚠️ ডেটা সংযোগ প্রয়োজন - বর্তমানে ডেমো ডেটা দেখানো হচ্ছে। সঠিক ডেটার জন্য ডেটাবেস টেবিল তৈরি করুন।
+    </div>
+
+    <!-- KPI Overview -->
+    <div class="grid">
+      <div class="col-3">
+        <div class="card kpi-card">
+          <div class="kpi-label">আজকের আয়</div>
+          <div class="kpi-value" id="todayIncome">৳ ০</div>
+          <div class="kpi-change positive" id="todayChange">+০%</div>
+          <div class="card-subtitle">গতকালের তুলনায়</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="card kpi-card">
+          <div class="kpi-label">মাসিক আয়</div>
+          <div class="kpi-value" id="monthlyIncome">৳ ০</div>
+          <div class="kpi-change positive" id="monthlyChange">+০%</div>
+          <div class="card-subtitle">গত মাসের তুলনায়</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="card kpi-card">
+          <div class="kpi-label">বকেয়া পাওনা</div>
+          <div class="kpi-value" id="outstanding">৳ ০</div>
+          <div class="kpi-change negative" id="outstandingChange">+০%</div>
+          <div class="card-subtitle">মোট বকেয়া</div>
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="card kpi-card">
+          <div class="kpi-label">ব্যাংক ব্যালেন্স</div>
+          <div class="kpi-value" id="bankBalance">৳ ০</div>
+          <div class="kpi-change positive" id="bankChange">+০%</div>
+          <div class="card-subtitle">সকল অ্যাকাউন্ট</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts and Recent Transactions -->
+    <div class="grid">
+      <div class="col-8">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">💰 মাসিক আয়-ব্যয় ট্রেন্ড</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="incomeExpenseChart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📊 আয়ের উৎস</div>
+          </div>
+          <div class="chart-container">
+            <canvas id="incomeSourceChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <div class="card-title">💳 সাম্প্রতিক লেনদেন</div>
+        <button class="action-btn" onclick="loadTransactions()">সব দেখুন</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>তারিখ</th>
+              <th>বিবরণ</th>
+              <th>ক্যাটেগরি</th>
+              <th>পেমেন্ট মেথড</th>
+              <th class="amount">পরিমাণ</th>
+              <th>স্ট্যাটাস</th>
+            </tr>
+          </thead>
+          <tbody id="transactionTable">
+            <tr><td colspan="6" class="text-center text-muted">লোড হচ্ছে...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Outstanding Fees -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <div class="card-title">⚠️ বকেয়া ফি তালিকা</div>
+        <button class="action-btn warning" onclick="generateOutstandingReport()">রিপোর্ট তৈরি</button>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ছাত্র ID</th>
+              <th>নাম</th>
+              <th>ক্লাস</th>
+              <th>ফি টাইপ</th>
+              <th class="amount">বকেয়া পরিমাণ</th>
+              <th>শেষ তারিখ</th>
+              <th>অ্যাকশন</th>
+            </tr>
+          </thead>
+          <tbody id="outstandingTable">
+            <tr><td colspan="7" class="text-center text-muted">লোড হচ্ছে...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">⚡ দ্রুত অ্যাকশন</div>
+      </div>
+      <div class="actions">
+        <button class="action-btn success" onclick="collectFee()">💰 ফি আদায়</button>
+        <button class="action-btn" onclick="newExpense()">💸 খরচ এন্ট্রি</button>
+        <button class="action-btn" onclick="bankReconciliation()">🏦 ব্যাংক রেকনসিলিয়েশন</button>
+        <button class="action-btn warning" onclick="generateInvoice()">📄 বিল তৈরি</button>
+        <button class="action-btn secondary" onclick="viewReports()">📊 রিপোর্ট</button>
+        <button class="action-btn secondary" onclick="chartOfAccounts()">📋 অ্যাকাউন্ট চার্ট</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    // Supabase Configuration
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // User Authorization
+    const allowedEditors = [
+      'fenimodelhighschool@gmail.com',
+      'roy.gopal159@gmail.com'
+    ];
+
+    // Global Variables
+    let incomeExpenseChart, incomeSourceChart;
+    const userAreaEl = document.getElementById('userArea');
+    const dataBanner = document.getElementById('dataBanner');
+    
+    // Utility Functions
+    function formatBDT(amount, bengali = false) {
+      try {
+        const locale = bengali ? 'bn-BD' : 'en-IN';
+        return new Intl.NumberFormat(locale, {
+          style: 'currency',
+          currency: 'BDT',
+          minimumFractionDigits: 0
+        }).format(amount || 0);
+      } catch {
+        return `৳ ${(amount || 0).toLocaleString()}`;
+      }
+    }
+
+    function formatNumber(num, bengali = false) {
+      try {
+        const locale = bengali ? 'bn-BD' : 'en-IN';
+        return new Intl.NumberFormat(locale).format(num || 0);
+      } catch {
+        return String(num || 0);
+      }
+    }
+
+    function updateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleString('bn-BD', {
+        timeZone: 'Asia/Dhaka',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.getElementById('currentTime').textContent = timeStr;
+    }
+
+    // Chart Functions
+    function initializeCharts() {
+      // Income vs Expense Chart
+      const incomeCtx = document.getElementById('incomeExpenseChart').getContext('2d');
+      incomeExpenseChart = new Chart(incomeCtx, {
+        type: 'line',
+        data: {
+          labels: ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন'],
+          datasets: [{
+            label: 'আয়',
+            data: [120000, 140000, 135000, 150000, 160000, 155000],
+            borderColor: '#059669',
+            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+            tension: 0.4
+          }, {
+            label: 'ব্যয়',
+            data: [80000, 90000, 85000, 95000, 100000, 92000],
+            borderColor: '#dc2626',
+            backgroundColor: 'rgba(220, 38, 38, 0.1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top'
+            }
+          }
+        }
+      });
+
+      // Income Source Chart
+      const sourceCtx = document.getElementById('incomeSourceChart').getContext('2d');
+      incomeSourceChart = new Chart(sourceCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['টিউশন ফি', 'পরীক্ষা ফি', 'অন্যান্য ফি', 'ডোনেশন'],
+          datasets: [{
+            data: [60, 25, 10, 5],
+            backgroundColor: ['#3b82f6', '#059669', '#d97706', '#8b5cf6']
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+
+    // Load Demo Data
+    function loadDemoData() {
+      const bengali = document.getElementById('bnDigits').checked;
+      
+      // Update KPIs
+      document.getElementById('todayIncome').textContent = formatBDT(25000, bengali);
+      document.getElementById('todayChange').textContent = '+12%';
+      
+      document.getElementById('monthlyIncome').textContent = formatBDT(450000, bengali);
+      document.getElementById('monthlyChange').textContent = '+8%';
+      
+      document.getElementById('outstanding').textContent = formatBDT(125000, bengali);
+      document.getElementById('outstandingChange').textContent = '+3%';
+      
+      document.getElementById('bankBalance').textContent = formatBDT(850000, bengali);
+      document.getElementById('bankChange').textContent = '+15%';
+
+      // Load Recent Transactions
+      const transactions = [
+        { date: '২৪/০৯/২০২৫', desc: 'ক্লাস-১০ টিউশন ফি', category: 'টিউশন', method: 'বিকাশ', amount: 5000, status: 'সম্পন্ন' },
+        { date: '২৪/০৯/২০২৫', desc: 'ক্লাস-৮ পরীক্ষা ফি', category: 'পরীক্ষা', method: 'নগদ', amount: 2000, status: 'সম্পন্ন' },
+        { date: '২৩/০৯/২০২৫', desc: 'বিদ্যুৎ বিল', category: 'খরচ', method: 'ব্যাংক', amount: -8000, status: 'সম্পন্ন' },
+        { date: '২৩/০৯/২০২৫', desc: 'শিক্ষক বেতন', category: 'বেতন', method: 'ব্যাংক', amount: -45000, status: 'প্রক্রিয়াধীন' }
+      ];
+
+      const transactionHtml = transactions.map(t => `
+        <tr>
+          <td>${t.date}</td>
+          <td>${t.desc}</td>
+          <td>${t.category}</td>
+          <td>${t.method}</td>
+          <td class="amount ${t.amount > 0 ? 'positive' : 'negative'}">${formatBDT(Math.abs(t.amount), bengali)}</td>
+          <td><span class="status ${t.status === 'সম্পন্ন' ? 'active' : 'pending'}">${t.status}</span></td>
+        </tr>
+      `).join('');
+      document.getElementById('transactionTable').innerHTML = transactionHtml;
+
+      // Load Outstanding Fees
+      const outstanding = [
+        { id: '2025001', name: 'রহিম আহমেদ', class: 'ক্লাস-৯', type: 'টিউশন ফি', amount: 5000, due: '৩০/০৯/২০২৫' },
+        { id: '2025002', name: 'ফাতিমা খাতুন', class: 'ক্লাস-১০', type: 'পরীক্ষা ফি', amount: 2500, due: '২৮/০৯/২০২৫' },
+        { id: '2025003', name: 'করিম উদ্দিন', class: 'ক্লাস-৮', type: 'বই ফি', amount: 1500, due: '১৫/১০/২০২৫' }
+      ];
+
+      const outstandingHtml = outstanding.map(o => `
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.name}</td>
+          <td>${o.class}</td>
+          <td>${o.type}</td>
+          <td class="amount negative">${formatBDT(o.amount, bengali)}</td>
+          <td>${o.due}</td>
+          <td><button class="action-btn success" onclick="collectStudentFee('${o.id}')">আদায়</button></td>
+        </tr>
+      `).join('');
+      document.getElementById('outstandingTable').innerHTML = outstandingHtml;
+    }
+
+    // Event Handlers
+    function setDateRange(range) {
+      const now = new Date();
+      const start = new Date(now);
+      
+      switch(range) {
+        case 'today':
+          // Keep same day
+          break;
+        case 'month':
+          start.setDate(1);
+          break;
+        case 'quarter':
+          const quarter = Math.floor(now.getMonth() / 3);
+          start.setMonth(quarter * 3, 1);
+          break;
+        case 'year':
+          // Bangladesh fiscal year: July 1 - June 30
+          const fiscalYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+          start.setFullYear(fiscalYear, 6, 1);
+          break;
+      }
+      
+      document.getElementById('fromDate').value = start.toISOString().split('T')[0];
+      document.getElementById('toDate').value = now.toISOString().split('T')[0];
+      
+      // Update active button
+      document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.range === range);
+      });
+      
+      loadDashboard();
+    }
+
+    async function loadDashboard() {
+      try {
+        // Try to load real data from database
+        const user = (await supabase.auth.getUser()).data.user;
+        userAreaEl.textContent = user?.email || 'Guest User';
+        
+        // Check if accounting tables exist
+        const { data, error } = await supabase.from('acc_transactions').select('*').limit(1);
+        
+        if (error) {
+          // Show demo data if tables don't exist
+          dataBanner.classList.remove('hidden');
+          loadDemoData();
+        } else {
+          // Hide banner and load real data
+          dataBanner.classList.add('hidden');
+          await loadRealData();
+        }
+      } catch (err) {
+        console.warn('Database connection failed, showing demo data:', err);
+        dataBanner.classList.remove('hidden');
+        loadDemoData();
+      }
+    }
+
+    async function loadRealData() {
+      // Implementation for loading real data from Supabase tables
+      // This will be implemented once tables are created
+      console.log('Loading real data from database...');
+      loadDemoData(); // Fallback to demo for now
+    }
+
+    // Initialize Dashboard
+    function initialize() {
+      updateTime();
+      setInterval(updateTime, 60000); // Update every minute
+      
+      initializeCharts();
+      setDateRange('month'); // Default to current month
+      
+      // Event listeners
+      document.querySelectorAll('[data-range]').forEach(btn => {
+        btn.addEventListener('click', () => setDateRange(btn.dataset.range));
+      });
+      
+      document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+      document.getElementById('bnDigits').addEventListener('change', loadDemoData);
+      document.getElementById('fromDate').addEventListener('change', loadDashboard);
+      document.getElementById('toDate').addEventListener('change', loadDashboard);
+      document.getElementById('campus').addEventListener('change', loadDashboard);
+    }
+
+    // Quick Action Functions
+    window.collectFee = function() {
+      alert('ফি আদায় মডিউল লোড হচ্ছে...');
+    };
+
+    window.newExpense = function() {
+      alert('খরচ এন্ট্রি মডিউল লোড হচ্ছে...');
+    };
+
+    window.bankReconciliation = function() {
+      alert('ব্যাংক রেকনসিলিয়েশন মডিউল লোড হচ্ছে...');
+    };
+
+    window.generateInvoice = function() {
+      alert('বিল তৈরি মডিউল লোড হচ্ছে...');
+    };
+
+    window.viewReports = function() {
+      alert('রিপোর্ট মডিউল লোড হচ্ছে...');
+    };
+
+    window.chartOfAccounts = function() {
+      alert('অ্যাকাউন্ট চার্ট মডিউল লোড হচ্ছে...');
+    };
+
+    window.collectStudentFee = function(studentId) {
+      alert(`ছাত্র ${studentId} এর ফি আদায় করা হচ্ছে...`);
+    };
+
+    window.loadTransactions = function() {
+      alert('সব লেনদেন দেখা হচ্ছে...');
+    };
+
+    window.generateOutstandingReport = function() {
+      alert('বকেয়া ফি রিপোর্ট তৈরি হচ্ছে...');
+    };
+
+    // Start the application
+    initialize();
+  </script>
+</body>
+</html>
