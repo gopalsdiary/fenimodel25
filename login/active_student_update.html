@@ -581,31 +581,24 @@
           return;
         }
 
+        // Custom headers for specific columns only
         const headers = [
-          'SL', 'IID', 'Name', 'Father_Name', 'Father_Mobile', 'Session',
-          `Class_${currentSession}`, `Section_${currentSession}`, `Roll_${currentSession}`,
-          'Active_Class', 'Active_Section', 'Active_Roll', 'Student_Key'
+          'iid', 'active_class', 'active_section', 'active_roll', 'session', 'student_name_en', 'student_key'
         ];
 
         const csvContent = [
           headers.join(','),
-          ...exportData.map((row, index) => {
+          ...exportData.map((row) => {
             const fatherMobile = String(row.father_mobile_en || row.father_mobile || '').replace(/\D/g, ''); // Remove non-digits
             const studentKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
             
             return [
-              index + 1,
               row.iid || '',
-              row.student_name_en || '',
-              row.father_name_en || '',
-              row.father_mobile_en || row.father_mobile || '',
-              row.session || '',
-              row[`class_${currentSession}`] || '',
-              row[`section_${currentSession}`] || '',
-              row[`roll_${currentSession}`] || '',
               row.active_class || '',
               row.active_section || '',
               row.active_roll || '',
+              row.session || '',
+              row.student_name_en || '',
               studentKey
             ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
           })
