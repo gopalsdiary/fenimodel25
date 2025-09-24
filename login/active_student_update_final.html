@@ -69,9 +69,18 @@
       <div class="filters left" style="align-items:center">
         <label for="sessionFilter" class="filter-label">Session</label>
         <select id="sessionFilter" class="filter-select">
+          <option value="">Select Session</option>
           <option value="2024">2024</option>
-          <option value="2025" selected>2025</option>
+          <option value="2025">2025</option>
           <option value="2026">2026</option>
+        </select>
+        <label for="classFilter" class="filter-label">Class</label>
+        <select id="classFilter" class="filter-select">
+          <option value="">All Classes</option>
+        </select>
+        <label for="sectionFilter" class="filter-label">Section</label>
+        <select id="sectionFilter" class="filter-select">
+          <option value="">All Sections</option>
         </select>
       </div>
       <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
@@ -90,18 +99,20 @@
             <th>IID</th>
             <th>Name</th>
             <th>Father Name</th>
+            <th>Father Mobile</th>
             <th>Session</th>
-            <th>Class (2025)</th>
-            <th>Section (2025)</th>
-            <th>Roll (2025)</th>
+            <th>Class</th>
+            <th>Section</th>
+            <th>Roll</th>
             <th>Active Class</th>
             <th>Active Section</th>
             <th>Active Roll</th>
+            <th>Student Key</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="12">Loading...</td></tr>
+          <tr><td colspan="14" class="muted">Select a session to view data</td></tr>
         </tbody>
       </table>
     </div>
@@ -125,12 +136,15 @@
     const tbody = document.querySelector('#dataTable tbody');
     const statusEl = document.getElementById('status');
     const sessionFilter = document.getElementById('sessionFilter');
+    const classFilter = document.getElementById('classFilter');
+    const sectionFilter = document.getElementById('sectionFilter');
     const tableHeader = document.getElementById('tableHeader');
     const rowCountEl = document.getElementById('rowCount');
 
     // Global data cache
     let allRowsCache = [];
-    let currentSession = '2025';
+    let filteredSessionData = [];
+    let currentSession = '';
 
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
@@ -142,9 +156,16 @@
       document.getElementById('refreshBtn').addEventListener('click', loadData);
       document.getElementById('sessionFilter').addEventListener('change', function() {
         currentSession = this.value;
-        updateTableHeader(currentSession);
-        filterAndRenderData();
+        if (currentSession) {
+          updateTableHeader(currentSession);
+          filterDataBySession();
+          populateFilters();
+        } else {
+          clearTable();
+        }
       });
+      document.getElementById('classFilter').addEventListener('change', filterAndRenderData);
+      document.getElementById('sectionFilter').addEventListener('change', filterAndRenderData);
       document.getElementById('updateAllBtn').addEventListener('click', updateAllNeeded);
       document.getElementById('downloadCsvBtn').addEventListener('click', downloadCSV);
       document.getElementById('logoutBtn').addEventListener('click', logout);
@@ -162,7 +183,7 @@
     async function loadData() {
       try {
         showStatus('Loading data...', 'loading');
-        tbody.innerHTML = '<tr><td colspan="12">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14">Loading...</td></tr>';
 
         console.log('Loading data from table:', tableName);
 
@@ -177,66 +198,61 @@
 
         if (!data || data.length === 0) {
           showStatus('No data found', 'error');
-          tbody.innerHTML = '<tr><td colspan="12" class="muted">No data available.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="14" class="muted">No data available.</td></tr>';
           return;
         }
 
         console.log('Data loaded successfully:', data.length, 'rows');
         allRowsCache = data;
-        currentSession = sessionFilter.value;
-        updateTableHeader(currentSession);
-        filterAndRenderData();
+        
+        // Don't show data initially - wait for session selection
+        clearTable();
+        showStatus('Data loaded. Select a session to view students.', 'ok');
 
       } catch (error) {
         console.error('Load data error:', error);
         showStatus('Failed to load data: ' + error.message, 'error');
-        tbody.innerHTML = '<tr><td colspan="12" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="14" class="muted">Failed to load data.</td></tr>';
       }
     }
 
-    function updateTableHeader(session) {
-      tableHeader.innerHTML = `
-        <tr>
-          <th class="col-sl">SL</th>
-          <th>IID</th>
-          <th>Name</th>
-          <th>Father Name</th>
-          <th>Session</th>
-          <th>Class (${session})</th>
-          <th>Section (${session})</th>
-          <th>Roll (${session})</th>
-          <th>Active Class</th>
-          <th>Active Section</th>
-          <th>Active Roll</th>
-          <th>Action</th>
-        </tr>
-      `;
+    function clearTable() {
+      tbody.innerHTML = '<tr><td colspan="14" class="muted">Select a session to view data</td></tr>';
+      rowCountEl.textContent = '';
+      classFilter.innerHTML = '<option value="">All Classes</option>';
+      sectionFilter.innerHTML = '<option value="">All Sections</option>';
     }
 
-    function filterAndRenderData() {
+    function filterDataBySession() {
+      if (!currentSession) {
+        filteredSessionData = [];
+        clearTable();
+        return;
+      }
+
       const sessionClassCol = `class_${currentSession}`;
       const sessionSectionCol = `section_${currentSession}`;
       const sessionRollCol = `roll_${currentSession}`;
 
       // Filter data for current session - students who have data in session-specific columns
-      const filteredData = allRowsCache.filter(row => {
+      filteredSessionData = allRowsCache.filter(row => {
         const hasClass = row[sessionClassCol] != null && row[sessionClassCol] !== '';
         const hasSection = row[sessionSectionCol] != null && row[sessionSectionCol] !== '';
         const hasRoll = row[sessionRollCol] != null && row[sessionRollCol] !== '';
         return hasClass || hasSection || hasRoll;
       });
 
-      console.log(`Filtered data for session ${currentSession}:`, filteredData.length, 'rows');
+      console.log(`Filtered data for session ${currentSession}:`, filteredSessionData.length, 'rows');
 
-      if (filteredData.length === 0) {
+      if (filteredSessionData.length === 0) {
         showStatus(`No students found for session ${currentSession}`, 'error');
-        tbody.innerHTML = `<tr><td colspan="12" class="muted">No students for session ${currentSession}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="14" class="muted">No students for session ${currentSession}.</td></tr>`;
         rowCountEl.textContent = '';
         return;
       }
 
       // Sort by class, section, roll for selected session
-      filteredData.sort((a, b) => {
+      filteredSessionData.sort((a, b) => {
         const aClass = String(a[sessionClassCol] || '');
         const bClass = String(b[sessionClassCol] || '');
         if (aClass !== bClass) {
@@ -254,7 +270,133 @@
         return aRoll - bRoll;
       });
 
-      renderTable(filteredData, currentSession);
+      filterAndRenderData();
+    }
+
+    function populateFilters() {
+      console.log('populateFilters called');
+      console.log('currentSession:', currentSession);
+      console.log('filteredSessionData length:', filteredSessionData.length);
+      
+      if (!currentSession || filteredSessionData.length === 0) return;
+
+      const sessionClassCol = `class_${currentSession}`;
+      const sessionSectionCol = `section_${currentSession}`;
+      
+      console.log('Session columns:', sessionClassCol, sessionSectionCol);
+
+      // Get unique classes and sections
+      const classes = [...new Set(filteredSessionData.map(row => row[sessionClassCol]).filter(Boolean))].sort((a, b) => {
+        // Sort classes numerically if they are numbers, otherwise alphabetically
+        const aNum = parseInt(a);
+        const bNum = parseInt(b);
+        if (!isNaN(aNum) && !isNaN(bNum)) {
+          return aNum - bNum;
+        }
+        return String(a).localeCompare(String(b));
+      });
+      const sections = [...new Set(filteredSessionData.map(row => row[sessionSectionCol]).filter(Boolean))].sort();
+      
+      console.log('Unique classes:', classes);
+      console.log('Unique sections:', sections);
+      console.log('Sample data for debugging:', filteredSessionData.slice(0, 3).map(row => ({
+        iid: row.iid,
+        [sessionClassCol]: row[sessionClassCol],
+        [sessionSectionCol]: row[sessionSectionCol],
+        classType: typeof row[sessionClassCol],
+        sectionType: typeof row[sessionSectionCol]
+      })));
+
+      // Populate class filter
+      classFilter.innerHTML = '<option value="">All Classes</option>';
+      classes.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls;
+        option.textContent = cls;
+        classFilter.appendChild(option);
+      });
+
+      // Populate section filter
+      sectionFilter.innerHTML = '<option value="">All Sections</option>';
+      sections.forEach(section => {
+        const option = document.createElement('option');
+        option.value = section;
+        option.textContent = section;
+        sectionFilter.appendChild(option);
+      });
+      
+      console.log('Filters populated successfully');
+    }
+
+    function updateTableHeader(session) {
+      tableHeader.innerHTML = `
+        <tr>
+          <th class="col-sl">SL</th>
+          <th>IID</th>
+          <th>Name</th>
+          <th>Father Name</th>
+          <th>Father Mobile</th>
+          <th>Session</th>
+          <th>Class (${session})</th>
+          <th>Section (${session})</th>
+          <th>Roll (${session})</th>
+          <th>Active Class</th>
+          <th>Active Section</th>
+          <th>Active Roll</th>
+          <th>Student Key</th>
+          <th>Action</th>
+        </tr>
+      `;
+    }
+
+    function filterAndRenderData() {
+      console.log('filterAndRenderData called');
+      console.log('currentSession:', currentSession);
+      console.log('filteredSessionData length:', filteredSessionData.length);
+      
+      if (!currentSession || filteredSessionData.length === 0) {
+        console.log('No session or no data, clearing table');
+        clearTable();
+        return;
+      }
+
+      const sessionClassCol = `class_${currentSession}`;
+      const sessionSectionCol = `section_${currentSession}`;
+
+      const selectedClass = classFilter.value;
+      const selectedSection = sectionFilter.value;
+      
+      console.log('Selected filters - Class:', selectedClass, 'Section:', selectedSection);
+
+      // Apply class and section filters
+      let displayData = filteredSessionData;
+      
+      if (selectedClass) {
+        displayData = displayData.filter(row => {
+          // Convert both values to string for comparison to handle type mismatch
+          return String(row[sessionClassCol]) === String(selectedClass);
+        });
+        console.log('After class filter:', displayData.length, 'rows');
+        console.log('Filtered by class:', selectedClass, 'sessionClassCol:', sessionClassCol);
+      }
+      
+      if (selectedSection) {
+        displayData = displayData.filter(row => {
+          // Convert both values to string for comparison
+          return String(row[sessionSectionCol]) === String(selectedSection);
+        });
+        console.log('After section filter:', displayData.length, 'rows');
+      }
+
+      console.log('Final displayData length:', displayData.length);
+
+      if (displayData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="14" class="muted">No students match the selected filters.</td></tr>';
+        rowCountEl.textContent = '';
+        return;
+      }
+
+      renderTable(displayData, currentSession);
     }
 
     function renderTable(data, session) {
@@ -269,20 +411,32 @@
         const sessionSection = row[sessionSectionCol];
         const sessionRoll = row[sessionRollCol];
         
-        const activeClass = row.active_class;
-        const activeSection = row.active_section;
-        const activeRoll = row.active_roll;
+        // Show session-specific values as "target" active values
+        const targetActiveClass = sessionClass;
+        const targetActiveSection = sessionSection;
+        const targetActiveRoll = sessionRoll;
+        
+        // Current active values from database
+        const currentActiveClass = row.active_class;
+        const currentActiveSection = row.active_section;
+        const currentActiveRoll = row.active_roll;
+        
+        // Generate student key from father mobile last 6 digits
+        const fatherMobile = String(row.father_mobile_en || row.father_mobile || '').replace(/\D/g, ''); // Remove non-digits
+        const generatedStudentKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
+        const currentStudentKey = row.student_key || '';
 
-        // Check if update is needed
-        const needsUpdate = (sessionClass !== activeClass) || 
-                           (sessionSection !== activeSection) || 
-                           (sessionRoll !== activeRoll);
+        // Check if update is needed (compare current active with target session values + student key)
+        const needsUpdate = (targetActiveClass !== currentActiveClass) || 
+                           (targetActiveSection !== currentActiveSection) || 
+                           (targetActiveRoll !== currentActiveRoll) ||
+                           (generatedStudentKey !== currentStudentKey);
 
         if (needsUpdate) needsUpdateCount++;
 
         const buttonClass = needsUpdate ? 'update-needed' : 'up-to-date';
         const buttonText = needsUpdate ? 'Update Active' : 'Up-to-date';
-        const isDisabled = !sessionClass && !sessionSection && !sessionRoll;
+        const isDisabled = !targetActiveClass && !targetActiveSection && !targetActiveRoll;
 
         return `
           <tr data-iid="${escapeHtml(row.iid || '')}">
@@ -290,17 +444,19 @@
             <td>${escapeHtml(row.iid || '')}</td>
             <td>${escapeHtml(row.student_name_en || '')}</td>
             <td>${escapeHtml(row.father_name_en || '')}</td>
+            <td>${escapeHtml(row.father_mobile_en || row.father_mobile || '')}</td>
             <td>${escapeHtml(row.session || '')}</td>
             <td>${escapeHtml(sessionClass || '')}</td>
             <td>${escapeHtml(sessionSection || '')}</td>
             <td>${escapeHtml(sessionRoll || '')}</td>
-            <td>${escapeHtml(activeClass || '')}</td>
-            <td>${escapeHtml(activeSection || '')}</td>
-            <td>${escapeHtml(activeRoll || '')}</td>
+            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">${escapeHtml(targetActiveClass || '')}</td>
+            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">${escapeHtml(targetActiveSection || '')}</td>
+            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">${escapeHtml(targetActiveRoll || '')}</td>
+            <td style="font-family: monospace; color: ${generatedStudentKey !== currentStudentKey ? '#ff8a00' : '#10b981'}; font-size: 12px; font-weight: ${generatedStudentKey !== currentStudentKey ? 'bold' : 'normal'};">${generatedStudentKey}</td>
             <td class="action-cell">
               <button 
                 class="btn ${buttonClass}" 
-                onclick="updateStudent('${escapeHtml(row.iid || '')}', '${escapeHtml(sessionClass || '')}', '${escapeHtml(sessionSection || '')}', '${escapeHtml(sessionRoll || '')}')"
+                onclick="updateStudent('${escapeHtml(row.iid || '')}', '${escapeHtml(targetActiveClass || '')}', '${escapeHtml(targetActiveSection || '')}', '${escapeHtml(targetActiveRoll || '')}', '${generatedStudentKey}')"
                 ${isDisabled ? 'disabled' : ''}
               >
                 ${buttonText}
@@ -318,7 +474,7 @@
       rowCountEl.textContent = `Total: ${totalStudents} students (${needsUpdateCount} need update)`;
     }
 
-    async function updateStudent(iid, sessionClass, sessionSection, sessionRoll) {
+    async function updateStudent(iid, sessionClass, sessionSection, sessionRoll, studentKey) {
       const statusEl = document.getElementById(`status-${iid}`);
       const button = event.target;
       
@@ -330,7 +486,8 @@
         const updates = {
           active_class: sessionClass || null,
           active_section: sessionSection || null,
-          active_roll: sessionRoll || null
+          active_roll: sessionRoll || null,
+          student_key: studentKey || null
         };
 
         const { error } = await supabase
@@ -354,6 +511,7 @@
           rowData.active_class = updates.active_class;
           rowData.active_section = updates.active_section;
           rowData.active_roll = updates.active_roll;
+          rowData.student_key = updates.student_key;
         }
 
         // Clear status message after 3 seconds
@@ -397,42 +555,60 @@
 
     async function downloadCSV() {
       try {
-        const filteredData = allRowsCache.filter(row => {
-          const sessionClassCol = `class_${currentSession}`;
-          const sessionSectionCol = `section_${currentSession}`;
-          const sessionRollCol = `roll_${currentSession}`;
-          const hasClass = row[sessionClassCol] != null && row[sessionClassCol] !== '';
-          const hasSection = row[sessionSectionCol] != null && row[sessionSectionCol] !== '';
-          const hasRoll = row[sessionRollCol] != null && row[sessionRollCol] !== '';
-          return hasClass || hasSection || hasRoll;
-        });
+        if (!currentSession || filteredSessionData.length === 0) {
+          showStatus('No data to download. Please select a session first.', 'error');
+          return;
+        }
 
-        if (filteredData.length === 0) {
-          showStatus('No data to download.', 'error');
+        const selectedClass = classFilter.value;
+        const selectedSection = sectionFilter.value;
+
+        // Apply current filters to data
+        let exportData = filteredSessionData;
+        
+        if (selectedClass) {
+          const sessionClassCol = `class_${currentSession}`;
+          exportData = exportData.filter(row => String(row[sessionClassCol]) === String(selectedClass));
+        }
+        
+        if (selectedSection) {
+          const sessionSectionCol = `section_${currentSession}`;
+          exportData = exportData.filter(row => String(row[sessionSectionCol]) === String(selectedSection));
+        }
+
+        if (exportData.length === 0) {
+          showStatus('No data to download with current filters.', 'error');
           return;
         }
 
         const headers = [
-          'SL', 'IID', 'Name', 'Father_Name', 'Session',
+          'SL', 'IID', 'Name', 'Father_Name', 'Father_Mobile', 'Session',
           `Class_${currentSession}`, `Section_${currentSession}`, `Roll_${currentSession}`,
-          'Active_Class', 'Active_Section', 'Active_Roll'
+          'Active_Class', 'Active_Section', 'Active_Roll', 'Student_Key'
         ];
 
         const csvContent = [
           headers.join(','),
-          ...filteredData.map((row, index) => [
-            index + 1,
-            row.iid || '',
-            row.student_name_en || '',
-            row.father_name_en || '',
-            row.session || '',
-            row[`class_${currentSession}`] || '',
-            row[`section_${currentSession}`] || '',
-            row[`roll_${currentSession}`] || '',
-            row.active_class || '',
-            row.active_section || '',
-            row.active_roll || ''
-          ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+          ...exportData.map((row, index) => {
+            const fatherMobile = String(row.father_mobile_en || row.father_mobile || '').replace(/\D/g, ''); // Remove non-digits
+            const studentKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
+            
+            return [
+              index + 1,
+              row.iid || '',
+              row.student_name_en || '',
+              row.father_name_en || '',
+              row.father_mobile_en || row.father_mobile || '',
+              row.session || '',
+              row[`class_${currentSession}`] || '',
+              row[`section_${currentSession}`] || '',
+              row[`roll_${currentSession}`] || '',
+              row.active_class || '',
+              row.active_section || '',
+              row.active_roll || '',
+              studentKey
+            ].map(field => `"${String(field).replace(/"/g, '""')}"`).join(',');
+          })
         ].join('\n');
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
