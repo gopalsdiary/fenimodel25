@@ -12,6 +12,11 @@ student_gender > Student Gender
 student_photo_url > Student Photo URL
 student_blood_group > Student Blood Group
 
+*Active Status
+active_class > Active Class
+active_section > Active Section
+active_roll > Active Roll
+
 *Class Information 2025
 class_2025 > Class 2025
 roll_2025 > Roll 2025
@@ -83,6 +88,17 @@ status > Status
 tc_date > TC Date
 tc_no > TC No
 
+*Class Information 2024
+class_2024 > Class 2024
+roll_2024 > Roll 2024
+section_2024 > Section 2024
+
+*Student URL
+student_photo_url > Student Photo URL
+registration_card_url > Registration Card URL
+birth_certificate_url > Birth Certificate URL
+
+*full data
 fulldata_ok > Full Data OK
 
 
