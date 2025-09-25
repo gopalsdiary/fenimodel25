@@ -42,7 +42,32 @@
   /* Make Edit button orange */
   .btn.edit { background:#ff8a00; border-color:#ff8a00; }
   .btn.edit:hover { background:#e07000; }
-    .row-thumb { width:40px; height:50px; object-fit:cover; border-radius:4px; border:1px solid var(--border); background:#fff; }
+    .row-thumb { width:40px; height:50px; object-fit:cover; border-radius:4px; border:1px solid var(--border); background:#fff; cursor:pointer; transition:transform .15s ease; }
+    .row-thumb:hover { transform: scale(1.04); }
+    /* Centered Photo Preview */
+    #photo-preview {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      z-index: 10001;
+      display: none;
+      max-width: 90vw;
+      max-height: 90vh;
+      pointer-events: none; /* don't capture mouse to avoid flicker */
+    }
+    #photo-preview img {
+      max-width: 500px;
+      max-height: 600px;
+      display: block;
+      object-fit: contain;
+      border-radius: 6px;
+    }
     /* Row highlight colors retained */
     #dataTable tbody tr.status-tc, #dataTable tbody tr.status-tc td{ background:#ff4d4f !important; color:#fff !important; }
     #dataTable tbody tr.row-fulldata-ok, #dataTable tbody tr.row-fulldata-ok td{ background:#10b981 !important; color:#fff !important; }
@@ -162,28 +187,60 @@
   const sessionFilter = document.getElementById('sessionFilter');
   const clearFilters = document.getElementById('clearFilters');
 
-  // photo preview
-  const photoPreview = document.createElement('div');
-  photoPreview.id = 'photo-preview';
-  const previewImg = document.createElement('img');
-  previewImg.style.width = '100%';
-  previewImg.style.height = '100%';
-  previewImg.style.objectFit = 'cover';
-  photoPreview.appendChild(previewImg);
-  document.body.appendChild(photoPreview);
+  // Stable centered photo preview (no flicker)
+  let previewTimeout;
+  let currentHoveredThumb = null;
 
-  tbody.addEventListener('mouseover', (e) => {
-    if(e.target.classList.contains('row-thumb')){
-      previewImg.src = e.target.src;
-      photoPreview.style.display = 'block';
+  function setupPhotoPreview(){
+    // Create preview once
+    let previewEl = document.getElementById('photo-preview');
+    if(!previewEl){
+      previewEl = document.createElement('div');
+      previewEl.id = 'photo-preview';
+      const img = document.createElement('img');
+      previewEl.appendChild(img);
+      document.body.appendChild(previewEl);
     }
-  });
 
-  tbody.addEventListener('mouseout', (e) => {
-    if(e.target.classList.contains('row-thumb')){
-      photoPreview.style.display = 'none';
-    }
-  });
+    // Delegate over thumbnails
+    document.addEventListener('mouseenter', (e) => {
+      if(e.target && e.target.classList && e.target.classList.contains('row-thumb')){
+        clearTimeout(previewTimeout);
+        currentHoveredThumb = e.target;
+        const img = document.querySelector('#photo-preview img');
+        if(img){
+          img.onload = () => { previewEl.style.display = 'block'; };
+          img.onerror = () => { previewEl.style.display = 'none'; };
+          img.src = e.target.src;
+        }
+      }
+    }, true);
+
+    document.addEventListener('mouseleave', (e) => {
+      if(e.target && e.target.classList && e.target.classList.contains('row-thumb')){
+        const previewEl = document.getElementById('photo-preview');
+        if(previewEl && (e.relatedTarget === previewEl || previewEl.contains(e.relatedTarget))){
+          // moving into preview: keep open
+          return;
+        }
+        if(currentHoveredThumb === e.target){
+          clearTimeout(previewTimeout);
+          previewTimeout = setTimeout(()=>{ if(previewEl) previewEl.style.display='none'; }, 60);
+          currentHoveredThumb = null;
+        }
+      }
+    }, true);
+
+    // Keep open while hovering preview itself
+    previewEl.addEventListener('mouseenter', ()=>{ clearTimeout(previewTimeout); });
+    previewEl.addEventListener('mouseleave', (e)=>{
+      if(e.relatedTarget && e.relatedTarget.classList && e.relatedTarget.classList.contains('row-thumb')) return;
+      previewTimeout = setTimeout(()=>{ previewEl.style.display='none'; }, 60);
+    });
+  }
+
+  // Initialize after DOM
+  setupPhotoPreview();
 
   // keep full dataset in memory for client-side filtering
   let allRowsCache = [];
