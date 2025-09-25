@@ -121,6 +121,17 @@
             background: #0d9f74;
         }
 
+        /* Warning style for missing assets */
+        .btn.warn {
+            background: var(--warning);
+            border-color: var(--warning);
+            color: #fff;
+        }
+        .btn.warn:hover:not(:disabled) {
+            background: #d97706; /* darker shade of warning */
+            border-color: #d97706;
+        }
+
         .student-info {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -420,6 +431,17 @@
         
         .btn.upload:hover { 
             background:#0d9f74; 
+        }
+
+        /* Ensure warn state overrides .btn.upload defaults */
+        .btn.upload.warn {
+            background: var(--warning) !important;
+            border-color: var(--warning) !important;
+            color: #fff !important;
+        }
+        .btn.upload.warn:hover {
+            background:#d97706 !important;
+            border-color:#d97706 !important;
         }
         
         .row-thumb { 
@@ -1006,17 +1028,20 @@
             }
 
             const rows = filteredData.map((student, index) => {
-                const photoImg = student.student_photo_url 
+                const hasPhoto = !!(student.student_photo_url && String(student.student_photo_url).trim());
+                const photoImg = hasPhoto 
                     ? `<img src="${student.student_photo_url}" alt="Student photo" class="row-thumb">`
                     : '<span style="color: #6a737d; font-size: 12px;">No photo</span>';
 
                 // Birth Certificate display
-                const birthCertDisplay = student.birth_certificate_url
+                const hasBirth = !!(student.birth_certificate_url && String(student.birth_certificate_url).trim());
+                const birthCertDisplay = hasBirth
                     ? `<a href="${student.birth_certificate_url}" target="_blank" style="color: #10b981; text-decoration: none;">📄 View</a>`
                     : '<span style="color: #64748b; font-size: 12px;"></span>';
 
                 // Registration Card display  
-                const regCardDisplay = student.registration_card_url
+                const hasReg = !!(student.registration_card_url && String(student.registration_card_url).trim());
+                const regCardDisplay = hasReg
                     ? `<a href="${student.registration_card_url}" target="_blank" style="color: #10b981; text-decoration: none;">📄 View</a>`
                     : '<span style="color: #64748b; font-size: 12px;"> </span>';
 
@@ -1032,31 +1057,31 @@
                         <td>${escapeHtml(student.father_mobile || '-')}</td>
                         <td class="photo-col">${photoImg}</td>
                         <td class="actions-col">
-                            <button class="btn upload" 
+                            <button class="btn upload${hasPhoto ? '' : ' warn'}" 
                                     data-iid="${student.iid || ''}" 
                                     data-student-name="${escapeHtml(student.student_name_en || '')}"
                                     onclick="uploadPhoto('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}')">
-                                📷 Photo
+                                📷 Photo Upload
                             </button>
                         </td>
                         <td class="photo-col">${birthCertDisplay}</td>
                         <td class="actions-col">
-                            <button class="btn upload" 
+                            <button class="btn upload${hasBirth ? '' : ' warn'}" 
                                     data-iid="${student.iid || ''}" 
                                     data-student-name="${escapeHtml(student.student_name_en || '')}"
                                     data-doc-type="birth_certificate"
                                     onclick="uploadDocument('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}', 'birth_certificate')">
-                                📄 Birth
+                                 Birth Certificate Upload
                             </button>
                         </td>
                         <td class="photo-col">${regCardDisplay}</td>
                         <td class="actions-col">
-                            <button class="btn upload" 
+                            <button class="btn upload${hasReg ? '' : ' warn'}" 
                                     data-iid="${student.iid || ''}" 
                                     data-student-name="${escapeHtml(student.student_name_en || '')}"
                                     data-doc-type="registration_card"
                                     onclick="uploadDocument('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}', 'registration_card')">
-                                📄 Reg
+                                Registration Card Upload
                             </button>
                         </td>
                     </tr>
