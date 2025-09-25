@@ -116,6 +116,28 @@
 	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 	function norm(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
 
+	// Robust URL <-> IID matching helper
+	function urlMatchesIID(url, iid){
+		try{
+			if(!url || !iid) return false;
+			const u = String(url);
+			// strip querystring/hash
+			const lastSeg = u.split('/').pop() || '';
+			const fname = lastSeg.split('?')[0].split('#')[0].toLowerCase();
+			const id = String(iid).toLowerCase();
+			const base = `avatar-${id}`;
+			// common exact extensions
+			const exts = ['.jpg','.jpeg','.png','.webp','.gif','.bmp'];
+			for(const e of exts){ if(fname === base + e) return true; }
+			// filenames that include avatar-{id} anywhere
+			if(fname.includes(base)) return true;
+			// tokenise filename and check for iid token (handles names like tPFFfmwn-avatar-12345.jpg)
+			const tokens = fname.split(/[^0-9a-z]+/).filter(Boolean);
+			if(tokens.indexOf(id) !== -1) return true;
+			return false;
+		}catch(e){ return false; }
+	}
+
 	// Data source: datalist.html cache
 	const DATALIST_CACHE_KEY = 'datalist_rows_v2';
 
@@ -243,7 +265,11 @@
 	function applyFilters(){
 			const key = document.getElementById('tableFilter').value;
 			let filtered = allStudents;
-			if(key){
+			// If no key (ALL) selected, clear filters and show all students
+			if(!key){
+				filters = { cls:'', section:'', session:'' };
+				filtered = allStudents.slice();
+			}else{
 				let parsed = null;
 				try{ parsed = JSON.parse(key); }catch(e){ parsed = null; }
 				if(parsed && parsed.cls!==undefined){
@@ -299,12 +325,7 @@
 			}
 			let match = false;
 			if(thumbUrl){
-				const filename = thumbUrl.split('/').pop().toLowerCase();
-				const expected1 = `avatar-${iidStr}.jpg`.toLowerCase();
-				const expected2 = `avatar-${iidStr}.png`.toLowerCase();
-				if(filename === expected1 || filename === expected2){
-					match = true;
-				}
+				match = urlMatchesIID(thumbUrl, iidStr);
 			}
 			const imgHtml = thumbUrl ? `<div class="image-wrapper"><img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo"><div class="preview" style="background-image: url('${escapeHtml(thumbUrl)}')"></div></div>` : '';
 		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
@@ -380,10 +401,7 @@
 					if(dbBadge){
 						if(!dbUrl){ dbBadge.className = 'match-badge no'; dbBadge.textContent = '✗'; }
 						else {
-							const fname = dbUrl.split('/').pop().toLowerCase();
-							const expected1 = `avatar-${iid}`.toLowerCase() + '.jpg';
-							const expected2 = `avatar-${iid}`.toLowerCase() + '.png';
-							const isMatch = fname === expected1 || fname === expected2 || fname.includes(iid);
+							const isMatch = urlMatchesIID(dbUrl, iid);
 							dbBadge.className = 'match-badge ' + (isMatch ? 'yes' : 'no');
 							dbBadge.textContent = isMatch ? '✓' : '✗';
 						}
@@ -430,10 +448,7 @@
 						// set DB badge to match/no-match
 						const dbBadge = tr.querySelector('span[data-iid-badge]');
 						if(dbBadge){
-							const fname = csvUrl.split('/').pop().toLowerCase();
-							const expected1 = `avatar-${iid}`.toLowerCase() + '.jpg';
-							const expected2 = `avatar-${iid}`.toLowerCase() + '.png';
-							const isMatch = fname === expected1 || fname === expected2 || fname.includes(iid);
+							const isMatch = urlMatchesIID(csvUrl, iid);
 							dbBadge.className = 'match-badge ' + (isMatch ? 'yes' : 'no');
 							dbBadge.textContent = isMatch ? '✓' : '✗';
 						}
@@ -484,12 +499,9 @@
 					// update UI
 					const dbCell = tr.querySelector('td:nth-child(9)');
 					if(dbCell) dbCell.innerHTML = `<a href="${escapeHtml(csvUrl)}" target="_blank" rel="noopener">${escapeHtml(csvUrl)}</a>`;
-					const dbBadge = tr.querySelector('span[data-iid-badge]');
+						const dbBadge = tr.querySelector('span[data-iid-badge]');
 					if(dbBadge){
-						const fname = csvUrl.split('/').pop().toLowerCase();
-						const expected1 = `avatar-${iid}`.toLowerCase() + '.jpg';
-						const expected2 = `avatar-${iid}`.toLowerCase() + '.png';
-						const isMatch = fname === expected1 || fname === expected2 || fname.includes(iid);
+						const isMatch = urlMatchesIID(csvUrl, iid);
 						dbBadge.className = 'match-badge ' + (isMatch ? 'yes' : 'no');
 						dbBadge.textContent = isMatch ? '✓' : '✗';
 					}
@@ -534,7 +546,7 @@
 
 	function populateFilters(){
 		const sel = document.getElementById('tableFilter'); if(!sel) return;
-			sel.innerHTML = '<option value="">Class-Section-Session</option>';
+			sel.innerHTML = '<option value="">ALL</option>';
 		groupOptions = buildGroupOptions();
 			groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=JSON.stringify({cls:g.cls, section:g.section, session:g.session}); o.textContent=g.name; sel.appendChild(o); });
 	}
@@ -555,6 +567,8 @@
 			loadAllStudentsFromCache();
 			populateFilters();
 			setStatus(`Photos indexed: ${photoIndex.size} — Ready`);
+			// Render the table with current filter (default ALL)
+			applyFilters();
 	}
 
 	// start
