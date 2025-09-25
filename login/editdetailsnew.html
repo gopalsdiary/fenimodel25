@@ -24,9 +24,9 @@
   .form-grid{display:flex;flex-direction:column;gap:4px}
   
   /* Photo area */
-  .photo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:12px}
+  .photo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:12px;padding:8px;background:#ffffff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);border:1px solid #f0f0f0}
   .photo-wrap img{width:120px;height:120px;object-fit:cover;border-radius:8px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.1);background:#fff}
-  .student-name{margin-top:8px;font-weight:600;font-size:1rem;color:#333}
+  .student-name{margin-top:8px;font-weight:600;font-size:1rem;color:#333;text-align:center}
   
   /* Form fields */
   .field-row{display:grid;grid-template-columns:160px 1.4fr;gap:10px;align-items:start;background:#ffffff;padding:8px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.05);border:1px solid #f0f0f0}
@@ -227,39 +227,18 @@
     async function renderPhotoForIID(iid, record){
       const wrap = document.getElementById('photoWrap');
       wrap.innerHTML = '';
-      // fetch CSV of image links
+      
       try{
-        const resp = await fetch('../photo/link.csv');
-        if(!resp.ok) throw new Error('photo list not loaded');
-        const txt = await resp.text();
-        const lines = txt.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        if(lines.length === 0) return;
+        // Get photo URL from database record
+        const imgUrl = record && record.student_photo_url ? record.student_photo_url.trim() : null;
 
-        // Find the link that matches the pattern: ends with avatar-{iid}.jpg or avatar-{iid}.png
-        let imgUrl = null;
-        const jpgPattern = new RegExp(`avatar-${iid}\\.jpg$`);
-        const pngPattern = new RegExp(`avatar-${iid}\\.png$`);
-
-        for(const line of lines){
-          if(line && (jpgPattern.test(line) || pngPattern.test(line))){
-            imgUrl = line;
-            break;
-          }
-        }
-
-        // If no matching image found, show default avatar
+        // If no photo URL found in database, only show name without default avatar
         if(!imgUrl){
-          const img = document.createElement('img');
-          img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDE0MCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjcwIiBjeT0iNTUiIHI9IjMwIiBmaWxsPSIjQzRDNEM0Ii8+CjxwYXRoIGQ9Ik03MCA4NUM2MCA4NSA2MCA3NSA3MCA3NUM4MCA3NSA4MCA4NSA3MCA4NVoiIGZpbGw9IiNDNEM0RDQiLz4KPHBhdGggZD0iTTcwIDEwNUM2MCAxMDUgNjAgMTE1IDcwIDExNUM4MCAxMTUgODAgMTA1IDcwIDEwNVoiIGZpbGw9IiNDNEM0RDQiLz4KPC9zdmc+';
-          img.alt = 'Default Avatar';
-          img.style.maxWidth = '140px';
-          img.style.maxHeight = '320px';
-
           const nameEl = document.createElement('div');
           nameEl.className = 'student-name';
+          nameEl.style.marginTop = '0px'; // No image above, so remove top margin
           nameEl.textContent = (record && record.student_name_en) ? record.student_name_en : `Student ID: ${iid}`;
 
-          wrap.appendChild(img);
           wrap.appendChild(nameEl);
           return;
         }
@@ -269,6 +248,14 @@
         img.alt = 'Student Photo';
         img.style.maxWidth = '140px';
         img.style.maxHeight = '220px';
+        
+        // Add error handler to hide image if URL is invalid
+        img.onerror = function() {
+          this.style.display = 'none';
+          // Update name element margin if image fails to load
+          const nameEl = wrap.querySelector('.student-name');
+          if(nameEl) nameEl.style.marginTop = '0px';
+        };
 
         const nameEl = document.createElement('div');
         nameEl.className = 'student-name';
@@ -278,18 +265,12 @@
         wrap.appendChild(nameEl);
       }catch(err){
         console.warn('renderPhotoForIID error', err);
-        // Show default avatar on error
-        const img = document.createElement('img');
-        img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQwIiBoZWlnaHQ9IjE0MCIgdmlld0JveD0iMCAwIDE0MCAxNDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDAiIGhlaWdodD0iMTQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxjaXJjbGUgY3g9IjcwIiBjeT0iNTUiIHI9IjMwIiBmaWxsPSIjQzRDNEM0Ii8+CjxwYXRoIGQ9Ik03MCA4NUM2MCA4NSA2MCA3NSA3MCA3NUM4MCA3NSA4MCA4NSA3MCA4NVoiIGZpbGw9IiNDNEM0RDQiLz4KPHBhdGggZD0iTTcwIDEwNUM2MCAxMDUgNjAgMTE1IDcwIDExNUM4MCAxMTUgODAgMTA1IDcwIDEwNVoiIGZpbGw9IiNDNEM0RDQiLz4KPC9zdmc+';
-        img.alt = 'Default Avatar';
-        img.style.maxWidth = '140px';
-        img.style.maxHeight = '220px';
-
+        // Show only name without default avatar on error
         const nameEl = document.createElement('div');
         nameEl.className = 'student-name';
+        nameEl.style.marginTop = '0px'; // No image above, so remove top margin
         nameEl.textContent = (record && record.student_name_en) ? record.student_name_en : `Student ID: ${iid}`;
 
-        wrap.appendChild(img);
         wrap.appendChild(nameEl);
       }
     }
