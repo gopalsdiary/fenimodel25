@@ -584,12 +584,13 @@
           .update(payload)
           .eq('iid', Number(iid));
         if(error) throw error;
-        noticeEl.classList.remove('');
-        noticeEl.classList.add('success');
+        noticeEl.className = 'notice success';
         noticeEl.textContent = 'Updated successfully.';
+        // Show popup alert
+        alert('Updated successfully!');
       }catch(err){
         console.error('update error', err);
-        noticeEl.classList.remove('success');
+        noticeEl.className = 'notice';
         noticeEl.textContent = 'Update failed: ' + (err.message || err);
       }finally{
         updateBtn.disabled = false;
