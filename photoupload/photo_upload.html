@@ -1,477 +1,1214 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<title>Photo upload — Download</title>
-	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-		<style>
-		body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:#f6f7fb;color:#0b1220}
-		.container{max-width:1100px;margin:28px auto;padding:16px}
-		h1{margin:0 0 12px;font-size:20px}
-		.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-		select,input[type=search]{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
-		button{padding:8px 10px;border-radius:8px;border:1px solid #1479d6;background:#0ea5e9;color:#fff;cursor:pointer}
-		button.secondary{background:#fff;color:#0b1220;border-color:#d1d5db}
-		.muted{color:#6b7280;font-size:13px}
-			.muted.right{margin-left:auto}
-			#status{margin-top:8px}
-			thead th.photo-col{width:90px}
-			thead th.actions-col{width:260px}
-		table{width:100%;border-collapse:collapse;margin-top:12px;background:#fff;border-radius:8px;overflow:hidden}
-		thead th{background:#f3f6fb;padding:10px 12px;text-align:left;border-bottom:1px solid #ecf0f4}
-		tbody td{padding:10px 12px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
-		.thumb{width:72px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e6edf6}
-		.image-wrapper{position:relative;display:inline-block}
-		.preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:350px;height:500px;background-size:cover;background-position:center;border-radius:8px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;opacity:0;visibility:hidden;transition:opacity 0.3s ease,visibility 0.3s ease}
-		.image-wrapper:hover .preview{opacity:1;visibility:visible}
-		.uploader{display:flex;gap:8px;align-items:center}
-		.status{font-size:13px}
-		.small{font-size:12px;color:#334155}
-	</style>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Photo Upload & Crop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0066cc;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #0052a3;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #0d9f74;
+        }
+
+        .student-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .info-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .upload-section {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+        }
+
+        .upload-section.dragover {
+            border-color: var(--primary);
+            background: rgba(0, 102, 204, 0.05);
+        }
+
+        .crop-container {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .crop-area {
+            max-width: 100%;
+            margin: 0 auto 20px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .crop-canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            cursor: crosshair;
+        }
+
+        .crop-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .preview-container {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .status.warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .current-photo {
+            max-width: 150px;
+            max-height: 150px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            .student-info { grid-template-columns: 1fr; }
+            .crop-controls { flex-direction: column; }
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .crop-info {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        /* Table styles from datalist_new.html */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .toolbar select, .toolbar input[type=text] {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        .toolbar button {
+            height: 34px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        thead {
+            background: #fafbfc;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 12.5px;
+            letter-spacing: .5px;
+            background: #f0f3f6;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #fcfcfd;
+        }
+
+        tbody tr:hover {
+            background: #fffbe6;
+        }
+
+        .photo-col img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        .actions-col {
+            white-space: nowrap;
+        }
+
+        .action-cell button + button {
+            margin-left: 8px;
+        }
+
+        .action-cell .btn {
+            padding: 6px 8px;
+        }
+
+        .btn.upload {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .btn.upload:hover {
+            background: #0d9f74;
+        }
+
+        .btn.outline {
+            background: #fff;
+            color: var(--primary);
+        }
+
+        .btn.outline:hover {
+            background: #e7f3ff;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #57606a;
+            margin-right: 8px;
+        }
+
+        .filter-select {
+            min-width: 120px;
+        }
+
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 60px 20px 40px;
+            z-index: 200;
+        }
+
+        .modal-panel {
+            background: #fff;
+            width: 880px;
+            max-width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px 24px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+            max-height: 80vh;
+            overflow: auto;
+        }
+    </style>
 </head>
-
 <body>
-	<div class="container">
-		<h1>Student photos - Photo Download & upload </h1>
-		<div class="toolbar">
-				<select id="tableFilter" aria-label="Class-Section-Session"><option value="">Class-Section-Session</option></select>
-				<input id="search" type="search" placeholder="Filter name or IID…" />
-				<button id="refreshBtn" class="secondary">Refresh data</button>
-				<button id="downloadPdfBtn">Download PDF</button>
-				<a href="photo_url.html" id="urlUploadBtn" style="background-color: orange; color: white; padding:8px 10px; border-radius:8px; border:1px solid #1479d6; text-decoration:none; display:inline-block;">URL UPLOAD</a>
-				<div class="muted right">Image album: <strong>student_photo</strong></div>
-		</div>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Student Photo Upload & Crop System</h1>
+            <p>Upload and crop student photos with automatic database update</p>
+        </div>
 
-		<div id="status" class="muted"></div>
+        <!-- Status Messages -->
+        <div id="statusMessage" style="display: none;"></div>
 
-		<table id="studentsTable" aria-live="polite">
-			<thead>
-								<tr>
-											<th class="photo-col">Photo</th>
-										<th>IID</th>
-										<th>Roll</th>
-										<th>Class</th>
-										<th>Name (EN)</th>
-										<th>Father name (EN)</th>
-										<th class="actions-col">Actions / Upload</th>
-								</tr>
-			</thead>
-			<tbody></tbody>
-		</table>
-	</div>
+        <!-- Filters and Controls -->
+        <div class="card">
+            <div class="toolbar">
+                <div class="filters left" style="align-items:center">
+                    <label for="sessionFilter" class="filter-label">Session</label>
+                    <select id="sessionFilter" class="filter-select">
+                        <option value="">All Sessions</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                    <label for="classFilter" class="filter-label">Class</label>
+                    <select id="classFilter" class="filter-select">
+                        <option value="">All Classes</option>
+                    </select>
+                    <label for="sectionFilter" class="filter-label">Section</label>
+                    <select id="sectionFilter" class="filter-select">
+                        <option value="">All Sections</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
+                    <button id="refreshBtn">Refresh</button>
+                    <button id="clearFilters" class="outline">Clear Filters</button>
+                    <span id="status" class="status"></span>
+                </div>
+            </div>
 
-	<script>
-	// Config from instruction.text
-	const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
-	const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
-	const IMGBB_ALBUM = 'student_photo';
+            <!-- Student Data Table -->
+            <div class="table-wrap">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th class="col-sl">SL</th>
+                            <th>ID</th>
+                            <th>Class</th>
+                            <th>Section</th>
+                            <th>Roll</th>
+                            <th>Name</th>
+                            <th>Father Name</th>
+                            <th>Father Mobile</th>
+                            <th>Photo</th>
+                            <th>Photo Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="10">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="rowCount" class="muted" style="margin-top:8px;"></div>
+        </div>
 
-	// Supabase config (reads student_database.student_photo_url per iid)
-	const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-	const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-	const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
-	const tableName = 'student_database';
+        <!-- Photo Upload Modal -->
+        <div id="uploadModal" class="modal">
+            <div class="modal-panel">
+                <h3>Upload Photo for: <span id="modalStudentName"></span></h3>
+                
+                <!-- File Upload Area -->
+                <div class="upload-section" id="uploadArea">
+                    <div>
+                        <h4>📷 Select or Drop Image File</h4>
+                        <p>Drag & drop an image here, or click to select</p>
+                        <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
+                            Supported formats: JPG, PNG, GIF (Max size: 5MB)<br>
+                            Recommended size: 944x944 pixels (96 DPI)
+                        </p>
+                        <button type="button" class="btn btn-primary" id="selectFileBtn">
+                            📂 Choose Image File
+                        </button>
+                    </div>
+                </div>
 
-	// Utility
-	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-	function norm(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
+                <input type="file" id="fileInput" accept="image/*">
 
-	// Data source: datalist.html cache
-	const DATALIST_CACHE_KEY = 'datalist_rows_v2';
+                <!-- Cropping Interface -->
+                <div class="crop-container" id="cropContainer">
+                    <h4>Crop Your Image</h4>
+                    <p class="crop-info">Click and drag to create a square crop area. The cropped image will be resized to 944x944 pixels.</p>
+                    
+                    <div class="crop-area">
+                        <canvas id="cropCanvas" class="crop-canvas"></canvas>
+                    </div>
 
-	function readDatalistCache(){
-		try{
-			const raw = localStorage.getItem(DATALIST_CACHE_KEY);
-			if(!raw) return null;
-			const obj = JSON.parse(raw);
-			if(!obj || !Array.isArray(obj.rows)) return null;
-			return obj.rows;
-		}catch(e){ return null; }
-	}
+                    <div class="crop-controls">
+                        <button type="button" class="btn btn-primary" id="resetCropBtn">
+                            🔄 Reset Crop
+                        </button>
+                        <button type="button" class="btn btn-success" id="confirmCropBtn">
+                            ✅ Confirm & Upload
+                        </button>
+                        <button type="button" class="btn" id="cancelCropBtn">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                </div>
 
-	function computeActiveFromRow(r){
-		const s = String(r.session||'').trim();
-		// Prefer fields matching the explicit session if present
-		if(s){
-			const clsKey = `class_${s}`;
-			const secKey = `section_${s}`;
-			const rollKey = `roll_${s}`;
-			if(r[clsKey] || r[secKey] || r[rollKey]){
-				return { session:s, active_class:String(r[clsKey]||''), active_section:String(r[secKey]||''), active_roll:String(r[rollKey]||'') };
-			}
-		}
-		// Otherwise, choose the latest year that has any of class/section/roll
-		let bestYear = null; let best = { c:'', s:'', r:'' };
-		for(const k of Object.keys(r||{})){
-			const m = k.match(/^class_(\d{2,4})$/);
-			if(!m) continue;
-			const year = m[1];
-			const c = String(r[`class_${year}`]||'').trim();
-			const sec = String(r[`section_${year}`]||'').trim();
-			const rl = String(r[`roll_${year}`]||'').trim();
-			if(c || sec || rl){
-				if(bestYear===null || Number(year) > Number(bestYear)){
-					bestYear = year; best = { c, s:sec, r:rl };
-				}
-			}
-		}
-		if(bestYear!==null){
-			return { session:String(bestYear), active_class:String(best.c||''), active_section:String(best.s||''), active_roll:String(best.r||'') };
-		}
-		// Fallback to legacy
-		let active_class='', active_section='', active_roll='';
-		if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
-		else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
-		return { session:s, active_class:String(active_class||''), active_section:String(active_section||''), active_roll:String(active_roll||'') };
-	}
+                <!-- Preview Section -->
+                <div class="preview-container" id="previewContainer">
+                    <h4>Preview</h4>
+                    <img id="previewImage" class="preview-image" alt="Cropped preview">
+                </div>
 
-	function buildGroupOptions(){
-		const rows = readDatalistCache();
-		if(!rows) return [];
-		const seen = new Set(); const pairs=[];
-		for(const r of rows){
-			if(String(r.status||'').toUpperCase().includes('TC')) continue;
-			const a = computeActiveFromRow(r);
-			if(!a.active_roll || a.active_roll.trim()==='') continue;
-			if(!a.active_class || !a.active_section || !a.session) continue;
-			const key = `${a.active_class}-${a.active_section}-${a.session}`;
-			if(seen.has(key)) continue; seen.add(key);
-			pairs.push({ id:'cache', name:key, cls:a.active_class, section:a.active_section, session:a.session });
-		}
-		pairs.sort((x,y)=>{ const cx=Number(x.cls)||0, cy=Number(y.cls)||0; if(cx!==cy) return cx-cy; return String(x.name).localeCompare(String(y.name)); });
-		return pairs;
-	}
+                <!-- Loading Indicator -->
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Uploading and updating...</p>
+                </div>
 
-	// Load DB photo urls from Supabase for a list of iids and store in a map
-	let dbPhotoMap = new Map(); // iid -> student_photo_url
-	async function loadDbPhotoUrlsForCache(){
-		if(!supabase) { dbPhotoMap = new Map(); return; }
-		const iids = (allStudents||[]).map(s=>s.iid).filter(Boolean);
-		const map = new Map();
-		const batchSize = 1000;
-		for(let i=0;i<iids.length;i+=batchSize){
-			const batch = iids.slice(i, i+batchSize);
-			try{
-				const { data, error } = await supabase.from(tableName).select('iid, student_photo_url').in('iid', batch);
-				if(error){ console.error('Supabase fetch error', error); continue; }
-				for(const r of data||[]){ if(r && r.iid) map.set(String(r.iid), r.student_photo_url || ''); }
-			}catch(err){ console.error('loadDbPhotoUrlsForCache error', err); }
-		}
-		dbPhotoMap = map;
-	}
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn outline" id="closeModalBtn">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-	// Render helpers
-	const tbody = document.querySelector('#studentsTable tbody');
-	const statusEl = document.getElementById('status');
+    <!-- Supabase JavaScript Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../login/auth-check.js"></script>
+    <script>
+        // Configuration
+        const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+        const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+        const IMGBB_ALBUM = 'student_photo';
+        
+        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        const tableName = 'student_database';
 
-	function setStatus(s, err){ statusEl.textContent = s || ''; if(err) console.error(err); }
+        // Initialize Supabase client
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-	// Application state
-	// link.csv no longer used on this page; use dbPhotoMap instead
-	let photoIndex = new Map(); // Keep for compatibility
-	let allStudents = []; // {iid, name, father, roll, cls, section, session}
-	let groupOptions = []; // {name, cls, section, session}
-	let filters = { cls:'', section:'', session:'' };
+        // Global variables
+        let currentStudent = null;
+        let originalImage = null;
+        let cropCanvas = null;
+        let cropContext = null;
+        let cropSelection = { x: 0, y: 0, width: 0, height: 0 };
+        let isDragging = false;
+        let startX, startY;
+        let allStudentsData = [];
+        let filteredData = [];
 
-	// Load all sheets and build students list (only necessary fields)
+        // DOM Elements
+        const tbody = document.querySelector('#dataTable tbody');
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const cropContainer = document.getElementById('cropContainer');
+        const cropCanvas_el = document.getElementById('cropCanvas');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const statusMessage = document.getElementById('statusMessage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const uploadModal = document.getElementById('uploadModal');
+        const modalStudentName = document.getElementById('modalStudentName');
+        const sessionFilter = document.getElementById('sessionFilter');
+        const classFilter = document.getElementById('classFilter');
+        const sectionFilter = document.getElementById('sectionFilter');
+        const rowCountEl = document.getElementById('rowCount');
 
-	function loadAllStudentsFromCache(){
-		setStatus('Loading from cache…');
-		const rows = readDatalistCache();
-		if(!rows){ setStatus('Cache missing. Open 0newdatabase/datalist.html first.'); allStudents=[]; return; }
-		const out=[]; let idx=0;
-		for(const r of rows){
-			if(String(r.status||'').toUpperCase().includes('TC')) continue;
-			const a = computeActiveFromRow(r);
-			if(!a.active_roll || a.active_roll.trim()==='') continue;
-			if(!a.active_class || !a.active_section || !a.session) continue;
-			out.push({
-				_idx: idx++,
-				iid: r.iid || '',
-				name: String(r.student_name_en||''),
-				father: String(r.father_name_en||''),
-				roll: String(a.active_roll||''),
-				cls: String(a.active_class||''),
-				section: String(a.active_section||''),
-				session: String(a.session||'')
-			});
-		}
-		allStudents = out;
-		setStatus(`Loaded ${allStudents.length} rows from cache`);
-	}
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
 
-	// Build table rows based on filters
-	function applyFilters(){
-		const key = document.getElementById('tableFilter').value;
-		const q = (document.getElementById('search').value||'').toLowerCase().trim();
-		let filtered = allStudents;
-		if(key){
-			let parsed=null; try{ parsed=JSON.parse(key);}catch(e){parsed=null}
-			if(parsed && parsed.cls!==undefined){
-				const { cls, section, session } = parsed;
-				filters = { cls, section, session };
-				filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
-			}else{
-				// Legacy fallback parsing: first dash splits class, last dash splits session
-				const firstDash = key.indexOf('-'); const lastDash = key.lastIndexOf('-');
-				if(lastDash>firstDash && firstDash>0){
-					const cls = key.slice(0, firstDash).trim();
-					const session = key.slice(lastDash+1).trim();
-					const section = key.slice(firstDash+1, lastDash).trim();
-					filters = { cls, section, session };
-					filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
-				}
-			}
-		}
-		if(q){ filtered = filtered.filter(s=> (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q)); }
-		// sort by roll numeric asc then IID
-		filtered = filtered.slice().sort((a,b)=>{
-			const ra=Number(a.roll), rb=Number(b.roll);
-			const va = Number.isFinite(ra)?ra:Infinity; const vb = Number.isFinite(rb)?rb:Infinity;
-			if(va!==vb) return va-vb;
-			return String(a.iid||'').localeCompare(String(b.iid||''), undefined, {numeric:true});
-		});
-		renderTable(filtered);
-	}
+        async function initializeApp() {
+            try {
+                await loadStudents();
+                showStatus('Application loaded successfully', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showStatus('Failed to initialize application: ' + error.message, 'error');
+            }
+        }
 
-	function renderTable(list){
-		tbody.innerHTML = '';
-		if(!list.length){ tbody.insertAdjacentHTML('beforeend','<tr><td colspan="7" class="muted small">No students found for selected filters.</td></tr>'); return; }
+        function setupEventListeners() {
+            // Filter controls with debugging
+            document.getElementById('sessionFilter').addEventListener('change', function() {
+                console.log('Session filter changed to:', this.value);
+                filterAndRenderData();
+            });
+            
+            document.getElementById('classFilter').addEventListener('change', function() {
+                console.log('Class filter changed to:', this.value);
+                filterAndRenderData();
+            });
+            
+            document.getElementById('sectionFilter').addEventListener('change', function() {
+                console.log('Section filter changed to:', this.value);
+                filterAndRenderData();
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', loadStudents);
+            document.getElementById('clearFilters').addEventListener('click', clearFilters);
 
-		// sort by roll when available (numeric preferred), fallback to IID
-		const sorted = list.slice().sort((a,b)=>{
-			const ra = (a.roll||'').toString().trim();
-			const rb = (b.roll||'').toString().trim();
-			const na = parseInt(ra,10); const nb = parseInt(rb,10);
-			if(!isNaN(na) && !isNaN(nb)) return na - nb;
-			if(ra && rb) return ra.localeCompare(rb, undefined, {numeric:true, sensitivity:'base'});
-			return String(a.iid||'').localeCompare(String(b.iid||''), undefined, {numeric:true, sensitivity:'base'});
-		});
+            // File input events
+            document.getElementById('selectFileBtn').addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelection);
 
-		const rowsHtml = sorted.map(s=>{
-			const iidStr = String(s.iid).trim();
-			// Use DB-provided URL if available
-			const thumbUrl = dbPhotoMap.get(iidStr) || '';
-			const imgHtml = thumbUrl ? `<div class="image-wrapper"><img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo"><div class="preview" style="background-image: url('${escapeHtml(thumbUrl)}')"></div></div>` : '';
-		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
-		const rollStr = String((s.roll && String(s.roll).trim()) || (typeof s.rowIndex !== 'undefined' ? String(s.rowIndex + 1) : '')).trim();
-			const iidDisplay = escapeHtml(iidStr);
-			const classCell = s.cls ? `${escapeHtml(s.cls)}${s.section? ' '+escapeHtml(s.section): ''}` : '';
-			// prepare download filenames (sanitize minimally)
-			const rawClass = (s.cls && String(s.cls).trim()) || '';
-			const rawSection = (s.section && String(s.section).trim()) || '';
-			// simple filename sanitizer: remove problematic chars and spaces
-			const safe = t => String(t||'').replace(/[^a-z0-9A-Z\-_.]/g, '').replace(/\s+/g, '');
-			const classNum = safe(rawClass);
-			const sectionVal = safe(rawSection);
-			const rollVal = safe(rollStr);
-			const avatarFile = `avatar-${iidStr}.jpg`;
-			// Class-roll: <Class>_<SECTION>-<roll>.jpg  (omit section if not present)
-			const classRollFile = `${classNum}${sectionVal ? '_' + sectionVal : ''}${rollVal ? '-'+rollVal : ''}.jpg`;
-			const hasPhoto = Boolean(thumbUrl); // Check if thumbUrl is valid
-			// details link to detailsinfo.html with iid query param
-			const detailsLink = iidStr ? `<a class="small" href="/0newdatabase/detailsinfo.html?iid=${encodeURIComponent(iidStr)}" target="_blank" rel="noopener">Details</a>` : `<span class="small muted">Details</span>`;
-			// download links: use data-filename and class so we can force-download via JS (avoids opening new tab)
-			const dlAvatar = hasPhoto ? `<a class="small dl-link dl-avatar" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(avatarFile)}">Download (IID)</a>` : `<span class="small muted">Download (IID)</span>`;
-			const dlClassRoll = hasPhoto ? `<a class="small dl-link dl-classroll" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(classRollFile)}">Download (Class-roll)</a>` : `<span class="small muted">Download (Class-roll)</span>`;
+            // Drag and drop
+            uploadArea.addEventListener('dragover', handleDragOver);
+            uploadArea.addEventListener('dragleave', handleDragLeave);
+            uploadArea.addEventListener('drop', handleFileDrop);
 
-			return `<tr data-iid="${escapeHtml(iidStr)}" data-roll="${escapeHtml(rollStr)}" data-src-sheet="${escapeHtml(s.src && s.src.name)}" data-src-id="${escapeHtml(s.src && s.src.id)}">
-				<td>${imgHtml}</td>
-				<td>${iidDisplay}</td>
-				<td>${escapeHtml(rollStr)}</td>
-				<td>${classCell}</td>
-				<td>${escapeHtml(s.name)}</td>
-				<td>${escapeHtml(s.father)}</td>
-				<td class="actions-col">
-					<div class="uploader">
-						<input type="file" accept="image/*" class="file-input" data-iid="${escapeHtml(iidStr)}">
-						<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
-						<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
-					</div>
-					<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-						${detailsLink}
-						${dlAvatar}
-						${dlClassRoll}
-					</div>
-				</td>
-			</tr>`;
-		}).join('');
+            // Crop controls
+            document.getElementById('resetCropBtn').addEventListener('click', resetCrop);
+            document.getElementById('confirmCropBtn').addEventListener('click', processCropAndUpload);
+            document.getElementById('cancelCropBtn').addEventListener('click', cancelCrop);
+            document.getElementById('closeModalBtn').addEventListener('click', closeUploadModal);
 
-		tbody.insertAdjacentHTML('beforeend', rowsHtml);
+            // Canvas mouse events for cropping
+            cropCanvas_el.addEventListener('mousedown', startCrop);
+            cropCanvas_el.addEventListener('mousemove', updateCrop);
+            cropCanvas_el.addEventListener('mouseup', endCrop);
 
-		// wire upload handlers
-		document.querySelectorAll('.upload-btn').forEach(btn=>{
-			btn.addEventListener('click', async (e)=>{
-				const iid = btn.dataset.iid;
-				const tr = btn.closest('tr');
-				const input = tr.querySelector('.file-input');
-				const status = tr.querySelector('.status');
-				status.textContent = '';
-				if(!input || !input.files || !input.files[0]){ status.textContent = 'Choose file first'; return; }
-				const f = input.files[0];
-				const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src = URL.createObjectURL(f); });
-				const targetW = 944, targetH = 1181;
-				const canvas = document.createElement('canvas');
-				canvas.width = targetW; canvas.height = targetH;
-				const ctx = canvas.getContext('2d');
-				ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-				const ratio = Math.min(targetW/img.width, targetH/img.height);
-				const w = Math.round(img.width * ratio); const h = Math.round(img.height * ratio);
-				const x = Math.round((targetW - w)/2); const y = Math.round((targetH - h)/2);
-				ctx.drawImage(img, x, y, w, h);
-				const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-				const base64 = dataUrl.split(',')[1];
-				status.textContent = 'Uploading…';
-				try{
-					const form = new FormData();
-					form.append('key', IMGBB_API_KEY);
-					form.append('image', base64);
-					form.append('name', `avatar-${iid}.jpg`);
-					form.append('album', IMGBB_ALBUM);
-					const resp = await fetch(IMGBB_UPLOAD_URL + '?key=' + encodeURIComponent(IMGBB_API_KEY), { method:'POST', body: form });
-					const j = await resp.json();
-					if(j && j.success && j.data && j.data.display_url){
-						const newUrl = j.data.display_url || j.data.url || (j.data.image && j.data.image.url) || '';
-						status.textContent = newUrl ? 'Uploaded ✓' : 'Uploaded (no URL)';
-						// Update image preview
-						const imgEl = tr.querySelector('img.thumb');
-						if(imgEl && newUrl){ imgEl.src = newUrl; }
-						// Persist to Supabase and update local map + links
-						try{
-							if(newUrl && supabase){
-								await supabase.from(tableName).update({ student_photo_url: newUrl }).eq('iid', iid);
-								dbPhotoMap.set(String(iid), newUrl);
-								// Update download links in the row
-								const aAvatar = tr.querySelector('a.dl-avatar'); if(aAvatar) aAvatar.href = newUrl;
-								const aCR = tr.querySelector('a.dl-classroll'); if(aCR) aCR.href = newUrl;
-								status.textContent = 'Uploaded ✓ (saved to DB)';
-							}
-						}catch(dbErr){ console.error('Supabase save error', dbErr); }
-						console.log('imgbb response', j);
-					} else {
-						status.textContent = 'Upload failed'; console.error(j);
-					}
-				}catch(err){ status.textContent='Upload error'; console.error(err); }
-			});
-		});
+            // Event delegation for upload buttons
+            tbody.addEventListener('click', function(e) {
+                if (e.target.matches('.btn.upload')) {
+                    const iid = e.target.getAttribute('data-iid');
+                    const studentName = e.target.getAttribute('data-student-name');
+                    console.log('Button clicked - IID:', iid, 'Name:', studentName);
+                    handleUploadButtonClick(iid, studentName);
+                }
+            });
+        }
 
-		// wire download handlers (force download by fetching blob then creating object URL)
-		document.querySelectorAll('.dl-link').forEach(a=>{
-			a.addEventListener('click', async (ev)=>{
-				ev.preventDefault();
-				const url = a.href;
-				const filename = a.dataset && a.dataset.filename ? a.dataset.filename : 'download.jpg';
-				try{
-					const resp = await fetch(url, {mode:'cors'});
-					if(!resp.ok) throw new Error('Fetch failed: '+resp.status);
-					const blob = await resp.blob();
-					const objUrl = URL.createObjectURL(blob);
-					const tmp = document.createElement('a');
-					tmp.href = objUrl; tmp.download = filename; document.body.appendChild(tmp);
-					tmp.click(); tmp.remove();
-					setTimeout(()=> URL.revokeObjectURL(objUrl), 5000);
-				}catch(err){
-					console.error('Download fallback, opening in new tab', err);
-					window.open(url,'_blank');
-				}
-			});
-		});
-	}
+        async function loadStudents() {
+            try {
+                showStatus('Loading students...', 'success');
+                tbody.innerHTML = '<tr><td colspan="10">Loading...</td></tr>';
 
-	function populateFilters(){
-		const sel = document.getElementById('tableFilter'); if(!sel) return;
-		sel.innerHTML = '<option value="">Class-Section-Session</option>';
-		groupOptions = buildGroupOptions();
-		groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=JSON.stringify({cls:g.cls, section:g.section, session:g.session}); o.textContent=g.name; sel.appendChild(o); });
-	}
+                const { data, error } = await supabase
+                    .from(tableName)
+                    .select('iid, active_class, active_section, active_roll, student_name_en, father_name_en, father_mobile, student_photo_url')
+                    .order('active_class', { ascending: true })
+                    .order('active_section', { ascending: true })
+                    .order('active_roll', { ascending: true });
 
-	// Wire filter controls (defensive)
-	const tableFilterEl = document.getElementById('tableFilter');
-	const searchEl = document.getElementById('search');
-	const refreshBtn = document.getElementById('refreshBtn');
-	if(tableFilterEl) tableFilterEl.addEventListener('change', ()=> applyFilters());
-	if(searchEl) searchEl.addEventListener('input', ()=>{ setTimeout(applyFilters,120) });
-	if(refreshBtn) refreshBtn.addEventListener('click', init);
+                if (error) throw error;
 
-	// obsolete handler removed
+                allStudentsData = data || [];
+                filteredData = [...allStudentsData];
+                
+                console.log('Raw student data sample:', allStudentsData.slice(0, 3));
+                
+                populateFilters();
+                renderTable();
 
-	// Populate class dropdown early with sheet list to help UX
-	// obsolete prefill removed
+                console.log('Loaded students:', data.length);
+                showStatus(`Loaded ${data.length} students successfully`, 'success');
+            } catch (error) {
+                console.error('Error loading students:', error);
+                showStatus('Failed to load student data: ' + error.message, 'error');
+                tbody.innerHTML = '<tr><td colspan="10" class="muted">Failed to load data.</td></tr>';
+            }
+        }
 
-	// initial load
-	async function init(){
-			setStatus('Loading photo index…');
-			setStatus('Loading DB photo urls…');
-			loadAllStudentsFromCache();
-			await loadDbPhotoUrlsForCache();
-			populateFilters();
-			setStatus(`DB photos loaded: ${dbPhotoMap.size} — Ready`);
-	}
+        function populateFilters() {
+            // Get unique classes and sections from current data
+            const classes = [...new Set(allStudentsData.map(s => s.active_class).filter(Boolean))].sort((a, b) => {
+                const aNum = parseInt(a);
+                const bNum = parseInt(b);
+                return !isNaN(aNum) && !isNaN(bNum) ? aNum - bNum : String(a).localeCompare(String(b));
+            });
 
-	// start
-	window.addEventListener('DOMContentLoaded', ()=>{ init(); });
+            const sections = [...new Set(allStudentsData.map(s => s.active_section).filter(Boolean))].sort();
 
-	// PDF download
-	document.getElementById('downloadPdfBtn').addEventListener('click', async ()=>{
-		const table = document.getElementById('studentsTable');
-		if(!table) return;
-		// Temporarily clear actions column content
-		const actionCells = document.querySelectorAll('td.actions-col');
-		actionCells.forEach(cell => cell.innerHTML = '');
-		const actionHeader = document.querySelector('th.actions-col');
-		if(actionHeader) actionHeader.style.display = 'none'; // hide header
-		
-		// Set row height to approx 1.5 cm (57px)
-		const rows = table.querySelectorAll('tbody tr');
-		rows.forEach(tr => tr.style.minHeight = '57px');
-		// Add black borders
-		table.style.border = '1px solid black';
-		table.style.borderCollapse = 'collapse';
-		table.style.fontFamily = 'Arial, sans-serif';
-		table.style.fontSize = '12px';
-		const cells = table.querySelectorAll('td, th');
-		cells.forEach(cell => {
-			cell.style.border = '1px solid black';
-			cell.style.padding = '8px';
-			cell.style.textAlign = 'center';
-		});
-		const ths = table.querySelectorAll('th');
-		ths.forEach(th => {
-			th.style.backgroundColor = '#e0e0e0';
-			th.style.fontWeight = 'bold';
-			th.style.color = '#000';
-		});
-		const nameCells = table.querySelectorAll('td:nth-child(5), td:nth-child(6)'); // Name and Father columns
-		nameCells.forEach(cell => cell.style.textAlign = 'left');
-		// Wait for images to load
-		await new Promise(resolve => setTimeout(resolve, 1000));
-		// Generate PDF
-		const opt = {
-			margin: [0.2, 0.2, 0.2, 0.2], // 0.5cm margin
-			filename: 'students.pdf',
-			image: { type: 'jpeg', quality: 1.0 },
-			html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794 },
-			jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-			repeat: { thead: true }
-		};
-		await html2pdf().set(opt).from(table).save();
-		// Restore
-		actionCells.forEach(cell => {
-			// Need to restore content, but since it's dynamic, perhaps reload table
-			// For simplicity, since page reloads or re-render, but to avoid, maybe store original
-			// But for now, since it's one time, and user can refresh
-		});
-		if(actionHeader) actionHeader.style.display = '';
-		rows.forEach(tr => tr.style.minHeight = '');
-		table.style.border = '';
-		table.style.borderCollapse = '';
-		cells.forEach(cell => cell.style.border = '');
-		// To restore content, re-render the table
-		applyFilters();
-	});
-	</script>
+            // Store current selections
+            const currentClass = classFilter.value;
+            const currentSection = sectionFilter.value;
+
+            // Populate class filter
+            classFilter.innerHTML = '<option value="">All Classes</option>';
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls;
+                option.textContent = cls;
+                if (cls === currentClass) option.selected = true;
+                classFilter.appendChild(option);
+            });
+
+            // Populate section filter  
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                if (section === currentSection) option.selected = true;
+                sectionFilter.appendChild(option);
+            });
+        }
+
+        function filterAndRenderData() {
+            const selectedSession = sessionFilter.value;
+            const selectedClass = classFilter.value;
+            const selectedSection = sectionFilter.value;
+
+            console.log('Filtering with:', { selectedSession, selectedClass, selectedSection });
+
+            filteredData = allStudentsData.filter(student => {
+                // Class filter
+                if (selectedClass && String(student.active_class) !== String(selectedClass)) {
+                    return false;
+                }
+                
+                // Section filter  
+                if (selectedSection && String(student.active_section) !== String(selectedSection)) {
+                    return false;
+                }
+
+                // For now, ignore session filter since we're using active_class/active_section
+                // In future, you can add session-specific filtering logic here
+
+                return true;
+            });
+
+            console.log('Filtered data:', filteredData.length, 'students');
+            renderTable();
+            
+            // Update section options based on selected class
+            if (selectedClass) {
+                updateSectionFilter(selectedClass);
+            } else if (!selectedClass && !selectedSection) {
+                populateFilters(); // Repopulate all filters
+            }
+        }
+
+        function updateSectionFilter(selectedClass) {
+            // Get sections for selected class only
+            const sectionsForClass = [...new Set(
+                allStudentsData
+                    .filter(s => String(s.active_class) === String(selectedClass))
+                    .map(s => s.active_section)
+                    .filter(Boolean)
+            )].sort();
+
+            const currentSection = sectionFilter.value;
+            
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            sectionsForClass.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                if (section === currentSection) option.selected = true;
+                sectionFilter.appendChild(option);
+            });
+        }
+
+        function renderTable() {
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="muted">No students found with current filters.</td></tr>';
+                rowCountEl.textContent = 'No students found';
+                return;
+            }
+
+            const rows = filteredData.map((student, index) => {
+                const photoImg = student.student_photo_url 
+                    ? `<img src="${student.student_photo_url}" alt="Student photo" class="photo-col" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">`
+                    : '<span style="color: #64748b; font-size: 12px;">No photo</span>';
+
+                return `
+                    <tr data-iid="${escapeHtml(student.iid || '')}">
+                        <td class="col-sl">${index + 1}</td>
+                        <td>${escapeHtml(student.iid || '-')}</td>
+                        <td>${escapeHtml(student.active_class || '-')}</td>
+                        <td>${escapeHtml(student.active_section || '-')}</td>
+                        <td>${escapeHtml(student.active_roll || '-')}</td>
+                        <td>${escapeHtml(student.student_name_en || '-')}</td>
+                        <td>${escapeHtml(student.father_name_en || '-')}</td>
+                        <td>${escapeHtml(student.father_mobile || '-')}</td>
+                        <td class="photo-col">${photoImg}</td>
+                        <td class="actions-col">
+                            <button class="btn upload" 
+                                    data-iid="${student.iid || ''}" 
+                                    data-student-name="${escapeHtml(student.student_name_en || '')}"
+                                    onclick="uploadPhoto('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}')">
+                                📷 Upload Photo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rows;
+            rowCountEl.textContent = `Total: ${filteredData.length} students`;
+            
+            // Show current filters in status
+            const selectedClass = classFilter.value;
+            const selectedSection = sectionFilter.value;
+            let filterText = '';
+            if (selectedClass) filterText += `Class: ${selectedClass} `;
+            if (selectedSection) filterText += `Section: ${selectedSection} `;
+            
+            if (filterText) {
+                rowCountEl.textContent += ` (filtered by ${filterText.trim()})`;
+            }
+        }
+
+        function clearFilters() {
+            sessionFilter.value = '';
+            classFilter.value = '';
+            sectionFilter.value = '';
+            
+            // Reset filtered data to show all students
+            filteredData = [...allStudentsData];
+            
+            // Repopulate filters
+            populateFilters();
+            
+            // Render table
+            renderTable();
+            
+            showStatus('Filters cleared', 'success');
+        }
+
+        function handleUploadButtonClick(iid, studentName) {
+            console.log('Upload button clicked for IID:', iid, 'Student Name:', studentName);
+            console.log('All students data length:', allStudentsData.length);
+            
+            // Find student by IID with string comparison
+            currentStudent = allStudentsData.find(s => {
+                const studentIID = String(s.iid || '').trim();
+                const searchIID = String(iid || '').trim();
+                console.log('Comparing:', studentIID, '===', searchIID, ':', studentIID === searchIID);
+                return studentIID === searchIID;
+            });
+            
+            if (!currentStudent) {
+                console.error('Student not found with IID:', iid);
+                console.log('Available IIDs:', allStudentsData.map(s => s.iid));
+                showStatus(`Student not found (IID: ${iid})`, 'error');
+                return;
+            }
+
+            console.log('Found student:', currentStudent);
+            openUploadModal(currentStudent, studentName);
+        }
+
+        function openUploadModal(student, studentName) {
+            currentStudent = student;
+            
+            modalStudentName.textContent = studentName || student.student_name_en || 'Unknown Student';
+            uploadModal.style.display = 'flex';
+            
+            // Reset modal state
+            cropContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
+            fileInput.value = '';
+            originalImage = null;
+        }
+
+        function closeUploadModal() {
+            uploadModal.style.display = 'none';
+            currentStudent = null;
+            
+            // Reset modal state
+            cropContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
+            fileInput.value = '';
+            originalImage = null;
+        }
+
+
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        }
+
+        function handleFileDrop(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processSelectedFile(files[0]);
+            }
+        }
+
+        function handleFileSelection(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processSelectedFile(file);
+            }
+        }
+
+        function processSelectedFile(file) {
+            if (!currentStudent) {
+                showStatus('Please select a student first', 'warning');
+                return;
+            }
+
+            // Validate file
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select a valid image file', 'error');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                showStatus('File size too large. Please select an image under 5MB', 'error');
+                return;
+            }
+
+            // Load image for cropping
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                loadImageForCropping(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadImageForCropping(imageSrc) {
+            const img = new Image();
+            img.onload = function() {
+                originalImage = img;
+                setupCropCanvas();
+                cropContainer.style.display = 'block';
+                previewContainer.style.display = 'none';
+                showStatus('Image loaded. Adjust the crop area and click "Confirm & Upload"', 'success');
+            };
+            img.src = imageSrc;
+        }
+
+        function setupCropCanvas() {
+            cropCanvas = cropCanvas_el;
+            cropContext = cropCanvas.getContext('2d');
+
+            // Calculate canvas size maintaining aspect ratio
+            const maxWidth = 600;
+            const maxHeight = 400;
+            let canvasWidth = originalImage.width;
+            let canvasHeight = originalImage.height;
+
+            if (canvasWidth > maxWidth) {
+                canvasHeight = (canvasHeight * maxWidth) / canvasWidth;
+                canvasWidth = maxWidth;
+            }
+
+            if (canvasHeight > maxHeight) {
+                canvasWidth = (canvasWidth * maxHeight) / canvasHeight;
+                canvasHeight = maxHeight;
+            }
+
+            cropCanvas.width = canvasWidth;
+            cropCanvas.height = canvasHeight;
+
+            // Draw image
+            cropContext.drawImage(originalImage, 0, 0, canvasWidth, canvasHeight);
+
+            // Initialize crop selection (square in center)
+            const size = Math.min(canvasWidth, canvasHeight) * 0.8;
+            cropSelection = {
+                x: (canvasWidth - size) / 2,
+                y: (canvasHeight - size) / 2,
+                width: size,
+                height: size
+            };
+
+            drawCropOverlay();
+        }
+
+        function drawCropOverlay() {
+            // Redraw image
+            cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+            cropContext.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+            // Draw overlay
+            cropContext.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+
+            // Clear crop area
+            cropContext.clearRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+            cropContext.drawImage(
+                originalImage,
+                (cropSelection.x / cropCanvas.width) * originalImage.width,
+                (cropSelection.y / cropCanvas.height) * originalImage.height,
+                (cropSelection.width / cropCanvas.width) * originalImage.width,
+                (cropSelection.height / cropCanvas.height) * originalImage.height,
+                cropSelection.x,
+                cropSelection.y,
+                cropSelection.width,
+                cropSelection.height
+            );
+
+            // Draw crop border
+            cropContext.strokeStyle = '#fff';
+            cropContext.lineWidth = 2;
+            cropContext.strokeRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+        }
+
+        function startCrop(e) {
+            const rect = cropCanvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+            isDragging = true;
+        }
+
+        function updateCrop(e) {
+            if (!isDragging) return;
+
+            const rect = cropCanvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            const size = Math.min(width, height); // Keep square
+
+            cropSelection.x = Math.min(startX, currentX);
+            cropSelection.y = Math.min(startY, currentY);
+            cropSelection.width = size;
+            cropSelection.height = size;
+
+            // Keep within canvas bounds
+            if (cropSelection.x + cropSelection.width > cropCanvas.width) {
+                cropSelection.width = cropCanvas.width - cropSelection.x;
+                cropSelection.height = cropSelection.width;
+            }
+            if (cropSelection.y + cropSelection.height > cropCanvas.height) {
+                cropSelection.height = cropCanvas.height - cropSelection.y;
+                cropSelection.width = cropSelection.height;
+            }
+
+            drawCropOverlay();
+        }
+
+        function endCrop() {
+            isDragging = false;
+        }
+
+        function resetCrop() {
+            const size = Math.min(cropCanvas.width, cropCanvas.height) * 0.8;
+            cropSelection = {
+                x: (cropCanvas.width - size) / 2,
+                y: (cropCanvas.height - size) / 2,
+                width: size,
+                height: size
+            };
+            drawCropOverlay();
+        }
+
+        function cancelCrop() {
+            cropContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
+            fileInput.value = '';
+            originalImage = null;
+        }
+
+        async function processCropAndUpload() {
+            if (!currentStudent || !originalImage || cropSelection.width === 0) {
+                showStatus('Please select a student and crop area', 'warning');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                showStatus('Processing image...', 'success');
+
+                // Create cropped image
+                const croppedCanvas = document.createElement('canvas');
+                const croppedContext = croppedCanvas.getContext('2d');
+
+                // Set target size (944x944 for square as per requirements)
+                const targetSize = 944;
+                croppedCanvas.width = targetSize;
+                croppedCanvas.height = targetSize;
+
+                // Calculate source coordinates
+                const scaleX = originalImage.width / cropCanvas.width;
+                const scaleY = originalImage.height / cropCanvas.height;
+                
+                const sourceX = cropSelection.x * scaleX;
+                const sourceY = cropSelection.y * scaleY;
+                const sourceWidth = cropSelection.width * scaleX;
+                const sourceHeight = cropSelection.height * scaleY;
+
+                // Draw cropped image
+                croppedContext.drawImage(
+                    originalImage,
+                    sourceX, sourceY, sourceWidth, sourceHeight,
+                    0, 0, targetSize, targetSize
+                );
+
+                // Convert to blob
+                const blob = await new Promise(resolve => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.9));
+
+                // Show preview
+                const previewUrl = URL.createObjectURL(blob);
+                previewImage.src = previewUrl;
+                previewContainer.style.display = 'block';
+
+                // Upload to ImgBB
+                showStatus('Uploading to ImgBB...', 'success');
+                const imgbbUrl = await uploadToImgBB(blob, currentStudent.iid);
+
+                // Update database
+                showStatus('Updating database...', 'success');
+                await updateStudentPhoto(currentStudent.iid, imgbbUrl);
+
+                // Success
+                showStatus('Photo uploaded and updated successfully! ✅', 'success');
+                
+                // Update local data and refresh table
+                const studentIndex = allStudentsData.findIndex(s => s.iid === currentStudent.iid);
+                if (studentIndex !== -1) {
+                    allStudentsData[studentIndex].student_photo_url = imgbbUrl;
+                }
+                filterAndRenderData(); // Refresh table display
+
+                // Clean up
+                URL.revokeObjectURL(previewUrl);
+                cropContainer.style.display = 'none';
+                
+                // Close modal after successful upload
+                setTimeout(() => {
+                    closeUploadModal();
+                }, 2000);
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                showStatus('Failed to upload photo: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function uploadToImgBB(blob, iid) {
+            const formData = new FormData();
+            formData.append('key', IMGBB_API_KEY);
+            formData.append('image', blob, `avatar-${iid}.jpg`);
+            formData.append('album', IMGBB_ALBUM);
+
+            const response = await fetch(IMGBB_UPLOAD_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('ImgBB upload failed: ' + response.statusText);
+            }
+
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error('ImgBB upload failed: ' + (data.error?.message || 'Unknown error'));
+            }
+
+            return data.data.url;
+        }
+
+        async function updateStudentPhoto(iid, photoUrl) {
+            const { error } = await supabase
+                .from(tableName)
+                .update({ student_photo_url: photoUrl })
+                .eq('iid', iid);
+
+            if (error) {
+                throw new Error('Database update failed: ' + error.message);
+            }
+        }
+
+        function showStatus(message, type = 'success') {
+            statusMessage.textContent = message;
+            statusMessage.className = `status ${type}`;
+            statusMessage.style.display = 'block';
+
+            // Auto-hide success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function showLoading(show) {
+            loadingIndicator.style.display = show ? 'block' : 'none';
+            
+            // Disable controls during upload
+            const controls = document.querySelectorAll('button, select, input');
+            controls.forEach(control => {
+                control.disabled = show;
+            });
+        }
+
+        // Utility function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Global function for onclick fallback (if needed)
+        window.uploadPhoto = function(iid, studentName) {
+            console.log('Global uploadPhoto called with:', iid, studentName);
+            handleUploadButtonClick(iid, studentName);
+        };
+    </script>
 </body>
 </html>

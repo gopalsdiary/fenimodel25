@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Photo upload — Download</title>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+		<style>
+		body{font-family:Inter,Segoe UI,Arial,sans-serif;margin:0;background:#f6f7fb;color:#0b1220}
+		.container{max-width:1100px;margin:28px auto;padding:16px}
+		h1{margin:0 0 12px;font-size:20px}
+		.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+		select,input[type=search]{padding:8px 10px;border:1px solid #d1d5db;border-radius:8px}
+		button{padding:8px 10px;border-radius:8px;border:1px solid #1479d6;background:#0ea5e9;color:#fff;cursor:pointer}
+		button.secondary{background:#fff;color:#0b1220;border-color:#d1d5db}
+		.muted{color:#6b7280;font-size:13px}
+			.muted.right{margin-left:auto}
+			#status{margin-top:8px}
+			thead th.photo-col{width:90px}
+			thead th.actions-col{width:260px}
+		table{width:100%;border-collapse:collapse;margin-top:12px;background:#fff;border-radius:8px;overflow:hidden}
+		thead th{background:#f3f6fb;padding:10px 12px;text-align:left;border-bottom:1px solid #ecf0f4}
+		tbody td{padding:10px 12px;border-bottom:1px solid #f4f6fa;vertical-align:middle}
+		.thumb{width:72px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #e6edf6}
+		.image-wrapper{position:relative;display:inline-block}
+		.preview{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:350px;height:500px;background-size:cover;background-position:center;border-radius:8px;border:2px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:1000;opacity:0;visibility:hidden;transition:opacity 0.3s ease,visibility 0.3s ease}
+		.image-wrapper:hover .preview{opacity:1;visibility:visible}
+		.uploader{display:flex;gap:8px;align-items:center}
+		.status{font-size:13px}
+		.small{font-size:12px;color:#334155}
+	</style>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+
+<body>
+	<div class="container">
+		<h1>Student photos - Photo Download & upload </h1>
+		<div class="toolbar">
+				<select id="tableFilter" aria-label="Class-Section-Session"><option value="">Class-Section-Session</option></select>
+				<input id="search" type="search" placeholder="Filter name or IID…" />
+				<button id="refreshBtn" class="secondary">Refresh data</button>
+				<button id="downloadPdfBtn">Download PDF</button>
+				<a href="photo_url.html" id="urlUploadBtn" style="background-color: orange; color: white; padding:8px 10px; border-radius:8px; border:1px solid #1479d6; text-decoration:none; display:inline-block;">URL UPLOAD</a>
+				<div class="muted right">Image album: <strong>student_photo</strong></div>
+		</div>
+
+		<div id="status" class="muted"></div>
+
+		<table id="studentsTable" aria-live="polite">
+			<thead>
+								<tr>
+											<th class="photo-col">Photo</th>
+										<th>IID</th>
+										<th>Roll</th>
+										<th>Class</th>
+										<th>Name (EN)</th>
+										<th>Father name (EN)</th>
+										<th class="actions-col">Actions / Upload</th>
+								</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+	</div>
+
+	<script>
+	// Config from instruction.text
+	const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+	const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+	const IMGBB_ALBUM = 'student_photo';
+
+	// Supabase config (reads student_database.student_photo_url per iid)
+	const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+	const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+	const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+	const tableName = 'student_database';
+
+	// Utility
+	function escapeHtml(s){ return String(s==null? '': s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+	function norm(s){ return String(s||'').toLowerCase().replace(/[\s_\-]+/g,'').trim(); }
+
+	// Data source: datalist.html cache
+	const DATALIST_CACHE_KEY = 'datalist_rows_v2';
+
+	function readDatalistCache(){
+		try{
+			const raw = localStorage.getItem(DATALIST_CACHE_KEY);
+			if(!raw) return null;
+			const obj = JSON.parse(raw);
+			if(!obj || !Array.isArray(obj.rows)) return null;
+			return obj.rows;
+		}catch(e){ return null; }
+	}
+
+	function computeActiveFromRow(r){
+		const s = String(r.session||'').trim();
+		// Prefer fields matching the explicit session if present
+		if(s){
+			const clsKey = `class_${s}`;
+			const secKey = `section_${s}`;
+			const rollKey = `roll_${s}`;
+			if(r[clsKey] || r[secKey] || r[rollKey]){
+				return { session:s, active_class:String(r[clsKey]||''), active_section:String(r[secKey]||''), active_roll:String(r[rollKey]||'') };
+			}
+		}
+		// Otherwise, choose the latest year that has any of class/section/roll
+		let bestYear = null; let best = { c:'', s:'', r:'' };
+		for(const k of Object.keys(r||{})){
+			const m = k.match(/^class_(\d{2,4})$/);
+			if(!m) continue;
+			const year = m[1];
+			const c = String(r[`class_${year}`]||'').trim();
+			const sec = String(r[`section_${year}`]||'').trim();
+			const rl = String(r[`roll_${year}`]||'').trim();
+			if(c || sec || rl){
+				if(bestYear===null || Number(year) > Number(bestYear)){
+					bestYear = year; best = { c, s:sec, r:rl };
+				}
+			}
+		}
+		if(bestYear!==null){
+			return { session:String(bestYear), active_class:String(best.c||''), active_section:String(best.s||''), active_roll:String(best.r||'') };
+		}
+		// Fallback to legacy
+		let active_class='', active_section='', active_roll='';
+		if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
+		else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
+		return { session:s, active_class:String(active_class||''), active_section:String(active_section||''), active_roll:String(active_roll||'') };
+	}
+
+	function buildGroupOptions(){
+		const rows = readDatalistCache();
+		if(!rows) return [];
+		const seen = new Set(); const pairs=[];
+		for(const r of rows){
+			if(String(r.status||'').toUpperCase().includes('TC')) continue;
+			const a = computeActiveFromRow(r);
+			if(!a.active_roll || a.active_roll.trim()==='') continue;
+			if(!a.active_class || !a.active_section || !a.session) continue;
+			const key = `${a.active_class}-${a.active_section}-${a.session}`;
+			if(seen.has(key)) continue; seen.add(key);
+			pairs.push({ id:'cache', name:key, cls:a.active_class, section:a.active_section, session:a.session });
+		}
+		pairs.sort((x,y)=>{ const cx=Number(x.cls)||0, cy=Number(y.cls)||0; if(cx!==cy) return cx-cy; return String(x.name).localeCompare(String(y.name)); });
+		return pairs;
+	}
+
+	// Load DB photo urls from Supabase for a list of iids and store in a map
+	let dbPhotoMap = new Map(); // iid -> student_photo_url
+	async function loadDbPhotoUrlsForCache(){
+		if(!supabase) { dbPhotoMap = new Map(); return; }
+		const iids = (allStudents||[]).map(s=>s.iid).filter(Boolean);
+		const map = new Map();
+		const batchSize = 1000;
+		for(let i=0;i<iids.length;i+=batchSize){
+			const batch = iids.slice(i, i+batchSize);
+			try{
+				const { data, error } = await supabase.from(tableName).select('iid, student_photo_url').in('iid', batch);
+				if(error){ console.error('Supabase fetch error', error); continue; }
+				for(const r of data||[]){ if(r && r.iid) map.set(String(r.iid), r.student_photo_url || ''); }
+			}catch(err){ console.error('loadDbPhotoUrlsForCache error', err); }
+		}
+		dbPhotoMap = map;
+	}
+
+	// Render helpers
+	const tbody = document.querySelector('#studentsTable tbody');
+	const statusEl = document.getElementById('status');
+
+	function setStatus(s, err){ statusEl.textContent = s || ''; if(err) console.error(err); }
+
+	// Application state
+	// link.csv no longer used on this page; use dbPhotoMap instead
+	let photoIndex = new Map(); // Keep for compatibility
+	let allStudents = []; // {iid, name, father, roll, cls, section, session}
+	let groupOptions = []; // {name, cls, section, session}
+	let filters = { cls:'', section:'', session:'' };
+
+	// Load all sheets and build students list (only necessary fields)
+
+	function loadAllStudentsFromCache(){
+		setStatus('Loading from cache…');
+		const rows = readDatalistCache();
+		if(!rows){ setStatus('Cache missing. Open 0newdatabase/datalist.html first.'); allStudents=[]; return; }
+		const out=[]; let idx=0;
+		for(const r of rows){
+			if(String(r.status||'').toUpperCase().includes('TC')) continue;
+			const a = computeActiveFromRow(r);
+			if(!a.active_roll || a.active_roll.trim()==='') continue;
+			if(!a.active_class || !a.active_section || !a.session) continue;
+			out.push({
+				_idx: idx++,
+				iid: r.iid || '',
+				name: String(r.student_name_en||''),
+				father: String(r.father_name_en||''),
+				roll: String(a.active_roll||''),
+				cls: String(a.active_class||''),
+				section: String(a.active_section||''),
+				session: String(a.session||'')
+			});
+		}
+		allStudents = out;
+		setStatus(`Loaded ${allStudents.length} rows from cache`);
+	}
+
+	// Build table rows based on filters
+	function applyFilters(){
+		const key = document.getElementById('tableFilter').value;
+		const q = (document.getElementById('search').value||'').toLowerCase().trim();
+		let filtered = allStudents;
+		if(key){
+			let parsed=null; try{ parsed=JSON.parse(key);}catch(e){parsed=null}
+			if(parsed && parsed.cls!==undefined){
+				const { cls, section, session } = parsed;
+				filters = { cls, section, session };
+				filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+			}else{
+				// Legacy fallback parsing: first dash splits class, last dash splits session
+				const firstDash = key.indexOf('-'); const lastDash = key.lastIndexOf('-');
+				if(lastDash>firstDash && firstDash>0){
+					const cls = key.slice(0, firstDash).trim();
+					const session = key.slice(lastDash+1).trim();
+					const section = key.slice(firstDash+1, lastDash).trim();
+					filters = { cls, section, session };
+					filtered = filtered.filter(s=> String(s.cls)===String(cls) && String(s.section).toLowerCase()===String(section).toLowerCase() && String(s.session)===String(session));
+				}
+			}
+		}
+		if(q){ filtered = filtered.filter(s=> (s.iid||'').toLowerCase().includes(q) || (s.name||'').toLowerCase().includes(q) || (s.father||'').toLowerCase().includes(q)); }
+		// sort by roll numeric asc then IID
+		filtered = filtered.slice().sort((a,b)=>{
+			const ra=Number(a.roll), rb=Number(b.roll);
+			const va = Number.isFinite(ra)?ra:Infinity; const vb = Number.isFinite(rb)?rb:Infinity;
+			if(va!==vb) return va-vb;
+			return String(a.iid||'').localeCompare(String(b.iid||''), undefined, {numeric:true});
+		});
+		renderTable(filtered);
+	}
+
+	function renderTable(list){
+		tbody.innerHTML = '';
+		if(!list.length){ tbody.insertAdjacentHTML('beforeend','<tr><td colspan="7" class="muted small">No students found for selected filters.</td></tr>'); return; }
+
+		// sort by roll when available (numeric preferred), fallback to IID
+		const sorted = list.slice().sort((a,b)=>{
+			const ra = (a.roll||'').toString().trim();
+			const rb = (b.roll||'').toString().trim();
+			const na = parseInt(ra,10); const nb = parseInt(rb,10);
+			if(!isNaN(na) && !isNaN(nb)) return na - nb;
+			if(ra && rb) return ra.localeCompare(rb, undefined, {numeric:true, sensitivity:'base'});
+			return String(a.iid||'').localeCompare(String(b.iid||''), undefined, {numeric:true, sensitivity:'base'});
+		});
+
+		const rowsHtml = sorted.map(s=>{
+			const iidStr = String(s.iid).trim();
+			// Use DB-provided URL if available
+			const thumbUrl = dbPhotoMap.get(iidStr) || '';
+			const imgHtml = thumbUrl ? `<div class="image-wrapper"><img loading="lazy" class="thumb" src="${escapeHtml(thumbUrl)}" alt="photo"><div class="preview" style="background-image: url('${escapeHtml(thumbUrl)}')"></div></div>` : '';
+		// show explicit roll if present, otherwise fallback to rowIndex+1 when available
+		const rollStr = String((s.roll && String(s.roll).trim()) || (typeof s.rowIndex !== 'undefined' ? String(s.rowIndex + 1) : '')).trim();
+			const iidDisplay = escapeHtml(iidStr);
+			const classCell = s.cls ? `${escapeHtml(s.cls)}${s.section? ' '+escapeHtml(s.section): ''}` : '';
+			// prepare download filenames (sanitize minimally)
+			const rawClass = (s.cls && String(s.cls).trim()) || '';
+			const rawSection = (s.section && String(s.section).trim()) || '';
+			// simple filename sanitizer: remove problematic chars and spaces
+			const safe = t => String(t||'').replace(/[^a-z0-9A-Z\-_.]/g, '').replace(/\s+/g, '');
+			const classNum = safe(rawClass);
+			const sectionVal = safe(rawSection);
+			const rollVal = safe(rollStr);
+			const avatarFile = `avatar-${iidStr}.jpg`;
+			// Class-roll: <Class>_<SECTION>-<roll>.jpg  (omit section if not present)
+			const classRollFile = `${classNum}${sectionVal ? '_' + sectionVal : ''}${rollVal ? '-'+rollVal : ''}.jpg`;
+			const hasPhoto = Boolean(thumbUrl); // Check if thumbUrl is valid
+			// details link to detailsinfo.html with iid query param
+			const detailsLink = iidStr ? `<a class="small" href="/0newdatabase/detailsinfo.html?iid=${encodeURIComponent(iidStr)}" target="_blank" rel="noopener">Details</a>` : `<span class="small muted">Details</span>`;
+			// download links: use data-filename and class so we can force-download via JS (avoids opening new tab)
+			const dlAvatar = hasPhoto ? `<a class="small dl-link dl-avatar" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(avatarFile)}">Download (IID)</a>` : `<span class="small muted">Download (IID)</span>`;
+			const dlClassRoll = hasPhoto ? `<a class="small dl-link dl-classroll" href="${escapeHtml(thumbUrl)}" data-filename="${escapeHtml(classRollFile)}">Download (Class-roll)</a>` : `<span class="small muted">Download (Class-roll)</span>`;
+
+			return `<tr data-iid="${escapeHtml(iidStr)}" data-roll="${escapeHtml(rollStr)}" data-src-sheet="${escapeHtml(s.src && s.src.name)}" data-src-id="${escapeHtml(s.src && s.src.id)}">
+				<td>${imgHtml}</td>
+				<td>${iidDisplay}</td>
+				<td>${escapeHtml(rollStr)}</td>
+				<td>${classCell}</td>
+				<td>${escapeHtml(s.name)}</td>
+				<td>${escapeHtml(s.father)}</td>
+				<td class="actions-col">
+					<div class="uploader">
+						<input type="file" accept="image/*" class="file-input" data-iid="${escapeHtml(iidStr)}">
+						<button class="upload-btn" data-iid="${escapeHtml(iidStr)}">Upload</button>
+						<div class="status small" data-iid="status-${escapeHtml(iidStr)}"></div>
+					</div>
+					<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+						${detailsLink}
+						${dlAvatar}
+						${dlClassRoll}
+					</div>
+				</td>
+			</tr>`;
+		}).join('');
+
+		tbody.insertAdjacentHTML('beforeend', rowsHtml);
+
+		// wire upload handlers
+		document.querySelectorAll('.upload-btn').forEach(btn=>{
+			btn.addEventListener('click', async (e)=>{
+				const iid = btn.dataset.iid;
+				const tr = btn.closest('tr');
+				const input = tr.querySelector('.file-input');
+				const status = tr.querySelector('.status');
+				status.textContent = '';
+				if(!input || !input.files || !input.files[0]){ status.textContent = 'Choose file first'; return; }
+				const f = input.files[0];
+				const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src = URL.createObjectURL(f); });
+				const targetW = 944, targetH = 1181;
+				const canvas = document.createElement('canvas');
+				canvas.width = targetW; canvas.height = targetH;
+				const ctx = canvas.getContext('2d');
+				ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+				const ratio = Math.min(targetW/img.width, targetH/img.height);
+				const w = Math.round(img.width * ratio); const h = Math.round(img.height * ratio);
+				const x = Math.round((targetW - w)/2); const y = Math.round((targetH - h)/2);
+				ctx.drawImage(img, x, y, w, h);
+				const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+				const base64 = dataUrl.split(',')[1];
+				status.textContent = 'Uploading…';
+				try{
+					const form = new FormData();
+					form.append('key', IMGBB_API_KEY);
+					form.append('image', base64);
+					form.append('name', `avatar-${iid}.jpg`);
+					form.append('album', IMGBB_ALBUM);
+					const resp = await fetch(IMGBB_UPLOAD_URL + '?key=' + encodeURIComponent(IMGBB_API_KEY), { method:'POST', body: form });
+					const j = await resp.json();
+					if(j && j.success && j.data && j.data.display_url){
+						const newUrl = j.data.display_url || j.data.url || (j.data.image && j.data.image.url) || '';
+						status.textContent = newUrl ? 'Uploaded ✓' : 'Uploaded (no URL)';
+						// Update image preview
+						const imgEl = tr.querySelector('img.thumb');
+						if(imgEl && newUrl){ imgEl.src = newUrl; }
+						// Persist to Supabase and update local map + links
+						try{
+							if(newUrl && supabase){
+								await supabase.from(tableName).update({ student_photo_url: newUrl }).eq('iid', iid);
+								dbPhotoMap.set(String(iid), newUrl);
+								// Update download links in the row
+								const aAvatar = tr.querySelector('a.dl-avatar'); if(aAvatar) aAvatar.href = newUrl;
+								const aCR = tr.querySelector('a.dl-classroll'); if(aCR) aCR.href = newUrl;
+								status.textContent = 'Uploaded ✓ (saved to DB)';
+							}
+						}catch(dbErr){ console.error('Supabase save error', dbErr); }
+						console.log('imgbb response', j);
+					} else {
+						status.textContent = 'Upload failed'; console.error(j);
+					}
+				}catch(err){ status.textContent='Upload error'; console.error(err); }
+			});
+		});
+
+		// wire download handlers (force download by fetching blob then creating object URL)
+		document.querySelectorAll('.dl-link').forEach(a=>{
+			a.addEventListener('click', async (ev)=>{
+				ev.preventDefault();
+				const url = a.href;
+				const filename = a.dataset && a.dataset.filename ? a.dataset.filename : 'download.jpg';
+				try{
+					const resp = await fetch(url, {mode:'cors'});
+					if(!resp.ok) throw new Error('Fetch failed: '+resp.status);
+					const blob = await resp.blob();
+					const objUrl = URL.createObjectURL(blob);
+					const tmp = document.createElement('a');
+					tmp.href = objUrl; tmp.download = filename; document.body.appendChild(tmp);
+					tmp.click(); tmp.remove();
+					setTimeout(()=> URL.revokeObjectURL(objUrl), 5000);
+				}catch(err){
+					console.error('Download fallback, opening in new tab', err);
+					window.open(url,'_blank');
+				}
+			});
+		});
+	}
+
+	function populateFilters(){
+		const sel = document.getElementById('tableFilter'); if(!sel) return;
+		sel.innerHTML = '<option value="">Class-Section-Session</option>';
+		groupOptions = buildGroupOptions();
+		groupOptions.forEach(g=>{ const o=document.createElement('option'); o.value=JSON.stringify({cls:g.cls, section:g.section, session:g.session}); o.textContent=g.name; sel.appendChild(o); });
+	}
+
+	// Wire filter controls (defensive)
+	const tableFilterEl = document.getElementById('tableFilter');
+	const searchEl = document.getElementById('search');
+	const refreshBtn = document.getElementById('refreshBtn');
+	if(tableFilterEl) tableFilterEl.addEventListener('change', ()=> applyFilters());
+	if(searchEl) searchEl.addEventListener('input', ()=>{ setTimeout(applyFilters,120) });
+	if(refreshBtn) refreshBtn.addEventListener('click', init);
+
+	// obsolete handler removed
+
+	// Populate class dropdown early with sheet list to help UX
+	// obsolete prefill removed
+
+	// initial load
+	async function init(){
+			setStatus('Loading photo index…');
+			setStatus('Loading DB photo urls…');
+			loadAllStudentsFromCache();
+			await loadDbPhotoUrlsForCache();
+			populateFilters();
+			setStatus(`DB photos loaded: ${dbPhotoMap.size} — Ready`);
+	}
+
+	// start
+	window.addEventListener('DOMContentLoaded', ()=>{ init(); });
+
+	// PDF download
+	document.getElementById('downloadPdfBtn').addEventListener('click', async ()=>{
+		const table = document.getElementById('studentsTable');
+		if(!table) return;
+		// Temporarily clear actions column content
+		const actionCells = document.querySelectorAll('td.actions-col');
+		actionCells.forEach(cell => cell.innerHTML = '');
+		const actionHeader = document.querySelector('th.actions-col');
+		if(actionHeader) actionHeader.style.display = 'none'; // hide header
+		
+		// Set row height to approx 1.5 cm (57px)
+		const rows = table.querySelectorAll('tbody tr');
+		rows.forEach(tr => tr.style.minHeight = '57px');
+		// Add black borders
+		table.style.border = '1px solid black';
+		table.style.borderCollapse = 'collapse';
+		table.style.fontFamily = 'Arial, sans-serif';
+		table.style.fontSize = '12px';
+		const cells = table.querySelectorAll('td, th');
+		cells.forEach(cell => {
+			cell.style.border = '1px solid black';
+			cell.style.padding = '8px';
+			cell.style.textAlign = 'center';
+		});
+		const ths = table.querySelectorAll('th');
+		ths.forEach(th => {
+			th.style.backgroundColor = '#e0e0e0';
+			th.style.fontWeight = 'bold';
+			th.style.color = '#000';
+		});
+		const nameCells = table.querySelectorAll('td:nth-child(5), td:nth-child(6)'); // Name and Father columns
+		nameCells.forEach(cell => cell.style.textAlign = 'left');
+		// Wait for images to load
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		// Generate PDF
+		const opt = {
+			margin: [0.2, 0.2, 0.2, 0.2], // 0.5cm margin
+			filename: 'students.pdf',
+			image: { type: 'jpeg', quality: 1.0 },
+			html2canvas: { scale: 2, useCORS: true, allowTaint: true, width: 794 },
+			jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
+			repeat: { thead: true }
+		};
+		await html2pdf().set(opt).from(table).save();
+		// Restore
+		actionCells.forEach(cell => {
+			// Need to restore content, but since it's dynamic, perhaps reload table
+			// For simplicity, since page reloads or re-render, but to avoid, maybe store original
+			// But for now, since it's one time, and user can refresh
+		});
+		if(actionHeader) actionHeader.style.display = '';
+		rows.forEach(tr => tr.style.minHeight = '');
+		table.style.border = '';
+		table.style.borderCollapse = '';
+		cells.forEach(cell => cell.style.border = '');
+		// To restore content, re-render the table
+		applyFilters();
+	});
+	</script>
+</body>
+</html>
