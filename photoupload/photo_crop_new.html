@@ -261,6 +261,141 @@
             color: #64748b;
             margin-bottom: 10px;
         }
+
+        /* Table styles from datalist_new.html */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        .toolbar select, .toolbar input[type=text] {
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        .toolbar button {
+            height: 34px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        thead {
+            background: #fafbfc;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        th {
+            font-weight: 600;
+            font-size: 12.5px;
+            letter-spacing: .5px;
+            background: #f0f3f6;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #fcfcfd;
+        }
+
+        tbody tr:hover {
+            background: #fffbe6;
+        }
+
+        .photo-col img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: #fff;
+        }
+
+        .actions-col {
+            white-space: nowrap;
+        }
+
+        .action-cell button + button {
+            margin-left: 8px;
+        }
+
+        .action-cell .btn {
+            padding: 6px 8px;
+        }
+
+        .btn.upload {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .btn.upload:hover {
+            background: #0d9f74;
+        }
+
+        .btn.outline {
+            background: #fff;
+            color: var(--primary);
+        }
+
+        .btn.outline:hover {
+            background: #e7f3ff;
+        }
+
+        .filter-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #57606a;
+            margin-right: 8px;
+        }
+
+        .filter-select {
+            min-width: 120px;
+        }
+
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 60px 20px 40px;
+            z-index: 200;
+        }
+
+        .modal-panel {
+            background: #fff;
+            width: 880px;
+            max-width: 100%;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px 20px 24px;
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+            max-height: 80vh;
+            overflow: auto;
+        }
     </style>
 </head>
 <body>
@@ -273,114 +408,124 @@
         <!-- Status Messages -->
         <div id="statusMessage" style="display: none;"></div>
 
-        <!-- Student Selection -->
+        <!-- Filters and Controls -->
         <div class="card">
-            <h3>Select Student</h3>
-            <div class="form-group">
-                <label for="studentSelect">Choose Student:</label>
-                <select id="studentSelect" class="form-control">
-                    <option value="">Select a student...</option>
-                </select>
+            <div class="toolbar">
+                <div class="filters left" style="align-items:center">
+                    <label for="sessionFilter" class="filter-label">Session</label>
+                    <select id="sessionFilter" class="filter-select">
+                        <option value="">All Sessions</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                    </select>
+                    <label for="classFilter" class="filter-label">Class</label>
+                    <select id="classFilter" class="filter-select">
+                        <option value="">All Classes</option>
+                    </select>
+                    <label for="sectionFilter" class="filter-label">Section</label>
+                    <select id="sectionFilter" class="filter-select">
+                        <option value="">All Sections</option>
+                    </select>
+                </div>
+                <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
+                    <button id="refreshBtn">Refresh</button>
+                    <button id="clearFilters" class="outline">Clear Filters</button>
+                    <span id="status" class="status"></span>
+                </div>
             </div>
 
-            <!-- Student Information Display -->
-            <div id="studentInfo" style="display: none;">
-                <h4>Student Information</h4>
-                <div class="student-info">
-                    <div class="info-item">
-                        <span class="info-label">Student ID</span>
-                        <span class="info-value" id="displayIID">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Student Name</span>
-                        <span class="info-value" id="displayName">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Father's Name</span>
-                        <span class="info-value" id="displayFather">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Class</span>
-                        <span class="info-value" id="displayClass">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Section</span>
-                        <span class="info-value" id="displaySection">-</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Roll</span>
-                        <span class="info-value" id="displayRoll">-</span>
-                    </div>
-                </div>
-                
-                <!-- Current Photo Display -->
-                <div id="currentPhotoContainer" style="display: none;">
-                    <h5>Current Photo:</h5>
-                    <img id="currentPhoto" class="current-photo" alt="Current student photo">
-                </div>
+            <!-- Student Data Table -->
+            <div class="table-wrap">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th class="col-sl">SL</th>
+                            <th>ID</th>
+                            <th>Class</th>
+                            <th>Section</th>
+                            <th>Roll</th>
+                            <th>Name</th>
+                            <th>Father Name</th>
+                            <th>Father Mobile</th>
+                            <th>Photo</th>
+                            <th>Photo Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="10">Loading...</td></tr>
+                    </tbody>
+                </table>
             </div>
+            <div id="rowCount" class="muted" style="margin-top:8px;"></div>
         </div>
 
-        <!-- Photo Upload Section -->
-        <div class="card">
-            <h3>Upload New Photo</h3>
-            
-            <!-- File Upload Area -->
-            <div class="upload-section" id="uploadArea">
-                <div>
-                    <h4>📷 Select or Drop Image File</h4>
-                    <p>Drag & drop an image here, or click to select</p>
-                    <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
-                        Supported formats: JPG, PNG, GIF (Max size: 5MB)<br>
-                        Recommended size: 944x1181 pixels (96 DPI)
-                    </p>
-                    <button type="button" class="btn btn-primary" id="selectFileBtn">
-                        📂 Choose Image File
-                    </button>
-                </div>
-            </div>
-
-            <input type="file" id="fileInput" accept="image/*">
-
-            <!-- Cropping Interface -->
-            <div class="crop-container" id="cropContainer">
-                <h4>Crop Your Image</h4>
-                <p class="crop-info">Click and drag to create a square crop area. The cropped image will be resized to 944x944 pixels.</p>
+        <!-- Photo Upload Modal -->
+        <div id="uploadModal" class="modal">
+            <div class="modal-panel">
+                <h3>Upload Photo for: <span id="modalStudentName"></span></h3>
                 
-                <div class="crop-area">
-                    <canvas id="cropCanvas" class="crop-canvas"></canvas>
+                <!-- File Upload Area -->
+                <div class="upload-section" id="uploadArea">
+                    <div>
+                        <h4>📷 Select or Drop Image File</h4>
+                        <p>Drag & drop an image here, or click to select</p>
+                        <p style="font-size: 12px; color: #64748b; margin-top: 10px;">
+                            Supported formats: JPG, PNG, GIF (Max size: 5MB)<br>
+                            Recommended size: 944x944 pixels (96 DPI)
+                        </p>
+                        <button type="button" class="btn btn-primary" id="selectFileBtn">
+                            📂 Choose Image File
+                        </button>
+                    </div>
                 </div>
 
-                <div class="crop-controls">
-                    <button type="button" class="btn btn-primary" id="resetCropBtn">
-                        🔄 Reset Crop
-                    </button>
-                    <button type="button" class="btn btn-success" id="confirmCropBtn">
-                        ✅ Confirm & Upload
-                    </button>
-                    <button type="button" class="btn" id="cancelCropBtn">
-                        ❌ Cancel
-                    </button>
+                <input type="file" id="fileInput" accept="image/*">
+
+                <!-- Cropping Interface -->
+                <div class="crop-container" id="cropContainer">
+                    <h4>Crop Your Image</h4>
+                    <p class="crop-info">Click and drag to create a square crop area. The cropped image will be resized to 944x944 pixels.</p>
+                    
+                    <div class="crop-area">
+                        <canvas id="cropCanvas" class="crop-canvas"></canvas>
+                    </div>
+
+                    <div class="crop-controls">
+                        <button type="button" class="btn btn-primary" id="resetCropBtn">
+                            🔄 Reset Crop
+                        </button>
+                        <button type="button" class="btn btn-success" id="confirmCropBtn">
+                            ✅ Confirm & Upload
+                        </button>
+                        <button type="button" class="btn" id="cancelCropBtn">
+                            ❌ Cancel
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Preview Section -->
-            <div class="preview-container" id="previewContainer">
-                <h4>Preview</h4>
-                <img id="previewImage" class="preview-image" alt="Cropped preview">
-            </div>
+                <!-- Preview Section -->
+                <div class="preview-container" id="previewContainer">
+                    <h4>Preview</h4>
+                    <img id="previewImage" class="preview-image" alt="Cropped preview">
+                </div>
 
-            <!-- Loading Indicator -->
-            <div class="loading" id="loadingIndicator">
-                <div class="spinner"></div>
-                <p>Uploading and updating...</p>
+                <!-- Loading Indicator -->
+                <div class="loading" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Uploading and updating...</p>
+                </div>
+
+                <div style="text-align: right; margin-top: 20px;">
+                    <button type="button" class="btn outline" id="closeModalBtn">Close</button>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Supabase JavaScript Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+    <script src="../login/auth-check.js"></script>
     <script>
         // Configuration
         const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
@@ -402,10 +547,11 @@
         let cropSelection = { x: 0, y: 0, width: 0, height: 0 };
         let isDragging = false;
         let startX, startY;
+        let allStudentsData = [];
+        let filteredData = [];
 
         // DOM Elements
-        const studentSelect = document.getElementById('studentSelect');
-        const studentInfo = document.getElementById('studentInfo');
+        const tbody = document.querySelector('#dataTable tbody');
         const fileInput = document.getElementById('fileInput');
         const uploadArea = document.getElementById('uploadArea');
         const cropContainer = document.getElementById('cropContainer');
@@ -414,6 +560,12 @@
         const previewImage = document.getElementById('previewImage');
         const statusMessage = document.getElementById('statusMessage');
         const loadingIndicator = document.getElementById('loadingIndicator');
+        const uploadModal = document.getElementById('uploadModal');
+        const modalStudentName = document.getElementById('modalStudentName');
+        const sessionFilter = document.getElementById('sessionFilter');
+        const classFilter = document.getElementById('classFilter');
+        const sectionFilter = document.getElementById('sectionFilter');
+        const rowCountEl = document.getElementById('rowCount');
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
@@ -432,8 +584,24 @@
         }
 
         function setupEventListeners() {
-            // Student selection
-            studentSelect.addEventListener('change', handleStudentSelection);
+            // Filter controls with debugging
+            document.getElementById('sessionFilter').addEventListener('change', function() {
+                console.log('Session filter changed to:', this.value);
+                filterAndRenderData();
+            });
+            
+            document.getElementById('classFilter').addEventListener('change', function() {
+                console.log('Class filter changed to:', this.value);
+                filterAndRenderData();
+            });
+            
+            document.getElementById('sectionFilter').addEventListener('change', function() {
+                console.log('Section filter changed to:', this.value);
+                filterAndRenderData();
+            });
+            
+            document.getElementById('refreshBtn').addEventListener('click', loadStudents);
+            document.getElementById('clearFilters').addEventListener('click', clearFilters);
 
             // File input events
             document.getElementById('selectFileBtn').addEventListener('click', () => fileInput.click());
@@ -448,82 +616,261 @@
             document.getElementById('resetCropBtn').addEventListener('click', resetCrop);
             document.getElementById('confirmCropBtn').addEventListener('click', processCropAndUpload);
             document.getElementById('cancelCropBtn').addEventListener('click', cancelCrop);
+            document.getElementById('closeModalBtn').addEventListener('click', closeUploadModal);
 
             // Canvas mouse events for cropping
             cropCanvas_el.addEventListener('mousedown', startCrop);
             cropCanvas_el.addEventListener('mousemove', updateCrop);
             cropCanvas_el.addEventListener('mouseup', endCrop);
+
+            // Event delegation for upload buttons
+            tbody.addEventListener('click', function(e) {
+                if (e.target.matches('.btn.upload')) {
+                    const iid = e.target.getAttribute('data-iid');
+                    const studentName = e.target.getAttribute('data-student-name');
+                    console.log('Button clicked - IID:', iid, 'Name:', studentName);
+                    handleUploadButtonClick(iid, studentName);
+                }
+            });
         }
 
         async function loadStudents() {
             try {
+                showStatus('Loading students...', 'success');
+                tbody.innerHTML = '<tr><td colspan="10">Loading...</td></tr>';
+
                 const { data, error } = await supabase
                     .from(tableName)
-                    .select('iid, active_class, active_section, active_roll, student_name_en, father_name_en, student_photo_url')
+                    .select('iid, active_class, active_section, active_roll, student_name_en, father_name_en, father_mobile, student_photo_url')
                     .order('active_class', { ascending: true })
                     .order('active_section', { ascending: true })
                     .order('active_roll', { ascending: true });
 
                 if (error) throw error;
 
-                studentSelect.innerHTML = '<option value="">Select a student...</option>';
+                allStudentsData = data || [];
+                filteredData = [...allStudentsData];
                 
-                data.forEach(student => {
-                    const option = document.createElement('option');
-                    option.value = student.iid;
-                    option.textContent = `${student.student_name_en} (${student.active_class}-${student.active_section}, Roll: ${student.active_roll})`;
-                    option.dataset.student = JSON.stringify(student);
-                    studentSelect.appendChild(option);
-                });
+                console.log('Raw student data sample:', allStudentsData.slice(0, 3));
+                
+                populateFilters();
+                renderTable();
 
                 console.log('Loaded students:', data.length);
+                showStatus(`Loaded ${data.length} students successfully`, 'success');
             } catch (error) {
                 console.error('Error loading students:', error);
-                throw new Error('Failed to load student data');
+                showStatus('Failed to load student data: ' + error.message, 'error');
+                tbody.innerHTML = '<tr><td colspan="10" class="muted">Failed to load data.</td></tr>';
             }
         }
 
-        function handleStudentSelection() {
-            const selectedOption = studentSelect.selectedOptions[0];
+        function populateFilters() {
+            // Get unique classes and sections from current data
+            const classes = [...new Set(allStudentsData.map(s => s.active_class).filter(Boolean))].sort((a, b) => {
+                const aNum = parseInt(a);
+                const bNum = parseInt(b);
+                return !isNaN(aNum) && !isNaN(bNum) ? aNum - bNum : String(a).localeCompare(String(b));
+            });
+
+            const sections = [...new Set(allStudentsData.map(s => s.active_section).filter(Boolean))].sort();
+
+            // Store current selections
+            const currentClass = classFilter.value;
+            const currentSection = sectionFilter.value;
+
+            // Populate class filter
+            classFilter.innerHTML = '<option value="">All Classes</option>';
+            classes.forEach(cls => {
+                const option = document.createElement('option');
+                option.value = cls;
+                option.textContent = cls;
+                if (cls === currentClass) option.selected = true;
+                classFilter.appendChild(option);
+            });
+
+            // Populate section filter  
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            sections.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                if (section === currentSection) option.selected = true;
+                sectionFilter.appendChild(option);
+            });
+        }
+
+        function filterAndRenderData() {
+            const selectedSession = sessionFilter.value;
+            const selectedClass = classFilter.value;
+            const selectedSection = sectionFilter.value;
+
+            console.log('Filtering with:', { selectedSession, selectedClass, selectedSection });
+
+            filteredData = allStudentsData.filter(student => {
+                // Class filter
+                if (selectedClass && String(student.active_class) !== String(selectedClass)) {
+                    return false;
+                }
+                
+                // Section filter  
+                if (selectedSection && String(student.active_section) !== String(selectedSection)) {
+                    return false;
+                }
+
+                // For now, ignore session filter since we're using active_class/active_section
+                // In future, you can add session-specific filtering logic here
+
+                return true;
+            });
+
+            console.log('Filtered data:', filteredData.length, 'students');
+            renderTable();
             
-            if (!selectedOption || !selectedOption.value) {
-                studentInfo.style.display = 'none';
-                currentStudent = null;
+            // Update section options based on selected class
+            if (selectedClass) {
+                updateSectionFilter(selectedClass);
+            } else if (!selectedClass && !selectedSection) {
+                populateFilters(); // Repopulate all filters
+            }
+        }
+
+        function updateSectionFilter(selectedClass) {
+            // Get sections for selected class only
+            const sectionsForClass = [...new Set(
+                allStudentsData
+                    .filter(s => String(s.active_class) === String(selectedClass))
+                    .map(s => s.active_section)
+                    .filter(Boolean)
+            )].sort();
+
+            const currentSection = sectionFilter.value;
+            
+            sectionFilter.innerHTML = '<option value="">All Sections</option>';
+            sectionsForClass.forEach(section => {
+                const option = document.createElement('option');
+                option.value = section;
+                option.textContent = section;
+                if (section === currentSection) option.selected = true;
+                sectionFilter.appendChild(option);
+            });
+        }
+
+        function renderTable() {
+            if (filteredData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="muted">No students found with current filters.</td></tr>';
+                rowCountEl.textContent = 'No students found';
                 return;
             }
 
-            try {
-                currentStudent = JSON.parse(selectedOption.dataset.student);
-                displayStudentInfo(currentStudent);
-                studentInfo.style.display = 'block';
-            } catch (error) {
-                console.error('Error parsing student data:', error);
-                showStatus('Error loading student information', 'error');
-            }
-        }
+            const rows = filteredData.map((student, index) => {
+                const photoImg = student.student_photo_url 
+                    ? `<img src="${student.student_photo_url}" alt="Student photo" class="photo-col" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px;">`
+                    : '<span style="color: #64748b; font-size: 12px;">No photo</span>';
 
-        function displayStudentInfo(student) {
-            document.getElementById('displayIID').textContent = student.iid || '-';
-            document.getElementById('displayName').textContent = student.student_name_en || '-';
-            document.getElementById('displayFather').textContent = student.father_name_en || '-';
-            document.getElementById('displayClass').textContent = student.active_class || '-';
-            document.getElementById('displaySection').textContent = student.active_section || '-';
-            document.getElementById('displayRoll').textContent = student.active_roll || '-';
+                return `
+                    <tr data-iid="${escapeHtml(student.iid || '')}">
+                        <td class="col-sl">${index + 1}</td>
+                        <td>${escapeHtml(student.iid || '-')}</td>
+                        <td>${escapeHtml(student.active_class || '-')}</td>
+                        <td>${escapeHtml(student.active_section || '-')}</td>
+                        <td>${escapeHtml(student.active_roll || '-')}</td>
+                        <td>${escapeHtml(student.student_name_en || '-')}</td>
+                        <td>${escapeHtml(student.father_name_en || '-')}</td>
+                        <td>${escapeHtml(student.father_mobile || '-')}</td>
+                        <td class="photo-col">${photoImg}</td>
+                        <td class="actions-col">
+                            <button class="btn upload" 
+                                    data-iid="${student.iid || ''}" 
+                                    data-student-name="${escapeHtml(student.student_name_en || '')}"
+                                    onclick="uploadPhoto('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}')">
+                                📷 Upload Photo
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
 
-            // Display current photo if exists
-            const currentPhotoContainer = document.getElementById('currentPhotoContainer');
-            const currentPhoto = document.getElementById('currentPhoto');
+            tbody.innerHTML = rows;
+            rowCountEl.textContent = `Total: ${filteredData.length} students`;
             
-            if (student.student_photo_url) {
-                currentPhoto.src = student.student_photo_url;
-                currentPhoto.onerror = () => {
-                    currentPhotoContainer.style.display = 'none';
-                };
-                currentPhotoContainer.style.display = 'block';
-            } else {
-                currentPhotoContainer.style.display = 'none';
+            // Show current filters in status
+            const selectedClass = classFilter.value;
+            const selectedSection = sectionFilter.value;
+            let filterText = '';
+            if (selectedClass) filterText += `Class: ${selectedClass} `;
+            if (selectedSection) filterText += `Section: ${selectedSection} `;
+            
+            if (filterText) {
+                rowCountEl.textContent += ` (filtered by ${filterText.trim()})`;
             }
         }
+
+        function clearFilters() {
+            sessionFilter.value = '';
+            classFilter.value = '';
+            sectionFilter.value = '';
+            
+            // Reset filtered data to show all students
+            filteredData = [...allStudentsData];
+            
+            // Repopulate filters
+            populateFilters();
+            
+            // Render table
+            renderTable();
+            
+            showStatus('Filters cleared', 'success');
+        }
+
+        function handleUploadButtonClick(iid, studentName) {
+            console.log('Upload button clicked for IID:', iid, 'Student Name:', studentName);
+            console.log('All students data length:', allStudentsData.length);
+            
+            // Find student by IID with string comparison
+            currentStudent = allStudentsData.find(s => {
+                const studentIID = String(s.iid || '').trim();
+                const searchIID = String(iid || '').trim();
+                console.log('Comparing:', studentIID, '===', searchIID, ':', studentIID === searchIID);
+                return studentIID === searchIID;
+            });
+            
+            if (!currentStudent) {
+                console.error('Student not found with IID:', iid);
+                console.log('Available IIDs:', allStudentsData.map(s => s.iid));
+                showStatus(`Student not found (IID: ${iid})`, 'error');
+                return;
+            }
+
+            console.log('Found student:', currentStudent);
+            openUploadModal(currentStudent, studentName);
+        }
+
+        function openUploadModal(student, studentName) {
+            currentStudent = student;
+            
+            modalStudentName.textContent = studentName || student.student_name_en || 'Unknown Student';
+            uploadModal.style.display = 'flex';
+            
+            // Reset modal state
+            cropContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
+            fileInput.value = '';
+            originalImage = null;
+        }
+
+        function closeUploadModal() {
+            uploadModal.style.display = 'none';
+            currentStudent = null;
+            
+            // Reset modal state
+            cropContainer.style.display = 'none';
+            previewContainer.style.display = 'none';
+            fileInput.value = '';
+            originalImage = null;
+        }
+
+
 
         function handleDragOver(e) {
             e.preventDefault();
@@ -767,12 +1114,22 @@
 
                 // Success
                 showStatus('Photo uploaded and updated successfully! ✅', 'success');
-                currentStudent.student_photo_url = imgbbUrl;
-                displayStudentInfo(currentStudent); // Refresh display
+                
+                // Update local data and refresh table
+                const studentIndex = allStudentsData.findIndex(s => s.iid === currentStudent.iid);
+                if (studentIndex !== -1) {
+                    allStudentsData[studentIndex].student_photo_url = imgbbUrl;
+                }
+                filterAndRenderData(); // Refresh table display
 
                 // Clean up
                 URL.revokeObjectURL(previewUrl);
                 cropContainer.style.display = 'none';
+                
+                // Close modal after successful upload
+                setTimeout(() => {
+                    closeUploadModal();
+                }, 2000);
 
             } catch (error) {
                 console.error('Upload error:', error);
@@ -839,6 +1196,19 @@
                 control.disabled = show;
             });
         }
+
+        // Utility function
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Global function for onclick fallback (if needed)
+        window.uploadPhoto = function(iid, studentName) {
+            console.log('Global uploadPhoto called with:', iid, studentName);
+            handleUploadButtonClick(iid, studentName);
+        };
     </script>
 </body>
 </html>
