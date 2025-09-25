@@ -98,21 +98,15 @@
             <th class="col-sl">SL</th>
             <th>IID</th>
             <th>Name</th>
-            <th>Father Name</th>
             <th>Father Mobile</th>
-            <th>Session</th>
-            <th>Class</th>
-            <th>Section</th>
-            <th>Roll</th>
-            <th>Active Class</th>
-            <th>Active Section</th>
-            <th>Active Roll</th>
-            <th>Student Key</th>
+            <th>Mother Mobile</th>
+            <th>Updated Father Mobile</th>
+            <th>Updated Mother Mobile</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="11" class="muted">Select a session to view data</td></tr>
+          <tr><td colspan="8" class="muted">Select a session to view data</td></tr>
         </tbody>
       </table>
     </div>
@@ -183,7 +177,7 @@
     async function loadData() {
       try {
         showStatus('Loading data...', 'loading');
-        tbody.innerHTML = '<tr><td colspan="11">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">Loading...</td></tr>';
 
         console.log('Loading data from table:', tableName);
 
@@ -198,7 +192,7 @@
 
         if (!data || data.length === 0) {
           showStatus('No data found', 'error');
-          tbody.innerHTML = '<tr><td colspan="11" class="muted">No data available.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="muted">No data available.</td></tr>';
           return;
         }
 
@@ -212,12 +206,12 @@
       } catch (error) {
         console.error('Load data error:', error);
         showStatus('Failed to load data: ' + error.message, 'error');
-        tbody.innerHTML = '<tr><td colspan="11" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="muted">Failed to load data.</td></tr>';
       }
     }
 
     function clearTable() {
-      tbody.innerHTML = '<tr><td colspan="11" class="muted">Select a session to view data</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="12" class="muted">Select a session to view data</td></tr>';
       rowCountEl.textContent = '';
       classFilter.innerHTML = '<option value="">All Classes</option>';
       sectionFilter.innerHTML = '<option value="">All Sections</option>';
@@ -246,7 +240,7 @@
 
       if (filteredSessionData.length === 0) {
         showStatus(`No students found for session ${currentSession}`, 'error');
-        tbody.innerHTML = `<tr><td colspan="11" class="muted">No students for session ${currentSession}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="muted">No students for session ${currentSession}.</td></tr>`;
         rowCountEl.textContent = '';
         return;
       }
@@ -334,13 +328,10 @@
           <th class="col-sl">SL</th>
           <th>IID</th>
           <th>Name</th>
-          <th>Father Name</th>
           <th>Father Mobile</th>
+          <th>Mother Mobile</th>
           <th>Updated Father Mobile</th>
-          <th>Session</th>
-          <th>Class (${session})</th>
-          <th>Section (${session})</th>
-          <th>Roll (${session})</th>
+          <th>Updated Mother Mobile</th>
           <th>Action</th>
         </tr>
       `;
@@ -388,7 +379,7 @@
       console.log('Final displayData length:', displayData.length);
 
       if (displayData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" class="muted">No students match the selected filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="muted">No students match the selected filters.</td></tr>';
         rowCountEl.textContent = '';
         return;
       }
@@ -423,46 +414,57 @@
         const generatedStudentKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
         const currentStudentKey = row.student_key || '';
 
-        // Check if update is needed (compare current active with target session values + student key)
+        // Process father mobile number - add 880 prefix if not present
+        const originalFatherMobile = String(row.father_mobile_en || row.father_mobile || '');
+        const cleanFatherMobile = originalFatherMobile.replace(/\D/g, ''); // Remove non-digits
+        let updatedFatherMobile = cleanFatherMobile;
+        
+        if (cleanFatherMobile && !cleanFatherMobile.startsWith('880')) {
+          updatedFatherMobile = '880' + cleanFatherMobile;
+        }
+        
+        // Check if father mobile needs update
+        const fatherMobileNeedsUpdate = cleanFatherMobile && !cleanFatherMobile.startsWith('880');
+
+        // Process mother mobile number - add 880 prefix if not present
+        const originalMotherMobile = String(row.mother_mobile_en || row.mother_mobile || '');
+        const cleanMotherMobile = originalMotherMobile.replace(/\D/g, ''); // Remove non-digits
+        let updatedMotherMobile = cleanMotherMobile;
+        
+        if (cleanMotherMobile && !cleanMotherMobile.startsWith('880')) {
+          updatedMotherMobile = '880' + cleanMotherMobile;
+        }
+        
+        // Check if mother mobile needs update
+        const motherMobileNeedsUpdate = cleanMotherMobile && !cleanMotherMobile.startsWith('880');
+
+        // Check if update is needed (compare current active with target session values + student key + mobile updates)
         const needsUpdate = (targetActiveClass !== currentActiveClass) || 
                            (targetActiveSection !== currentActiveSection) || 
                            (targetActiveRoll !== currentActiveRoll) ||
-                           (generatedStudentKey !== currentStudentKey);
+                           (generatedStudentKey !== currentStudentKey) ||
+                           fatherMobileNeedsUpdate ||
+                           motherMobileNeedsUpdate;
 
         if (needsUpdate) needsUpdateCount++;
 
         const buttonClass = needsUpdate ? 'update-needed' : 'up-to-date';
-        const buttonText = needsUpdate ? 'Update Active' : 'Up-to-date';
-        const isDisabled = !targetActiveClass && !targetActiveSection && !targetActiveRoll;
-
-        // Process father mobile number - add 880 prefix if not present
-        const originalMobile = String(row.father_mobile_en || row.father_mobile || '');
-        const cleanMobile = originalMobile.replace(/\D/g, ''); // Remove non-digits
-        let updatedMobile = cleanMobile;
-        
-        if (cleanMobile && !cleanMobile.startsWith('880')) {
-          updatedMobile = '880' + cleanMobile;
-        }
-        
-        // Check if mobile needs update
-        const mobileNeedsUpdate = cleanMobile && !cleanMobile.startsWith('880');
+        const buttonText = needsUpdate ? 'Update Data' : 'Up-to-date';
+        const isDisabled = !targetActiveClass && !targetActiveSection && !targetActiveRoll && !fatherMobileNeedsUpdate && !motherMobileNeedsUpdate;
 
         return `
           <tr data-iid="${escapeHtml(row.iid || '')}">
             <td class="col-sl">${index + 1}</td>
             <td>${escapeHtml(row.iid || '')}</td>
             <td>${escapeHtml(row.student_name_en || '')}</td>
-            <td>${escapeHtml(row.father_name_en || '')}</td>
-            <td>${escapeHtml(originalMobile)}</td>
-            <td style="font-weight: ${mobileNeedsUpdate ? 'bold' : 'normal'}; color: ${mobileNeedsUpdate ? '#ff8a00' : '#10b981'};">${escapeHtml(updatedMobile)}</td>
-            <td>${escapeHtml(row.session || '')}</td>
-            <td>${escapeHtml(sessionClass || '')}</td>
-            <td>${escapeHtml(sessionSection || '')}</td>
-            <td>${escapeHtml(sessionRoll || '')}</td>
+            <td>${escapeHtml(originalFatherMobile)}</td>
+            <td>${escapeHtml(originalMotherMobile)}</td>
+            <td style="font-weight: ${fatherMobileNeedsUpdate ? 'bold' : 'normal'}; color: ${fatherMobileNeedsUpdate ? '#ff8a00' : '#10b981'};">${escapeHtml(updatedFatherMobile)}</td>
+            <td style="font-weight: ${motherMobileNeedsUpdate ? 'bold' : 'normal'}; color: ${motherMobileNeedsUpdate ? '#ff8a00' : '#10b981'};">${escapeHtml(updatedMotherMobile)}</td>
             <td class="action-cell">
               <button 
                 class="btn ${buttonClass}" 
-                onclick="updateStudent('${escapeHtml(row.iid || '')}', '${escapeHtml(targetActiveClass || '')}', '${escapeHtml(targetActiveSection || '')}', '${escapeHtml(targetActiveRoll || '')}', '${generatedStudentKey}', '${escapeHtml(updatedMobile)}')"
+                onclick="updateStudent('${escapeHtml(row.iid || '')}', '${escapeHtml(targetActiveClass || '')}', '${escapeHtml(targetActiveSection || '')}', '${escapeHtml(targetActiveRoll || '')}', '${generatedStudentKey}', '${escapeHtml(updatedFatherMobile)}', '${escapeHtml(updatedMotherMobile)}')"
                 ${isDisabled ? 'disabled' : ''}
               >
                 ${buttonText}
@@ -480,7 +482,7 @@
       rowCountEl.textContent = `Total: ${totalStudents} students (${needsUpdateCount} need update)`;
     }
 
-    async function updateStudent(iid, sessionClass, sessionSection, sessionRoll, studentKey, updatedMobile) {
+    async function updateStudent(iid, sessionClass, sessionSection, sessionRoll, studentKey, updatedFatherMobile, updatedMotherMobile) {
       const statusEl = document.getElementById(`status-${iid}`);
       const button = event.target;
       
@@ -494,7 +496,8 @@
           active_section: sessionSection || null,
           active_roll: sessionRoll || null,
           student_key: studentKey || null,
-          father_mobile: updatedMobile || null
+          father_mobile: updatedFatherMobile || null,
+          mother_mobile: updatedMotherMobile || null
         };
 
         const { error } = await supabase
@@ -521,6 +524,8 @@
           rowData.student_key = updates.student_key;
           rowData.father_mobile = updates.father_mobile;
           rowData.father_mobile_en = updates.father_mobile;
+          rowData.mother_mobile = updates.mother_mobile;
+          rowData.mother_mobile_en = updates.mother_mobile;
         }
 
         // Clear status message after 3 seconds
