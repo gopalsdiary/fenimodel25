@@ -6,6 +6,8 @@
 	<title>seat List — Generate Cards</title>
 	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+	<!-- Supabase JS for dynamic filters -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<style>
 		:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --border:#e5e7eb; --primary:#0ea5e9; }
 		*{ box-sizing:border-box }
@@ -53,11 +55,10 @@
 
 
 	<script>
-		// Data source: datalist.html cache (same as admit/admitlist.html)
+		// Data source: datalist.html cache (same structure as admit version)
 		const DATALIST_CACHE_KEY = 'datalist_rows_v2';
-
-		let sheets = []; // dropdown options {id,name,cls,section,session}
-		let allStudents = []; // rendered students
+		let sheets = []; // cache combined group options
+		let allStudents = [];
 		let filters = { cls:'', section:'', session:'' };
 		let exam = 'Half Yearly  Examination';
 		let year = '2025';
@@ -65,178 +66,109 @@
 		function updateStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent = msg; }
 
 		function readDatalistCache(){
-			try{
-				const raw = localStorage.getItem(DATALIST_CACHE_KEY);
-				if(!raw) return null;
-				const obj = JSON.parse(raw);
-				if(!obj || !Array.isArray(obj.rows)) return null;
-				return obj.rows;
-			}catch(e){ return null; }
+			try{ const raw = localStorage.getItem(DATALIST_CACHE_KEY); if(!raw) return null; const obj=JSON.parse(raw); if(!obj||!Array.isArray(obj.rows)) return null; return obj.rows; }catch(e){ return null; }
 		}
 
 		function computeActiveFromRow(r){
-			const s = String(r.session||'').trim();
-			let active_class='', active_section='', active_roll='';
+			const s=String(r.session||'').trim(); let active_class='', active_section='', active_roll='';
 			if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
 			else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
 			return { session:s, active_class:String(active_class||''), active_section:String(active_section||''), active_roll:String(active_roll||'') };
 		}
 
 		function buildGroupOptions(){
-			const rows = readDatalistCache();
-			if(!rows) return [];
-			const seen = new Set(); const pairs=[];
+			const rows = readDatalistCache(); if(!rows) return [];
+			const seen=new Set(); const pairs=[];
 			for(const r of rows){
 				if(String(r.status||'').toUpperCase().includes('TC')) continue;
 				const a = computeActiveFromRow(r);
-				if(!a.active_roll || a.active_roll.trim()==='') continue;
-				if(!a.active_class || !a.active_section || !a.session) continue;
+				if(!a.active_roll || !a.active_class || !a.active_section || !a.session) continue;
 				const key = `${a.active_class}-${a.active_section}-${a.session}`;
 				if(seen.has(key)) continue; seen.add(key);
 				pairs.push({ id:'cache', name:key, cls:a.active_class, section:a.active_section, session:a.session });
 			}
-			// Sort by class (numeric); tie-breaker by name for consistent order
-			pairs.sort((x,y)=>{
-				const cx = Number(x.cls)||0, cy = Number(y.cls)||0;
-				if(cx!==cy) return cx - cy;
-				return String(x.name).localeCompare(String(y.name));
-			});
+			pairs.sort((x,y)=>{ const cx=Number(x.cls)||0, cy=Number(y.cls)||0; if(cx!==cy) return cx-cy; return String(x.name).localeCompare(String(y.name)); });
 			return pairs;
 		}
 
 		function renderTable(){
-			const tbody = document.querySelector('#list tbody'); if(!tbody) return;
-			tbody.innerHTML='';
-			// Sort by roll (numeric asc), non-numeric at the end
-			const rows = [...allStudents].sort((a,b)=>{
-				const ra = Number(a.roll), rb = Number(b.roll);
-				const va = Number.isFinite(ra) ? ra : Infinity;
-				const vb = Number.isFinite(rb) ? rb : Infinity;
-				if(va !== vb) return va - vb;
-				return String(a.roll||'').localeCompare(String(b.roll||''));
-			});
+			const tbody=document.querySelector('#list tbody'); if(!tbody) return; tbody.innerHTML='';
+			const rows=[...allStudents].sort((a,b)=>{ const ra=Number(a.roll), rb=Number(b.roll); const va=Number.isFinite(ra)?ra:Infinity; const vb=Number.isFinite(rb)?rb:Infinity; if(va!==vb) return va-vb; return String(a.roll||'').localeCompare(String(b.roll||'')); });
 			document.getElementById('count').textContent = `${rows.length} students`;
-			rows.forEach((s)=>{
+			rows.forEach(s=>{
 				const tr=document.createElement('tr');
-				const tdSel=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.className='row-check'; cb.dataset.index = s._idx; tdSel.appendChild(cb); tr.appendChild(tdSel);
+				const tdSel=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.className='row-check'; cb.dataset.index=s._idx; tdSel.appendChild(cb); tr.appendChild(tdSel);
 				const tdName=document.createElement('td'); tdName.textContent=s.name||''; tr.appendChild(tdName);
 				const tdFather=document.createElement('td'); tdFather.textContent=s.father||''; tr.appendChild(tdFather);
 				const tdClass=document.createElement('td'); tdClass.textContent=s.cls||''; tr.appendChild(tdClass);
 				const tdSection=document.createElement('td'); tdSection.textContent=s.section||''; tr.appendChild(tdSection);
 				const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
-				const tdIID=document.createElement('td'); tdIID.textContent = s.iid || ''; tr.appendChild(tdIID);
-				const tdGroup=document.createElement('td'); tdGroup.textContent = s.group || ''; tr.appendChild(tdGroup);
+				const tdIID=document.createElement('td'); tdIID.textContent=s.iid||''; tr.appendChild(tdIID);
+				const tdGroup=document.createElement('td'); tdGroup.textContent=s.group||''; tr.appendChild(tdGroup);
 				const tdPdf=document.createElement('td');
 					const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
-					const params = new URLSearchParams({ exam, year, name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||''), GROUP: String(s.group||'') });
-					btn.href = `print_admit.html?${params.toString()}`;
-					tdPdf.appendChild(btn); tr.appendChild(tdPdf);
+					const params=new URLSearchParams({ exam, year, name:s.name||'', father:s.father||'', cls:s.cls||'', section:s.section||'', roll:String(s.roll||''), iid:String(s.iid||''), GROUP:String(s.group||'') });
+					btn.href=`print_admit.html?${params.toString()}`; tdPdf.appendChild(btn); tr.appendChild(tdPdf);
 				tbody.appendChild(tr);
 			});
 			document.getElementById('selectAll').checked=false;
 		}
 
-		function getSelected(){
-			const set = new Set([...document.querySelectorAll('.row-check:checked')].map(el=>Number(el.dataset.index)));
-			return allStudents.filter(s=> set.has(s._idx) );
-		}
+		function getSelected(){ const set=new Set([...document.querySelectorAll('.row-check:checked')].map(el=>Number(el.dataset.index))); return allStudents.filter(s=>set.has(s._idx)); }
 
 		function renderPrint(students){
-			const wrap = document.getElementById('printArea'); if(!wrap) return;
-			wrap.innerHTML = ''; wrap.style.display = 'block';
-			const sheet = document.createElement('div'); sheet.className='sheet';
-			const grid = document.createElement('div'); grid.className='print-grid'; sheet.appendChild(grid); wrap.appendChild(sheet);
-			students.forEach(s=>{
-				const card = document.createElement('div'); card.className='card';
-				const tn = document.createElement('div'); tn.className='t name'; tn.textContent = String(s.name||'').toUpperCase(); card.appendChild(tn);
-				const tc = document.createElement('div'); tc.className='t class'; tc.textContent = s.cls||''; card.appendChild(tc);
-				const ts = document.createElement('div'); ts.className='t section'; ts.textContent = s.section||''; card.appendChild(ts);
-				const tr = document.createElement('div'); tr.className='t roll'; tr.textContent = s.roll||''; card.appendChild(tr);
-				const te = document.createElement('div'); te.className='t exam'; te.textContent = exam; card.appendChild(te);
-				const ty = document.createElement('div'); ty.className='t year'; ty.textContent = year; card.appendChild(ty);
-				if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
+			const wrap=document.getElementById('printArea'); if(!wrap) return; wrap.innerHTML=''; wrap.style.display='block';
+			const sheet=document.createElement('div'); sheet.className='sheet'; const grid=document.createElement('div'); grid.className='print-grid'; sheet.appendChild(grid); wrap.appendChild(sheet);
+			students.forEach(s=>{ const card=document.createElement('div'); card.className='card';
+				[['name',String(s.name||'').toUpperCase()],['class',s.cls||''],['section',s.section||''],['roll',s.roll||''],['exam',exam],['year',year]].forEach(([c,v])=>{ const el=document.createElement('div'); el.className='t '+c; el.textContent=v; card.appendChild(el); });
+				if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent=`IID : ${s.iid}`; card.appendChild(ti); }
 				grid.appendChild(card);
 			});
-			// No QR for seat plan
+			// Seat plan: no QR overlay
 		}
 
 		function loadForCurrentFilter(){
-			const { cls, section, session } = filters; if(!cls || !section || !session){ return; }
-			updateStatus('Loading students from cache…');
-			allStudents = []; let idx=0;
-			const rows = readDatalistCache();
-			if(!rows){ updateStatus('Cache missing. Open 0newdatabase/datalist.html first.'); return; }
+			const {cls,section,session}=filters; if(!cls||!section||!session) return; updateStatus('Loading students from cache…');
+			allStudents=[]; let idx=0; const rows=readDatalistCache(); if(!rows){ updateStatus('Cache missing. Open 0newdatabase/datalist.html first.'); return; }
 			for(const r of rows){
-				if(String(r.status||'').toUpperCase().includes('TC')) continue;
-				const a = computeActiveFromRow(r);
-				if(!a.active_roll || a.active_roll.trim()==='') continue;
-				if(a.session !== String(session)) continue;
-				if(String(a.active_class) !== String(cls)) continue;
-				if(String(a.active_section).toLowerCase() !== String(section).toLowerCase()) continue;
-				const name = r.student_name_en || '';
-				const father = r.father_name_en || '';
-				const grp = r.group || r.GROUP || '';
-				allStudents.push({
-					_idx: idx++,
-					name: String(name||''),
-					father: String(father||''),
-					roll: String(a.active_roll||''),
-					iid: r.iid || '',
-					group: String(grp||''),
-					cls: String(a.active_class||''),
-					section: String(a.active_section||''),
-					sheetId: 'cache', sheetName: 'datalist', row: r.iid
-				});
+				if(String(r.status||'').toUpperCase().includes('TC')) continue; const a=computeActiveFromRow(r); if(!a.active_roll) continue;
+				if(a.session!==String(session)) continue; if(String(a.active_class)!==String(cls)) continue; if(String(a.active_section).toLowerCase()!==String(section).toLowerCase()) continue;
+				allStudents.push({_idx:idx++, name:String(r.student_name_en||''), father:String(r.father_name_en||''), roll:String(a.active_roll||''), iid:r.iid||'', group:String(r.group||r.GROUP||''), cls:String(a.active_class||''), section:String(a.active_section||'')});
 			}
-			renderTable();
-			updateStatus('Ready — Source: datalist cache');
+			renderTable(); updateStatus('Ready — Source: datalist cache');
 		}
 
-		function init(){
-			updateStatus('Loading Class-Section-Session from cache…');
-			sheets = buildGroupOptions();
-			const tableSel = document.getElementById('tableFilter');
-			if(tableSel){
-				tableSel.innerHTML='';
-				const opt = document.createElement('option'); opt.value=''; opt.textContent='Class-Section-Session'; tableSel.appendChild(opt);
-				for(const {name, cls, section, session} of sheets){ const o=document.createElement('option'); o.value=name; o.textContent=name; tableSel.appendChild(o); }
-			}
-			document.getElementById('count').textContent = `${sheets.length} groups found — select one`;
-			updateStatus('Waiting for selection');
-		}
+		// --- Supabase integration (mirrors admit version) ---
+		const supabaseUrl='https://rtfefxghfbtirfnlbucb.supabase.co';
+		const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		let supabaseClient;
+		function initSupabaseClient(){ if(supabaseClient) return supabaseClient; if(!window.supabase) return null; try{ supabaseClient=window.supabase.createClient(supabaseUrl,supabaseKey); return supabaseClient; }catch(e){ console.warn('Supabase init failed',e); return null; } }
+		function waitForSupabase(maxAttempts=40){ return new Promise(resolve=>{ let attempts=0;(function poll(){ attempts++; if(window.supabase){ resolve(true); return;} if(attempts>=maxAttempts){ resolve(false); return;} setTimeout(poll,100); })(); }); }
 
-		window.addEventListener('DOMContentLoaded', ()=>{
-			init();
-			const tableSel = document.getElementById('tableFilter');
-			if(tableSel){
-				tableSel.addEventListener('change', e=>{
-					const key = e.target.value;
-					const match = (sheets||[]).find(it=>it.name===key);
-					filters.cls = match? match.cls : '';
-					filters.section = match? match.section : '';
-					filters.session = match? match.session : '';
-					if(match && match.session){
-						year = String(match.session);
-						const yearSel = document.getElementById('yearSelect');
-						if(yearSel){ yearSel.value = year; }
-					}
-					allStudents = []; renderTable();
-					if(filters.cls && filters.section && filters.session){ loadForCurrentFilter(); }
-				});
-			}
-			document.getElementById('examSelect').addEventListener('change', e=>{ exam = e.target.value; });
-			document.getElementById('yearSelect').addEventListener('change', e=>{ year = e.target.value; });
-			document.getElementById('selectAll').addEventListener('change', e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked = e.target.checked; }); });
-			document.getElementById('generate').addEventListener('click', ()=>{
-				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
-				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid, group:s.group })) };
-				const key = 'admit_bulk_' + Date.now();
-				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
-				const qrParam = new URLSearchParams(location.search).get('qr') || '0';
-				window.open(`print_selected.html?key=${encodeURIComponent(key)}&qr=${encodeURIComponent(qrParam)}`, '_blank', 'noopener');
-				renderPrint(sel);
-			});
-			const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{ const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; } renderPrint(sel); }); }
+		async function loadFiltersFromDB(){ if(!supabaseClient) supabaseClient=initSupabaseClient(); if(!supabaseClient){ updateStatus('Supabase not available, using cache'); initCacheFallback(); return; }
+			try{ updateStatus('Loading filters from database…'); const {data,error}=await supabaseClient.from('student_database').select('session, active_class, active_section, status').not('active_class','is',null).not('active_section','is',null); if(error) throw error; const sessionSet=new Set(); const classMap=new Map(); const sectionMap=new Map(); data.forEach(r=>{ if(String(r.status||'').toUpperCase().includes('TC')) return; const s=String(r.session||'').trim(); const c=String(r.active_class||'').trim(); const sec=String(r.active_section||'').trim(); if(!s||!c||!sec) return; sessionSet.add(s); if(!classMap.has(s)) classMap.set(s,new Set()); classMap.get(s).add(c); const key=s+'|'+c; if(!sectionMap.has(key)) sectionMap.set(key,new Set()); sectionMap.get(key).add(sec); }); populateSession([...sessionSet].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})), classMap, sectionMap); updateStatus('Select Session, Class & Section'); }catch(e){ console.error(e); updateStatus('Database load failed, fallback to cache'); initCacheFallback(); }}
+
+		function populateSession(sessions, classMap, sectionMap){ const sessionSel=document.getElementById('sessionSelect'); const classSel=document.getElementById('classSelect'); const sectionSel=document.getElementById('sectionSelect'); if(sessionSel){ sessions.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionSel.appendChild(o); }); }
+			function refreshClasses(){ classSel.innerHTML='<option value="">Class</option>'; sectionSel.innerHTML='<option value="">Section</option>'; const s=sessionSel.value; if(!s) return; const set=classMap.get(s); if(!set) return; [...set].sort((a,b)=>Number(a)-Number(b)).forEach(cls=>{ const o=document.createElement('option'); o.value=cls; o.textContent=cls; classSel.appendChild(o); }); }
+			function refreshSections(){ sectionSel.innerHTML='<option value="">Section</option>'; const s=sessionSel.value; const c=classSel.value; if(!s||!c) return; const set=sectionMap.get(s+'|'+c); if(!set) return; [...set].sort().forEach(sec=>{ const o=document.createElement('option'); o.value=sec; o.textContent=sec; sectionSel.appendChild(o); }); }
+			sessionSel.addEventListener('change',()=>{ filters.session=sessionSel.value; filters.cls=''; filters.section=''; refreshClasses(); allStudents=[]; renderTable(); const ySel=document.getElementById('yearSelect'); if(ySel && filters.session){ ySel.value=filters.session; year=filters.session; } if(filters.session) loadStudentsFromDB(); });
+			classSel.addEventListener('change',()=>{ filters.cls=classSel.value; filters.section=''; refreshSections(); allStudents=[]; renderTable(); if(filters.session&&filters.cls) loadStudentsFromDB(); });
+			sectionSel.addEventListener('change',()=>{ filters.section=sectionSel.value; allStudents=[]; renderTable(); if(filters.session&&filters.cls&&filters.section) loadStudentsFromDB(); }); }
+
+		async function loadStudentsFromDB(){ if(!supabaseClient||!filters.session||!filters.cls||!filters.section) return; updateStatus('Loading students from database…'); allStudents=[]; let idx=0; try{ const {data,error}=await supabaseClient.from('student_database').select('iid, student_name_en, father_name_en, group, status, session, active_class, active_section, active_roll').eq('session',filters.session).eq('active_class',filters.cls).eq('active_section',filters.section).not('active_roll','is',null); if(error) throw error; for(const r of data){ if(String(r.status||'').toUpperCase().includes('TC')) continue; if(!r.active_roll) continue; allStudents.push({_idx:idx++, name:String(r.student_name_en||''), father:String(r.father_name_en||''), roll:String(r.active_roll||''), iid:r.iid||'', group:String(r.group||r.GROUP||''), cls:String(r.active_class||''), section:String(r.active_section||'')}); } renderTable(); updateStatus('Ready — Source: database'); }catch(e){ console.error(e); updateStatus('Student load failed, fallback cache'); loadForCurrentFilter(); } }
+
+		function initCacheFallback(){ const combined=document.getElementById('tableFilter'); if(combined){ combined.style.display=''; }
+			updateStatus('Cache mode — select combined group'); const tableSel=document.getElementById('tableFilter'); tableSel.innerHTML=''; const opt=document.createElement('option'); opt.value=''; opt.textContent='Class-Section-Session'; tableSel.appendChild(opt); sheets=buildGroupOptions(); for(const {name} of sheets){ const o=document.createElement('option'); o.value=name; o.textContent=name; tableSel.appendChild(o); } document.getElementById('count').textContent=`${sheets.length} groups found — select one`; tableSel.addEventListener('change',e=>{ const key=e.target.value; const match=(sheets||[]).find(it=>it.name===key); filters.cls=match?match.cls:''; filters.section=match?match.section:''; filters.session=match?match.session:''; if(match&&match.session){ year=String(match.session); const yearSel=document.getElementById('yearSelect'); if(yearSel) yearSel.value=year; } allStudents=[]; renderTable(); if(filters.cls&&filters.section&&filters.session) loadForCurrentFilter(); }); }
+
+		function initUIEvents(){ document.getElementById('examSelect').addEventListener('change',e=>{ exam=e.target.value; }); document.getElementById('yearSelect').addEventListener('change',e=>{ year=e.target.value; }); document.getElementById('selectAll').addEventListener('change',e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked=e.target.checked; }); }); document.getElementById('generate').addEventListener('click',()=>{ const sel=getSelected(); if(!sel.length){ alert('Select at least one student'); return; } const payload={ exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid, group:s.group })) }; const key='admit_bulk_'+Date.now(); try{ localStorage.setItem(key,JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; } const qrParam=new URLSearchParams(location.search).get('qr')||'0'; window.open(`print_selected.html?key=${encodeURIComponent(key)}&qr=${encodeURIComponent(qrParam)}`,'_blank','noopener'); renderPrint(sel); }); const pdfBtn=document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click',()=>{ const sel=getSelected(); if(!sel.length){ alert('Select at least one student'); return; } renderPrint(sel); }); } }
+
+		window.addEventListener('DOMContentLoaded', async ()=>{
+			initUIEvents();
+			// Try database path first
+			const ok=await waitForSupabase();
+			if(!ok){ updateStatus('Supabase load timeout, cache mode'); initCacheFallback(); return; }
+			initSupabaseClient();
+			loadFiltersFromDB();
 		});
 	</script>
 </head>
@@ -248,7 +180,10 @@
 				<div class="left-tools">
 					<label><input type="checkbox" id="selectAll"> Select all</label>
 				</div>
-				<select id="tableFilter" aria-label="Class-Section-Session"></select>
+				<select id="sessionSelect" aria-label="Session"><option value="">Session</option></select>
+				<select id="classSelect" aria-label="Class"><option value="">Class</option></select>
+				<select id="sectionSelect" aria-label="Section"><option value="">Section</option></select>
+				<select id="tableFilter" aria-label="Class-Section-Session" style="display:none"></select>
 				<select id="examSelect" aria-label="Exam">
 					<option>Half Yearly  Examination</option>
 					<option>Annual  Examination</option>
