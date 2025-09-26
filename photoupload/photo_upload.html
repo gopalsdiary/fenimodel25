@@ -582,10 +582,11 @@
                     <th>Birth Cert Action</th>
                     <th>Registration Card</th>
                     <th>Reg Card Action</th>
+                    <th>Download</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="14">Loading...</td></tr>
+                <tr><td colspan="15">Loading...</td></tr>
             </tbody>
         </table>
         </div>
@@ -811,7 +812,7 @@
         }
 
         function showInitialMessage() {
-            tbody.innerHTML = '<tr><td colspan="14" class="muted" style="text-align: center; padding: 40px; font-size: 16px;">📋 Please select Session and Class from the filters above to view students</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="15" class="muted" style="text-align: center; padding: 40px; font-size: 16px;">📋 Please select Session and Class from the filters above to view students</td></tr>';
             rowCountEl.textContent = 'No filters selected';
         }
 
@@ -894,7 +895,7 @@
         async function loadStudents(selectedClass = null) {
             try {
                 showStatus('Loading students...', 'success');
-                tbody.innerHTML = '<tr><td colspan="14">Loading...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15">Loading...</td></tr>';
 
                 let query = supabase
                     .from(tableName)
@@ -926,7 +927,7 @@
             } catch (error) {
                 console.error('Error loading students:', error);
                 showStatus('Failed to load student data: ' + error.message, 'error');
-                tbody.innerHTML = '<tr><td colspan="14" class="muted">Failed to load data.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" class="muted">Failed to load data.</td></tr>';
             }
         }
 
@@ -1022,7 +1023,7 @@
 
         function renderTable() {
             if (filteredData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="14" class="muted">No students found with current filters.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" class="muted">No students found with current filters.</td></tr>';
                 rowCountEl.textContent = 'No students found';
                 return;
             }
@@ -1082,6 +1083,24 @@
                                     data-doc-type="registration_card"
                                     onclick="uploadDocument('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}', 'registration_card')">
                                 Registration Card Upload
+                            </button>
+                        </td>
+                        <td class="actions-col">
+                            <a href="/0newdatabase/detailsinfo.html?iid=${student.iid || ''}" 
+                               target="_blank" 
+                               class="btn outline" 
+                               style="margin-bottom:4px; font-size:11px;">
+                                📄 Details
+                            </a><br>
+                            <button class="btn" 
+                                    onclick="downloadPhoto('${student.iid || ''}', 'iid')" 
+                                    style="margin-bottom:4px; font-size:11px;">
+                                🔽 Download (IID)
+                            </button><br>
+                            <button class="btn" 
+                                    onclick="downloadPhoto('${student.iid || ''}', 'class-roll', '${student.active_class || ''}', '${student.active_section || ''}', '${student.active_roll || ''}')" 
+                                    style="font-size:11px;">
+                                🔽 Download (Class-roll)
                             </button>
                         </td>
                     </tr>
@@ -1884,6 +1903,100 @@
         window.uploadDocument = function(iid, studentName, docType) {
             console.log('Global uploadDocument called with:', iid, studentName, docType);
             handleDocumentUploadButtonClick(iid, studentName, docType);
+        };
+
+        // Download photo function
+        window.downloadPhoto = function(iid, type, activeClass, activeSection, activeRoll) {
+            console.log('Download photo called with:', iid, type, activeClass, activeSection, activeRoll);
+            
+            // Find the student from both filtered data and all students data
+            let student = filteredData.find(s => String(s.iid || '').trim() === String(iid || '').trim());
+            if (!student) {
+                student = allStudentsData.find(s => String(s.iid || '').trim() === String(iid || '').trim());
+            }
+            
+            if (!student) {
+                console.error('Student not found with IID:', iid);
+                showStatus('Student not found for download', 'error');
+                return;
+            }
+
+            if (!student.student_photo_url || !String(student.student_photo_url).trim()) {
+                console.error('No photo URL found for student:', iid);
+                showStatus('No photo available for this student', 'error');
+                return;
+            }
+
+            console.log('Found student for download:', student);
+            console.log('Photo URL:', student.student_photo_url);
+
+            let filename;
+            if (type === 'iid') {
+                filename = `avater-${iid}.jpg`;
+            } else if (type === 'class-roll') {
+                filename = `${activeClass}-${activeSection}-${activeRoll}.jpg`;
+            } else {
+                filename = `photo-${iid}.jpg`;
+            }
+
+            try {
+                // Method 1: Try direct download first
+                const link = document.createElement('a');
+                link.href = student.student_photo_url;
+                link.download = filename;
+                link.target = '_blank';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                showStatus(`Photo download initiated: ${filename}`, 'success');
+                console.log('Download initiated for:', filename);
+                
+                // Method 2: If direct download doesn't work, try fetch and blob method
+                setTimeout(async () => {
+                    try {
+                        const response = await fetch(student.student_photo_url, {
+                            mode: 'cors'
+                        });
+                        
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const blobUrl = URL.createObjectURL(blob);
+                            
+                            const downloadLink = document.createElement('a');
+                            downloadLink.href = blobUrl;
+                            downloadLink.download = filename;
+                            document.body.appendChild(downloadLink);
+                            downloadLink.click();
+                            document.body.removeChild(downloadLink);
+                            
+                            // Clean up
+                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                            
+                            console.log('Blob download completed for:', filename);
+                        }
+                    } catch (fetchError) {
+                        console.log('Fetch download also failed:', fetchError);
+                        // Fallback: open in new tab
+                        window.open(student.student_photo_url, '_blank');
+                        showStatus(`Photo opened in new tab. Right-click to save as: ${filename}`, 'warning');
+                    }
+                }, 500);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                showStatus('Failed to download photo: ' + error.message, 'error');
+                
+                // Fallback: open in new tab
+                try {
+                    window.open(student.student_photo_url, '_blank');
+                    showStatus(`Photo opened in new tab. Right-click to save as: ${filename}`, 'warning');
+                } catch (fallbackError) {
+                    console.error('Fallback also failed:', fallbackError);
+                    showStatus('Unable to download or open photo', 'error');
+                }
+            }
         };
     </script>
 </body>
