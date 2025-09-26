@@ -10,8 +10,10 @@
             --bg:#f6f8fa; 
             --card:#ffffff; 
             --border:#d0d7de; 
-            --accent:#0366d6; 
-            --accent-hover:#024c9e; 
+            /* primary button color changed per user request */
+            --accent:#019f66; 
+            /* slightly darker hover for the new green */
+            --accent-hover:#019f66; 
             --danger:#d73a49; 
             --success: #10b981;
             --warning: #f59e0b;
@@ -1906,7 +1908,7 @@
         };
 
         // Download photo function
-        window.downloadPhoto = function(iid, type, activeClass, activeSection, activeRoll) {
+        window.downloadPhoto = async function(iid, type, activeClass, activeSection, activeRoll) {
             console.log('Download photo called with:', iid, type, activeClass, activeSection, activeRoll);
             
             // Find the student from both filtered data and all students data
@@ -1940,61 +1942,53 @@
             }
 
             try {
-                // Method 1: Try direct download first
-                const link = document.createElement('a');
-                link.href = student.student_photo_url;
-                link.download = filename;
-                link.target = '_blank';
+                // Use fetch to download the image as blob for direct download
+                const response = await fetch(student.student_photo_url, {
+                    mode: 'cors'
+                });
                 
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-
-                showStatus(`Photo download initiated: ${filename}`, 'success');
-                console.log('Download initiated for:', filename);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 
-                // Method 2: If direct download doesn't work, try fetch and blob method
-                setTimeout(async () => {
-                    try {
-                        const response = await fetch(student.student_photo_url, {
-                            mode: 'cors'
-                        });
-                        
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            const blobUrl = URL.createObjectURL(blob);
-                            
-                            const downloadLink = document.createElement('a');
-                            downloadLink.href = blobUrl;
-                            downloadLink.download = filename;
-                            document.body.appendChild(downloadLink);
-                            downloadLink.click();
-                            document.body.removeChild(downloadLink);
-                            
-                            // Clean up
-                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-                            
-                            console.log('Blob download completed for:', filename);
-                        }
-                    } catch (fetchError) {
-                        console.log('Fetch download also failed:', fetchError);
-                        // Fallback: open in new tab
-                        window.open(student.student_photo_url, '_blank');
-                        showStatus(`Photo opened in new tab. Right-click to save as: ${filename}`, 'warning');
-                    }
-                }, 500);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                
+                // Create download link and trigger download
+                const downloadLink = document.createElement('a');
+                downloadLink.href = blobUrl;
+                downloadLink.download = filename;
+                downloadLink.style.display = 'none';
+                
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                
+                // Clean up blob URL
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                
+                showStatus(`Photo downloaded successfully: ${filename}`, 'success');
+                console.log('Direct download completed for:', filename);
                 
             } catch (error) {
                 console.error('Download error:', error);
-                showStatus('Failed to download photo: ' + error.message, 'error');
+                console.log('Falling back to direct link method');
                 
-                // Fallback: open in new tab
+                // Fallback method: Try direct link download
                 try {
-                    window.open(student.student_photo_url, '_blank');
-                    showStatus(`Photo opened in new tab. Right-click to save as: ${filename}`, 'warning');
+                    const link = document.createElement('a');
+                    link.href = student.student_photo_url;
+                    link.download = filename;
+                    link.style.display = 'none';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    showStatus(`Photo download initiated: ${filename}`, 'success');
                 } catch (fallbackError) {
-                    console.error('Fallback also failed:', fallbackError);
-                    showStatus('Unable to download or open photo', 'error');
+                    console.error('Fallback download also failed:', fallbackError);
+                    showStatus('Unable to download photo directly. Please try again.', 'error');
                 }
             }
         };
