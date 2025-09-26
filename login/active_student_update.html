@@ -104,6 +104,7 @@
             <th>Class</th>
             <th>Section</th>
             <th>Roll</th>
+            <th>Status</th>
             <th>Active Class</th>
             <th>Active Section</th>
             <th>Active Roll</th>
@@ -112,7 +113,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td colspan="14" class="muted">Select a session to view data</td></tr>
+          <tr><td colspan="15" class="muted">Select a session to view data</td></tr>
         </tbody>
       </table>
     </div>
@@ -183,7 +184,7 @@
     async function loadData() {
       try {
         showStatus('Loading data...', 'loading');
-        tbody.innerHTML = '<tr><td colspan="14">Loading...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15">Loading...</td></tr>';
 
         console.log('Loading data from table:', tableName);
 
@@ -198,7 +199,7 @@
 
         if (!data || data.length === 0) {
           showStatus('No data found', 'error');
-          tbody.innerHTML = '<tr><td colspan="14" class="muted">No data available.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="15" class="muted">No data available.</td></tr>';
           return;
         }
 
@@ -212,12 +213,12 @@
       } catch (error) {
         console.error('Load data error:', error);
         showStatus('Failed to load data: ' + error.message, 'error');
-        tbody.innerHTML = '<tr><td colspan="14" class="muted">Failed to load data.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" class="muted">Failed to load data.</td></tr>';
       }
     }
 
     function clearTable() {
-      tbody.innerHTML = '<tr><td colspan="14" class="muted">Select a session to view data</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="15" class="muted">Select a session to view data</td></tr>';
       rowCountEl.textContent = '';
       classFilter.innerHTML = '<option value="">All Classes</option>';
       sectionFilter.innerHTML = '<option value="">All Sections</option>';
@@ -246,7 +247,7 @@
 
       if (filteredSessionData.length === 0) {
         showStatus(`No students found for session ${currentSession}`, 'error');
-        tbody.innerHTML = `<tr><td colspan="14" class="muted">No students for session ${currentSession}.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="15" class="muted">No students for session ${currentSession}.</td></tr>`;
         rowCountEl.textContent = '';
         return;
       }
@@ -340,6 +341,7 @@
           <th>Class (${session})</th>
           <th>Section (${session})</th>
           <th>Roll (${session})</th>
+          <th>Status</th>
           <th>Active Class</th>
           <th>Active Section</th>
           <th>Active Roll</th>
@@ -391,7 +393,7 @@
       console.log('Final displayData length:', displayData.length);
 
       if (displayData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="14" class="muted">No students match the selected filters.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="15" class="muted">No students match the selected filters.</td></tr>';
         rowCountEl.textContent = '';
         return;
       }
@@ -412,9 +414,16 @@
         const sessionRoll = row[sessionRollCol];
         
         // Show session-specific values as "target" active values
-        const targetActiveClass = sessionClass;
-        const targetActiveSection = sessionSection;
-        const targetActiveRoll = sessionRoll;
+        // If status is 'TC', set active fields to null
+        let targetActiveClass = sessionClass;
+        let targetActiveSection = sessionSection;
+        let targetActiveRoll = sessionRoll;
+        
+        if (row.status === 'TC') {
+          targetActiveClass = null;
+          targetActiveSection = null;
+          targetActiveRoll = null;
+        }
         
         // Current active values from database
         const currentActiveClass = row.active_class;
@@ -423,20 +432,42 @@
         
         // Generate student key from father mobile last 6 digits
         const fatherMobile = String(row.father_mobile_en || row.father_mobile || '').replace(/\D/g, ''); // Remove non-digits
-        const generatedStudentKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
-        const currentStudentKey = row.student_key || '';
+        let generatedStudentKey = '';
+        
+        if (fatherMobile.length >= 6) {
+          generatedStudentKey = fatherMobile.slice(-6); // This preserves leading zeros like "003695"
+        } else if (fatherMobile.length > 0) {
+          generatedStudentKey = fatherMobile; // Use whatever digits are available
+        }
+        
+        // If status is TC, set student key to null as well
+        if (row.status === 'TC') {
+          generatedStudentKey = null;
+        }
+        
+        const currentStudentKey = row.student_key;
 
-        // Check if update is needed (compare current active with target session values + student key)
-        const needsUpdate = (targetActiveClass !== currentActiveClass) || 
-                           (targetActiveSection !== currentActiveSection) || 
-                           (targetActiveRoll !== currentActiveRoll) ||
-                           (generatedStudentKey !== currentStudentKey);
+        // Check if update is needed - compare what should be with what currently is
+        // For TC status: active fields should be null, for others: active fields should match session fields
+        // Special handling for student key to preserve leading zeros and handle null properly
+        const targetStudentKeyStr = generatedStudentKey === null ? '' : String(generatedStudentKey);
+        const currentStudentKeyStr = currentStudentKey === null ? '' : String(currentStudentKey || '');
+        
+        // Normalize values for comparison - treat null, undefined, and empty string as equivalent
+        const normalizeValue = (val) => (val === null || val === undefined || val === '') ? null : String(val);
+        
+        const needsUpdate = (normalizeValue(targetActiveClass) !== normalizeValue(currentActiveClass)) || 
+                           (normalizeValue(targetActiveSection) !== normalizeValue(currentActiveSection)) || 
+                           (normalizeValue(targetActiveRoll) !== normalizeValue(currentActiveRoll)) ||
+                           (normalizeValue(generatedStudentKey) !== normalizeValue(currentStudentKey));
 
         if (needsUpdate) needsUpdateCount++;
 
         const buttonClass = needsUpdate ? 'update-needed' : 'up-to-date';
-        const buttonText = needsUpdate ? 'Update Active' : 'Up-to-date';
-        const isDisabled = !targetActiveClass && !targetActiveSection && !targetActiveRoll;
+        const buttonText = needsUpdate ? 'Update' : 'Up-to-date';
+        // Don't disable button for TC students - they need to update to null values
+        // Only disable if no session data exists at all
+        const isDisabled = !sessionClass && !sessionSection && !sessionRoll && row.status !== 'TC';
 
         return `
           <tr data-iid="${escapeHtml(row.iid || '')}">
@@ -449,14 +480,27 @@
             <td>${escapeHtml(sessionClass || '')}</td>
             <td>${escapeHtml(sessionSection || '')}</td>
             <td>${escapeHtml(sessionRoll || '')}</td>
-            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">${escapeHtml(targetActiveClass || '')}</td>
-            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">${escapeHtml(targetActiveSection || '')}</td>
-            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">${escapeHtml(targetActiveRoll || '')}</td>
-            <td style="font-family: monospace; color: ${generatedStudentKey !== currentStudentKey ? '#ff8a00' : '#10b981'}; font-size: 12px; font-weight: ${generatedStudentKey !== currentStudentKey ? 'bold' : 'normal'};">${generatedStudentKey}</td>
+            <td>${escapeHtml(row.status || '')}</td>
+            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">
+              <div style="font-weight: bold;">${escapeHtml(currentActiveClass || '')}</div>
+              ${needsUpdate ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">→ ${escapeHtml(targetActiveClass || '')}</div>` : ''}
+            </td>
+            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">
+              <div style="font-weight: bold;">${escapeHtml(currentActiveSection || '')}</div>
+              ${needsUpdate ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">→ ${escapeHtml(targetActiveSection || '')}</div>` : ''}
+            </td>
+            <td style="color: ${needsUpdate ? '#ff8a00' : '#10b981'}; font-weight: ${needsUpdate ? '600' : 'normal'};">
+              <div style="font-weight: bold;">${escapeHtml(currentActiveRoll || '')}</div>
+              ${needsUpdate ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">→ ${escapeHtml(targetActiveRoll || '')}</div>` : ''}
+            </td>
+            <td style="font-family: monospace; color: ${targetStudentKeyStr !== currentStudentKeyStr ? '#ff8a00' : '#10b981'}; font-size: 12px; font-weight: ${targetStudentKeyStr !== currentStudentKeyStr ? 'bold' : 'normal'};">
+              <div style="font-weight: bold;">${escapeHtml(currentStudentKey || '')}</div>
+              ${(targetStudentKeyStr !== currentStudentKeyStr) ? `<div style="font-size: 10px; color: #666; margin-top: 2px;">→ ${escapeHtml(generatedStudentKey || '')}</div>` : ''}
+            </td>
             <td class="action-cell">
               <button 
                 class="btn ${buttonClass}" 
-                onclick="updateStudent('${escapeHtml(row.iid || '')}', '${escapeHtml(targetActiveClass || '')}', '${escapeHtml(targetActiveSection || '')}', '${escapeHtml(targetActiveRoll || '')}', '${generatedStudentKey}')"
+                onclick="updateStudent('${escapeHtml(row.iid || '')}', ${targetActiveClass === null ? 'null' : `'${escapeHtml(targetActiveClass || '')}'`}, ${targetActiveSection === null ? 'null' : `'${escapeHtml(targetActiveSection || '')}'`}, ${targetActiveRoll === null ? 'null' : `'${escapeHtml(targetActiveRoll || '')}'`}, ${generatedStudentKey === null ? 'null' : `'${escapeHtml(generatedStudentKey || '')}' `})"
                 ${isDisabled ? 'disabled' : ''}
               >
                 ${buttonText}
@@ -484,10 +528,10 @@
         button.disabled = true;
 
         const updates = {
-          active_class: sessionClass || null,
-          active_section: sessionSection || null,
-          active_roll: sessionRoll || null,
-          student_key: studentKey || null
+          active_class: sessionClass === null ? null : (sessionClass && sessionClass !== '' ? sessionClass : null),
+          active_section: sessionSection === null ? null : (sessionSection && sessionSection !== '' ? sessionSection : null),
+          active_roll: sessionRoll === null ? null : (sessionRoll && sessionRoll !== '' ? sessionRoll : null),
+          student_key: studentKey === null ? null : (studentKey && studentKey !== '' ? studentKey : null)
         };
 
         const { error } = await supabase
@@ -513,6 +557,18 @@
           rowData.active_roll = updates.active_roll;
           rowData.student_key = updates.student_key;
         }
+
+        // Also update filtered session data cache
+        const sessionRowData = filteredSessionData.find(row => row.iid === iid);
+        if (sessionRowData) {
+          sessionRowData.active_class = updates.active_class;
+          sessionRowData.active_section = updates.active_section;
+          sessionRowData.active_roll = updates.active_roll;
+          sessionRowData.student_key = updates.student_key;
+        }
+
+        // Refresh the table display immediately to show correct status
+        filterAndRenderData();
 
         // Clear status message after 3 seconds
         setTimeout(() => {
@@ -583,17 +639,23 @@
 
         // Custom headers for specific columns only
         const headers = [
-          'iid', 'active_class', 'active_section', 'active_roll', 'session', 'student_name_en', 'student_key'
+          'iid', 'status', 'active_class', 'active_section', 'active_roll', 'session', 'student_name_en', 'student_key'
         ];
 
         const csvContent = [
           headers.join(','),
           ...exportData.map((row) => {
             const fatherMobile = String(row.father_mobile_en || row.father_mobile || '').replace(/\D/g, ''); // Remove non-digits
-            const studentKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
+            let studentKey = '';
+            if (fatherMobile.length >= 6) {
+              studentKey = fatherMobile.slice(-6); // Preserves leading zeros like "003695"
+            } else if (fatherMobile.length > 0) {
+              studentKey = fatherMobile;
+            }
             
             return [
               row.iid || '',
+              row.status || '',
               row.active_class || '',
               row.active_section || '',
               row.active_roll || '',
