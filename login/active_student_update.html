@@ -412,11 +412,8 @@
       let indexCounter = 0;
 
       const normalize = (val) => (val === null || val === undefined || val === '') ? '' : String(val);
-      const normalizeKey = (val) => {
-        if (val === null || val === undefined || val === '') return '';
-        // For comparison ignore leading zeros because DB may store as integer
-        return String(val).replace(/^0+/, '');
-      };
+      // Do NOT strip leading zeros; we want exactly 6-digit key. Any other length (1-5, >6) triggers update.
+      const isValidSixDigit = (val) => /^\d{6}$/.test(String(val||''));
 
       data.forEach((row) => {
         indexCounter++;
@@ -470,7 +467,12 @@
   const needsUpdate = (normalizeValue(targetActiveClass) !== normalizeValue(currentActiveClass)) || 
          (normalizeValue(targetActiveSection) !== normalizeValue(currentActiveSection)) || 
          (normalizeValue(targetActiveRoll) !== normalizeValue(currentActiveRoll)) ||
-         (normalizeKey(generatedStudentKey) !== normalizeKey(currentStudentKey));
+         // Student key update rules:
+         // 1. If generated key is null (TC) but current not null -> update
+         // 2. If generated key exists and is not exactly 6 digits -> update (needs padding not allowed; we always store derived last 6 exactly)
+         // 3. If stored key !== generated key (exact string compare) -> update
+         ( (generatedStudentKey === null && (currentStudentKey !== null && currentStudentKey !== '')) ||
+           (generatedStudentKey !== null && (!isValidSixDigit(generatedStudentKey) || String(currentStudentKey||'') !== String(generatedStudentKey))) );
 
         if (needsUpdate) needsUpdateCount++;
 
@@ -504,9 +506,9 @@
               <div style="font-weight: bold;">${escapeHtml(currentActiveRoll || '')}</div>
               ${needsUpdate ? `<div style="font-size: 11px; color: #666; margin-top: 2px;">→ ${escapeHtml(targetActiveRoll || '')}</div>` : ''}
             </td>
-            <td style="font-family: monospace; color: ${targetStudentKeyStr !== currentStudentKeyStr ? '#ff8a00' : '#10b981'}; font-size: 12px; font-weight: ${targetStudentKeyStr !== currentStudentKeyStr ? 'bold' : 'normal'};">
+            <td style="font-family: monospace; color: ${ (generatedStudentKey === null && currentStudentKey) || (generatedStudentKey && String(generatedStudentKey) !== String(currentStudentKey || '')) || (generatedStudentKey && !isValidSixDigit(generatedStudentKey)) ? '#ff8a00' : '#10b981'}; font-size: 12px; font-weight: ${ (generatedStudentKey === null && currentStudentKey) || (generatedStudentKey && String(generatedStudentKey) !== String(currentStudentKey || '')) || (generatedStudentKey && !isValidSixDigit(generatedStudentKey)) ? 'bold' : 'normal'};">
               <div style="font-weight: bold;">${escapeHtml(currentStudentKey || '')}</div>
-              ${(targetStudentKeyStr !== currentStudentKeyStr) ? `<div style="font-size: 10px; color: #666; margin-top: 2px;">→ ${escapeHtml(generatedStudentKey || '')}</div>` : ''}
+              ${( (generatedStudentKey === null && currentStudentKey) || (generatedStudentKey && String(generatedStudentKey) !== String(currentStudentKey || '')) || (generatedStudentKey && !isValidSixDigit(generatedStudentKey)) ) ? `<div style="font-size: 10px; color: #666; margin-top: 2px;">→ ${escapeHtml(generatedStudentKey || '')}</div>` : ''}
             </td>
             <td class="action-cell">
               <button 
