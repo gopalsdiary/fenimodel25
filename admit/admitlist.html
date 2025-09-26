@@ -6,6 +6,8 @@
 	<title>Admit List — Generate Cards</title>
 	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+	<!-- Supabase JS (needed for dynamic filters) -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 	<style>
 		:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --border:#e5e7eb; --primary:#0ea5e9; }
 		*{ box-sizing:border-box }
@@ -202,38 +204,135 @@
 			updateStatus('Ready — Source: datalist cache');
 		}
 
-		function init(){
-			updateStatus('Loading Class-Section-Session from cache…');
-			sheets = buildGroupOptions();
-			const tableSel = document.getElementById('tableFilter');
-			if(tableSel){
-				tableSel.innerHTML='';
-				const opt = document.createElement('option'); opt.value=''; opt.textContent='Class-Section-Session'; tableSel.appendChild(opt);
-				for(const {name, cls, section, session} of sheets){ const o=document.createElement('option'); o.value=name; o.textContent=name; tableSel.appendChild(o); }
-			}
-			document.getElementById('count').textContent = `${sheets.length} groups found — select one`;
-			updateStatus('Waiting for selection');
+		// Supabase integration to load distinct session, class, section from active_* columns
+		const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		let supabaseClient;
+		function initSupabaseClient(){
+			if(supabaseClient) return supabaseClient;
+			if(!window.supabase) return null;
+			try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); return supabaseClient; } catch(e){ console.warn('Supabase init failed', e); return null; }
 		}
 
-		window.addEventListener('DOMContentLoaded', ()=>{
-			init();
-			const tableSel = document.getElementById('tableFilter');
-			if(tableSel){
-				tableSel.addEventListener('change', e=>{
-					const key = e.target.value;
-					const match = (sheets||[]).find(it=>it.name===key);
-					filters.cls = match? match.cls : '';
-					filters.section = match? match.section : '';
-					filters.session = match? match.session : '';
-					if(match && match.session){
-						year = String(match.session);
-						const yearSel = document.getElementById('yearSelect');
-						if(yearSel){ yearSel.value = year; }
-					}
-					allStudents = []; renderTable();
-					if(filters.cls && filters.section && filters.session){ loadForCurrentFilter(); }
+		function waitForSupabase(maxAttempts=40){
+			return new Promise(resolve=>{
+				let attempts=0; (function poll(){
+					attempts++; if(window.supabase){ resolve(true); return; }
+					if(attempts>=maxAttempts){ resolve(false); return; }
+					setTimeout(poll,100);
+				})();
+			});
+		}
+
+		async function loadFiltersFromDB(){
+			if(!supabaseClient) supabaseClient = initSupabaseClient();
+			if(!supabaseClient){ updateStatus('Supabase not available, using cache'); initCacheFallback(); return; }
+			try{
+				updateStatus('Loading filters from database…');
+				const { data, error } = await supabaseClient
+					.from('student_database')
+					.select('session, active_class, active_section, status')
+					.not('active_class','is',null)
+					.not('active_section','is',null);
+				if(error) throw error;
+				const sessionSet = new Set();
+				const classMap = new Map(); // session -> Set(class)
+				const sectionMap = new Map(); // session|class -> Set(section)
+				data.forEach(r=>{
+					if(String(r.status||'').toUpperCase().includes('TC')) return;
+					const s=String(r.session||'').trim();
+					const c=String(r.active_class||'').trim();
+					const sec=String(r.active_section||'').trim();
+					if(!s||!c||!sec) return; sessionSet.add(s);
+					if(!classMap.has(s)) classMap.set(s,new Set()); classMap.get(s).add(c);
+					const key = s+'|'+c; if(!sectionMap.has(key)) sectionMap.set(key,new Set()); sectionMap.get(key).add(sec);
 				});
+				populateSession([...sessionSet].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})), classMap, sectionMap);
+				updateStatus('Select Session, Class & Section');
+			}catch(e){ console.error(e); updateStatus('Database load failed, fallback to cache'); initCacheFallback(); }
+		}
+
+		function populateSession(sessions, classMap, sectionMap){
+			const sessionSel = document.getElementById('sessionSelect');
+			const classSel = document.getElementById('classSelect');
+			const sectionSel = document.getElementById('sectionSelect');
+			if(sessionSel){ sessions.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionSel.appendChild(o); }); }
+			function refreshClasses(){
+				classSel.innerHTML = '<option value="">Class</option>';
+				sectionSel.innerHTML = '<option value="">Section</option>';
+				const s = sessionSel.value; if(!s) return; const set = classMap.get(s); if(!set) return;
+				[...set].sort((a,b)=>Number(a)-Number(b)).forEach(cls=>{ const o=document.createElement('option'); o.value=cls; o.textContent=cls; classSel.appendChild(o); });
 			}
+			function refreshSections(){
+				sectionSel.innerHTML = '<option value="">Section</option>';
+				const s = sessionSel.value; const c = classSel.value; if(!s||!c) return; const set = sectionMap.get(s+'|'+c); if(!set) return;
+				[...set].sort().forEach(sec=>{ const o=document.createElement('option'); o.value=sec; o.textContent=sec; sectionSel.appendChild(o); });
+			}
+			sessionSel.addEventListener('change', ()=>{ 
+				filters.session=sessionSel.value; filters.cls=''; filters.section=''; refreshClasses(); allStudents=[]; renderTable();
+				// auto update year selector
+				const ySel=document.getElementById('yearSelect'); if(ySel && filters.session){ ySel.value = filters.session; year = filters.session; }
+				if(filters.session) loadStudentsFromDB();
+			});
+			classSel.addEventListener('change', ()=>{ filters.cls=classSel.value; filters.section=''; refreshSections(); allStudents=[]; renderTable(); if(filters.session && filters.cls) loadStudentsFromDB(); });
+			sectionSel.addEventListener('change', ()=>{ filters.section=sectionSel.value; allStudents=[]; renderTable(); if(filters.session && filters.cls && filters.section) loadStudentsFromDB(); });
+		}
+
+		async function loadStudentsFromDB(){
+			if(!supabaseClient || !filters.session || !filters.cls || !filters.section){ return; }
+			updateStatus('Loading students from database…');
+			allStudents = []; let idx=0;
+			try{
+				const { data, error } = await supabaseClient
+					.from('student_database')
+					.select('iid, student_name_en, father_name_en, group, status, session, active_class, active_section, active_roll')
+					.eq('session', filters.session)
+					.eq('active_class', filters.cls)
+					.eq('active_section', filters.section)
+					.not('active_roll','is',null);
+				if(error) throw error;
+				for(const r of data){
+					if(String(r.status||'').toUpperCase().includes('TC')) continue;
+					if(!r.active_roll) continue;
+					allStudents.push({
+						_idx: idx++,
+						name: String(r.student_name_en||''),
+						father: String(r.father_name_en||''),
+						roll: String(r.active_roll||''),
+						iid: r.iid || '',
+						group: String(r.group||r.GROUP||''),
+						cls: String(r.active_class||''),
+						section: String(r.active_section||'')
+					});
+				}
+				renderTable();
+				updateStatus('Ready — Source: database');
+			}catch(e){ console.error(e); updateStatus('Student load failed, fallback cache'); loadForCurrentFilter(); }
+		}
+
+		function initCacheFallback(){
+			// Keep old combined selector hidden? We can still allow if needed.
+			const combined = document.getElementById('tableFilter'); if(combined){ combined.style.display=''; }
+			updateStatus('Cache mode — select combined group');
+			// Reuse previous init logic for combined dropdown
+			const tableSel = document.getElementById('tableFilter');
+			tableSel.innerHTML='';
+			const opt = document.createElement('option'); opt.value=''; opt.textContent='Class-Section-Session'; tableSel.appendChild(opt);
+			sheets = buildGroupOptions();
+			for(const {name} of sheets){ const o=document.createElement('option'); o.value=name; o.textContent=name; tableSel.appendChild(o); }
+			document.getElementById('count').textContent = `${sheets.length} groups found — select one`;
+			tableSel.addEventListener('change', e=>{
+				const key = e.target.value;
+				const match = (sheets||[]).find(it=>it.name===key);
+				filters.cls = match? match.cls : '';
+				filters.section = match? match.section : '';
+				filters.session = match? match.session : '';
+				if(match && match.session){ year = String(match.session); const yearSel = document.getElementById('yearSelect'); if(yearSel) yearSel.value = year; }
+				allStudents=[]; renderTable(); if(filters.cls && filters.section && filters.session) loadForCurrentFilter();
+			});
+		}
+
+		function initUIEvents(){
 			document.getElementById('examSelect').addEventListener('change', e=>{ exam = e.target.value; });
 			document.getElementById('yearSelect').addEventListener('change', e=>{ year = e.target.value; });
 			document.getElementById('selectAll').addEventListener('change', e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked = e.target.checked; }); });
@@ -247,6 +346,14 @@
 				renderPrint(sel);
 			});
 			const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{ const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; } renderPrint(sel); }); }
+		}
+
+		window.addEventListener('DOMContentLoaded', async ()=>{
+			initUIEvents();
+			const ok = await waitForSupabase();
+			if(!ok){ updateStatus('Supabase load timeout, cache mode'); initCacheFallback(); return; }
+			initSupabaseClient();
+			loadFiltersFromDB();
 		});
 	</script>
 </head>
@@ -258,7 +365,10 @@
 				<div class="left-tools">
 					<label><input type="checkbox" id="selectAll"> Select all</label>
 				</div>
-				<select id="tableFilter" aria-label="Class-Section-Session"></select>
+				<select id="sessionSelect" aria-label="Session"><option value="">Session</option></select>
+				<select id="classSelect" aria-label="Class"><option value="">Class</option></select>
+				<select id="sectionSelect" aria-label="Section"><option value="">Section</option></select>
+				<select id="tableFilter" aria-label="Class-Section-Session" style="display:none"></select>
 				<select id="examSelect" aria-label="Exam">
 					<option>Half Yearly  Examination</option>
 					<option>Annual  Examination</option>
