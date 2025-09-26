@@ -521,6 +521,56 @@
     async function updateStudent(iid, sessionClass, sessionSection, sessionRoll, studentKey) {
       const statusEl = document.getElementById(`status-${iid}`);
       const button = event.target;
+      // Show confirmation only for direct user clicks (event.isTrusted === true)
+      // For bulk updates we trigger button.click() programmatically (isTrusted === false) so we skip prompts.
+      try {
+        const rowData = allRowsCache.find(row => row.iid === iid) || {};
+        if (event && event.isTrusted) {
+          // Build a human-readable list of changes that will occur
+            const changes = [];
+            const currentMap = {
+              'Active Class': rowData.active_class,
+              'Active Section': rowData.active_section,
+              'Active Roll': rowData.active_roll,
+              'Student Key': rowData.student_key
+            };
+            const targetMap = {
+              'Active Class': sessionClass,
+              'Active Section': sessionSection,
+              'Active Roll': sessionRoll,
+              'Student Key': studentKey
+            };
+            for (const label in currentMap) {
+              const curVal = (currentMap[label] === null || currentMap[label] === undefined || currentMap[label] === '') ? '' : String(currentMap[label]);
+              const newVal = (targetMap[label] === null || targetMap[label] === undefined || targetMap[label] === '') ? '' : String(targetMap[label]);
+              if (curVal !== newVal) {
+                changes.push(`${label}: '${curVal || '∅'}' → '${newVal || '∅'}'`);
+              }
+            }
+            if (changes.length === 0) {
+              // Nothing to change; just exit silently
+              statusEl.textContent = 'Already up-to-date';
+              statusEl.className = 'update-status success';
+              setTimeout(()=>{ statusEl.textContent=''; }, 2500);
+              return;
+            }
+            const confirmMsg = [
+              `আইডি (IID): ${iid}`,
+              'নিচের পরিবর্তনগুলি আপডেট হবে:',
+              '',
+              ...changes,
+              '',
+              'আপনি কি নিশ্চিত আপডেট করতে চান?'
+            ].join('\n');
+            if (!window.confirm(confirmMsg)) {
+              return; // User cancelled
+            }
+        }
+        // Proceed with update after confirmation (or skipped for bulk)
+      } catch(confirmErr) {
+        console.error('Confirmation build error:', confirmErr);
+        // Fail safe: continue without blocking update
+      }
       
       try {
         statusEl.textContent = 'Updating...';
@@ -550,30 +600,24 @@
         button.textContent = 'Up-to-date';
         
         // Update local cache
-        const rowData = allRowsCache.find(row => row.iid === iid);
-        if (rowData) {
-          rowData.active_class = updates.active_class;
-          rowData.active_section = updates.active_section;
-          rowData.active_roll = updates.active_roll;
-          rowData.student_key = updates.student_key;
+        // rowData already fetched earlier (inside confirmation block). Fetch again only if not available.
+        let rowDataForUpdate = allRowsCache.find(row => row.iid === iid);
+        if (rowDataForUpdate) {
+          rowDataForUpdate.active_class = updates.active_class;
+          rowDataForUpdate.active_section = updates.active_section;
+          rowDataForUpdate.active_roll = updates.active_roll;
+          rowDataForUpdate.student_key = updates.student_key;
         }
 
-        // Also update filtered session data cache
-        const sessionRowData = filteredSessionData.find(row => row.iid === iid);
-        if (sessionRowData) {
-          sessionRowData.active_class = updates.active_class;
-          sessionRowData.active_section = updates.active_section;
-          sessionRowData.active_roll = updates.active_roll;
-          sessionRowData.student_key = updates.student_key;
-        }
+        // Wait a moment to show the success message, then refresh
+        setTimeout(() => {
+          filterAndRenderData();
+        }, 1500);
 
-        // Refresh the table display immediately to show correct status
-        filterAndRenderData();
-
-        // Clear status message after 3 seconds
+        // Clear status message after 4 seconds
         setTimeout(() => {
           statusEl.textContent = '';
-        }, 3000);
+        }, 4000);
 
       } catch (error) {
         console.error('Update error:', error);
