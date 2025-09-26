@@ -8,28 +8,34 @@
         body { font-family: Segoe UI, Arial, sans-serif; background: #f8f9fa; margin: 0; }
         .container { max-width: 1200px; margin: 2rem auto; background: #fff; border-radius: 10px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2rem; }
         h1 { text-align: center; margin-bottom: 1.5rem; }
-        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-        .controls button, .controls input[type=number] { padding: 8px 16px; border-radius: 5px; border: 1px solid #2196f3; background: #2196f3; color: #fff; font-weight: bold; cursor: pointer; margin-right: 8px; }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap:wrap; gap:8px; }
+        .controls button, .controls input[type=number], .controls input[type=search] { padding: 8px 16px; border-radius: 5px; border: 1px solid #2196f3; background: #2196f3; color: #fff; font-weight: bold; cursor: pointer; margin-right: 8px; }
+        .controls input[type=search]{ background:#fff; color:#111; font-weight:400; width:220px; }
         .controls button:disabled { background: #bdbdbd; cursor: not-allowed; }
         .controls input[type=number] { background: #fff; color: #333; border: 1px solid #2196f3; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 16px; }
         .img-card { background: #f1f8ff; border-radius: 8px; padding: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; }
-        .img-card img { max-width: 100px; max-height: 100px; border-radius: 6px; margin-bottom: 6px; }
+        .img-card img { max-width: 100px; max-height: 100px; border-radius: 6px; margin-bottom: 6px; object-fit:cover; }
         .img-card input[type=checkbox] { position: absolute; top: 8px; right: 8px; transform: scale(1.3); }
         .pagination { text-align: center; margin-top: 1.5rem; }
         .pagination button { margin: 0 4px; padding: 6px 12px; border-radius: 4px; border: 1px solid #2196f3; background: #2196f3; color: #fff; font-weight: bold; cursor: pointer; }
         .pagination button:disabled { background: #bdbdbd; cursor: not-allowed; }
+        #status { font-size:13px; color:#555; margin-left:8px; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../login/auth-check.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>Bulk Photo Downloader</h1>
+        <h1>Bulk Photo Downloader 25 per page</h1>
         <div class="controls">
-            <div>
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
                 <button id="selectAllBtn">Select All</button>
                 <button id="downloadJpgBtn" disabled>Download Selected (JPG)</button>
                 <button id="downloadZipBtn" disabled>Download Selected (ZIP)</button>
+                <input type="search" id="searchBox" placeholder="Search IID or Name" />
+                <span id="status">Loading...</span>
             </div>
             <div>
                 <span id="pageInfo"></span>
@@ -41,197 +47,148 @@
         <div class="pagination" id="pagination"></div>
     </div>
     <script>
-    const CSV_URL = '36link.csv';
     const PAGE_SIZE = 25;
-    let links = [];
+    let links = []; // full array: {url, iid, name, cls, section, roll}
+    let filtered = []; // filtered subset
     let currentPage = 1;
     let totalPages = 1;
 
-    async function fetchLinks() {
-        const res = await fetch(CSV_URL);
-        const text = await res.text();
-        links = text.split(/\r?\n/).filter(l => l.trim());
-        totalPages = Math.ceil(links.length / PAGE_SIZE);
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    let supabaseClient;
+    function ensureClient(){ if(supabaseClient) return supabaseClient; if(!window.supabase) return null; try{ supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); return supabaseClient; }catch(e){ console.error('Supabase init failed', e); return null; } }
+
+    function setStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent = msg; }
+
+    async function fetchLinks(){
+        if(!ensureClient()){ setStatus('Supabase not ready'); links=[]; filtered=[]; renderPage(); return; }
+        try{
+            setStatus('Loading photos from database...');
+            const { data, error } = await supabaseClient
+                .from('student_database')
+                .select('iid, student_name_en, student_photo_url, active_class, active_section, active_roll')
+                .not('student_photo_url','is',null)
+                .not('active_class','is',null)
+                .not('active_section','is',null)
+                .not('active_roll','is',null);
+            if(error) throw error;
+            links = (data||[])
+                .filter(r=>r.student_photo_url && r.student_photo_url.trim()!=='')
+                .map(r=>({
+                    url: r.student_photo_url.trim(),
+                    iid: String(r.iid||''),
+                    name: String(r.student_name_en||''),
+                    cls: String(r.active_class||''),
+                    section: String(r.active_section||''),
+                    roll: String(r.active_roll||'')
+                }));
+            links.sort((a,b)=> a.iid.localeCompare(b.iid, undefined, {numeric:true}));
+            filtered = links.slice();
+            totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+            currentPage = 1;
+            renderPage();
+            setStatus(`Loaded ${links.length} photos`);
+        }catch(e){ console.error(e); setStatus('Load failed'); links=[]; filtered=[]; totalPages=1; renderPage(); }
+    }
+
+    function applySearch(){
+        const q = document.getElementById('searchBox').value.trim().toLowerCase();
+        if(!q){ filtered = links.slice(); }
+        else {
+            filtered = links.filter(it=>
+                it.iid.toLowerCase().includes(q) ||
+                it.name.toLowerCase().includes(q) ||
+                it.cls.toLowerCase().includes(q) ||
+                it.section.toLowerCase().includes(q) ||
+                it.roll.toLowerCase().includes(q)
+            );
+        }
+        totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+        currentPage = 1;
         renderPage();
     }
 
-    function renderPage() {
+    function renderPage(){
         const start = (currentPage - 1) * PAGE_SIZE;
-        const end = Math.min(start + PAGE_SIZE, links.length);
-        const pageLinks = links.slice(start, end);
+        const end = Math.min(start + PAGE_SIZE, filtered.length);
+        const pageLinks = filtered.slice(start, end);
         const grid = document.getElementById('imageGrid');
-        grid.innerHTML = pageLinks.map((url, i) => `
+        grid.innerHTML = pageLinks.map((item, i) => {
+            const url = item.url;
+            const fname = url.split('/').pop();
+            return `
             <div class="img-card">
                 <input type="checkbox" class="img-check" data-idx="${start + i}">
-                <img src="${url}" alt="Photo ${start + i + 1}" data-idx="${start + i}">
-                <div style="font-size:12px;word-break:break-all;">${url.split('/').pop()}</div>
+                <img src="${url}" alt="${item.iid || 'Photo'}" data-idx="${start + i}">
+                <div style="font-size:11px;font-weight:600;">${item.iid || ''}</div>
+                <div style="font-size:11px;">Cls ${item.cls||''} | Sec ${item.section||''}</div>
+                <div style="font-size:11px;">Roll: ${item.roll||''}</div>
+                <div style="font-size:11px;word-break:break-all;">${item.name || fname}</div>
                 <button class="img-download-btn" data-idx="${start + i}" style="margin-top:4px;padding:2px 8px;font-size:12px;" disabled>Download</button>
-            </div>
-        `).join('');
-        // Enable download button only when image is loaded
+            </div>`; }).join('');
+
         document.querySelectorAll('.img-card img').forEach(img => {
-            img.onload = () => {
-                const btn = img.parentElement.querySelector('.img-download-btn');
-                if (btn) btn.disabled = false;
-            };
-            if (img.complete && img.naturalWidth > 0) {
-                const btn = img.parentElement.querySelector('.img-download-btn');
-                if (btn) btn.disabled = false;
-            }
+            function enable(){ const btn = img.parentElement.querySelector('.img-download-btn'); if(btn) btn.disabled=false; }
+            img.onload = enable; if(img.complete && img.naturalWidth>0) enable();
         });
-            // Re-attach per-image download handler after render
-            document.querySelectorAll('.img-download-btn').forEach(btn => {
-                btn.onclick = async (e) => {
-                    const idx = parseInt(btn.dataset.idx);
-                    const url = links[idx];
-                    const fname = url.split('/').pop();
-                    const imgEl = btn.parentElement.querySelector('img');
-                    if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = imgEl.naturalWidth;
-                        canvas.height = imgEl.naturalHeight;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(imgEl, 0, 0);
-                        // Use async/await for toBlob
-                        const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
-                        if (blob) {
-                            const a = document.createElement('a');
-                            a.href = URL.createObjectURL(blob);
-                            a.download = fname;
-                            document.body.appendChild(a);
-                            a.click();
-                            setTimeout(()=>{
-                                URL.revokeObjectURL(a.href);
-                                a.remove();
-                            }, 2000);
-                        }
-                    } else {
-                        alert('Image not loaded yet.');
-                    }
-                };
-            });
+
+        document.querySelectorAll('.img-download-btn').forEach(btn => {
+            btn.onclick = async () => {
+                const idx = parseInt(btn.dataset.idx);
+                const item = filtered[idx]; if(!item) return;
+                const url = item.url; const fname = url.split('/').pop();
+                const imgEl = btn.parentElement.querySelector('img');
+                if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = imgEl.naturalWidth; canvas.height = imgEl.naturalHeight;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(imgEl,0,0);
+                    const blob = await new Promise(res=>canvas.toBlob(res,'image/jpeg'));
+                    if(blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1500); }
+                } else { alert('Image not loaded yet'); }
+            };
+        });
         document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
         document.getElementById('prevPageBtn').disabled = currentPage === 1;
         document.getElementById('nextPageBtn').disabled = currentPage === totalPages;
-    document.getElementById('downloadZipBtn').disabled = true;
-    document.getElementById('downloadJpgBtn').disabled = true;
+        document.getElementById('downloadZipBtn').disabled = true;
+        document.getElementById('downloadJpgBtn').disabled = true;
     }
 
-    document.getElementById('prevPageBtn').onclick = () => {
-        if (currentPage > 1) { currentPage--; renderPage(); }
-    };
-    document.getElementById('nextPageBtn').onclick = () => {
-        if (currentPage < totalPages) { currentPage++; renderPage(); }
-    };
-    document.getElementById('selectAllBtn').onclick = () => {
-        document.querySelectorAll('.img-check').forEach(cb => cb.checked = true);
-        document.getElementById('downloadZipBtn').disabled = false;
-    };
-    document.getElementById('imageGrid').addEventListener('change', () => {
-        const anyChecked = Array.from(document.querySelectorAll('.img-check')).some(cb => cb.checked);
-        document.getElementById('downloadZipBtn').disabled = !anyChecked;
-        document.getElementById('downloadJpgBtn').disabled = !anyChecked;
-    });
-    document.getElementById('downloadJpgBtn').onclick = async () => {
-        const checked = Array.from(document.querySelectorAll('.img-check')).filter(cb => cb.checked);
-        if (!checked.length) return;
-        document.getElementById('downloadJpgBtn').disabled = true;
-        let success = 0, fail = 0;
-        for (const cb of checked) {
+    document.getElementById('prevPageBtn').onclick = ()=>{ if(currentPage>1){ currentPage--; renderPage(); } };
+    document.getElementById('nextPageBtn').onclick = ()=>{ if(currentPage<totalPages){ currentPage++; renderPage(); } };
+    document.getElementById('selectAllBtn').onclick = ()=>{ document.querySelectorAll('.img-check').forEach(cb=>cb.checked=true); document.getElementById('downloadZipBtn').disabled=false; document.getElementById('downloadJpgBtn').disabled=false; };
+    document.getElementById('imageGrid').addEventListener('change', ()=>{ const any=Array.from(document.querySelectorAll('.img-check')).some(cb=>cb.checked); document.getElementById('downloadZipBtn').disabled=!any; document.getElementById('downloadJpgBtn').disabled=!any; });
+    document.getElementById('searchBox').addEventListener('input', ()=>{ applySearch(); });
+
+    document.getElementById('downloadJpgBtn').onclick = async ()=>{
+        const checked = Array.from(document.querySelectorAll('.img-check')).filter(cb=>cb.checked);
+        if(!checked.length) return; document.getElementById('downloadJpgBtn').disabled=true;
+        let success=0, fail=0;
+        for(const cb of checked){
             const idx = parseInt(cb.dataset.idx);
-            const url = links[idx];
-            const fname = url.split('/').pop();
-            // Find the corresponding <img> element
+            const item = filtered[idx]; if(!item) { fail++; continue; }
+            const url = item.url; const fname = url.split('/').pop();
             const imgEl = document.querySelector(`.img-card img[src='${url}']`);
-            if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
-                try {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = imgEl.naturalWidth;
-                    canvas.height = imgEl.naturalHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(imgEl, 0, 0);
-                    canvas.toBlob(blob => {
-                        if (blob) {
-                            const a = document.createElement('a');
-                            a.href = URL.createObjectURL(blob);
-                            a.download = fname;
-                            document.body.appendChild(a);
-                            a.click();
-                            setTimeout(()=>{
-                                URL.revokeObjectURL(a.href);
-                                a.remove();
-                            }, 2000);
-                            success++;
-                        } else {
-                            fail++;
-                        }
-                    }, 'image/jpeg');
-                } catch(e) { fail++; }
-            } else {
-                fail++;
-            }
-            await new Promise(r=>setTimeout(r,200));
+            if(imgEl && imgEl.complete && imgEl.naturalWidth>0){
+                try{ const canvas=document.createElement('canvas'); canvas.width=imgEl.naturalWidth; canvas.height=imgEl.naturalHeight; const ctx=canvas.getContext('2d'); ctx.drawImage(imgEl,0,0); const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg')); if(blob){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fname; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },2000); success++; } else fail++; }catch(e){ fail++; }
+            } else { fail++; }
+            await new Promise(r=>setTimeout(r,150));
         }
-        if (fail > 0) {
-            alert(`Some JPGs could not be downloaded. Success: ${success}, Failed: ${fail}.\nCheck console for details. If none downloaded, please allow popups for this site.`);
-        }
+        if(fail>0){ alert(`Some JPGs failed. Success: ${success}, Failed: ${fail}`); }
         renderPage();
     };
-    document.getElementById('downloadZipBtn').onclick = async () => {
-        const checked = Array.from(document.querySelectorAll('.img-check')).filter(cb => cb.checked);
-        if (!checked.length) return;
-        const zip = new JSZip();
-        let success = 0, fail = 0;
-        // Wait for all selected images to load
-        const loadPromises = checked.map(cb => {
-            const idx = parseInt(cb.dataset.idx);
-            const url = links[idx];
-            const imgEl = document.querySelector(`.img-card img[src='${url}']`);
-            if (!imgEl) return Promise.resolve(false);
-            if (imgEl.complete && imgEl.naturalWidth > 0) return Promise.resolve(true);
-            return new Promise(res => {
-                imgEl.onload = () => res(true);
-                imgEl.onerror = () => res(false);
-            });
-        });
+
+    document.getElementById('downloadZipBtn').onclick = async ()=>{
+        const checked = Array.from(document.querySelectorAll('.img-check')).filter(cb=>cb.checked);
+        if(!checked.length) return; const zip=new JSZip(); let success=0, fail=0;
+        const loadPromises = checked.map(cb=>{ const idx=parseInt(cb.dataset.idx); const item=filtered[idx]; if(!item) return Promise.resolve(false); const imgEl=document.querySelector(`.img-card img[src='${item.url}']`); if(!imgEl) return Promise.resolve(false); if(imgEl.complete && imgEl.naturalWidth>0) return Promise.resolve(true); return new Promise(res=>{ imgEl.onload=()=>res(true); imgEl.onerror=()=>res(false); }); });
         const loadedArr = await Promise.all(loadPromises);
-        for (let i = 0; i < checked.length; i++) {
-            const cb = checked[i];
-            const idx = parseInt(cb.dataset.idx);
-            const url = links[idx];
-            const fname = url.split('/').pop();
-            const imgEl = document.querySelector(`.img-card img[src='${url}']`);
-            if (loadedArr[i] && imgEl && imgEl.naturalWidth > 0) {
-                try {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = imgEl.naturalWidth;
-                    canvas.height = imgEl.naturalHeight;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(imgEl, 0, 0);
-                    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
-                    if (blob) {
-                        zip.file(fname, blob);
-                        success++;
-                    } else {
-                        fail++;
-                    }
-                } catch(e) { fail++; }
-            } else {
-                fail++;
-            }
-            await new Promise(r=>setTimeout(r,100));
-        }
-        document.getElementById('downloadZipBtn').disabled = true;
-        const content = await zip.generateAsync({type:"blob"});
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(content);
-        a.download = `photos_page${currentPage}.zip`;
-        a.click();
-        setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-        alert(`ZIP download complete. Success: ${success}, Failed: ${fail}.`);
-        renderPage();
+        for(let i=0;i<checked.length;i++){ const cb=checked[i]; const idx=parseInt(cb.dataset.idx); const item=filtered[idx]; if(!item){ fail++; continue;} const imgEl=document.querySelector(`.img-card img[src='${item.url}']`); const fname=item.url.split('/').pop(); if(loadedArr[i] && imgEl && imgEl.naturalWidth>0){ try{ const canvas=document.createElement('canvas'); canvas.width=imgEl.naturalWidth; canvas.height=imgEl.naturalHeight; const ctx=canvas.getContext('2d'); ctx.drawImage(imgEl,0,0); const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg')); if(blob){ zip.file(fname, blob); success++; } else fail++; }catch(e){ fail++; } } else { fail++; } await new Promise(r=>setTimeout(r,80)); }
+        document.getElementById('downloadZipBtn').disabled=true; const content=await zip.generateAsync({type:'blob'}); const a=document.createElement('a'); a.href=URL.createObjectURL(content); a.download=`photos_page${currentPage}.zip`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); alert(`ZIP complete. Success: ${success}, Failed: ${fail}`); renderPage();
     };
-    fetchLinks();
+
+    // Wait for supabase script then fetch
+    (function wait(at=0){ if(window.supabase || at>40){ fetchLinks(); return; } setTimeout(()=>wait(at+1),100); })();
     </script>
 </body>
 </html>

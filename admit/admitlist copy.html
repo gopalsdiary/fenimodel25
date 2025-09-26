@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>Admit List — Generate Cards</title>
+	<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+	<style>
+		:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --border:#e5e7eb; --primary:#0ea5e9; }
+		*{ box-sizing:border-box }
+		body{ margin:0; font-family:'Noto Sans Bengali','Hind Siliguri', system-ui, Arial, sans-serif; background:var(--bg); color:#111; }
+		header{ position:sticky; top:0; background:var(--card); border-bottom:1px solid var(--border); z-index:10 }
+		.container{ max-width:1200px; margin:0 auto; padding:1rem }
+		h1{ margin:.25rem 0; text-align:center }
+		.toolbar{ display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; justify-content:center; margin:.5rem 0 1rem }
+		select, input[type=search]{ padding:.5rem .7rem; border:1px solid #d1d5db; border-radius:10px; background:#fff }
+		.btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.55rem 1rem; border:1px solid #d1d5db; border-radius:10px; background:#fff; color:#111; text-decoration:none; font-weight:600; box-shadow:0 1px 2px rgba(0,0,0,.04); cursor:pointer }
+		.btn.primary{ background:var(--primary); border-color:#0284c7; color:#fff }
+		.btn:disabled{ opacity:.6; cursor:not-allowed }
+		.status{ color:var(--muted); font-size:.9rem }
+		table{ border-collapse:collapse; width:100%; background:#fff; border:1px solid #e8eef8 }
+		thead th{ position:sticky; top:0; background:linear-gradient(180deg,#f8fafc,#f1f5f9); text-align:left; padding:.6rem .7rem; border-bottom:2px solid #e6eef7 }
+		td{ padding:.55rem .7rem; border-top:1px solid #f1f5f9 }
+		tbody tr:hover{ background:#fbfdff }
+		.left-tools{ display:flex; gap:.5rem; align-items:center }
+		.footbar{ display:flex; justify-content:space-between; align-items:center; gap:.75rem; padding:1rem 0 }
+		.muted{ color:var(--muted) }
+		.btn.pdf{ background:#ef4444; border-color:#dc2626; color:#fff; padding:.35rem .7rem; border-radius:999px; font-size:.85rem }
+		.btn.pdf:hover{ background:#dc2626 }
+		/* Print area */
+		.print-area{ display:none }
+		@media print{
+			header, .controls, .list-area{ display:none !important }
+			body{ background:#fff }
+			.print-area{ display:block }
+			@page{ size:A4; margin:6mm }
+		}
+		.sheet{ width:210mm; margin:0 auto }
+		.print-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:4mm; padding:2mm }
+		.card{ position:relative; aspect-ratio: 210 / 115; background:#fff url('admit.png') center/cover no-repeat; overflow:hidden; border:1px solid #e5e7eb }
+		.card .t{ position:absolute; font-family:'Times New Roman', Times, serif; color:#111 }
+		/* Approximate placements (tweak if needed) */
+		.t.name{ left:10mm; top:40mm; font-size:4.8mm; letter-spacing:.3mm; text-transform:uppercase }
+		.t.class{ left:10mm; top:86mm; font-size:5mm }
+		.t.section{ left:76mm; top:86mm; font-size:5mm; text-transform:uppercase }
+		.t.roll{ left:10mm; top:102mm; font-size:5.5mm }
+		.t.exam{ left:60mm; top:52mm; font-weight:700; font-size:4.6mm }
+		.t.year{ left:138mm; top:52mm; font-weight:700; font-size:4.6mm }
+		.t.iid{ left:78mm; top:122mm; font-size:4mm }
+	/* QR images aligned to the right of the Admit Card badge */
+	.qr-container{ position:absolute; top:17.22mm; right:6mm; display:flex; flex-direction:column; gap:0.6mm; align-items:center; pointer-events:none }
+	.qr-container.horizontal{ flex-direction:row; top:16mm; }
+	.qr-container img{ width:4mm; height:4mm; object-fit:contain; display:block }
+	</style>
+
+
+	<script>
+		// Data source: datalist.html cache
+		const DATALIST_CACHE_KEY = 'datalist_rows_v2';
+
+		let sheets = []; // dropdown options {id,name,cls,section,session}
+		let allStudents = []; // rendered students
+		let filters = { cls:'', section:'', session:'' };
+		let exam = 'Half Yearly  Examination';
+		let year = '2025';
+
+		function updateStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent = msg; }
+
+		function readDatalistCache(){
+			try{
+				const raw = localStorage.getItem(DATALIST_CACHE_KEY);
+				if(!raw) return null;
+				const obj = JSON.parse(raw);
+				if(!obj || !Array.isArray(obj.rows)) return null;
+				return obj.rows;
+			}catch(e){ return null; }
+		}
+
+		function computeActiveFromRow(r){
+			const s = String(r.session||'').trim();
+			let active_class='', active_section='', active_roll='';
+			if(s==='2026'){ active_class=r.class_2026||''; active_section=r.section_2026||''; active_roll=r.roll_2026||''; }
+			else if(s==='2025'){ active_class=r.class_2025||''; active_section=r.section_2025||''; active_roll=r.roll_2025||''; }
+			return { session:s, active_class:String(active_class||''), active_section:String(active_section||''), active_roll:String(active_roll||'') };
+		}
+
+		function buildGroupOptions(){
+			const rows = readDatalistCache();
+			if(!rows) return [];
+			const seen = new Set(); const pairs=[];
+			for(const r of rows){
+				if(String(r.status||'').toUpperCase().includes('TC')) continue;
+				const a = computeActiveFromRow(r);
+				if(!a.active_roll || a.active_roll.trim()==='') continue;
+				if(!a.active_class || !a.active_section || !a.session) continue;
+				const key = `${a.active_class}-${a.active_section}-${a.session}`;
+				if(seen.has(key)) continue; seen.add(key);
+				pairs.push({ id:'cache', name:key, cls:a.active_class, section:a.active_section, session:a.session });
+			}
+			// Sort by class (numeric); tie-breaker by name for consistent order
+			pairs.sort((x,y)=>{
+				const cx = Number(x.cls)||0, cy = Number(y.cls)||0;
+				if(cx!==cy) return cx - cy;
+				return String(x.name).localeCompare(String(y.name));
+			});
+			return pairs;
+		}
+
+		function renderTable(){
+			const tbody = document.querySelector('#list tbody'); if(!tbody) return;
+			tbody.innerHTML='';
+			// Sort by roll (numeric asc), non-numeric at the end
+			const rows = [...allStudents].sort((a,b)=>{
+				const ra = Number(a.roll), rb = Number(b.roll);
+				const va = Number.isFinite(ra) ? ra : Infinity;
+				const vb = Number.isFinite(rb) ? rb : Infinity;
+				if(va !== vb) return va - vb;
+				return String(a.roll||'').localeCompare(String(b.roll||''));
+			});
+			document.getElementById('count').textContent = `${rows.length} students`;
+			rows.forEach((s)=>{
+				const tr=document.createElement('tr');
+				const tdSel=document.createElement('td'); const cb=document.createElement('input'); cb.type='checkbox'; cb.className='row-check'; cb.dataset.index = s._idx; tdSel.appendChild(cb); tr.appendChild(tdSel);
+				const tdName=document.createElement('td'); tdName.textContent=s.name||''; tr.appendChild(tdName);
+				const tdFather=document.createElement('td'); tdFather.textContent=s.father||''; tr.appendChild(tdFather);
+				const tdClass=document.createElement('td'); tdClass.textContent=s.cls||''; tr.appendChild(tdClass);
+				const tdSection=document.createElement('td'); tdSection.textContent=s.section||''; tr.appendChild(tdSection);
+				const tdRoll=document.createElement('td'); tdRoll.textContent=s.roll||''; tr.appendChild(tdRoll);
+				const tdIID=document.createElement('td'); tdIID.textContent = s.iid || ''; tr.appendChild(tdIID);
+				const tdGroup=document.createElement('td'); tdGroup.textContent = s.group || ''; tr.appendChild(tdGroup);
+				const tdPdf=document.createElement('td');
+					const btn=document.createElement('a'); btn.target='_blank'; btn.rel='noopener'; btn.className='btn pdf'; btn.textContent='PDF';
+					const params = new URLSearchParams({ exam, year, name: s.name||'', father: s.father||'', cls: s.cls||'', section: s.section||'', roll: String(s.roll||''), iid: String(s.iid||''), GROUP: String(s.group||'') });
+					btn.href = `print_admit.html?${params.toString()}`;
+					tdPdf.appendChild(btn); tr.appendChild(tdPdf);
+				tbody.appendChild(tr);
+			});
+			document.getElementById('selectAll').checked=false;
+		}
+
+		function getSelected(){
+			const set = new Set([...document.querySelectorAll('.row-check:checked')].map(el=>Number(el.dataset.index)));
+			return allStudents.filter(s=> set.has(s._idx) );
+		}
+
+		function renderPrint(students){
+			const wrap = document.getElementById('printArea'); if(!wrap) return;
+			wrap.innerHTML = ''; wrap.style.display = 'block';
+			const sheet = document.createElement('div'); sheet.className='sheet';
+			const grid = document.createElement('div'); grid.className='print-grid'; sheet.appendChild(grid); wrap.appendChild(sheet);
+			students.forEach(s=>{
+				const card = document.createElement('div'); card.className='card';
+				const tn = document.createElement('div'); tn.className='t name'; tn.textContent = String(s.name||'').toUpperCase(); card.appendChild(tn);
+				const tc = document.createElement('div'); tc.className='t class'; tc.textContent = s.cls||''; card.appendChild(tc);
+				const ts = document.createElement('div'); ts.className='t section'; ts.textContent = s.section||''; card.appendChild(ts);
+				const tr = document.createElement('div'); tr.className='t roll'; tr.textContent = s.roll||''; card.appendChild(tr);
+				const te = document.createElement('div'); te.className='t exam'; te.textContent = exam; card.appendChild(te);
+				const ty = document.createElement('div'); ty.className='t year'; ty.textContent = year; card.appendChild(ty);
+				if(s.iid){ const ti=document.createElement('div'); ti.className='t iid'; ti.textContent = `IID : ${s.iid}`; card.appendChild(ti); }
+				grid.appendChild(card);
+			});
+			const qrCount = 1;
+			if(qrCount>0){
+				Array.from(grid.querySelectorAll('.card')).forEach(cardEl=>{
+					const container = document.createElement('div'); container.className='qr-container';
+					for(let i=0;i<qrCount;i++){ const img=document.createElement('img'); img.src='./qr.png'; img.alt='QR'; img.decoding='async'; container.appendChild(img); }
+					cardEl.appendChild(container);
+				});
+			}
+		}
+
+		function loadForCurrentFilter(){
+			const { cls, section, session } = filters; if(!cls || !section || !session){ return; }
+			updateStatus('Loading students from cache…');
+			allStudents = []; let idx=0;
+			const rows = readDatalistCache();
+			if(!rows){ updateStatus('Cache missing. Open 0newdatabase/datalist.html first.'); return; }
+			for(const r of rows){
+				if(String(r.status||'').toUpperCase().includes('TC')) continue;
+				const a = computeActiveFromRow(r);
+				if(!a.active_roll || a.active_roll.trim()==='') continue;
+				if(a.session !== String(session)) continue;
+				if(String(a.active_class) !== String(cls)) continue;
+				if(String(a.active_section).toLowerCase() !== String(section).toLowerCase()) continue;
+				const name = r.student_name_en || '';
+				const father = r.father_name_en || '';
+				const grp = r.group || r.GROUP || '';
+				allStudents.push({
+					_idx: idx++,
+					name: String(name||''),
+					father: String(father||''),
+					roll: String(a.active_roll||''),
+					iid: r.iid || '',
+					group: String(grp||''),
+					cls: String(a.active_class||''),
+					section: String(a.active_section||''),
+					sheetId: 'cache', sheetName: 'datalist', row: r.iid
+				});
+			}
+			renderTable();
+			updateStatus('Ready — Source: datalist cache');
+		}
+
+		// Supabase integration to load distinct session, class, section from active_* columns
+		const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		let supabaseClient;
+		try { supabaseClient = window.supabase ? window.supabase.createClient(supabaseUrl, supabaseKey) : null; } catch(e){ console.warn('Supabase init failed', e); }
+
+		async function loadFiltersFromDB(){
+			if(!supabaseClient){ updateStatus('Supabase not available, cache mode'); initCacheFallback(); return; }
+			try{
+				updateStatus('Loading filters from database…');
+				const { data, error } = await supabaseClient
+					.from('student_database')
+					.select('session, active_class, active_section, status')
+					.not('active_class','is',null)
+					.not('active_section','is',null);
+				if(error) throw error;
+				const sessionSet = new Set();
+				const classMap = new Map(); // session -> Set(class)
+				const sectionMap = new Map(); // session|class -> Set(section)
+				data.forEach(r=>{
+					if(String(r.status||'').toUpperCase().includes('TC')) return;
+					const s=String(r.session||'').trim();
+					const c=String(r.active_class||'').trim();
+					const sec=String(r.active_section||'').trim();
+					if(!s||!c||!sec) return; sessionSet.add(s);
+					if(!classMap.has(s)) classMap.set(s,new Set()); classMap.get(s).add(c);
+					const key = s+'|'+c; if(!sectionMap.has(key)) sectionMap.set(key,new Set()); sectionMap.get(key).add(sec);
+				});
+				populateSession([...sessionSet].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})), classMap, sectionMap);
+				updateStatus('Select Session, Class & Section');
+			}catch(e){ console.error(e); updateStatus('Database load failed, fallback to cache'); initCacheFallback(); }
+		}
+
+		function populateSession(sessions, classMap, sectionMap){
+			const sessionSel = document.getElementById('sessionSelect');
+			const classSel = document.getElementById('classSelect');
+			const sectionSel = document.getElementById('sectionSelect');
+			if(sessionSel){ sessions.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sessionSel.appendChild(o); }); }
+			function refreshClasses(){
+				classSel.innerHTML = '<option value="">Class</option>';
+				sectionSel.innerHTML = '<option value="">Section</option>';
+				const s = sessionSel.value; if(!s) return; const set = classMap.get(s); if(!set) return;
+				[...set].sort((a,b)=>Number(a)-Number(b)).forEach(cls=>{ const o=document.createElement('option'); o.value=cls; o.textContent=cls; classSel.appendChild(o); });
+			}
+			function refreshSections(){
+				sectionSel.innerHTML = '<option value="">Section</option>';
+				const s = sessionSel.value; const c = classSel.value; if(!s||!c) return; const set = sectionMap.get(s+'|'+c); if(!set) return;
+				[...set].sort().forEach(sec=>{ const o=document.createElement('option'); o.value=sec; o.textContent=sec; sectionSel.appendChild(o); });
+			}
+			sessionSel.addEventListener('change', ()=>{ filters.session=sessionSel.value; filters.cls=''; filters.section=''; refreshClasses(); allStudents=[]; renderTable(); if(filters.session) loadStudentsFromDB(); });
+			classSel.addEventListener('change', ()=>{ filters.cls=classSel.value; filters.section=''; refreshSections(); allStudents=[]; renderTable(); if(filters.session && filters.cls) loadStudentsFromDB(); });
+			sectionSel.addEventListener('change', ()=>{ filters.section=sectionSel.value; allStudents=[]; renderTable(); if(filters.session && filters.cls && filters.section) loadStudentsFromDB(); });
+		}
+
+		async function loadStudentsFromDB(){
+			if(!supabaseClient || !filters.session || !filters.cls || !filters.section){ return; }
+			updateStatus('Loading students from database…');
+			allStudents = []; let idx=0;
+			try{
+				const { data, error } = await supabaseClient
+					.from('student_database')
+					.select('iid, student_name_en, father_name_en, group, status, session, active_class, active_section, active_roll')
+					.eq('session', filters.session)
+					.eq('active_class', filters.cls)
+					.eq('active_section', filters.section)
+					.not('active_roll','is',null);
+				if(error) throw error;
+				for(const r of data){
+					if(String(r.status||'').toUpperCase().includes('TC')) continue;
+					if(!r.active_roll) continue;
+					allStudents.push({
+						_idx: idx++,
+						name: String(r.student_name_en||''),
+						father: String(r.father_name_en||''),
+						roll: String(r.active_roll||''),
+						iid: r.iid || '',
+						group: String(r.group||r.GROUP||''),
+						cls: String(r.active_class||''),
+						section: String(r.active_section||'')
+					});
+				}
+				renderTable();
+				updateStatus('Ready — Source: database');
+			}catch(e){ console.error(e); updateStatus('Student load failed, fallback cache'); loadForCurrentFilter(); }
+		}
+
+		function initCacheFallback(){
+			// Keep old combined selector hidden? We can still allow if needed.
+			const combined = document.getElementById('tableFilter'); if(combined){ combined.style.display=''; }
+			updateStatus('Cache mode — select combined group');
+			// Reuse previous init logic for combined dropdown
+			const tableSel = document.getElementById('tableFilter');
+			tableSel.innerHTML='';
+			const opt = document.createElement('option'); opt.value=''; opt.textContent='Class-Section-Session'; tableSel.appendChild(opt);
+			sheets = buildGroupOptions();
+			for(const {name} of sheets){ const o=document.createElement('option'); o.value=name; o.textContent=name; tableSel.appendChild(o); }
+			document.getElementById('count').textContent = `${sheets.length} groups found — select one`;
+			tableSel.addEventListener('change', e=>{
+				const key = e.target.value;
+				const match = (sheets||[]).find(it=>it.name===key);
+				filters.cls = match? match.cls : '';
+				filters.section = match? match.section : '';
+				filters.session = match? match.session : '';
+				if(match && match.session){ year = String(match.session); const yearSel = document.getElementById('yearSelect'); if(yearSel) yearSel.value = year; }
+				allStudents=[]; renderTable(); if(filters.cls && filters.section && filters.session) loadForCurrentFilter();
+			});
+		}
+
+		function initUIEvents(){
+			document.getElementById('examSelect').addEventListener('change', e=>{ exam = e.target.value; });
+			document.getElementById('yearSelect').addEventListener('change', e=>{ year = e.target.value; });
+			document.getElementById('selectAll').addEventListener('change', e=>{ document.querySelectorAll('.row-check').forEach(cb=>{ cb.checked = e.target.checked; }); });
+			document.getElementById('generate').addEventListener('click', ()=>{
+				const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; }
+				const payload = { exam, year, students: sel.map(s=>({ name:s.name, father:s.father, roll:s.roll, cls:s.cls, section:s.section, iid:s.iid, group:s.group })) };
+				const key = 'admit_bulk_' + Date.now();
+				try{ localStorage.setItem(key, JSON.stringify(payload)); }catch(e){ alert('Unable to prepare preview (storage).'); return; }
+				const qrParam = new URLSearchParams(location.search).get('qr') || '3';
+				window.open(`print_selected.html?key=${encodeURIComponent(key)}&qr=${encodeURIComponent(qrParam)}`, '_blank', 'noopener');
+				renderPrint(sel);
+			});
+			const pdfBtn = document.getElementById('pdfBtn'); if(pdfBtn){ pdfBtn.addEventListener('click', ()=>{ const sel = getSelected(); if(!sel.length){ alert('Select at least one student'); return; } renderPrint(sel); }); }
+		}
+
+		window.addEventListener('DOMContentLoaded', ()=>{
+			initUIEvents();
+			// Build new filter selects (already in HTML). Try DB first; fallback to cache if fails.
+			loadFiltersFromDB();
+		});
+	</script>
+</head>
+<body>
+	<header>
+		<div class="container">
+			<h1>Admit — Select and Generate</h1>
+			<div class="toolbar controls">
+				<div class="left-tools">
+					<label><input type="checkbox" id="selectAll"> Select all</label>
+				</div>
+				<select id="sessionSelect" aria-label="Session"><option value="">Session</option></select>
+				<select id="classSelect" aria-label="Class"><option value="">Class</option></select>
+				<select id="sectionSelect" aria-label="Section"><option value="">Section</option></select>
+				<select id="tableFilter" aria-label="Class-Section-Session" style="display:none"></select>
+				<select id="examSelect" aria-label="Exam">
+					<option>Half Yearly  Examination</option>
+					<option>Annual  Examination</option>
+					<option>Pre-Test  Examination</option>
+					<option>Test Examination</option>
+				</select>
+				<select id="yearSelect" aria-label="Year">
+					<option>2025</option>
+					<option>2026</option>
+				</select>
+				<div style="flex:1 1 auto"></div>
+				<button id="generate" class="btn primary">Generate selected</button>
+				<button id="pdfBtn" class="btn" title="Print to PDF">PDF</button>
+				<span id="status" class="status"></span>
+			</div>
+		</div>
+	</header>
+	<main class="container list-area">
+		<table id="list">
+			<thead>
+				<tr>
+					<th style="width:48px">Select</th>
+					<th>Name</th>
+					<th>Father</th>
+					<th>Class</th>
+					<th>Section</th>
+					<th>Roll</th>
+					<th>IID</th>
+					<th>Group</th>
+					<th>PDF</th>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+		<div class="footbar">
+			<div class="muted" id="count">0 students</div>
+			<div class="muted">Tip: Use filters above, tick students, then Generate to print 10 per A4 (5×2).</div>
+		</div>
+	</main>
+	<div id="printArea" class="print-area"></div>
+</body>
+</html>
