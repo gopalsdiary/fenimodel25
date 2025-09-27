@@ -120,9 +120,17 @@
 	<div id="printHeader" style="display:none; text-align:center; font-weight:700; font-size:14px; margin-bottom:6px"></div>
 	<!-- print footer placeholder will be inserted at end of body for reliable positioning -->
 	<div class="toolbar">
-		<label for="classSectionYearFilter">Filter by Class-Section-Year:</label>
-		<select id="classSectionYearFilter">
-			<option value="">All</option>
+		<label for="sessionFilter">Session:</label>
+		<select id="sessionFilter">
+			<option value="">Select Session</option>
+		</select>
+		<label for="classFilter">Class:</label>
+		<select id="classFilter" disabled>
+			<option value="">Select Class</option>
+		</select>
+		<label for="sectionFilter">Section:</label>
+		<select id="sectionFilter" disabled>
+			<option value="">All Sections</option>
 		</select>
 		<span id="status" class="status"></span>
 		<div id="columnControls" class="column-controls"></div>
@@ -133,57 +141,56 @@
 	<div id="container" class="container">
 		<!-- groups will be rendered here -->
 	</div>
-
+  <script src="./auth-check.js"></script>
 	<script>
 		// Direct Supabase data source (localStorage cache removed)
 		const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 		const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 		let supabaseClient = null;
 
-		// Authentication check first, then initialize Supabase
-		async function initializeWithAuth(){
-			try {
-				// Quick auth check first
-				if (typeof window.supabase === 'undefined') {
-					console.warn('Supabase not loaded, redirecting to login for security');
-					window.location.href = './index.html';
-					return;
+		/*
+		 * AUTH INITIALIZATION (single source)
+		 * We already include auth-check.js which performs a redirect if NOT logged in.
+		 * The previous inline auth logic duplicated that check and called an old loadAll() (now removed),
+		 * leading to race conditions and repeated redirects. We replace that with a unified bootstrap
+		 * that waits for a VALID session once, then proceeds with data init.
+		 */
+		async function waitForSessionAndInit(){
+			statusEl.textContent = 'Checking login...';
+			let attempts = 0;
+			while(attempts < 40){ // ~8s max (40 * 200ms)
+				attempts++;
+				if(typeof window.supabase !== 'undefined'){
+					try{
+						const temp = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+						const { data: { session } } = await temp.auth.getSession();
+						if(session){
+							console.log('Session OK for', session.user && session.user.email);
+							supabaseClient = temp; // reuse this client for queries
+							// Set up single auth listener (avoid duplicates)
+							supabaseClient.auth.onAuthStateChange((event, s) => {
+								if (event === 'SIGNED_OUT' || (!s && event !== 'INITIAL_SESSION')) {
+									console.log('Signed out detected -> redirect login');
+									window.location.href='./index.html';
+								}
+							});
+							// Proceed to column order + lite data
+							await loadColumnOrder();
+							liteRows = await fetchLite();
+							buildSessionOptions();
+							statusEl.textContent='Select Session';
+							return;
+						}
+					}catch(err){ console.warn('Session poll error', err); }
 				}
-				
-				// Create auth client using same config as page
-				const authClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-				const { data: { session }, error } = await authClient.auth.getSession();
-				
-				if (error || !session) {
-					console.log('No valid session found, redirecting to login...');
-					window.location.href = './index.html';
-					return;
-				}
-				
-				console.log('Authentication verified for user:', session.user && session.user.email ? session.user.email : '(no-email)');
-				
-				// Now that auth is verified, create main client and proceed
-				supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-				loadAll();
-				
-				// Setup auth state listener for future changes
-				authClient.auth.onAuthStateChange((event, session) => {
-					if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
-						console.log('User signed out, redirecting to login...');
-						window.location.href = './index.html';
-					}
-				});
-				
-			} catch (error) {
-				console.error('Auth check failed:', error);
-				window.location.href = './index.html';
+				await new Promise(r=>setTimeout(r,200));
 			}
+			// If we reach here, auth-check.js likely redirected already; show fallback message
+			if(!supabaseClient){ statusEl.textContent='Login required'; }
 		}
 
-		(function ensureSupabase(){
-			if(window.supabase){ initializeWithAuth(); }
-			else { const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>{ initializeWithAuth(); }; document.head.appendChild(s); }
-		})();
+		// Kick off unified auth/data init AFTER DOM ready
+		document.addEventListener('DOMContentLoaded', ()=>{ waitForSessionAndInit(); });
 		const CACHE_KEY = null; // disabled
 		const CACHE_TTL_MS = 0; // disabled
 
@@ -198,38 +205,34 @@
 	let allRows = [];
 	let columnOrder = []; // preferred order from dataorder.csv
 
-		async function fetchAll(){
-			if(!supabaseClient){ statusEl.textContent='Supabase not ready'; return []; }
-			statusEl.textContent='Loading from database...';
-			try{
-				const { data, error } = await supabaseClient
-					.from('student_database')
-					.select('*')
-					.order('iid', { ascending:true })
-					.limit(10000);
-				if(error) throw error;
-				statusEl.textContent = `Loaded ${data.length} rows`;
-				return data;
-			}catch(err){ console.error('fetchAll error', err); statusEl.textContent='Load error'; return []; }
-		}
+	// --- New lite & session/class/section filtering flow ---
+	async function fetchLite(){
+	    if(!supabaseClient){ statusEl.textContent='Supabase not ready'; return []; }
+	    statusEl.textContent='Loading sessions/classes...';
+	    try {
+	        const { data, error } = await supabaseClient
+	            .from('student_database')
+	            .select('session,class_2025,section_2025,class_2026,section_2026')
+	            .limit(20000);
+	        if(error) throw error;
+	        statusEl.textContent='Select Session';
+	        return data||[];
+	    } catch(err){ console.error('fetchLite error', err); statusEl.textContent='Lite load error'; return []; }
+	}
 
-		function groupByClassSection(rows){
-			// Exclude TC-status rows from display
-			const filtered = rows.filter(r => !String(r.status||'').toUpperCase().includes('TC'));
-			// Return all rows as a single group for unified table display
-			const allRows = [...filtered].sort((a,b)=>{
-				// Sort by class, section, roll, then iid
-				const ca = Number(a.class_2025) || 0, cb = Number(b.class_2025) || 0;
-				if(ca !== cb) return ca - cb;
-				const secCmp = (a.section_2025 || '').localeCompare(b.section_2025 || '');
-				if(secCmp !== 0) return secCmp;
-				const ra = Number(a.roll_2025) || 0, rb = Number(b.roll_2025) || 0;
-				if(ra !== rb) return ra - rb;
-				const ia = Number(a.iid) || 0, ib = Number(b.iid) || 0;
-				return ia - ib;
-			});
-			return [{ class_: 'All Classes', section: '', session: '', rows: allRows }];
-		}
+	async function fetchSessionData(session){
+	    if(!supabaseClient || !session){ return []; }
+	    statusEl.textContent='Loading data...';
+	    try {
+	        const { data, error } = await supabaseClient
+	            .from('student_database')
+	            .select('*')
+	            .eq('session', session)
+	            .limit(20000);
+	        if(error) throw error;
+	        return data||[];
+	    } catch(err){ console.error('fetchSessionData error', err); statusEl.textContent='Load error'; return []; }
+	}
 
 		function escapeHtml(s){
 			if(s===null||s===undefined) return '';
@@ -480,118 +483,70 @@
 		}
 
 		selectedColumns = loadSelectedColumns();
+		let liteRows = [];
+		let selectedSession = '';
+		let selectedClass = '';
+		let selectedSection = '';
+		const sessionFilterEl = document.getElementById('sessionFilter');
+		const classFilterEl = document.getElementById('classFilter');
+		const sectionFilterEl = document.getElementById('sectionFilter');
 
-		async function render(groups){
-			container.innerHTML = '';
-			// Use document fragment for better performance
-			const fragment = document.createDocumentFragment();
-			
-			// Populate dropdown with unique class_section_year values
-			const dropdown = document.getElementById('classSectionYearFilter');
-			const uniqueCSY = new Set();
-			groups[0].rows.forEach(row => {
-				const sNum = Number(row.session);
-				let active_roll = '', active_class = '', active_section = '';
-				if(Number.isFinite(sNum) && sNum === 2026){
-					active_roll = row.roll_2026 ?? '';
-					active_class = row.class_2026 ?? '';
-					active_section = row.section_2026 ?? '';
-				}else if(Number.isFinite(sNum) && sNum === 2025){
-					active_roll = row.roll_2025 ?? '';
-					active_class = row.class_2025 ?? '';
-					active_section = row.section_2025 ?? '';
-				}
-				let csY = '';
-				const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-				if(hasActiveRoll){
-					csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
-						.map(x => String(x ?? ''))
-						.join('-');
-				}
-				if(csY) uniqueCSY.add(csY);
-			});
-			const prevValue = dropdown.value;
-			dropdown.innerHTML = '<option value="" disabled selected>Select class-section-year</option><option value="__ALL__">All</option>';
-			Array.from(uniqueCSY).sort().forEach(csy => {
-				const option = document.createElement('option');
-				option.value = csy;
-				option.textContent = csy;
-				dropdown.appendChild(option);
-			});
-			if(prevValue){ dropdown.value = prevValue; }
-			
-			// Apply filter
-			const selectedCSY = dropdown.value;
-			let filteredRows = [];
-			if(selectedCSY === '__ALL__'){
-				filteredRows = groups[0].rows;
-			} else if(selectedCSY){
-				filteredRows = groups[0].rows.filter(row => {
-					const sNum = Number(row.session);
-					let active_roll = '', active_class = '', active_section = '';
-					if(Number.isFinite(sNum) && sNum === 2026){
-						active_roll = row.roll_2026 ?? '';
-						active_class = row.class_2026 ?? '';
-						active_section = row.section_2026 ?? '';
-					}else if(Number.isFinite(sNum) && sNum === 2025){
-						active_roll = row.roll_2025 ?? '';
-						active_class = row.class_2025 ?? '';
-						active_section = row.section_2025 ?? '';
-					}
-					let csY = '';
-					const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-					if(hasActiveRoll){
-						csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
-							.map(x => String(x ?? ''))
-							.join('-');
-					}
-					return csY === selectedCSY;
-				});
-			}
-			const showData = (selectedCSY === '__ALL__') || (selectedCSY && selectedCSY !== '');
-			const selectedCsyPrintEl = document.getElementById('selectedCsyPrint');
-			if(!showData){
-				// Show only a hint in status; no table initially
-				container.appendChild(fragment);
-				statusEl.textContent = 'Select a Class-Section-Year to view data';
-				if(columnControlsEl) columnControlsEl.style.display='none';
-				if(selectedCsyPrintEl) selectedCsyPrintEl.textContent = '';
-				// clear print header too
-				const ph = document.getElementById('printHeader'); if(ph) ph.style.display='none';
-				return;
-			}
-			
-			// Save latest, show column chooser, and render table based on selections
-			latestFilteredRows = filteredRows;
-			const availableColumns = computeAvailableColumns();
-			buildColumnControls(availableColumns);
-			reRenderTable();
-			if(selectedCsyPrintEl){
-				const label = (selectedCSY === '__ALL__') ? 'All' : selectedCSY;
-				selectedCsyPrintEl.textContent = `Class-Section-Year: ${label}`;
-			}
-			// keep #printHeader hidden; we use the in-page title + selected text for print
-			const ph = document.getElementById('printHeader');
-			if(ph){ ph.textContent = ''; ph.style.display='none'; }
+		function getActiveFields(row){
+		    const sNum = Number(row.session);
+		    if(sNum === 2026){ return {active_class: row.class_2026 ?? '', active_section: row.section_2026 ?? '', active_roll: row.roll_2026 ?? ''}; }
+		    if(sNum === 2025){ return {active_class: row.class_2025 ?? '', active_section: row.section_2025 ?? '', active_roll: row.roll_2025 ?? ''}; }
+		    return {active_class:'', active_section:'', active_roll:''};
 		}
 
-		async function loadAll(){
-			statusEl.textContent='Loading...';
-			allRows = await fetchAll();
-			const groups = groupByClassSection(allRows);
-			await render(groups);
+		function buildSessionOptions(){
+		    const sessions = Array.from(new Set(liteRows.map(r=>r.session).filter(v=>v!=null))).sort((a,b)=>Number(a)-Number(b));
+		    sessionFilterEl.innerHTML = '<option value="">Select Session</option>' + sessions.map(s=>`<option value="${s}">${s}</option>`).join('');
+		    classFilterEl.innerHTML = '<option value="">Select Class</option>'; classFilterEl.disabled=true;
+		    sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
 		}
+		function buildClassOptions(){
+		    if(!selectedSession){ return; }
+		    const field = `class_${selectedSession}`;
+		    const classes = new Set();
+		    liteRows.forEach(r=>{ if(String(r.session)===String(selectedSession)){ const v=r[field]; if(v!=null && String(v).trim()!==''){ classes.add(String(v)); } } });
+		    const sorted = Array.from(classes).sort((a,b)=>{ const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+		    classFilterEl.innerHTML = '<option value="">Select Class</option>' + sorted.map(c=>`<option value="${c}">${c}</option>`).join('');
+		    classFilterEl.disabled=false; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
+		}
+		function buildSectionOptions(){
+		    if(!selectedSession || !selectedClass){ return; }
+		    const sections = new Set();
+		    allRows.forEach(r=>{ const {active_class, active_section} = getActiveFields(r); if(String(active_class)===String(selectedClass) && active_section){ sections.add(String(active_section)); } });
+		    const sorted = Array.from(sections).sort((a,b)=> String(a).localeCompare(String(b)));
+		    sectionFilterEl.innerHTML = '<option value="">All Sections</option>' + sorted.map(s=>`<option value="${s}">${s}</option>`).join('');
+		    sectionFilterEl.disabled=false;
+		}
+		function applySectionFilter(){
+		    if(!selectedSession || !selectedClass){ latestFilteredRows=[]; container.innerHTML=''; statusEl.textContent='Select Session & Class'; return; }
+		    let rows = allRows.filter(r=>{ const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass); });
+		    if(selectedSection){ rows = rows.filter(r=>{ const {active_section} = getActiveFields(r); return String(active_section)===String(selectedSection); }); }
+		    latestFilteredRows = rows;
+		    const availableColumns = computeAvailableColumns();
+		    if((!selectedColumns || !selectedColumns.length) && availableColumns.length){ selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length)); saveSelectedColumns(); }
+		    buildColumnControls(availableColumns);
+		    reRenderTable();
+		    statusEl.textContent = `Loaded ${latestFilteredRows.length} rows (Session: ${selectedSession}, Class: ${selectedClass}${selectedSection? ', Section: '+selectedSection:''})`;
+		}
+		async function loadGroupData(){
+		    if(!selectedSession || !selectedClass){ return; }
+		    const sessionData = await fetchSessionData(selectedSession);
+		    allRows = sessionData.filter(r=>{
+		        if(String(r.status||'').toUpperCase().includes('TC')) return false;
+		        const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass);
+		    });
+		    buildSectionOptions();
+		    applySectionFilter();
+		}
+		sessionFilterEl.addEventListener('change', ()=>{ selectedSession=sessionFilterEl.value; selectedClass=''; selectedSection=''; allRows=[]; latestFilteredRows=[]; buildClassOptions(); container.innerHTML=''; statusEl.textContent= selectedSession? 'Select Class':'Select Session'; });
+		classFilterEl.addEventListener('change', async ()=>{ selectedClass=classFilterEl.value; selectedSection=''; allRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled=true; container.innerHTML=''; if(selectedClass){ await loadGroupData(); } else statusEl.textContent='Select Class'; });
+		sectionFilterEl.addEventListener('change', ()=>{ selectedSection=sectionFilterEl.value; applySectionFilter(); });
 
-		// Initial load direct DB
-		(async function init(){
-			// load preferred column order first (if available)
-			await loadColumnOrder();
-			await loadAll();
-			document.getElementById('classSectionYearFilter').addEventListener('change', async () => {
-				const groups = groupByClassSection(allRows);
-				await render(groups);
-			});
-		})();
+		// Old initNew replaced by waitForSessionAndInit() above
 	</script>
 
 	<!-- floating print button (bottom-right) -->

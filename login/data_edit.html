@@ -99,9 +99,17 @@
 	<div id="printHeader" style="display:none; text-align:center; font-weight:700; font-size:14px; margin-bottom:6px"></div>
 	<!-- print footer placeholder will be inserted at end of body for reliable positioning -->
 	<div class="toolbar">
-		<label for="classSectionYearFilter">Filter by Class-Section-Year:</label>
-		<select id="classSectionYearFilter">
-			<option value="">All</option>
+		<label for="sessionFilter">Session:</label>
+		<select id="sessionFilter">
+			<option value="">Select Session</option>
+		</select>
+		<label for="classFilter">Class:</label>
+		<select id="classFilter" disabled>
+			<option value="">Select Class</option>
+		</select>
+		<label for="sectionFilter">Section:</label>
+		<select id="sectionFilter" disabled>
+			<option value="">All Sections</option>
 		</select>
 		<span id="status" class="status"></span>
 		<div id="columnControls" class="column-controls"></div>
@@ -112,7 +120,7 @@
 	<div id="container" class="container">
 		<!-- groups will be rendered here -->
 	</div>
-
+  <script src="./auth-check.js"></script>
 	<script>
 		// --- Supabase client init for update operations ---
 		// Reuse existing project credentials (same as other pages)
@@ -463,161 +471,120 @@
 
 		selectedColumns = loadSelectedColumns();
 
+		/* ===================== NEW FILTER RENDER FLOW (Session -> Class -> Section) ===================== */
+		let selectedSession = '';
+		let selectedClass = '';
+		let selectedSection = '';
+		const sessionFilterEl = document.getElementById('sessionFilter');
+		const classFilterEl = document.getElementById('classFilter');
+		const sectionFilterEl = document.getElementById('sectionFilter');
+
+		function getActiveFields(row){
+			const sNum = Number(row.session);
+			if(sNum === 2026){
+				return {active_class: row.class_2026 ?? '', active_section: row.section_2026 ?? '', active_roll: row.roll_2026 ?? ''};
+			}
+			if(sNum === 2025){
+				return {active_class: row.class_2025 ?? '', active_section: row.section_2025 ?? '', active_roll: row.roll_2025 ?? ''};
+			}
+			// fallback
+			return {active_class: '', active_section: '', active_roll: ''};
+		}
+
+		function buildSessionOptions(){
+			const sessions = Array.from(new Set(liteRows.map(r => r.session).filter(v => v!=null))).sort((a,b)=> Number(a)-Number(b));
+			sessionFilterEl.innerHTML = '<option value="">Select Session</option>' + sessions.map(s=>`<option value="${s}">${s}</option>`).join('');
+			classFilterEl.innerHTML = '<option value="">Select Class</option>';
+			sectionFilterEl.innerHTML = '<option value="">All Sections</option>';
+			classFilterEl.disabled = true; sectionFilterEl.disabled = true;
+		}
+
+		function buildClassOptions(){
+			if(!selectedSession){ return; }
+			const field = `class_${selectedSession}`; // e.g., class_2025
+			const classes = new Set();
+			liteRows.forEach(r=>{ if(String(r.session)===String(selectedSession)){ const v=r[field]; if(v!==undefined && v!==null && String(v).trim()!==''){ classes.add(String(v)); } } });
+			const sorted = Array.from(classes).sort((a,b)=>{ const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+			classFilterEl.innerHTML = '<option value="">Select Class</option>' + sorted.map(c=>`<option value="${c}">${c}</option>`).join('');
+			classFilterEl.disabled = false; sectionFilterEl.disabled = true; sectionFilterEl.innerHTML = '<option value="">All Sections</option>';
+		}
+
+		function buildSectionOptions(){
+			if(!selectedSession || !selectedClass){ return; }
+			const rows = currentGroupRows; // already filtered by session+class
+			const sections = new Set();
+			rows.forEach(r=>{ const {active_section} = getActiveFields(r); if(active_section){ sections.add(String(active_section)); } });
+			const sorted = Array.from(sections).sort((a,b)=> String(a).localeCompare(String(b)));
+			sectionFilterEl.innerHTML = '<option value="">All Sections</option>' + sorted.map(s=>`<option value="${s}">${s}</option>`).join('');
+			sectionFilterEl.disabled = false;
+		}
+
+		function applySectionFilter(){
+			if(!selectedSession || !selectedClass){ latestFilteredRows = []; container.innerHTML=''; statusEl.textContent='Select Session & Class'; return; }
+			if(!currentGroupRows.length){ container.innerHTML=''; statusEl.textContent='No data for selection'; return; }
+			if(!selectedSection){
+				latestFilteredRows = currentGroupRows.slice();
+			}else{
+				latestFilteredRows = currentGroupRows.filter(r=>{ const {active_section} = getActiveFields(r); return String(active_section)===String(selectedSection); });
+			}
+			const availableColumns = computeAvailableColumns();
+			if((!selectedColumns || selectedColumns.length===0) && availableColumns.length){
+				selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length));
+				selectedEditable = selectedColumns[selectedColumns.length-1] || null; saveSelectedColumns(); saveSelectedEditable();
+			}
+			buildColumnControls(availableColumns);
+			reRenderTable();
+			statusEl.textContent = `Loaded ${latestFilteredRows.length} rows (Session: ${selectedSession}, Class: ${selectedClass}${selectedSection? ', Section: '+selectedSection:''})`;
+		}
+
+		async function loadGroupData(){
+			if(!selectedSession || !selectedClass){ return; }
+			statusEl.textContent='Loading data...';
+			try {
+				const { data, error } = await supabaseClient.from('student_database').select('*').eq('session', selectedSession).limit(20000);
+				if(error) throw error;
+				// filter by selected class
+				const filtered = (data||[]).filter(r=>{
+					const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass);
+				});
+				// exclude TC rows
+				currentGroupRows = filtered.filter(r=> !String(r.status||'').toUpperCase().includes('TC'));
+				allColumns = []; // reset for recompute
+				buildSectionOptions();
+				applySectionFilter();
+			} catch(err){
+				console.error(err); statusEl.textContent='Load error';
+			}
+		}
+
+		// Event listeners
+		sessionFilterEl.addEventListener('change', ()=>{
+			selectedSession = sessionFilterEl.value; selectedClass=''; selectedSection='';
+			container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[]; buildClassOptions(); statusEl.textContent = selectedSession? 'Select Class' : 'Select Session';
+		});
+		classFilterEl.addEventListener('change', async ()=>{
+			selectedClass = classFilterEl.value; selectedSection=''; container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
+			if(selectedClass){ await loadGroupData(); } else { statusEl.textContent='Select Class'; }
+		});
+		sectionFilterEl.addEventListener('change', ()=>{ selectedSection = sectionFilterEl.value; applySectionFilter(); });
+
+		/* ===================== LEGACY RENDER FUNCTION (unused now) LEFT FOR REFERENCE ===================== */
 		async function render(groups){
 			container.innerHTML = '';
 			// Use document fragment for better performance
 			const fragment = document.createDocumentFragment();
-			
-			// Populate dropdown; prefer a cached stable options array if available
-			const dropdown = document.getElementById('classSectionYearFilter');
-			const prevValue = dropdown ? dropdown.value : '';
-			if(dropdown){
-				dropdown.innerHTML = '<option value="" disabled selected>Select class-section-year</option><option value="__ALL__">All</option>';
-				const opts = Array.isArray(window.__dropdownOptions) && window.__dropdownOptions.length ? window.__dropdownOptions.slice() : null;
-				if(!opts){
-					// fallback: compute from provided groups
-					const uniqueCSY = new Set();
-					groups[0].rows.forEach(row => {
-						const sNum = Number(row.session);
-						let active_class = '', active_section = '';
-						if(Number.isFinite(sNum) && sNum === 2026){
-							active_class = row.class_2026 ?? '';
-							active_section = row.section_2026 ?? '';
-						}else if(Number.isFinite(sNum) && sNum === 2025){
-							active_class = row.class_2025 ?? '';
-							active_section = row.section_2025 ?? '';
-						}
-						if(active_class){
-							const csY = [active_class ?? '', active_section ?? '', (row.session ?? '')]
-								.map(x => String(x ?? ''))
-								.join('-');
-							if(csY) uniqueCSY.add(csY);
-						}
-					});
-					window.__dropdownOptions = Array.from(uniqueCSY).sort();
-					opts = window.__dropdownOptions.slice();
-				}
-				// append options
-				opts.forEach(csy => {
-					const option = document.createElement('option');
-					option.value = csy;
-					option.textContent = csy;
-					dropdown.appendChild(option);
-				});
-				if(prevValue){ dropdown.value = prevValue; }
-			}
-			
-			// Apply filter
-			const selectedCSY = dropdown.value;
-			let filteredRows = [];
-			if(selectedCSY === '__ALL__'){
-				filteredRows = groups[0].rows;
-			} else if(selectedCSY){
-				filteredRows = groups[0].rows.filter(row => {
-					const sNum = Number(row.session);
-					let active_class = '', active_section = '';
-					if(Number.isFinite(sNum) && sNum === 2026){
-						active_class = row.class_2026 ?? '';
-						active_section = row.section_2026 ?? '';
-					}else if(Number.isFinite(sNum) && sNum === 2025){
-						active_class = row.class_2025 ?? '';
-						active_section = row.section_2025 ?? '';
-					}
-					const csY = active_class ? [active_class ?? '', active_section ?? '', (row.session ?? '')].map(x=>String(x??'')).join('-') : '';
-					return csY === selectedCSY;
-				});
-			}
-			const showData = (selectedCSY === '__ALL__') || (selectedCSY && selectedCSY !== '');
-			const selectedCsyPrintEl = document.getElementById('selectedCsyPrint');
-			if(!showData){
-				// Show only a hint in status; no table initially
-				container.appendChild(fragment);
-				statusEl.textContent = 'Select a Class-Section-Year to view data';
-				if(columnControlsEl) columnControlsEl.style.display='none';
-				if(selectedCsyPrintEl) selectedCsyPrintEl.textContent = '';
-				// clear print header too
-				const ph = document.getElementById('printHeader'); if(ph) ph.style.display='none';
-				return;
-			}
-			
-			// Save latest, show column chooser, and render table based on selections
-			latestFilteredRows = filteredRows;
-			const availableColumns = computeAvailableColumns();
-			// If user has no saved selections, pick sensible defaults so table is visible immediately
-			if((!selectedColumns || selectedColumns.length===0) && Array.isArray(availableColumns) && availableColumns.length){
-				selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length));
-				// last selected becomes editable
-				selectedEditable = selectedColumns[selectedColumns.length-1] || null;
-				saveSelectedColumns(); saveSelectedEditable();
-			}
-			buildColumnControls(availableColumns);
-			reRenderTable();
-			if(selectedCsyPrintEl){
-				const label = (selectedCSY === '__ALL__') ? 'All' : selectedCSY;
-				selectedCsyPrintEl.textContent = `Class-Section-Year: ${label}`;
-			}
-			// keep #printHeader hidden; we use the in-page title + selected text for print
-			const ph = document.getElementById('printHeader');
-			if(ph){ ph.textContent = ''; ph.style.display='none'; }
+			statusEl.textContent='(Legacy render not used)';
 		}
 
-		async function loadLite(){
-			liteRows = await fetchLite();
-			// compute and cache a stable, sorted list of class-section-year options
-			try{
-				const unique = new Set();
-				liteRows.forEach(row => {
-					const sNum = Number(row.session);
-					let active_class = '', active_section = '';
-					if(Number.isFinite(sNum) && sNum === 2026){
-						active_class = row.class_2026 ?? '';
-						active_section = row.section_2026 ?? '';
-					}else if(Number.isFinite(sNum) && sNum === 2025){
-						active_class = row.class_2025 ?? '';
-						active_section = row.section_2025 ?? '';
-					}
-					if(active_class){
-						const csY = [active_class ?? '', active_section ?? '', (row.session ?? '')].map(x=>String(x??'')).join('-');
-						if(csY) unique.add(csY);
-					}
-				});
-				window.__dropdownOptions = Array.from(unique).sort();
-			}catch(e){
-				console.warn('Failed to build dropdown options from liteRows', e);
-				window.__dropdownOptions = window.__dropdownOptions || [];
-			}
-			// build groups from lite rows and render
-			const groups = groupByClassSection(liteRows);
-			await render(groups);
-			statusEl.textContent = 'Select class-section-year';
-		}
-		async function loadGroup(csy){
-			const dd = document.getElementById('classSectionYearFilter'); if(dd) dd.disabled = true;
-			currentGroupRows = await fetchGroupFull(csy);
-			// integrate into rendering by replacing rows in group structure
-			const groups = groupByClassSection(currentGroupRows);
-			allColumns = []; // reset so recompute
-			await render(groups);
-			statusEl.textContent = `Loaded group: ${csy} (${currentGroupRows.length})`;
-			if(dd) dd.disabled = false;
-		}
+		// legacy loadLite/loadGroup removed in favor of new flow
 
 		// Init: lite first
 		(async function init(){
 			await waitForSupabase();
-			// load preferred column order (if present) then load data
 			await loadColumnOrder();
-			await loadLite();
-			document.getElementById('classSectionYearFilter').addEventListener('change', async () => {
-				const csy = document.getElementById('classSectionYearFilter').value;
-				if(!csy) return;
-				if(csy==='__ALL__'){
-					statusEl.textContent='Loading ALL (may be slow)...';
-					await loadGroup('__ALL__');
-				}else{
-					await loadGroup(csy);
-				}
-			});
+			liteRows = await fetchLite();
+			buildSessionOptions();
+			statusEl.textContent='Select Session';
 		})();
 	</script>
 </body>
