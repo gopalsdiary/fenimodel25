@@ -730,6 +730,25 @@
           return;
         }
 
+        // Filter out rows where iid, active_class, active_section, and active_roll are all empty
+        exportData = exportData.filter(row => {
+          const iid = row.iid;
+          const activeClass = row.active_class;
+          const activeSection = row.active_section;
+          const activeRoll = row.active_roll;
+          
+          // Check if any of the fields are empty (null, undefined, or empty string)
+          const isEmpty = (val) => val === null || val === undefined || val === '';
+          
+          // Keep row only if ALL four fields have values (exclude if ANY field is empty)
+          return !isEmpty(iid) && !isEmpty(activeClass) && !isEmpty(activeSection) && !isEmpty(activeRoll);
+        });
+
+        if (exportData.length === 0) {
+          showStatus('No valid data to download. All rows have empty required fields.', 'error');
+          return;
+        }
+
         // Custom headers for specific columns only
         const headers = [
           'iid', 'active_class', 'active_section', 'active_roll', 'session', 'student_name_en', 'student_key'
