@@ -108,3 +108,68 @@ function setupAuthStateListener() {
 
 // Setup auth state listener when page is ready
 setTimeout(setupAuthStateListener, 2000);
+
+// === 15-Minute Inactivity Auto-Logout ===
+(function setupInactivityTimeout() {
+    const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
+    let inactivityTimer = null;
+    
+    // Reset the inactivity timer
+    function resetInactivityTimer() {
+        // Clear existing timer
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+        }
+        
+        // Start new timer
+        inactivityTimer = setTimeout(() => {
+            console.log('Session expired due to 15 minutes of inactivity');
+            
+            // Perform logout
+            if (typeof window.supabase !== 'undefined') {
+                try {
+                    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+                    
+                    const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    authClient.auth.signOut().then(() => {
+                        // Show timeout message briefly before redirect
+                        alert('Session expired after 15 minutes of inactivity. Please log in again.');
+                        window.location.href = './index.html';
+                    }).catch(() => {
+                        // Force redirect even if signOut fails
+                        window.location.href = './index.html';
+                    });
+                } catch (error) {
+                    console.error('Error during inactivity logout:', error);
+                    // Force redirect on error
+                    window.location.href = './index.html';
+                }
+            } else {
+                // No Supabase available, just redirect
+                alert('Session expired after 15 minutes of inactivity. Please log in again.');
+                window.location.href = './index.html';
+            }
+        }, INACTIVITY_TIMEOUT);
+    }
+    
+    // Activity events to monitor
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    // Add event listeners for user activity
+    activityEvents.forEach(event => {
+        document.addEventListener(event, resetInactivityTimer, true);
+    });
+    
+    // Start the initial timer
+    resetInactivityTimer();
+    
+    // Reset timer when page becomes visible (in case user switches tabs)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            resetInactivityTimer();
+        }
+    });
+    
+    console.log('Inactivity timeout set to 15 minutes');
+})();
