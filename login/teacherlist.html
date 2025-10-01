@@ -27,7 +27,7 @@
     .iid-col { width:90px; font-weight:600; font-family:monospace; }
     .photo-col { width:70px; }
     .photo-col img { width:48px; height:48px; object-fit:cover; border-radius:4px; border:1px solid var(--border); background:#fff; }
-    .actions-col { width:70px; text-align:center; }
+    .actions-col { width:140px; text-align:center; }
     button { cursor:pointer; font-size:12px; line-height:1.2; padding:6px 10px; border-radius:4px; border:1px solid var(--accent); background:var(--accent); color:#fff; font-weight:500; }
     button:hover { background:var(--accent-hover); }
     button.outline { background:#fff; color:var(--accent); }
@@ -169,7 +169,10 @@
           <td>${safe(r.teacher_email_id)}</td>
           <td>${safe(r.nid_number_en)}</td>
           <td class="nowrap">${safe(r.join_date)}</td>
-          <td class="actions-col"><button type="button" data-link-edit="${r.iid}">Edit</button></td>
+          <td class="actions-col">
+            <button type="button" data-link-view="${r.iid}" style="background:#28a745;border-color:#28a745;margin-right:4px;">View</button>
+            <button type="button" data-link-edit="${r.iid}">Edit</button>
+          </td>
         </tr>`;
       }).join('');
       tbody.innerHTML = rowsHtml;
@@ -403,11 +406,18 @@
     saveBtn.addEventListener('click', saveChanges);
   addTeacherBtn.addEventListener('click', openAddModal);
 
-    // ---------- Delegated Edit Click ----------
+    // ---------- Delegated Button Clicks ----------
     tbody.addEventListener('click', e=>{
-      const linkBtn = e.target.closest('button[data-link-edit]');
-      if(linkBtn){
-        const iid = linkBtn.getAttribute('data-link-edit');
+      const viewBtn = e.target.closest('button[data-link-view]');
+      if(viewBtn){
+        const iid = viewBtn.getAttribute('data-link-view');
+        window.open('teacher_view.html?iid=' + encodeURIComponent(iid), '_blank');
+        return;
+      }
+      
+      const editBtn = e.target.closest('button[data-link-edit]');
+      if(editBtn){
+        const iid = editBtn.getAttribute('data-link-edit');
         window.location.href = 'teacher_edit.html?iid=' + encodeURIComponent(iid);
         return;
       }
