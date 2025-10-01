@@ -1,12 +1,13 @@
 <!doctype html>
-<html lang="e <header>
-  <h1>Admission Book</h1>
-   </header>
+<html lang="en">
+<head>
 <meta charset="utf-8" />
 <title>Admission Book 2025</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
  body{ margin:0; font-family:Inter, system-ui, Arial, sans-serif; background:#f5f7fa; color:#111; }
  header{ background:#fff; border-bottom:1px solid #e2e8f0; padding:1rem 1.25rem; }
@@ -28,7 +29,23 @@
  .small{ font-size:.65rem; color:#555; }
  .toolbar-spacer{ flex:1 1 auto; }
  .print-note{ font-size:.65rem; color:#64748b; margin-left:.75rem; }
- @media print{ body{ background:#fff; } header{ position:sticky; top:0; } button,#searchBox{ display:none; } main{ box-shadow:none; border:none; } }
+ 
+ /* Print styles for exact Ctrl+P appearance */
+ @media print{ 
+   body{ background:#fff; font-size:10px; margin:0; padding:0; }
+   header{ position:static; padding:0.5rem; border:none; page-break-inside:avoid; }
+   .header-row{ justify-content:center; margin-bottom:0.3rem; }
+   h1{ font-size:16px; text-align:center; }
+   button, #searchBox, select, .status{ display:none !important; }
+   main{ box-shadow:none; border:none; margin:0; border-radius:0; max-width:none; }
+   table{ font-size:8px; width:100%; }
+   thead th{ background:#f0f0f0 !important; padding:3px 2px; font-size:7px; }
+   tbody td{ padding:3px 2px; font-size:7px; }
+   .group-row td{ background:#e8e8e8 !important; font-size:8px; padding:4px; }
+   .small{ font-size:6px; }
+   img{ max-width:30px !important; max-height:35px !important; }
+   @page{ size:legal landscape; margin:0.5in 0.3in; }
+ }
 </style>
 </head>
 <body>
@@ -43,12 +60,12 @@
    </select>
    <select id="classSelect" aria-label="Class"><option value="">Select Class</option></select>
    <select id="sectionSelect" aria-label="Section"><option value="">Select Section</option></select>
-   <button id="loadBtn" disabled>Load Data</button>
    <span id="status" class="status">Select class year</span>
   </div>
   <div class="header-row">
    <input id="searchBox" type="search" placeholder="Search name / IID / roll" />
-   <button id="printBtn">Print</button>
+   <button id="printBtn" onclick="window.print()">Print (Ctrl+P)</button>
+   <button id="pdfBtn">Download as PDF</button>
    <div style="flex:1;"></div>
   </div>
  </header>
@@ -64,6 +81,7 @@
 		 <th>VILLAGE<br>POST OFFICE<br>UPAZILLA<br>DISTRICT</th>
 		 <th>OCCUPATION<br>STUDENT AGE<br>PREVIOUS SCHOOL</th>
 		 <th>FREEDOM FIGHTER CHILD</th>
+		 <th>PHOTO</th>
 		 <th>HEAD MASTER<br>SINE</th>
 		 <th>COMMENT</th>
 		</tr>
@@ -108,24 +126,37 @@
  }
 
  async function loadRows(){
-   if(!currentClassYear || !currentClass || !currentSection){ setStatus('Select class year, class & section'); return; }
+   if(!currentClassYear){ setStatus('Select class year'); return; }
    setStatus('Loading students…');
    const sectionCol = currentClassYear.replace('class_', 'section_'); // class_2025 -> section_2025
    const rollCol = currentClassYear.replace('class_', 'roll_'); // class_2025 -> roll_2025
    
    try {
-     const { data, error } = await supabaseClient
+     let query = supabaseClient
        .from('student_database')
        .select(`
          iid,admission_date,student_name_en,father_name_en,mother_name_en,father_mobile,
          ${currentClassYear},session,student_dateofbirth,religion,birth_registration,student_gender,
          village_en,postoffice_en,upazilla_en,district_en,father_occupation,previous_school,
-         quote_freedomfighter,status,${sectionCol},${rollCol}
+         quote_freedomfighter,student_photo_url,status,${sectionCol},${rollCol}
        `)
-       .eq(currentClassYear, currentClass)
-       .eq(sectionCol, currentSection)
        .not('iid','is',null)
+       .not(currentClassYear,'is',null)
+       .order(currentClassYear)
+       .order(sectionCol)
        .order(rollCol,{ ascending:true });
+       
+     // If class is selected, filter by class
+     if(currentClass){
+       query = query.eq(currentClassYear, currentClass);
+     }
+       
+     // If section is selected, filter by section too
+     if(currentSection){
+       query = query.eq(sectionCol, currentSection);
+     }
+       
+     const { data, error } = await query;
        
      if(error){ 
        setStatus('Student load failed: ' + error.message); 
@@ -163,38 +194,156 @@
    return ageInYears.toFixed(1) + ' Years';
  }
 
+ async function generatePDF() {
+   if (!allRows.length) {
+     alert('No data to export');
+     return;
+   }
+
+   const year = currentClassYear.replace('class_', '');
+   const filename = `admission_book_${year}_${new Date().toISOString().split('T')[0]}.pdf`;
+   
+   try {
+     // Show loading message
+     const pdfBtn = document.getElementById('pdfBtn');
+     const originalText = pdfBtn.textContent;
+     pdfBtn.textContent = 'Generating PDF...';
+     pdfBtn.disabled = true;
+     
+     // Get the table element
+     const table = document.getElementById('bookTable');
+     
+     // Create temporary container with print styles
+     const tempDiv = document.createElement('div');
+     tempDiv.style.position = 'absolute';
+     tempDiv.style.left = '-9999px';
+     tempDiv.style.top = '0';
+     tempDiv.style.background = 'white';
+     tempDiv.style.width = '1400px';
+     tempDiv.style.fontFamily = 'Arial, sans-serif';
+     tempDiv.style.fontSize = '12px';
+     
+     // Add title and table
+     tempDiv.innerHTML = `
+       <div style="text-align:center;margin-bottom:20px;font-size:18px;font-weight:bold;">
+         Admission Book ${year}
+       </div>
+       ${table.outerHTML}
+     `;
+     
+     document.body.appendChild(tempDiv);
+     
+     // Generate canvas from table
+     const canvas = await html2canvas(tempDiv, {
+       scale: 2,
+       useCORS: true,
+       allowTaint: true,
+       backgroundColor: '#ffffff',
+       width: 1400,
+       height: tempDiv.scrollHeight
+     });
+     
+     // Remove temporary div
+     document.body.removeChild(tempDiv);
+     
+     // Create PDF
+     const { jsPDF } = window.jspdf;
+     const pdf = new jsPDF({
+       orientation: 'landscape',
+       unit: 'mm',
+       format: 'a4'
+     });
+     
+     // Calculate image dimensions for A4 landscape
+     const imgWidth = 297; // A4 landscape width in mm
+     const imgHeight = (canvas.height * imgWidth) / canvas.width;
+     
+     // Add image to PDF
+     const imgData = canvas.toDataURL('image/png');
+     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+     
+     // Save the PDF
+     pdf.save(filename);
+     
+     // Restore button
+     pdfBtn.textContent = originalText;
+     pdfBtn.disabled = false;
+     
+   } catch (error) {
+     console.error('PDF generation failed:', error);
+     alert('PDF generation failed. Please try using Ctrl+P to print manually.');
+     
+     // Restore button on error
+     const pdfBtn = document.getElementById('pdfBtn');
+     pdfBtn.textContent = 'Download as PDF';
+     pdfBtn.disabled = false;
+   }
+ }
+
  function renderTable(){
    const tbody=document.querySelector('#bookTable tbody'); tbody.innerHTML='';
-   if(!allRows.length){ tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:1rem;">No records</td></tr>'; setStatus('0 rows'); return; }
+   if(!allRows.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:1rem;">No records</td></tr>'; setStatus('0 rows'); return; }
    
-   // Group header row
-   if(allRows.length > 0){
-     const year = currentClassYear.replace('class_', ''); // class_2025 -> 2025
-     const groupTr = document.createElement('tr');
-     groupTr.className = 'group-row';
-     groupTr.innerHTML = `<td colspan="10" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${currentClass} || Section: ${currentSection} || ${year}</td>`;
-     tbody.appendChild(groupTr);
-   }
+   const year = currentClassYear.replace('class_', ''); // class_2025 -> 2025
+   const sectionCol = currentClassYear.replace('class_', 'section_');
    
-   allRows.forEach((r,i)=>{
-     const tr=document.createElement('tr');
-     const sectionCol = currentClassYear.replace('class_', 'section_');
-     const rollCol = currentClassYear.replace('class_', 'roll_');
-     const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
-     
-     tr.innerHTML = `
-       <td>${i+1}</td>
-       <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
-       <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
-       <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
-       <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
-       <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
-       <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
-       <td>${simplify(r.quote_freedomfighter)}</td>
-       <td></td>
-       <td>${simplify(r.status)}</td>`;
-     tbody.appendChild(tr);
+   // Debug: Check photo URLs
+   console.log('Photo URLs check:', allRows.slice(0,3).map(r => ({
+     name: r.student_name_en,
+     photo_url: r.student_photo_url,
+     type: typeof r.student_photo_url,
+     length: r.student_photo_url ? r.student_photo_url.length : 0
+   })));
+   
+   // Group by class first, then by section
+   const classes = {};
+   allRows.forEach(r => {
+     const classValue = r[currentClassYear] || 'Unknown';
+     const section = r[sectionCol] || 'Unknown';
+     if(!classes[classValue]) classes[classValue] = {};
+     if(!classes[classValue][section]) classes[classValue][section] = [];
+     classes[classValue][section].push(r);
    });
+   
+   let overallIndex = 0; // Continuous serial number
+   
+   // Render each class and its sections
+   Object.keys(classes).sort((a,b)=>Number(a)-Number(b)).forEach(classValue => {
+     const classSections = classes[classValue];
+     
+     Object.keys(classSections).sort().forEach(section => {
+       const sectionRows = classSections[section];
+       
+       // Section header row
+       const groupTr = document.createElement('tr');
+       groupTr.className = 'group-row';
+       groupTr.innerHTML = `<td colspan="11" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${classValue} || Section: ${section} || ${year}</td>`;
+       tbody.appendChild(groupTr);
+       
+       // Section data rows with continuous serial
+       sectionRows.forEach((r)=>{
+         overallIndex++; // Increment for each row
+         const tr=document.createElement('tr');
+         const rollCol = currentClassYear.replace('class_', 'roll_');
+         const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
+         
+         tr.innerHTML = `
+           <td>${overallIndex}</td>
+           <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
+           <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
+           <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
+           <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
+           <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
+           <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
+           <td>${simplify(r.quote_freedomfighter)}</td>
+           <td style="text-align:center;padding:0.2rem;">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" style="width:40px;height:50px;object-fit:cover;border:1px solid #ddd;background:#f5f5f5;" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
+           <td></td>
+           <td>${simplify(r.status)}</td>`;
+         tbody.appendChild(tr);
+       });
+     });
+   });
+   
    setStatus(`${allRows.length} rows`);
  }
 
@@ -209,40 +358,63 @@
    });
    const tbody=document.querySelector('#bookTable tbody'); tbody.innerHTML='';
    
-   // Group header for filtered results
-   if(filtered.length > 0){
-     const year = currentClassYear.replace('class_', '');
-     const groupTr = document.createElement('tr');
-     groupTr.className = 'group-row';
-     groupTr.innerHTML = `<td colspan="10" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${currentClass} || Section: ${currentSection} || ${year} (Filtered)</td>`;
-     tbody.appendChild(groupTr);
-   }
+   if(!filtered.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:1rem;">No search results</td></tr>'; setStatus('No results'); return; }
    
-   filtered.forEach((r,i)=>{
-     const tr=document.createElement('tr');
-     const sectionCol = currentClassYear.replace('class_', 'section_');
-     const rollCol = currentClassYear.replace('class_', 'roll_');
-     const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
-     tr.innerHTML = `
-       <td>${i+1}</td>
-       <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
-       <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
-       <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
-       <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
-       <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
-       <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
-       <td>${simplify(r.quote_freedomfighter)}</td>
-       <td></td>
-       <td>${simplify(r.status)}</td>`;
-     tbody.appendChild(tr);
+   const year = currentClassYear.replace('class_', '');
+   
+   // Group filtered results by class first, then by section
+   const classes = {};
+   filtered.forEach(r => {
+     const classValue = r[currentClassYear] || 'Unknown';
+     const section = r[sectionCol] || 'Unknown';
+     if(!classes[classValue]) classes[classValue] = {};
+     if(!classes[classValue][section]) classes[classValue][section] = [];
+     classes[classValue][section].push(r);
    });
+   
+   let overallIndex = 0; // Continuous serial number for filtered results
+   
+   // Render each class and its sections
+   Object.keys(classes).sort((a,b)=>Number(a)-Number(b)).forEach(classValue => {
+     const classSections = classes[classValue];
+     
+     Object.keys(classSections).sort().forEach(section => {
+       const sectionRows = classSections[section];
+       
+       // Section header row for filtered results
+       const groupTr = document.createElement('tr');
+       groupTr.className = 'group-row';
+       groupTr.innerHTML = `<td colspan="11" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${classValue} || Section: ${section} || ${year} (Filtered)</td>`;
+       tbody.appendChild(groupTr);
+       
+       // Section data rows with continuous serial
+       sectionRows.forEach((r)=>{
+         overallIndex++; // Increment for each filtered row
+         const tr=document.createElement('tr');
+         const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
+         tr.innerHTML = `
+           <td>${overallIndex}</td>
+           <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
+           <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
+           <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
+           <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
+           <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
+           <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
+           <td>${simplify(r.quote_freedomfighter)}</td>
+           <td style="text-align:center;padding:0.2rem;">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" style="width:40px;height:50px;object-fit:cover;border:1px solid #ddd;background:#f5f5f5;" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
+           <td></td>
+           <td>${simplify(r.status)}</td>`;
+         tbody.appendChild(tr);
+       });
+     });
+   });
+   
    setStatus(`${filtered.length} (filtered)`);
  }
 
- document.getElementById('classYearSelect').addEventListener('change', async e=>{ currentClassYear=e.target.value; currentClass=''; currentSection=''; document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear){ await loadClassOptions(); } allRows=[]; renderTable(); document.getElementById('loadBtn').disabled = !(currentClassYear && currentClass && currentSection); });
- document.getElementById('classSelect').addEventListener('change', async e=>{ currentClass=e.target.value; currentSection=''; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear && currentClass){ await loadSectionOptions(); } allRows=[]; renderTable(); document.getElementById('loadBtn').disabled = !(currentClassYear && currentClass && currentSection); });
- document.getElementById('sectionSelect').addEventListener('change', e=>{ currentSection=e.target.value; document.getElementById('loadBtn').disabled = !(currentClassYear && currentClass && currentSection); });
- document.getElementById('loadBtn').addEventListener('click', loadRows);
+ document.getElementById('classYearSelect').addEventListener('change', async e=>{ currentClassYear=e.target.value; currentClass=''; currentSection=''; document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear){ await loadClassOptions(); await loadRows(); } else { allRows=[]; renderTable(); } });
+ document.getElementById('classSelect').addEventListener('change', async e=>{ currentClass=e.target.value; currentSection=''; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear && currentClass){ await loadSectionOptions(); await loadRows(); } else if(currentClassYear) { await loadRows(); } else { allRows=[]; renderTable(); } });
+ document.getElementById('sectionSelect').addEventListener('change', async e=>{ currentSection=e.target.value; if(currentClassYear){ await loadRows(); } });
  
  // Add null checks for optional elements
  const searchBox = document.getElementById('searchBox');
@@ -250,6 +422,9 @@
  
  const printBtn = document.getElementById('printBtn');
  if(printBtn) printBtn.addEventListener('click', ()=>{ window.print(); });
+
+ const pdfBtn = document.getElementById('pdfBtn');
+ if(pdfBtn) pdfBtn.addEventListener('click', generatePDF);
 
  window.addEventListener('DOMContentLoaded', async ()=>{ const ok = !!window.supabase; if(!ok){ console.error('Supabase lib missing'); return; } initSupabase(); });
  </script>
