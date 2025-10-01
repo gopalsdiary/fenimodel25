@@ -32,6 +32,10 @@
  .toolbar-spacer{ flex:1 1 auto; }
  .print-note{ font-size:.65rem; color:#64748b; margin-left:.75rem; }
  
+ /* Style for auto-generated admission dates */
+ .auto-date{ color:#e11d48; font-weight:600; }
+ .auto-date::after{ content:" *"; font-size:.6em; color:#9ca3af; }
+ 
  /* Print styles for exact Ctrl+P appearance */
  @media print{ 
    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -175,6 +179,12 @@
      orphans: 3;
      widows: 3;
    }
+   
+   /* Auto-generated dates in print */
+   .auto-date {
+     color: #000 !important;
+     font-weight: bold !important;
+   }
  }
 </style>
 </head>
@@ -195,8 +205,6 @@
   <div class="header-row">
    <input id="searchBox" type="search" placeholder="Search name / IID / roll" />
    <button id="printBtn" onclick="window.print()">Print (Ctrl+P)</button>
-   <button id="pdfBtn">Download as PDF</button>
-   <button id="pdfAdvancedBtn">Advanced PDF</button>
    <div style="flex:1;"></div>
   </div>
  </header>
@@ -305,24 +313,115 @@
    }
  } function simplify(val){ return (val==null||val==='null'||val==='undefined')? '' : String(val); }
 
- function calculateAge(birthDate, admissionDate) {
-   if (!birthDate || !admissionDate) return '';
+ function calculateAge(birthDate, admissionDate, classYear = null) {
+   if (!birthDate) return '';
    
-   const birth = new Date(birthDate);
-   const admission = new Date(admissionDate);
+   // Handle null admission date based on class year
+   if (!admissionDate || admissionDate === 'null' || admissionDate === null) {
+     if (classYear) {
+       const year = classYear.replace('class_', '');
+       admissionDate = `01-01-${year}`;
+     } else {
+       return ''; // Can't calculate without admission date or class year
+     }
+   }
    
-   if (isNaN(birth.getTime()) || isNaN(admission.getTime())) return '';
+   // Parse dates in dd-mm-yyyy format
+   function parseDate(dateStr) {
+     if (!dateStr) return null;
+     
+     // Handle different date formats
+     const dateString = String(dateStr).trim().replace('*', ''); // Remove * mark for parsing
+     
+     // Check if it's in dd-mm-yyyy format (22-12-2024)
+     if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+       const [day, month, year] = dateString.split('-');
+       return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+     }
+     
+     // Check if it's in yyyy-mm-dd format
+     if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+       return new Date(dateString);
+     }
+     
+     // Try other common formats
+     return new Date(dateString);
+   }
    
+   const birth = parseDate(birthDate);
+   const admission = parseDate(admissionDate);
+   
+   if (!birth || !admission || isNaN(birth.getTime()) || isNaN(admission.getTime())) {
+     return '';
+   }
+   
+   // Calculate age in years and months
    let years = admission.getFullYear() - birth.getFullYear();
    let months = admission.getMonth() - birth.getMonth();
+   let days = admission.getDate() - birth.getDate();
    
+   // Adjust if day difference is negative
+   if (days < 0) {
+     months--;
+     const daysInPrevMonth = new Date(admission.getFullYear(), admission.getMonth(), 0).getDate();
+     days += daysInPrevMonth;
+   }
+   
+   // Adjust if month difference is negative
    if (months < 0) {
      years--;
      months += 12;
    }
    
-   const ageInYears = years + (months / 12);
-   return ageInYears.toFixed(1) + ' Years';
+   // Format the result
+   if (years > 0) {
+     if (months > 0) {
+       return `${years} years ${months} months`;
+     } else {
+       return `${years} years`;
+     }
+   } else if (months > 0) {
+     return `${months} months`;
+   } else {
+     return `${days} days`;
+   }
+ }
+
+ // Helper function to get admission date (handle null values)
+ function getAdmissionDate(admissionDate, classYear) {
+   if (admissionDate && admissionDate !== 'null' && admissionDate !== null && admissionDate.trim() !== '') {
+     return admissionDate;
+   }
+   
+   // Return default date based on class year with * mark
+   if (classYear) {
+     const year = classYear.replace('class_', '');
+     return `01-01-${year}*`;
+   }
+   
+   return '01-01-2025*'; // fallback with * mark
+ }
+
+ // Test function for age calculation - you can test in browser console
+ function testAgeCalculation() {
+   console.log('Testing age calculation:');
+   console.log('Birth: 25-02-2014, Admission: 22-12-2024');
+   console.log('Calculated Age:', calculateAge('25-02-2014', '22-12-2024'));
+   
+   console.log('Birth: 15-03-2015, Admission: 01-01-2025');
+   console.log('Calculated Age:', calculateAge('15-03-2015', '01-01-2025'));
+   
+   console.log('Birth: 10-05-2016, Admission: null, Class: class_2026');
+   console.log('Calculated Age:', calculateAge('10-05-2016', null, 'class_2026'));
+   
+   console.log('Testing getAdmissionDate:');
+   console.log('Null admission, class_2025:', getAdmissionDate(null, 'class_2025'));
+   console.log('Null admission, class_2024:', getAdmissionDate(null, 'class_2024'));
+   console.log('Null admission, class_2026:', getAdmissionDate(null, 'class_2026'));
+   console.log('Empty string admission, class_2025:', getAdmissionDate('', 'class_2025'));
+   console.log('Valid admission date:', getAdmissionDate('15-06-2024', 'class_2025'));
+   
+   return 'Test completed. Check console for results.';
  }
 
  async function generatePDF() {
@@ -635,14 +734,15 @@
            pdf.setFont(undefined, 'normal');
            
            let xPos = margin;
+           const admissionDateToShow = getAdmissionDate(row.admission_date, currentClassYear);
            const rowData = [
              overallIndex.toString(),
-             `${simplify(row.admission_date)}\n${simplify(row.iid)}`,
+             `${simplify(admissionDateToShow)}\n${simplify(row.iid)}`,
              `${simplify(row.student_name_en)}\n${simplify(row.father_name_en)}\n${simplify(row.mother_name_en)}\n${simplify(row.father_mobile)}`,
              `${simplify(row[currentClassYear])}\n${simplify(row[sectionCol])}\n${simplify(row[rollCol])}\n${simplify(row.session)}`,
              `${simplify(row.student_dateofbirth)}\n${simplify(row.student_gender)}\n${simplify(row.religion)}\n${simplify(row.birth_registration)}`,
              `${simplify(row.village_en)}\n${simplify(row.postoffice_en)}\n${simplify(row.upazilla_en)}\n${simplify(row.district_en)}`,
-             `${simplify(row.father_occupation)}\n${calculateAge(row.student_dateofbirth, row.admission_date)}\n${simplify(row.previous_school)}`,
+             `${simplify(row.father_occupation)}\n${calculateAge(row.student_dateofbirth, admissionDateToShow, currentClassYear)}\n${simplify(row.previous_school)}`,
              simplify(row.quote_freedomfighter),
              row.student_photo_url && row.student_photo_url.trim() && row.student_photo_url !== 'null' ? 'Photo' : 'No Photo',
              '',
@@ -738,11 +838,14 @@
          overallIndex++; // Increment for each row
          const tr=document.createElement('tr');
          const rollCol = currentClassYear.replace('class_', 'roll_');
-         const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
+         const admissionDateToShow = getAdmissionDate(r.admission_date, currentClassYear);
+         const calculatedAge = calculateAge(r.student_dateofbirth, admissionDateToShow, currentClassYear);
+         const isAutoDate = admissionDateToShow.includes('*');
+         const dateClass = isAutoDate ? 'auto-date' : '';
          
          tr.innerHTML = `
            <td>${overallIndex}</td>
-           <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
+           <td><span class="${dateClass}">${simplify(admissionDateToShow)}</span><br><span class="small">${simplify(r.iid)}</span></td>
            <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
            <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
            <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
@@ -804,10 +907,13 @@
        sectionRows.forEach((r)=>{
          overallIndex++; // Increment for each filtered row
          const tr=document.createElement('tr');
-         const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
+         const admissionDateToShow = getAdmissionDate(r.admission_date, currentClassYear);
+         const calculatedAge = calculateAge(r.student_dateofbirth, admissionDateToShow, currentClassYear);
+         const isAutoDate = admissionDateToShow.includes('*');
+         const dateClass = isAutoDate ? 'auto-date' : '';
          tr.innerHTML = `
            <td>${overallIndex}</td>
-           <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
+           <td><span class="${dateClass}">${simplify(admissionDateToShow)}</span><br><span class="small">${simplify(r.iid)}</span></td>
            <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
            <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
            <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
@@ -882,7 +988,18 @@
  const pdfAdvancedBtn = document.getElementById('pdfAdvancedBtn');
  if(pdfAdvancedBtn) pdfAdvancedBtn.addEventListener('click', generateAdvancedPDF);
 
- window.addEventListener('DOMContentLoaded', async ()=>{ const ok = !!window.supabase; if(!ok){ console.error('Supabase lib missing'); return; } initSupabase(); });
+ window.addEventListener('DOMContentLoaded', async ()=>{ 
+   const ok = !!window.supabase; 
+   if(!ok){ console.error('Supabase lib missing'); return; } 
+   initSupabase();
+   
+   // Make test function available globally
+   window.testAgeCalculation = testAgeCalculation;
+   window.calculateAge = calculateAge;
+   window.getAdmissionDate = getAdmissionDate;
+   
+   console.log('Age calculation test functions loaded. Use testAgeCalculation() in console to test.');
+ });
  </script>
 </body>
 </html>
