@@ -17,6 +17,8 @@
  select, button, input[type=search]{ padding:.55rem .8rem; font-size:.9rem; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-family:inherit; min-width:120px; }
  button{ background:#0ea5e9; color:#fff; border-color:#0284c7; cursor:pointer; font-weight:600; }
  button:disabled{ opacity:.6; cursor:not-allowed; }
+ #pdfAdvancedBtn{ background:#059669; border-color:#047857; }
+ #pdfAdvancedBtn:hover{ background:#047857; }
  .status{ font-size:.85rem; color:#475569; min-width:160px; }
  input[type=search]{ min-width:200px; }
  main{ max-width: 1400px; margin:1rem auto 2rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.04); }
@@ -32,19 +34,147 @@
  
  /* Print styles for exact Ctrl+P appearance */
  @media print{ 
-   body{ background:#fff; font-size:10px; margin:0; padding:0; }
-   header{ position:static; padding:0.5rem; border:none; page-break-inside:avoid; }
-   .header-row{ justify-content:center; margin-bottom:0.3rem; }
-   h1{ font-size:16px; text-align:center; }
+   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+   
+   body{ background:#fff; font-size:14px; margin:0; padding:0; }
+   header{ position:static; padding:0.8rem; border:none; page-break-inside:avoid; }
+   .header-row{ justify-content:center; margin-bottom:0.5rem; }
+   h1{ font-size:20px; text-align:center; font-weight:bold; margin-bottom:10px; }
    button, #searchBox, select, .status{ display:none !important; }
-   main{ box-shadow:none; border:none; margin:0; border-radius:0; max-width:none; }
-   table{ font-size:8px; width:100%; }
-   thead th{ background:#f0f0f0 !important; padding:3px 2px; font-size:7px; }
-   tbody td{ padding:3px 2px; font-size:7px; }
-   .group-row td{ background:#e8e8e8 !important; font-size:8px; padding:4px; }
-   .small{ font-size:6px; }
-   img{ max-width:30px !important; max-height:35px !important; }
-   @page{ size:legal landscape; margin:0.5in 0.3in; }
+   main{ box-shadow:none; border:none; margin:0; border-radius:0; max-width:none; height:auto; }
+   table{ 
+     font-size:12px; 
+     width:100%; 
+     border-collapse:collapse;
+     page-break-inside:auto;
+     table-layout: fixed;
+   }
+   thead{ 
+     display:table-header-group; 
+     break-inside:avoid;
+   }
+   thead th{ 
+     background:#f0f0f0 !important; 
+     padding:8px 4px; 
+     font-size:11px; 
+     border:2px solid #000;
+     page-break-inside:avoid;
+     font-weight:bold;
+     text-align:center;
+     height:40px;
+     vertical-align:middle;
+   }
+   tbody{ 
+     display:table-row-group;
+   }
+   tbody tr{ 
+     page-break-inside:avoid; 
+     break-inside:avoid;
+     height:auto;
+     min-height:40px;
+   }
+   tbody tr:not(.group-row) {
+     height:auto !important;
+     min-height:40px !important;
+   }
+   tbody td{ 
+     padding:6px 4px; 
+     font-size:10px; 
+     border:1.5px solid #000;
+     line-height:1.3;
+     vertical-align:top;
+     height:auto;
+     min-height:40px;
+     overflow:hidden;
+   }
+   .group-row{ 
+     page-break-before:auto; 
+     page-break-after:avoid;
+     break-after:avoid;
+     height:30px !important;
+   }
+   .group-row td{ 
+     background:#e0e0e0 !important; 
+     font-size:12px; 
+     padding:8px;
+     font-weight:bold;
+     text-align:center;
+     border:2px solid #000;
+     height:30px;
+   }
+   .small{ font-size:9px; }
+   img{ 
+     max-width:35px !important; 
+     max-height:40px !important; 
+     object-fit:cover;
+   }
+   @page{ 
+     size:A4 landscape; 
+     margin:0.3cm; 
+   }
+   
+   /* Ensure table headers repeat on each page */
+   thead{ 
+     display:table-header-group;
+   }
+   
+   /* Natural page breaks - allow minimum 8 rows per page */
+   tbody tr:not(.group-row):nth-child(8n) { 
+     page-break-after: auto;
+   }
+   
+   /* Avoid breaking rows */
+   tr{ 
+     page-break-inside:avoid;
+   }
+   
+   /* Keep group headers with their content */
+   .group-row{ 
+     page-break-after:avoid;
+     page-break-before:auto;
+   }
+   
+   /* Prevent section headers from being orphaned */
+   .group-row + tr:not(.group-row) {
+     page-break-before: avoid;
+   }
+   
+   /* Better widow/orphan control */
+   tbody {
+     orphans: 3;
+     widows: 3;
+   }
+   
+   /* Custom page break classes */
+   .page-break-after {
+     page-break-after: always !important;
+   }
+   
+   .page-break-before {
+     page-break-before: always !important;
+   }
+   
+   /* Prevent orphan rows - ensure at least 3 rows stay together */
+   tbody tr:not(.group-row):nth-last-child(-n+3) {
+     page-break-before: avoid;
+   }
+   
+   /* Natural flow with good spacing */
+   .print-optimized tbody tr:not(.group-row) {
+     height: auto !important;
+     min-height: 40px !important;
+   }
+   
+   .print-optimized thead th {
+     height: 40px;
+   }
+   
+   /* Better page utilization */
+   .print-optimized {
+     height: auto;
+     orphans: 3;
+     widows: 3;
+   }
  }
 </style>
 </head>
@@ -66,6 +196,7 @@
    <input id="searchBox" type="search" placeholder="Search name / IID / roll" />
    <button id="printBtn" onclick="window.print()">Print (Ctrl+P)</button>
    <button id="pdfBtn">Download as PDF</button>
+   <button id="pdfAdvancedBtn">Advanced PDF</button>
    <div style="flex:1;"></div>
   </div>
  </header>
@@ -221,32 +352,78 @@
      tempDiv.style.background = 'white';
      tempDiv.style.width = '1400px';
      tempDiv.style.fontFamily = 'Arial, sans-serif';
-     tempDiv.style.fontSize = '12px';
+     tempDiv.style.fontSize = '10px'; // Smaller font for better fit
+     tempDiv.style.color = 'black';
      
-     // Add title and table
+     // Clone and modify table for PDF
+     const tableClone = table.cloneNode(true);
+     
+     // Apply PDF-specific styles to the cloned table
+     tableClone.style.width = '100%';
+     tableClone.style.fontSize = '8px';
+     tableClone.style.borderCollapse = 'collapse';
+     
+     // Style header
+     const headers = tableClone.querySelectorAll('thead th');
+     headers.forEach(th => {
+       th.style.background = '#f0f0f0';
+       th.style.padding = '4px 2px';
+       th.style.border = '1px solid #ccc';
+       th.style.fontSize = '7px';
+       th.style.fontWeight = 'bold';
+     });
+     
+     // Style body cells
+     const cells = tableClone.querySelectorAll('tbody td');
+     cells.forEach(td => {
+       td.style.padding = '3px 2px';
+       td.style.border = '1px solid #ddd';
+       td.style.fontSize = '7px';
+       td.style.lineHeight = '1.2';
+     });
+     
+     // Style group rows
+     const groupRows = tableClone.querySelectorAll('.group-row td');
+     groupRows.forEach(td => {
+       td.style.background = '#e8e8e8';
+       td.style.fontSize = '8px';
+       td.style.fontWeight = 'bold';
+       td.style.padding = '6px';
+     });
+     
+     // Style images in PDF
+     const images = tableClone.querySelectorAll('img');
+     images.forEach(img => {
+       img.style.maxWidth = '25px';
+       img.style.maxHeight = '30px';
+       img.style.objectFit = 'cover';
+     });
+     
+     // Add title and table to temp div
      tempDiv.innerHTML = `
-       <div style="text-align:center;margin-bottom:20px;font-size:18px;font-weight:bold;">
+       <div style="text-align:center;margin-bottom:15px;font-size:16px;font-weight:bold;color:black;">
          Admission Book ${year}
        </div>
-       ${table.outerHTML}
+       ${tableClone.outerHTML}
      `;
      
      document.body.appendChild(tempDiv);
      
-     // Generate canvas from table
-     const canvas = await html2canvas(tempDiv, {
-       scale: 2,
-       useCORS: true,
-       allowTaint: true,
-       backgroundColor: '#ffffff',
-       width: 1400,
-       height: tempDiv.scrollHeight
-     });
+     // Wait for images to load
+     const imgElements = tempDiv.querySelectorAll('img');
+     await Promise.all(Array.from(imgElements).map(img => {
+       return new Promise(resolve => {
+         if (img.complete) {
+           resolve();
+         } else {
+           img.onload = resolve;
+           img.onerror = resolve;
+           setTimeout(resolve, 2000); // Timeout after 2 seconds
+         }
+       });
+     }));
      
-     // Remove temporary div
-     document.body.removeChild(tempDiv);
-     
-     // Create PDF
+     // Create PDF with better page handling
      const { jsPDF } = window.jspdf;
      const pdf = new jsPDF({
        orientation: 'landscape',
@@ -254,13 +431,73 @@
        format: 'a4'
      });
      
-     // Calculate image dimensions for A4 landscape
-     const imgWidth = 297; // A4 landscape width in mm
+     const pageWidth = 297; // A4 landscape width in mm
+     const pageHeight = 210; // A4 landscape height in mm
+     const margin = 5; // Small margin
+     const contentWidth = pageWidth - (margin * 2);
+     const contentHeight = pageHeight - (margin * 2);
+     
+     // Calculate scale to fit content width
+     const scale = contentWidth / (tempDiv.scrollWidth * 0.264583); // Convert px to mm
+     
+     // Generate canvas with better settings
+     const canvas = await html2canvas(tempDiv, {
+       scale: Math.max(1, scale * 2), // Higher scale for better quality
+       useCORS: true,
+       allowTaint: true,
+       backgroundColor: '#ffffff',
+       width: tempDiv.scrollWidth,
+       height: tempDiv.scrollHeight,
+       scrollX: 0,
+       scrollY: 0,
+       logging: false
+     });
+     
+     // Remove temporary div
+     document.body.removeChild(tempDiv);
+     
+     const imgData = canvas.toDataURL('image/png', 1.0);
+     const imgWidth = contentWidth;
      const imgHeight = (canvas.height * imgWidth) / canvas.width;
      
-     // Add image to PDF
-     const imgData = canvas.toDataURL('image/png');
-     pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+     // Add pages as needed
+     let yPosition = 0;
+     let pageNumber = 1;
+     
+     while (yPosition < imgHeight) {
+       if (pageNumber > 1) {
+         pdf.addPage();
+       }
+       
+       // Calculate how much of the image fits on this page
+       const remainingHeight = imgHeight - yPosition;
+       const pageImageHeight = Math.min(contentHeight, remainingHeight);
+       
+       // Add the image portion to this page
+       pdf.addImage(
+         imgData, 
+         'PNG', 
+         margin, 
+         margin, 
+         imgWidth, 
+         imgHeight,
+         undefined,
+         'FAST',
+         0,
+         -yPosition // Negative offset to show different part of image
+       );
+       
+       // Add page number
+       pdf.setFontSize(8);
+       pdf.setTextColor(100);
+       pdf.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 5);
+       
+       yPosition += contentHeight;
+       pageNumber++;
+       
+       // Safety break to prevent infinite loop
+       if (pageNumber > 50) break;
+     }
      
      // Save the PDF
      pdf.save(filename);
@@ -276,6 +513,182 @@
      // Restore button on error
      const pdfBtn = document.getElementById('pdfBtn');
      pdfBtn.textContent = 'Download as PDF';
+     pdfBtn.disabled = false;
+   }
+ }
+
+ async function generateAdvancedPDF() {
+   if (!allRows.length) {
+     alert('No data to export');
+     return;
+   }
+
+   const year = currentClassYear.replace('class_', '');
+   const filename = `admission_book_advanced_${year}_${new Date().toISOString().split('T')[0]}.pdf`;
+   
+   try {
+     // Show loading message
+     const pdfBtn = document.getElementById('pdfAdvancedBtn');
+     const originalText = pdfBtn.textContent;
+     pdfBtn.textContent = 'Generating...';
+     pdfBtn.disabled = true;
+     
+     const { jsPDF } = window.jspdf;
+     const pdf = new jsPDF({
+       orientation: 'landscape',
+       unit: 'mm',
+       format: 'a4'
+     });
+     
+     const pageWidth = 297;
+     const pageHeight = 210;
+     const margin = 10;
+     const contentWidth = pageWidth - (margin * 2);
+     const contentHeight = pageHeight - (margin * 2);
+     
+     // Title
+     pdf.setFontSize(16);
+     pdf.setFont(undefined, 'bold');
+     pdf.text(`Admission Book ${year}`, pageWidth / 2, 20, { align: 'center' });
+     
+     // Table setup
+     const sectionCol = currentClassYear.replace('class_', 'section_');
+     const rollCol = currentClassYear.replace('class_', 'roll_');
+     
+     // Group data by class and section
+     const classes = {};
+     allRows.forEach(r => {
+       const classValue = r[currentClassYear] || 'Unknown';
+       const section = r[sectionCol] || 'Unknown';
+       if(!classes[classValue]) classes[classValue] = {};
+       if(!classes[classValue][section]) classes[classValue][section] = [];
+       classes[classValue][section].push(r);
+     });
+     
+     let yPosition = 35;
+     let pageNumber = 1;
+     let overallIndex = 0;
+     
+     // Table headers
+     const headers = ['S.L', 'Date\nUID', 'Name\nFather\nMother\nMobile', 'Class\nSection\nRoll\nSession', 
+                     'DOB\nGender\nReligion\nBirth Reg', 'Address', 'Occupation\nAge\nPrevious School', 
+                     'Freedom Fighter', 'Photo', 'Head Master', 'Comment'];
+     
+     const colWidths = [15, 25, 45, 30, 35, 40, 35, 25, 20, 20, 25];
+     
+     function drawTableHeader() {
+       pdf.setFontSize(7);
+       pdf.setFont(undefined, 'bold');
+       
+       let xPos = margin;
+       headers.forEach((header, i) => {
+         pdf.rect(xPos, yPosition, colWidths[i], 15);
+         const lines = header.split('\n');
+         lines.forEach((line, lineIndex) => {
+           pdf.text(line, xPos + colWidths[i]/2, yPosition + 4 + (lineIndex * 3), { align: 'center' });
+         });
+         xPos += colWidths[i];
+       });
+       
+       yPosition += 15;
+     }
+     
+     function checkPageBreak(neededHeight = 20) {
+       if (yPosition + neededHeight > contentHeight + margin) {
+         pdf.addPage();
+         yPosition = margin + 10;
+         
+         // Add page number
+         pdf.setFontSize(8);
+         pdf.setFont(undefined, 'normal');
+         pdf.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 5);
+         pageNumber++;
+         
+         drawTableHeader();
+       }
+     }
+     
+     // Draw initial headers
+     drawTableHeader();
+     
+     // Process each class and section
+     Object.keys(classes).sort((a,b)=>Number(a)-Number(b)).forEach(classValue => {
+       const classSections = classes[classValue];
+       
+       Object.keys(classSections).sort().forEach(section => {
+         const sectionRows = classSections[section];
+         
+         // Section header
+         checkPageBreak(10);
+         pdf.setFontSize(9);
+         pdf.setFont(undefined, 'bold');
+         pdf.rect(margin, yPosition, contentWidth, 8);
+         pdf.text(`Class: ${classValue} || Section: ${section} || ${year}`, pageWidth/2, yPosition + 5, { align: 'center' });
+         yPosition += 8;
+         
+         // Process each student in this section
+         sectionRows.forEach(row => {
+           overallIndex++;
+           checkPageBreak(12);
+           
+           pdf.setFontSize(6);
+           pdf.setFont(undefined, 'normal');
+           
+           let xPos = margin;
+           const rowData = [
+             overallIndex.toString(),
+             `${simplify(row.admission_date)}\n${simplify(row.iid)}`,
+             `${simplify(row.student_name_en)}\n${simplify(row.father_name_en)}\n${simplify(row.mother_name_en)}\n${simplify(row.father_mobile)}`,
+             `${simplify(row[currentClassYear])}\n${simplify(row[sectionCol])}\n${simplify(row[rollCol])}\n${simplify(row.session)}`,
+             `${simplify(row.student_dateofbirth)}\n${simplify(row.student_gender)}\n${simplify(row.religion)}\n${simplify(row.birth_registration)}`,
+             `${simplify(row.village_en)}\n${simplify(row.postoffice_en)}\n${simplify(row.upazilla_en)}\n${simplify(row.district_en)}`,
+             `${simplify(row.father_occupation)}\n${calculateAge(row.student_dateofbirth, row.admission_date)}\n${simplify(row.previous_school)}`,
+             simplify(row.quote_freedomfighter),
+             row.student_photo_url && row.student_photo_url.trim() && row.student_photo_url !== 'null' ? 'Photo' : 'No Photo',
+             '',
+             simplify(row.status)
+           ];
+           
+           const cellHeight = 12;
+           
+           rowData.forEach((cellData, i) => {
+             pdf.rect(xPos, yPosition, colWidths[i], cellHeight);
+             
+             if (cellData) {
+               const lines = cellData.toString().split('\n');
+               lines.forEach((line, lineIndex) => {
+                 if (lineIndex < 4) { // Limit to 4 lines per cell
+                   pdf.text(line.substring(0, 25), xPos + 1, yPosition + 3 + (lineIndex * 2.5), { maxWidth: colWidths[i] - 2 });
+                 }
+               });
+             }
+             
+             xPos += colWidths[i];
+           });
+           
+           yPosition += cellHeight;
+         });
+       });
+     });
+     
+     // Add final page number
+     pdf.setFontSize(8);
+     pdf.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 5);
+     
+     // Save the PDF
+     pdf.save(filename);
+     
+     // Restore button
+     pdfBtn.textContent = originalText;
+     pdfBtn.disabled = false;
+     
+   } catch (error) {
+     console.error('Advanced PDF generation failed:', error);
+     alert('Advanced PDF generation failed: ' + error.message);
+     
+     // Restore button on error
+     const pdfBtn = document.getElementById('pdfAdvancedBtn');
+     pdfBtn.textContent = 'Advanced PDF';
      pdfBtn.disabled = false;
    }
  }
@@ -421,10 +834,53 @@
  if(searchBox) searchBox.addEventListener('input', ()=>{ applySearch(); });
  
  const printBtn = document.getElementById('printBtn');
- if(printBtn) printBtn.addEventListener('click', ()=>{ window.print(); });
+ if(printBtn) printBtn.addEventListener('click', ()=>{ 
+   preparePrintLayout();
+   setTimeout(() => window.print(), 100);
+ });
+
+ function preparePrintLayout() {
+   // Remove any existing page break classes
+   const allRows = document.querySelectorAll('#bookTable tbody tr');
+   allRows.forEach(row => row.classList.remove('page-break-before', 'page-break-after'));
+   
+   // Natural page breaking - no forced breaks every 8 rows
+   // Instead, let CSS handle natural breaks with minimum 8 rows preference
+   const dataRows = document.querySelectorAll('#bookTable tbody tr:not(.group-row)');
+   let currentPageRowCount = 0;
+   let lastGroupRow = null;
+   
+   dataRows.forEach((row, index) => {
+     currentPageRowCount++;
+     
+     // Find if there's a group row before this data row
+     const prevElement = row.previousElementSibling;
+     if (prevElement && prevElement.classList.contains('group-row')) {
+       lastGroupRow = prevElement;
+       currentPageRowCount = 1; // Reset count after group header
+     }
+     
+     // Suggest page break after 10-12 rows for better distribution
+     if (currentPageRowCount >= 10) {
+       // Check if next few rows would be orphaned
+       const remainingRows = dataRows.length - index - 1;
+       if (remainingRows > 3) { // Don't break if only 1-3 rows left
+         row.classList.add('page-break-after');
+         currentPageRowCount = 0;
+       }
+     }
+   });
+   
+   // Add print-specific styling
+   const table = document.getElementById('bookTable');
+   table.classList.add('print-optimized');
+ }
 
  const pdfBtn = document.getElementById('pdfBtn');
  if(pdfBtn) pdfBtn.addEventListener('click', generatePDF);
+
+ const pdfAdvancedBtn = document.getElementById('pdfAdvancedBtn');
+ if(pdfAdvancedBtn) pdfAdvancedBtn.addEventListener('click', generateAdvancedPDF);
 
  window.addEventListener('DOMContentLoaded', async ()=>{ const ok = !!window.supabase; if(!ok){ console.error('Supabase lib missing'); return; } initSupabase(); });
  </script>
