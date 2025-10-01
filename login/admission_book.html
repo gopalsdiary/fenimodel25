@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="e <header>
+  <h1>Admission Book</h1>
+   </header>
+<meta charset="utf-8" />
+<title>Admission Book 2025</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+ body{ margin:0; font-family:Inter, system-ui, Arial, sans-serif; background:#f5f7fa; color:#111; }
+ header{ background:#fff; border-bottom:1px solid #e2e8f0; padding:1rem 1.25rem; }
+ .header-row{ display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-bottom:.75rem; }
+ .header-row:last-child{ margin-bottom:0; }
+ h1{ font-size:1.25rem; margin:0; min-width:180px; }
+ select, button, input[type=search]{ padding:.55rem .8rem; font-size:.9rem; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-family:inherit; min-width:120px; }
+ button{ background:#0ea5e9; color:#fff; border-color:#0284c7; cursor:pointer; font-weight:600; }
+ button:disabled{ opacity:.6; cursor:not-allowed; }
+ .status{ font-size:.85rem; color:#475569; min-width:160px; }
+ input[type=search]{ min-width:200px; }
+ main{ max-width: 1400px; margin:1rem auto 2rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.04); }
+ table{ border-collapse:collapse; width:100%; font-size:.72rem; }
+ thead th{ background:#dfeff5; padding:.5rem .4rem; text-align:left; border:1px solid #e2e8f0; font-weight:600; }
+ tbody td{ padding:.45rem .4rem; border:1px solid #eef2f5; vertical-align:top; background:#f9fbfc; }
+ tbody tr:nth-child(even) td{ background:#f3f8fa; }
+ .group-row td{ background:#f0f6f8; font-weight:600; font-size:.78rem; letter-spacing:.4px; }
+ .sticky-head thead th{ position:sticky; top:0; z-index:5; }
+ .small{ font-size:.65rem; color:#555; }
+ .toolbar-spacer{ flex:1 1 auto; }
+ .print-note{ font-size:.65rem; color:#64748b; margin-left:.75rem; }
+ @media print{ body{ background:#fff; } header{ position:sticky; top:0; } button,#searchBox{ display:none; } main{ box-shadow:none; border:none; } }
+</style>
+</head>
+<body>
+ <header>
+  <div class="header-row">
+   <h1>Admission Book</h1>
+   <select id="classYearSelect" aria-label="Class Year">
+    <option value="">Select Class Year</option>
+    <option value="class_2024">Class 2024</option>
+    <option value="class_2025">Class 2025</option>
+    <option value="class_2026">Class 2026</option>
+   </select>
+   <select id="classSelect" aria-label="Class"><option value="">Select Class</option></select>
+   <select id="sectionSelect" aria-label="Section"><option value="">Select Section</option></select>
+   <button id="loadBtn" disabled>Load Data</button>
+   <span id="status" class="status">Select class year</span>
+  </div>
+  <div class="header-row">
+   <input id="searchBox" type="search" placeholder="Search name / IID / roll" />
+   <button id="printBtn">Print</button>
+   <div style="flex:1;"></div>
+  </div>
+ </header>
+ <main>
+	<table id="bookTable" class="sticky-head">
+	 <thead>
+		<tr>
+		 <th>S.L</th>
+		 <th>ADMISSION<br>DATE<br>UID</th>
+		 <th>NAME<br>FATHER'S NAME<br>MOTHER'S NAME<br>MOBILE NO</th>
+		 <th>CLASS<br>SECTION<br>ROLL<br>SESSION</th>
+		 <th>DATE OF BIRTH<br>GENDER<br>RELIGION<br>BIRTH REG NUMBER</th>
+		 <th>VILLAGE<br>POST OFFICE<br>UPAZILLA<br>DISTRICT</th>
+		 <th>OCCUPATION<br>STUDENT AGE<br>PREVIOUS SCHOOL</th>
+		 <th>FREEDOM FIGHTER CHILD</th>
+		 <th>HEAD MASTER<br>SINE</th>
+		 <th>COMMENT</th>
+		</tr>
+	 </thead>
+	 <tbody></tbody>
+	</table>
+ </main>
+ <script>
+ const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+ const tableName = 'student_database';
+ let supabaseClient;
+ let allRows = [];
+ let currentClassYear = ''; // e.g., 'class_2025'
+ let currentClass = '';
+ let currentSection = '';
+
+ function setStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent=msg; }
+ function initSupabase(){ if(supabaseClient) return supabaseClient; supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); return supabaseClient; }
+
+ async function loadClassOptions(){
+   if(!currentClassYear){ document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; return; }
+   setStatus('Loading classes…'); initSupabase();
+   const { data, error } = await supabaseClient.from(tableName).select(currentClassYear).not(currentClassYear,'is',null);
+   if(error){ setStatus('Class load failed'); console.error(error); return; }
+   const set = new Set(); data.forEach(r=>{ const c=String(r[currentClassYear]||'').trim(); if(c) set.add(c); });
+   const list = [...set].sort((a,b)=>Number(a)-Number(b));
+   const sel = document.getElementById('classSelect'); sel.innerHTML='<option value="">Select Class</option>' + list.map(c=>`<option value="${c}">${c}</option>`).join('');
+   setStatus('Select class');
+ }
+
+ async function loadSectionOptions(){
+   if(!currentClassYear || !currentClass){ document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; return; }
+   setStatus('Loading sections…');
+   const sectionCol = currentClassYear.replace('class_', 'section_'); // class_2025 -> section_2025
+   const { data, error } = await supabaseClient.from(tableName).select(sectionCol).eq(currentClassYear, currentClass).not(sectionCol,'is',null);
+   if(error){ setStatus('Section load failed'); console.error(error); return; }
+   const set = new Set(); data.forEach(r=>{ const s=String(r[sectionCol]||'').trim(); if(s) set.add(s); });
+   const list=[...set].sort();
+   const sel=document.getElementById('sectionSelect'); sel.innerHTML='<option value="">Select Section</option>' + list.map(s=>`<option value="${s}">${s}</option>`).join('');
+   setStatus('Select section');
+ }
+
+ async function loadRows(){
+   if(!currentClassYear || !currentClass || !currentSection){ setStatus('Select class year, class & section'); return; }
+   setStatus('Loading students…');
+   const sectionCol = currentClassYear.replace('class_', 'section_'); // class_2025 -> section_2025
+   const rollCol = currentClassYear.replace('class_', 'roll_'); // class_2025 -> roll_2025
+   
+   try {
+     const { data, error } = await supabaseClient
+       .from('student_database')
+       .select(`
+         iid,admission_date,student_name_en,father_name_en,mother_name_en,father_mobile,
+         ${currentClassYear},session,student_dateofbirth,religion,birth_registration,student_gender,
+         village_en,postoffice_en,upazilla_en,district_en,father_occupation,previous_school,
+         quote_freedomfighter,status,${sectionCol},${rollCol}
+       `)
+       .eq(currentClassYear, currentClass)
+       .eq(sectionCol, currentSection)
+       .not('iid','is',null)
+       .order(rollCol,{ ascending:true });
+       
+     if(error){ 
+       setStatus('Student load failed: ' + error.message); 
+       console.error('Supabase error:', error); 
+       return; 
+     }
+     
+     allRows = data || [];
+     setStatus(`Loaded ${allRows.length} students`);
+     renderTable();
+     
+   } catch(err) {
+     setStatus('Network error: ' + err.message);
+     console.error('Network error:', err);
+   }
+ } function simplify(val){ return (val==null||val==='null'||val==='undefined')? '' : String(val); }
+
+ function calculateAge(birthDate, admissionDate) {
+   if (!birthDate || !admissionDate) return '';
+   
+   const birth = new Date(birthDate);
+   const admission = new Date(admissionDate);
+   
+   if (isNaN(birth.getTime()) || isNaN(admission.getTime())) return '';
+   
+   let years = admission.getFullYear() - birth.getFullYear();
+   let months = admission.getMonth() - birth.getMonth();
+   
+   if (months < 0) {
+     years--;
+     months += 12;
+   }
+   
+   const ageInYears = years + (months / 12);
+   return ageInYears.toFixed(1) + ' Years';
+ }
+
+ function renderTable(){
+   const tbody=document.querySelector('#bookTable tbody'); tbody.innerHTML='';
+   if(!allRows.length){ tbody.innerHTML='<tr><td colspan="10" style="text-align:center;padding:1rem;">No records</td></tr>'; setStatus('0 rows'); return; }
+   
+   // Group header row
+   if(allRows.length > 0){
+     const year = currentClassYear.replace('class_', ''); // class_2025 -> 2025
+     const groupTr = document.createElement('tr');
+     groupTr.className = 'group-row';
+     groupTr.innerHTML = `<td colspan="10" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${currentClass} || Section: ${currentSection} || ${year}</td>`;
+     tbody.appendChild(groupTr);
+   }
+   
+   allRows.forEach((r,i)=>{
+     const tr=document.createElement('tr');
+     const sectionCol = currentClassYear.replace('class_', 'section_');
+     const rollCol = currentClassYear.replace('class_', 'roll_');
+     const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
+     
+     tr.innerHTML = `
+       <td>${i+1}</td>
+       <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
+       <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
+       <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
+       <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
+       <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
+       <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
+       <td>${simplify(r.quote_freedomfighter)}</td>
+       <td></td>
+       <td>${simplify(r.status)}</td>`;
+     tbody.appendChild(tr);
+   });
+   setStatus(`${allRows.length} rows`);
+ }
+
+ function applySearch(){
+   const q = document.getElementById('searchBox').value.trim().toLowerCase();
+   if(!q){ renderTable(); return; }
+   const sectionCol = currentClassYear.replace('class_', 'section_');
+   const rollCol = currentClassYear.replace('class_', 'roll_');
+   const filtered = allRows.filter(r=>{
+     return [r.iid,r.student_name_en,r.father_name_en,r.mother_name_en,r[rollCol],r[sectionCol],r[currentClassYear]]
+       .map(v=>String(v||'').toLowerCase()).some(txt=>txt.includes(q));
+   });
+   const tbody=document.querySelector('#bookTable tbody'); tbody.innerHTML='';
+   
+   // Group header for filtered results
+   if(filtered.length > 0){
+     const year = currentClassYear.replace('class_', '');
+     const groupTr = document.createElement('tr');
+     groupTr.className = 'group-row';
+     groupTr.innerHTML = `<td colspan="10" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${currentClass} || Section: ${currentSection} || ${year} (Filtered)</td>`;
+     tbody.appendChild(groupTr);
+   }
+   
+   filtered.forEach((r,i)=>{
+     const tr=document.createElement('tr');
+     const sectionCol = currentClassYear.replace('class_', 'section_');
+     const rollCol = currentClassYear.replace('class_', 'roll_');
+     const calculatedAge = calculateAge(r.student_dateofbirth, r.admission_date);
+     tr.innerHTML = `
+       <td>${i+1}</td>
+       <td>${simplify(r.admission_date)}<br><span class="small">${simplify(r.iid)}</span></td>
+       <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
+       <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
+       <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
+       <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
+       <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
+       <td>${simplify(r.quote_freedomfighter)}</td>
+       <td></td>
+       <td>${simplify(r.status)}</td>`;
+     tbody.appendChild(tr);
+   });
+   setStatus(`${filtered.length} (filtered)`);
+ }
+
+ document.getElementById('classYearSelect').addEventListener('change', async e=>{ currentClassYear=e.target.value; currentClass=''; currentSection=''; document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear){ await loadClassOptions(); } allRows=[]; renderTable(); document.getElementById('loadBtn').disabled = !(currentClassYear && currentClass && currentSection); });
+ document.getElementById('classSelect').addEventListener('change', async e=>{ currentClass=e.target.value; currentSection=''; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear && currentClass){ await loadSectionOptions(); } allRows=[]; renderTable(); document.getElementById('loadBtn').disabled = !(currentClassYear && currentClass && currentSection); });
+ document.getElementById('sectionSelect').addEventListener('change', e=>{ currentSection=e.target.value; document.getElementById('loadBtn').disabled = !(currentClassYear && currentClass && currentSection); });
+ document.getElementById('loadBtn').addEventListener('click', loadRows);
+ 
+ // Add null checks for optional elements
+ const searchBox = document.getElementById('searchBox');
+ if(searchBox) searchBox.addEventListener('input', ()=>{ applySearch(); });
+ 
+ const printBtn = document.getElementById('printBtn');
+ if(printBtn) printBtn.addEventListener('click', ()=>{ window.print(); });
+
+ window.addEventListener('DOMContentLoaded', async ()=>{ const ok = !!window.supabase; if(!ok){ console.error('Supabase lib missing'); return; } initSupabase(); });
+ </script>
+</body>
+</html>
