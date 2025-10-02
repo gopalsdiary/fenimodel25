@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <title>Entry - Show & Edit</title>
+    <script src="./auth-check_copy.js"></script>
   <style>
     :root { --bg:#f6f8fa; --card:#ffffff; --border:#d0d7de; --accent:#0366d6; --accent-hover:#024c9e; --danger:#d73a49; --radius:6px; font-family: system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; }
     body { margin:0; background:var(--bg); color:#24292f; }
@@ -958,8 +959,6 @@
   (async ()=>{ await discoverSessionColumns(); loadClassList(); })();
   </script>
   
-  <!-- Authentication Protection - Load after page initialization -->
-  <script src="./auth-check.js"></script>
 </body>
 </html>
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supabase Authentication Dashboard</title>
+    <title>Authentication Super Admin Dashboard</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -130,7 +130,7 @@
     <div class="container">
         <div class="auth-header">
             <h1><i class="fas fa-shield-alt"></i> Dashboard</h1>
-            <p>Secure authentication with Supabase</p>
+            <p>Secure authentication Super Admin</p>
         </div>
         <!-- Login Form -->
         <div id="login-form" class="form-container">
@@ -224,8 +224,18 @@
             try{
                 const { error } = await supabase.auth.signInWithPassword({ email, password });
                 if(error) throw error;
-                showAlert(alertContainer,'Login successful! Redirecting to admin dashboard...','success');
-                setTimeout(()=>{ window.location.href='./admin-dashboard.html'; },1200);
+                
+                // Check if there's a returnTo parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const returnTo = urlParams.get('returnTo');
+                
+                if(returnTo) {
+                    showAlert(alertContainer,`Login successful! Redirecting to ${returnTo}...`,'success');
+                    setTimeout(()=>{ window.location.href = `./${returnTo}`; },1200);
+                } else {
+                    showAlert(alertContainer,'Login successful! Redirecting to admin dashboard...','success');
+                    setTimeout(()=>{ window.location.href='./admin-dashboard.html'; },1200);
+                }
             }catch(err){ showAlert(alertContainer, err.message||'Login failed'); }
             finally{ setLoading(loginBtn,false); }
         }
@@ -275,7 +285,19 @@
         forgotPasswordBtn.addEventListener('click', ()=>{ showForm(resetForm); });
         backToLoginBtn.addEventListener('click', ()=>{ showForm(loginForm); });
 
-        supabase.auth.getSession().then(({ data:{ session } })=>{ if(session){ window.location.href='./admin-dashboard.html'; } });
+        supabase.auth.getSession().then(({ data:{ session } })=>{ 
+            if(session){ 
+                // Check if there's a returnTo parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const returnTo = urlParams.get('returnTo');
+                
+                if(returnTo) {
+                    window.location.href = `./${returnTo}`;
+                } else {
+                    window.location.href='./admin-dashboard.html'; 
+                }
+            } 
+        });
         supabase.auth.onAuthStateChange((event, session)=>{ if(event==='SIGNED_IN' && session){ console.log('User signed in'); } else if(event==='SIGNED_OUT'){ showForm(loginForm); } });
 
         document.getElementById('confirmPassword').addEventListener('input', function(){ const pass=document.getElementById('signupPassword').value; const v=this.value; if(v && pass!==v){ this.classList.add('error'); this.classList.remove('success'); } else if(v && pass===v){ this.classList.add('success'); this.classList.remove('error'); } else { this.classList.remove('error','success'); } });
