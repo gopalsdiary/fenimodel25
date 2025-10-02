@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>প্রত্যয়ন তালিকা (বাংলা)</title>
-	  <script src="../login/auth-check_copy.js"></script>
+  <meta name="viewport" content="width=device-width, initial-sca        
+
+  <title>প্রত্যয়ন তালিকা </title>
 
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <!-- Kalpurush Bangla font -->
@@ -52,38 +52,17 @@
       .muted { color: #9aa5b1; }
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSR6FCD57Krj-QJLlvmKymos6jYF57RkYGishM_hEXgGmaAWDyOPuu9toXGNuEOgzBOM4ZqEeyaqSN7/pub?output=csv';
-    function getVal(row, headers, key){ const h = headers[key]; const v = h ? row[h] : ''; return v == null ? '' : String(v).trim(); }
+    // Supabase configuration
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const tableName = 'protoyon_data';
+    const studentTable = 'student_database';
+    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-    function buildHeaderMap(fields){
-      const map={};
-      const norm = s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
-      const want={
-        sl:['sl','serial','serialno','serialnumber','serial_no'],
-        name:['name_bangla','studentname','fullname'],
-        father:['father_bangla','fathername','fathersname','father_s_name','fname'],
-        mother:['mother_bangla','mothername','mothersname','m_name'],
-        roll:['roll_bangla','rollno','rollnumber'],
-        iid:['iid','id','studentid','sid','uniqueid'],
-        registrationnumber:['registrationnumber','registration number','registration','regno','reg no','reg_number'],
-        dob:['dob','dateofbirth','birthdate','date of birth'],
-        gender:['gender','sex'],
-        group:['group','grp'],
-        gpa:['gpa','gradepoint','grade point','result'],
-        sscmonth:['sscmonth','exammonth','exam month','month'],
-        session:['session','academic session','sess','sessionyear','year']
-      };
-      for(const f of fields){
-        const nf=norm(f);
-        for(const key of Object.keys(want)){
-          if(map[key]) continue;
-            if(want[key].some(w=>nf===norm(w))){ map[key]=f; }
-        }
-      }
-      return map;
-    }
+    const DEBUG = new URLSearchParams(location.search).has('debug');
+    function logDbg(...a){ if(DEBUG) console.log('[PROTOYON-LIST]', ...a); }
 
     function createRow(tr, cells){
       cells.forEach(c => { const td = document.createElement('td'); if(c && c.element) td.appendChild(c.element); else td.textContent = c ?? ''; tr.appendChild(td); });
@@ -92,152 +71,62 @@
 
     function renderTable(rows){ const tbody=document.querySelector('#tbody'); tbody.innerHTML=''; rows.forEach(r=>tbody.appendChild(r)); document.querySelector('#count').textContent=`${rows.length}`; }
 
-  function buildRows(data, headers){
-    const rows=[];
-    for(const obj of data){
-      const sl=getVal(obj, headers,'sl');
-      const name=getVal(obj, headers,'name');
-      const father=getVal(obj, headers,'father');
-      const roll=getVal(obj, headers,'roll');
-      const iid=getVal(obj, headers,'iid');
-      // Name link
-      const nameLink=document.createElement('a');
-      nameLink.className='link';
-      nameLink.textContent=name||'(No Name)';
-      const hrefBase='certificate_word.html';
-      let certHref = hrefBase;
-      if(iid) certHref = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
-      else if(sl) certHref = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
-      nameLink.href = certHref;
-      // PDF badge link (open in new tab; can be used by browser print to save as PDF)
-      const pdfLink=document.createElement('a');
-      pdfLink.className='pdf-badge';
-      pdfLink.textContent='PDF';
-      pdfLink.href=certHref + (certHref.includes('?') ? '&' : '?') + 'view=pdf';
-      pdfLink.target='_blank';
-      pdfLink.rel='noopener';
-      pdfLink.title='Open certificate (use browser Print to save as PDF)';
-      const tr=document.createElement('tr');
-      createRow(tr,[sl,{element:nameLink},father,roll,{element:pdfLink}]);
-      rows.push(tr);
+    function buildRows(data){
+      const rows=[];
+      for(const obj of data){
+        const sl = obj.protoyon_sl ?? '';
+        const name = obj.student_name_bn ?? '';
+        const father = obj.father_name_bn ?? '';
+        const iid = obj.iid ?? '';
+        const klass = obj.active_class ?? '';
+        const section = obj.active_section ?? '';
+        const roll = obj.active_roll ?? '';
+        
+        // Create PDF button for certificate
+        const pdfLink = document.createElement('a');
+        pdfLink.className = 'pdf-badge';
+        pdfLink.textContent = 'PDF';
+        pdfLink.href = `./certificate_word.html?iid=${encodeURIComponent(iid)}`;
+        pdfLink.target = '_blank';
+        pdfLink.rel = 'noopener';
+        pdfLink.title = 'Open certificate (use browser Print to save as PDF)';
+        
+        const tr=document.createElement('tr');
+        createRow(tr,[sl, name, father, iid, klass, section, roll, {element: pdfLink}]);
+        rows.push(tr);
+      }
+      return rows;
     }
-    return rows;
-  }
 
     function setupFilter(allRows){ const input=document.querySelector('#search'); const apply=()=>{ const q=input.value.toLowerCase().trim(); if(!q) return renderTable(allRows); const filtered=allRows.filter(tr=>tr.textContent.toLowerCase().includes(q)); renderTable(filtered); }; input.addEventListener('input',apply); apply(); }
 
-  function loadFromCache(){ return null; }
-  function saveCache(){ /* no-op */ }
-
-    function showRetry(msg){
-      const status=document.querySelector('#status');
-      status.textContent=msg;
-      status.classList.add('error');
-      if(!document.getElementById('retryBtn')){
-        const btn=document.createElement('button');
-        btn.id='retryBtn'; btn.textContent='Retry'; btn.style.marginLeft='.75rem'; btn.style.padding='.35rem .7rem'; btn.style.fontSize='.65rem'; btn.style.cursor='pointer'; btn.onclick=()=>{ btn.remove(); initLoad(true); };
-        status.parentElement.appendChild(btn);
+    async function loadData(){
+      const statusEl=document.querySelector('#status');
+      statusEl.classList.remove('error');
+      statusEl.textContent='Loading…';
+      try{
+        const { data, error } = await client.from(tableName)
+          .select('protoyon_sl, student_name_bn, father_name_bn, iid, active_class, active_section, active_roll')
+          .order('protoyon_sl', { ascending:false })
+          .limit(1000);
+        if(error) throw error;
+        logDbg('Fetched rows', data?.length||0);
+        const rows=buildRows(data||[]);
+        setupFilter(rows);
+        statusEl.textContent='Loaded';
+      }catch(e){
+        console.error('Load failed', e);
+        statusEl.textContent='Failed to load';
+        statusEl.classList.add('error');
+        if(!document.getElementById('retryBtn')){
+          const btn=document.createElement('button');
+          btn.id='retryBtn'; btn.textContent='Retry'; btn.style.marginLeft='.75rem'; btn.style.padding='.35rem .7rem'; btn.style.fontSize='.65rem'; btn.style.cursor='pointer'; btn.onclick=()=>{ btn.remove(); loadData(); }; statusEl.parentElement.appendChild(btn);
+        }
       }
     }
 
-    const MAX_ATTEMPTS = 3;
-    const RETRY_DELAY_MS = 900;
-    let attemptNo = 0;
-    const DEBUG = new URLSearchParams(location.search).has('debug');
-
-    function logDbg(...a){ if(DEBUG) console.log('[TL]', ...a); }
-
-    function parseAndRender(results, source){
-      const status=document.querySelector('#status');
-      if(!results || !results.data){ throw new Error('Empty results'); }
-      const fields = (results.meta && results.meta.fields) || Object.keys(results.data[0]||{});
-      const headers=buildHeaderMap(fields);
-      if(Object.keys(headers).length === 0){ throw new Error('Header map empty'); }
-      const rows=buildRows(results.data, headers);
-      setupFilter(rows);
-      status.textContent = 'Loaded';
-      if(DEBUG) status.textContent += ' ('+source+')';
-      window.__ALL_CERT_DATA = results.data;
-      window.__ALL_CERT_HEADERS = headers;
-    }
-
-    async function manualFetchFallback(){
-      logDbg('Manual fetch fallback fetching text...');
-      const res = await fetch(CSV_URL, { cache:'no-store' });
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const text = await res.text();
-      return new Promise((resolve,reject)=>{
-        Papa.parse(text, { header:true, skipEmptyLines:true, complete: r=>resolve(r), error: e=>reject(e) });
-      });
-    }
-
-    function attemptLoad(){
-      attemptNo++;
-      const status=document.querySelector('#status');
-      status.classList.remove('error');
-      status.textContent = 'Loading… (Attempt '+attemptNo+'/'+MAX_ATTEMPTS+')';
-      logDbg('Attempt', attemptNo);
-      Papa.parse(CSV_URL, {
-        download:true, header:true, skipEmptyLines:true,
-        complete:(results)=>{
-          try { parseAndRender(results, 'direct'); }
-          catch(e){
-            console.error('Primary parse render error', e);
-            if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Parse error'); }
-            // Last resort: manual fetch parse
-            manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
-              .catch(err => { console.error('Fallback failed', err); showRetry('Failed to render data'); });
-          }
-        },
-        error:(err)=>{
-          console.error('Papa error', err);
-          if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Load error'); }
-          manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
-            .catch(e2 => { console.error('Fallback fetch failed', e2); showRetry('Failed to load CSV'); });
-        }
-      });
-    }
-
-    function scheduleRetry(reason){
-      const status=document.querySelector('#status');
-      status.textContent = 'Retrying… '+reason+' ('+attemptNo+'/'+MAX_ATTEMPTS+')';
-      setTimeout(attemptLoad, RETRY_DELAY_MS * attemptNo); // backoff
-    }
-
-    function initLoad(){
-      attemptNo = 0;
-      attemptLoad();
-    }
-
-    function pronouns(gRaw){
-      const g=(gRaw||'').toLowerCase();
-      const isFem=/^(f|female|girl|she)/.test(g);
-      const isMale=/^(m|male|boy|he)/.test(g)&&!isFem;
-      const child=isFem?'Daughter':isMale?'Son':'Son/Daughter';
-      const he=isFem?'she':isMale?'he':'he / she';
-      const his=isFem?'her':isMale?'his':'his / her';
-      const him=isFem?'her':isMale?'him':'him / her';
-      return {child,he,his,him,He:he.charAt(0).toUpperCase()+he.slice(1),His:his.charAt(0).toUpperCase()+his.slice(1)};
-    }
-    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-    function buildCertHtml(r){
-      const p=pronouns(r.gender);
-      const line1=`This is to certify that <strong><u>${esc(r.name)}</u></strong> ${p.child} of ${esc(r.father)} and ${esc(r.mother)} duly passed the S.S.C Examination held in the month of ${esc(r.sscmonth)} under the Board of Intermediate and Secondary Education, Cumilla as a regular/irregular candidate in ${esc(r.group)} group and secured G.P.A ${esc(r.gpa)} on a scale of 5.00. ${p.His} S.S.C registration number is ${esc(r.registrationnumber)} & S.S.C roll is ${esc(r.roll)}.`;
-      const line2=`${p.His} date of birth is ${esc(r.dob)}. In so far as I know, ${p.he} bears a good moral character and did not take part in any activities subversive of the state or of the school during ${p.his} stay in the school.`;
-      const line3=`I wish ${p.him} every success in life.`;
-      return `<div class="cert-body">${line1}<br><br><em>${line2}</em><br><br><em>${line3}</em></div>`;
-    }
-    function generateAll(){
-      // Open new page that renders all certificates with full layout like certificate_word.html
-      const url = 'certificate_all.html';
-      window.open(url, '_blank');
-    }
     window.addEventListener('DOMContentLoaded', () => {
-      initLoad();
-      const b1=document.getElementById('genAllBtn');
-      const b2=document.getElementById('genAllBtnBottom');
-      if(b1) b1.addEventListener('click', generateAll);
-      if(b2) b2.addEventListener('click', generateAll);
+      loadData();
     });
   </script>
 </head>
@@ -249,32 +138,194 @@
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
         <span class="muted">Rows: <span id="count">0</span></span>
-        <a class="nav-btn" href="../index.html">Home</a>
-        <a class="nav-btn secondary" href="https://docs.google.com/spreadsheets/d/12RcNJHKc8oLIIjM6k65gFeT7ZFcxEam-_L_hsnnIRLQ/edit?gid=1173319178#gid=1173319178">Database for প্রত্যয়ন</a>
-  <a id="genAllBtn" class="nav-btn" href="https://forms.gle/vMqy6zQbuGqxUD5e6">প্রত্যয়ন ফরম</a>
+          <a class="nav-btn" href="../index.html">Home</a>
+  <a id="genAllBtn" class="nav-btn" href="#">প্রত্যয়ন ফরম</a>
       </div>
     </div>
   </header>
   <main>
     <div class="container">
       <div class="table-wrap">
-        <table role="table" aria-label="Testimonials">
+        <table role="table" aria-label="Protoyon List">
           <thead>
             <tr>
-              <th>SL. NO</th>
-              <th>Name (Open Certificate)</th>
-              <th>Father’s Name</th>
-              <th>Roll Number</th>
+              <th>Serial</th>
+              <th>Student Name (বাংলা)</th>
+              <th>Father Name (বাংলা)</th>
+              <th>IID</th>
+              <th>Class</th>
+              <th>Section</th>
+              <th>Roll</th>
+              <th>Certificate</th>
             </tr>
           </thead>
             <tbody id="tbody"></tbody>
         </table>
       </div>
-  <div id="allCertificates"></div>
-      <div class="toolbar" style="justify-content:center; margin-top:1.5rem;">
-        <a id="genAllBtnBottom" class="nav-btn" href="javascript:void(0)">Generate All</a>
-      </div>
     </div>
   </main>
+  
+  <!-- Modal for Protoyon Entry Form -->
+  <div id="protoyonModal" aria-hidden="true" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:200;">
+    <div role="dialog" aria-modal="true" aria-labelledby="protoyonModalTitle" style="background:#fff;border-radius:14px;max-width:560px;width:100%;padding:1rem 1.15rem;box-shadow:0 10px 38px -8px rgba(0,0,0,.35);font-family:'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;position:relative;">
+      <button type="button" id="closeProtoyonModal" aria-label="Close" style="position:absolute;top:8px;right:8px;background:#e2e8f0;border:1px solid #cbd5e1;border-radius:6px;padding:.25rem .5rem;font-size:.65rem;font-weight:600;cursor:pointer;">✕</button>
+      <h2 id="protoyonModalTitle" style="margin:.25rem 0 1rem;font-size:1rem;">নতুন প্রত্যয়ন এন্ট্রি</h2>
+      <div id="protoyonModalStatus" style="font-size:.7rem;margin:-.5rem 0 .75rem;color:#6b7280;">IID দিন এবং ছাত্রের তথ্য লোড করুন</div>
+      <form id="protoyonEntryForm" autocomplete="off">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem .85rem;align-items:start;">
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">
+            IID
+            <div style="display:flex;gap:.4rem;">
+              <input name="iid" id="iidInputProtoyon" required style="flex:1;padding:.55rem .6rem;border:1px solid #d1d5db;border-radius:8px;" />
+              <button type="button" id="loadIIDBtnProtoyon" style="background:#2563eb;color:#fff;border:0;border-radius:8px;padding:.55rem .75rem;font-size:.65rem;font-weight:600;cursor:pointer;">Load</button>
+            </div>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">ছাত্রের নাম (বাংলা)
+            <input name="student_name_bn" id="student_name_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">পিতার নাম (বাংলা)
+            <input name="father_name_bn" id="father_name_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">মাতার নাম (বাংলা)
+            <input name="mother_name_bn" id="mother_name_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">গ্রাম (বাংলা)
+            <input name="village_bn" id="village_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">ডাকঘর (বাংলা)
+            <input name="postoffice_bn" id="postoffice_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">উপজেলা (বাংলা)
+            <input name="upazilla_bn" id="upazilla_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">জেলা (বাংলা)
+            <input name="district_bn" id="district_bn" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান শ্রেণী
+            <input name="active_class" id="active_class" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান শাখা
+            <input name="active_section" id="active_section" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান রোল
+            <input name="active_roll" id="active_roll" readonly />
+          </label>
+        </div>
+        <div style="display:flex;gap:.7rem;margin-top:1rem;flex-wrap:wrap;">
+          <button type="submit" class="nav-btn" style="background:#16a34a;">Save</button>
+          <button type="button" id="resetProtoyonForm" class="nav-btn" style="background:#6b7280;">Reset</button>
+        </div>
+      </form>
+      <div style="margin-top:.9rem;font-size:.6rem;line-height:1.3;color:#6b7280;">
+        সেভ করার পর, উইন্ডো বন্ধ করুন এবং প্রয়োজনে তালিকা রিফ্রেশ করুন।
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Modal / Protoyon Entry logic
+    const modal = document.getElementById('protoyonModal');
+    const openBtn = document.getElementById('genAllBtn');
+    const closeBtn = document.getElementById('closeProtoyonModal');
+    const loadIIDBtn = document.getElementById('loadIIDBtnProtoyon');
+    const entryStatus = document.getElementById('protoyonModalStatus');
+    const form = document.getElementById('protoyonEntryForm');
+    
+    function showModal(){ 
+      modal.style.display='flex'; 
+      entryStatus.textContent='IID দিন এবং ছাত্রের তথ্য লোড করুন'; 
+      entryStatus.style.color='';
+      document.getElementById('iidInputProtoyon').focus(); 
+    }
+    function hideModal(){ modal.style.display='none'; form.reset(); }
+    
+    if(openBtn) openBtn.addEventListener('click', (e) => { e.preventDefault(); showModal(); });
+    closeBtn?.addEventListener('click', hideModal);
+    modal?.addEventListener('click', e=>{ if(e.target===modal) hideModal(); });
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.style.display==='flex') hideModal(); });
+    
+    async function loadStudent(){
+      const iid = document.getElementById('iidInputProtoyon').value.trim();
+      if(!iid){ entryStatus.textContent='IID প্রদান করুন'; entryStatus.style.color='#b91c1c'; return; }
+      entryStatus.textContent='Loading…'; entryStatus.style.color='';
+      try {
+        const { data, error } = await client.from(studentTable).select('*').eq('iid', iid).limit(1);
+        if(error) throw error;
+        if(!data || !data.length){ entryStatus.textContent='পাওয়া যায়নি'; entryStatus.style.color='#b91c1c'; return; }
+        const row = data[0];
+        
+        // Map fields from student_database to form
+        document.getElementById('student_name_bn').value = row.student_name_bn || row.name_bn || '';
+        document.getElementById('father_name_bn').value = row.father_name_bn || row.father_bn || '';
+        document.getElementById('mother_name_bn').value = row.mother_name_bn || row.mother_bn || '';
+        document.getElementById('village_bn').value = row.village_bn || row.village || '';
+        document.getElementById('postoffice_bn').value = row.postoffice_bn || row.postoffice || '';
+        document.getElementById('upazilla_bn').value = row.upazilla_bn || row.upazilla || '';
+        document.getElementById('district_bn').value = row.district_bn || row.district || '';
+        document.getElementById('active_class').value = row.active_class || row.class || '';
+        document.getElementById('active_section').value = row.active_section || row.section || '';
+        document.getElementById('active_roll').value = row.active_roll || row.roll || '';
+        
+        entryStatus.textContent='তথ্য লোড হয়েছে। সেভ করুন।';
+      } catch(e){ 
+        console.error(e); 
+        entryStatus.textContent='লোড ব্যর্থ'; 
+        entryStatus.style.color='#b91c1c'; 
+      }
+    }
+    
+    loadIIDBtn?.addEventListener('click', loadStudent);
+    document.getElementById('iidInputProtoyon')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); loadStudent(); }});
+    document.getElementById('resetProtoyonForm')?.addEventListener('click', ()=>{ 
+      const keepIID=document.getElementById('iidInputProtoyon').value; 
+      form.reset(); 
+      document.getElementById('iidInputProtoyon').value=keepIID; 
+      entryStatus.textContent='ফর্ম রিসেট'; 
+      entryStatus.style.color='';
+    });
+    
+    form?.addEventListener('submit', async e=>{
+      e.preventDefault();
+      entryStatus.textContent='সেভ করা হচ্ছে…'; entryStatus.style.color='';
+      const payload = {
+        iid: form.iid.value.trim(),
+        student_name_bn: form.student_name_bn.value.trim(),
+        father_name_bn: form.father_name_bn.value.trim(),
+        mother_name_bn: form.mother_name_bn.value.trim(),
+        village_bn: form.village_bn.value.trim(),
+        postoffice_bn: form.postoffice_bn.value.trim(),
+        upazilla_bn: form.upazilla_bn.value.trim(),
+        district_bn: form.district_bn.value.trim(),
+        active_class: form.active_class.value.trim(),
+        active_section: form.active_section.value.trim(),
+        active_roll: form.active_roll.value.trim()
+      };
+      
+      if(!payload.iid){ entryStatus.textContent='IID প্রয়োজন'; entryStatus.style.color='#b91c1c'; return; }
+      
+      try {
+        // Check if already exists
+        const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
+        if(existErr) throw existErr;
+        if(existing && existing.length){ entryStatus.textContent='ইতিমধ্যে আছে (iid)'; entryStatus.style.color='#b91c1c'; return; }
+        
+        const { data: inserted, error } = await client.from(tableName).insert(payload).select('protoyon_sl').single();
+        if(error) throw error;
+        
+        entryStatus.textContent='সেভ হয়েছে ✔'; entryStatus.style.color='#15803d';
+        // Auto-close modal and refresh data
+        setTimeout(()=>{ 
+          try{ 
+            hideModal(); 
+            loadData(); // Refresh the list
+          }catch(_e){} 
+        }, 800);
+      } catch(err){ 
+        console.error(err); 
+        entryStatus.textContent='সেভ ব্যর্থ'; 
+        entryStatus.style.color='#b91c1c'; 
+      }
+    });
+  </script>
 </body>
 </html>

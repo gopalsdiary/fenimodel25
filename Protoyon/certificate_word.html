@@ -6,7 +6,7 @@
   <title>Transfer Certificate (Image)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://f    function renderRecord(rec){om/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
   <!-- Kalpurush Bangla font -->
   <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
   <style>
@@ -107,94 +107,43 @@
   .overlay-text, .field { color: #e5e7eb; }
     }
   </style>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script defer src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
 <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSR6FCD57Krj-QJLlvmKymos6jYF57RkYGishM_hEXgGmaAWDyOPuu9toXGNuEOgzBOM4ZqEeyaqSN7/pub?output=csv';
-  // v3: sessionStorage only, 1 minute TTL, parsed rows + fields
-  // Cache disabled: always fetch fresh data
+    // Supabase configuration
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const tableName = 'protoyon_data';
+    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-
-  const CSV_CACHE_KEY = null;
-  const CSV_CACHE_TTL_MS = 0;
-  const STORAGE = { getItem(){ return null; }, setItem(){} };
-
-    const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    function normalizeFieldMap(fields){ const m = {}; (fields||[]).forEach(f => { if (!f) return; m[String(f).toLowerCase().trim()] = f; }); return m; }
-    function findHeaderByAliases(fieldMap, aliases){ const keys = Object.keys(fieldMap); for (const a of aliases){ const t = norm(a); const k = keys.find(x => norm(x)===t || norm(x).includes(t)); if (k) return fieldMap[k]; } return null; }
-    function buildCsvKeyMap(fieldMap){
-      const alias = {
-  name: ['name','student name','studentname','full name','fullname'],
-  father: ['father','father name','fathers name','guardian','parent'],
-  mother: ['mother','mother name','mothers name'],
-  roll: ['roll','roll no','roll number','rollno','roll_no'],
-  registrationnumber: ['registration number','registration','reg no','regno','registration no','registrationno','registration'],
-  dob: ['dob','date of birth','birth date','dateofbirth'],
-    iid: ['iid','id','student id','studentid','student-id','sid','s id','s.i.d','school_iid','school iid','schoolid','school-id','sch_iid','sch iid','uniqueid','unique id','unique_id','studentcode','student code','student_code','stu_id','studid'],
-  sl: ['sl','serial','serial no','serial number','serialno','sl no','slno','sl.','s.l','s.l.'],
-  issue_date: ['date','issue date','certificate date'],
-  issueby: ['issueby','issuedby','issued by','issued','issue by','issue-by','issuedbyname','issued name','issuedname'],
-  gender: ['gender','sex'],
-  group: ['group','grp','subject group'],
-  gpa: ['gpa','grade point','gradepoint','result','g.p.a'],
-  sscmonth: ['sscmonth','exam month','ssc exam month','month','exammonth'],
-  session: ['session','academic session','sess','session year','exam session','year'],
-  year: ['year','yr','exam year','passing year','issue year','issue_year','session_year','year of issue'],
-  // Bangla fields
-  name_bangla: ['name_bangla','name (bangla)','student name bangla','name bn','name_bn','bn_name','student_name_bangla'],
-  father_bangla: ['father_bangla','father (bangla)','father name bangla','bn_father','father_bn','fathers_name_bangla'],
-  mother_bangla: ['mother_bangla','mother (bangla)','mother name bangla','bn_mother','mother_bn','mothers_name_bangla'],
-  village_bangla: ['village_bangla','gram_bangla','village (bangla)','gram','gram bn','gram_bn'],
-  postoffice_bangla: ['postoffice_bangla','post office bangla','dakghor_bangla','dakghor bangla','postoffice (bangla)','dakghar_bangla'],
-  upazila_bangla: ['upazila_bangla','upazilla_bangla','upozila_bangla','upazila (bangla)','thana_bangla'],
-  zilla_bangla: ['zilla_bangla','district_bangla','zilla (bangla)','jila_bangla'],
-  class_bangla: ['class_bangla','class (bangla)','shreni_bangla','class_bn'],
-  shift_bangla: ['shift_bangla','section_bangla','shakha_bangla','section (bangla)','shift (bangla)'],
-  roll_bangla: ['roll_bangla','roll no bangla','roll_bn','roll (bangla)']
-      };
-      const csvMap = {};
-      for (const key of Object.keys(alias)){ const hdr = findHeaderByAliases(fieldMap, alias[key]); if (hdr) csvMap[key] = hdr; }
-      return csvMap;
-    }
-    function getVal(row, csvMap, key){ const hdr = csvMap[key]; const v = hdr ? row[hdr] : undefined; return v == null ? '' : String(v).trim(); }
     function byParam(n){ return new URLSearchParams(location.search).get(n) || ''; }
 
     function defaultDate(raw){ if (raw) return raw; const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); return `${dd}-${mm}-${yyyy}`; }
 
-    function buildRecord(row, csvMap){
+    function buildRecord(row){
       return {
-        name: getVal(row, csvMap, 'name'),
-        father: getVal(row, csvMap, 'father'),
-        mother: getVal(row, csvMap, 'mother'),
-  roll: getVal(row, csvMap, 'roll'),
-        registrationnumber: getVal(row, csvMap, 'registrationnumber') || getVal(row, csvMap, 'registration'),
-        dob: getVal(row, csvMap, 'dob'),
-        iid: getVal(row, csvMap, 'iid'),
-  sl: getVal(row, csvMap, 'sl'),
-  issue_date: getVal(row, csvMap, 'issue_date'),
-  year: getVal(row, csvMap, 'year'),
-  date: getVal(row, csvMap, 'issue_date') || defaultDate(''),
-  issueby: getVal(row, csvMap, 'issueby'),
-  gender: getVal(row, csvMap, 'gender'),
-  group: getVal(row, csvMap, 'group'),
-  gpa: getVal(row, csvMap, 'gpa'),
-  sscmonth: getVal(row, csvMap, 'sscmonth'),
-  session: getVal(row, csvMap, 'session'),
-  // Bangla fields
-  name_bangla: getVal(row, csvMap, 'name_bangla'),
-  father_bangla: getVal(row, csvMap, 'father_bangla'),
-  mother_bangla: getVal(row, csvMap, 'mother_bangla'),
-  village_bangla: getVal(row, csvMap, 'village_bangla'),
-  postoffice_bangla: getVal(row, csvMap, 'postoffice_bangla'),
-  upazila_bangla: getVal(row, csvMap, 'upazila_bangla'),
-  zilla_bangla: getVal(row, csvMap, 'zilla_bangla'),
-  class_bangla: getVal(row, csvMap, 'class_bangla'),
-  shift_bangla: getVal(row, csvMap, 'shift_bangla'),
-  roll_bangla: getVal(row, csvMap, 'roll_bangla'),
+        name: row.student_name_bn || '',
+        father: row.father_name_bn || '',
+        mother: row.mother_name_bn || '',
+        roll: row.active_roll || '',
+        iid: row.iid || '',
+        sl: row.protoyon_sl || '',
+        issue_date: row.created_at ? new Date(row.created_at).toLocaleDateString('bn-BD') : '',
+        date: row.created_at ? new Date(row.created_at).toLocaleDateString('bn-BD') : defaultDate(''),
+        // Bangla fields - direct mapping from protoyon_data
+        name_bangla: row.student_name_bn || '',
+        father_bangla: row.father_name_bn || '',
+        mother_bangla: row.mother_name_bn || '',
+        village_bangla: row.village_bn || '',
+        postoffice_bangla: row.postoffice_bn || '',
+        upazila_bangla: row.upazilla_bn || '',
+        zilla_bangla: row.district_bn || '',
+        class_bangla: row.active_class || '',
+        shift_bangla: row.active_section || '',
+        roll_bangla: row.active_roll || '',
       };
     }
 
@@ -239,12 +188,11 @@
       const params = new URLSearchParams(location.search);
       const iidParam = (params.get('iid')||'').trim();
       const slParam = (params.get('sl')||'').trim();
-      const ukParam = (params.get('uk')||'').trim(); // format: iid_sl
-      const regParam = (params.get('reg')||params.get('registration')||'').trim();
       const DEBUG = params.has('debug');
       function logDbg(...a){ if(DEBUG) console.log('[CERT]', ...a); }
       const status = document.getElementById('status');
       status.textContent = 'Loading…';
+      
       function ensureDebugBox(){
         let box = document.getElementById('debugInfo');
         if(!box){
@@ -256,138 +204,114 @@
         }
         return box;
       }
-      loadCsvData((results) => {
+      
+      loadProtoyonData((data) => {
         try {
-          const fieldMap = normalizeFieldMap(results.meta.fields);
-          const csvMap = buildCsvKeyMap(fieldMap);
-          const iidHeader = csvMap.iid || fieldMap['iid'] || fieldMap['id'];
-          const slHeader = csvMap.sl || fieldMap['sl'] || fieldMap['serial'];
-          const regHeader = csvMap.registrationnumber || fieldMap['registration number'] || fieldMap['registration'];
-          let candidates = results.data.slice();
-          logDbg('Total rows', candidates.length, 'Params',{iidParam,slParam,ukParam,regParam});
+          let candidates = data.slice();
+          logDbg('Total rows', candidates.length, 'Params', {iidParam, slParam});
+          
           const valueEquals = (a,b)=>{
-            if(a==null || b==null) return false; const A=String(a).trim(); const B=String(b).trim();
-            if(!A||!B) return false; if(A===B) return true; // ignore leading zeros numeric
-              // Case-insensitive
-              if(A.toLowerCase()===B.toLowerCase()) return true;
-              // Strip leading zeros if both numeric
-              if(/^\d+$/.test(A) && /^\d+$/.test(B)) return A.replace(/^0+/,'') === B.replace(/^0+/,'');
-              // Normalized (alphanumeric only)
-              const NA = A.toLowerCase().replace(/[^a-z0-9]/g,'');
-              const NB = B.toLowerCase().replace(/[^a-z0-9]/g,'');
-              if(NA && NA===NB) return true;
+            if(a==null || b==null) return false; 
+            const A=String(a).trim(); 
+            const B=String(b).trim();
+            if(!A||!B) return false; 
+            if(A===B) return true; 
+            // Case-insensitive
+            if(A.toLowerCase()===B.toLowerCase()) return true;
+            // Strip leading zeros if both numeric
+            if(/^\d+$/.test(A) && /^\d+$/.test(B)) return A.replace(/^0+/,'') === B.replace(/^0+/,'');
             return false;
           };
+          
           const debugSteps = [];
-          // If uk present, split and narrow early
-          if(ukParam){
-            const [ukIid, ukSl] = ukParam.split('_');
-            candidates = candidates.filter(r => {
-              const riid = String(iidHeader ? r[iidHeader] : '').trim();
-              const rsl = String(slHeader ? r[slHeader] : '').trim();
-              return (ukIid?valueEquals(riid,ukIid):true) && (ukSl?valueEquals(rsl,ukSl):true);
-            });
-          }
+          
           if(iidParam){
             const before = candidates.length;
-            candidates = candidates.filter(r => valueEquals(iidHeader ? r[iidHeader] : '', iidParam));
+            candidates = candidates.filter(r => valueEquals(r.iid, iidParam));
             debugSteps.push(`Filter iid=${iidParam} -> ${before} => ${candidates.length}`);
           }
-            if(slParam){
+          
+          if(slParam){
             const before = candidates.length;
-            candidates = candidates.filter(r => valueEquals(slHeader ? r[slHeader] : '', slParam));
+            candidates = candidates.filter(r => valueEquals(r.protoyon_sl, slParam));
             debugSteps.push(`Filter sl=${slParam} -> ${before} => ${candidates.length}`);
           }
-          if(!iidParam && !slParam && regParam && regHeader){
-            const before = candidates.length;
-            candidates = candidates.filter(r => valueEquals(r[regHeader], regParam));
-            debugSteps.push(`Filter reg=${regParam} -> ${before} => ${candidates.length}`);
-          }
-          // If still multiple, try roll+class params
-          if(candidates.length > 1){
-            const rollParam = (params.get('roll')||'').trim();
-            const classParam = (params.get('class')||params.get('cls')||'').trim();
-            const rollHeader = csvMap.roll || fieldMap['roll'];
-            const classHeader = csvMap.class || fieldMap['class'];
-            if(rollParam){ const before=candidates.length; candidates = candidates.filter(r => valueEquals(rollHeader? r[rollHeader]: '', rollParam)); debugSteps.push(`Narrow roll=${rollParam} -> ${before} => ${candidates.length}`); }
-            if(classParam){ const before=candidates.length; candidates = candidates.filter(r => valueEquals(classHeader? r[classHeader]: '', classParam)); debugSteps.push(`Narrow class=${classParam} -> ${before} => ${candidates.length}`); }
-          }
-          if(candidates.length === 0){
-            // Fallback: loosen to partial name/roll match if iid supplied
-            const nameParam = (params.get('name')||'').trim().toLowerCase();
-            if(nameParam){
-              const nameHeader = csvMap.name || fieldMap['name'];
-              const loose = results.data.filter(r => String(nameHeader? r[nameHeader]: '').toLowerCase().includes(nameParam));
-              if(loose.length){ candidates = [loose[0]]; logDbg('Loose name fallback used', loose.length,'matches'); debugSteps.push(`Loose name fallback '${nameParam}' matches=${loose.length}`); }
-            }
-          }
-          if(candidates.length === 0){
-            // Extra fallback: roll only match (if provided) across all rows
-            const rollParamExtra = (params.get('roll')||'').trim();
-            if(rollParamExtra){
-              const rollHeader = csvMap.roll || fieldMap['roll'];
-              const rollMatches = results.data.filter(r => valueEquals(rollHeader? r[rollHeader]: '', rollParamExtra));
-              if(rollMatches.length === 1){ candidates = [rollMatches[0]]; debugSteps.push(`Roll-only fallback used roll=${rollParamExtra}`); }
-            }
-          }
+          
           if(candidates.length === 0){
             status.textContent = 'No record found';
             status.classList.add('error');
-            logDbg('First row sample', results.data[0]);
+            logDbg('First row sample', data[0]);
             const box = ensureDebugBox();
-            const first = results.data[0] || {};
-            function distinctVals(header){
-              if(!header) return [];
+            const first = data[0] || {};
+            function distinctVals(field){
               const set = new Set();
-              for(const r of results.data){
-                let v = r[header];
-                if(v==null) continue; v=String(v).trim(); if(!v) continue; set.add(v);
+              for(const r of data){
+                let v = r[field];
+                if(v==null) continue; 
+                v=String(v).trim(); 
+                if(!v) continue; 
+                set.add(v);
                 if(set.size>30) break;
               }
               return Array.from(set).slice(0,30);
             }
-            const iidVals = distinctVals(iidHeader);
-            const slVals = distinctVals(slHeader);
-            const regVals = distinctVals(regHeader);
-            const rollHeader = csvMap.roll || fieldMap['roll'];
-            const rollVals = distinctVals(rollHeader);
+            const iidVals = distinctVals('iid');
+            const slVals = distinctVals('protoyon_sl');
             box.innerHTML = '<strong style="font-size:13px;">Debug Info – No Match</strong><br>'
-              + 'Params: ' + JSON.stringify({iidParam,slParam,ukParam,regParam}, null, 2) + '<br>'
-              + 'Mapped headers: ' + JSON.stringify(csvMap, null, 2) + '<br>'
-              + 'Available headers: ' + Object.keys(fieldMap).join(', ') + '<br>'
+              + 'Params: ' + JSON.stringify({iidParam,slParam}, null, 2) + '<br>'
               + 'First row sample: ' + JSON.stringify(first, null, 2) + '<br>'
               + 'Distinct iid values (sample): ' + (iidVals.join(', ')||'(none)') + '<br>'
               + 'Distinct sl values (sample): ' + (slVals.join(', ')||'(none)') + '<br>'
-              + 'Distinct registration values (sample): ' + (regVals.join(', ')||'(none)') + '<br>'
-              + 'Distinct roll values (sample): ' + (rollVals.join(', ')||'(none)') + '<br>'
               + 'Debug steps: ' + debugSteps.join(' | ');
             return;
           }
+          
           if(DEBUG){
             const box = ensureDebugBox();
-            const first = results.data[0] || {};
+            const first = data[0] || {};
             box.innerHTML = '<strong style="font-size:13px;">Debug Info</strong><br>'
-              + 'Params: ' + JSON.stringify({iidParam,slParam,ukParam,regParam}, null, 2) + '<br>'
-              + 'Mapped headers: ' + JSON.stringify(csvMap, null, 2) + '<br>'
-              + 'Available headers: ' + Object.keys(fieldMap).join(', ') + '<br>'
+              + 'Params: ' + JSON.stringify({iidParam,slParam}, null, 2) + '<br>'
               + 'First row sample: ' + JSON.stringify(first, null, 2) + '<br>'
               + 'Debug steps: ' + debugSteps.join(' | ');
           }
-          if(candidates.length > 1){ status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; status.classList.add('warn'); }
+          
+          if(candidates.length > 1){ 
+            status.textContent = 'Ambiguous ('+candidates.length+'). Using first'; 
+            status.classList.add('warn'); 
+          }
+          
           const row = candidates[0];
-          const rec = buildRecord(row, csvMap);
+          const rec = buildRecord(row);
           // Unique key for QR & share
           rec.uk = [rec.iid||'', rec.sl||''].filter(Boolean).join('_');
           renderRecord(rec);
           status.textContent = 'Ready';
           if(DEBUG) status.textContent += ' (debug)';
-        } catch(e){ console.error(e); status.textContent='Failed to render'; status.classList.add('error'); }
+        } catch(e){ 
+          console.error(e); 
+          status.textContent='Failed to render'; 
+          status.classList.add('error'); 
+        }
       }, (err) => {
         console.error(err);
-        status.textContent = 'Failed to load CSV';
+        status.textContent = 'Failed to load data';
         status.classList.add('error');
       });
     });
+
+    // Load data from Supabase protoyon_data table
+    async function loadProtoyonData(onSuccess, onError){
+      try {
+        const { data, error } = await client.from(tableName)
+          .select('*')
+          .order('protoyon_sl', { ascending: false });
+        
+        if(error) throw error;
+        onSuccess(data || []);
+      } catch(e) {
+        onError(e);
+      }
+    }
 
     function renderRecord(rec){
       // If SL missing, warn but still show certificate
