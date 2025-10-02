@@ -52,6 +52,10 @@
   .btn:hover{background:#555}
   .btn.secondary{background:#f0f0f0;color:#666;border:1px solid #e0e0e0}
   .btn.secondary:hover{background:#e0e0e0}
+  .btn.orange{background:#ff8c00;color:#fff}
+  .btn.orange:hover{background:#e07600}
+  .btn.green{background:#28a745;color:#fff;cursor:default}
+  .btn.green:hover{background:#28a745}
   
   .notice{margin-top:16px;color:#d32f2f;font-weight:500}
   .notice.success{color:#2e7d32}
@@ -96,6 +100,7 @@
     <div id="fields" class="form-grid"></div>
 
     <div class="actions">
+      <button id="idCardBtn" class="btn orange">Apply For ID Card</button>
       <button id="updateBtn" class="btn">Update</button>
     </div>
     <div id="notice" class="notice"></div>
@@ -116,6 +121,7 @@
     const infoEl = document.getElementById('info');
     const noticeEl = document.getElementById('notice');
     const updateBtn = document.getElementById('updateBtn');
+    const idCardBtn = document.getElementById('idCardBtn');
     const backBtn = document.getElementById('backBtn');
 
     // Store field order mapping
@@ -124,6 +130,84 @@
     let fieldGroups = [];
 
     updateBtn.addEventListener('click', saveChanges);
+    idCardBtn.addEventListener('click', handleIdCardApplication);
+
+    // Check ID card application status on page load
+    if (iid) {
+      checkIdCardStatus(iid);
+    }
+
+    // Check if IID already exists in idcard_data table
+    async function checkIdCardStatus(iid) {
+      try {
+        const { data, error } = await supabase
+          .from('idcard_data')
+          .select('iid')
+          .eq('iid', Number(iid))
+          .limit(1);
+
+        if (error) {
+          console.error('Error checking ID card status:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Already applied
+          idCardBtn.textContent = 'Already Applied';
+          idCardBtn.className = 'btn green';
+          idCardBtn.disabled = true;
+        } else {
+          // Not applied yet
+          idCardBtn.textContent = 'Apply For ID Card';
+          idCardBtn.className = 'btn orange';
+          idCardBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Error checking ID card status:', error);
+      }
+    }
+
+    // Handle ID card application
+    async function handleIdCardApplication() {
+      if (!iid) {
+        alert('IID not found');
+        return;
+      }
+
+      // Show confirmation popup
+      const confirmed = confirm('আপনি কি ID Card এর জন্য আবেদন করতে চান?');
+      if (!confirmed) {
+        return;
+      }
+
+      try {
+        // Disable button during submission
+        idCardBtn.disabled = true;
+        idCardBtn.textContent = 'Submitting...';
+
+        const { data, error } = await supabase
+          .from('idcard_data')
+          .insert([{ iid: Number(iid) }]);
+
+        if (error) {
+          throw error;
+        }
+
+        // Success - update button state
+        idCardBtn.textContent = 'Already Applied';
+        idCardBtn.className = 'btn green';
+        alert('ID Card এর জন্য সফলভাবে আবেদন করা হয়েছে!');
+
+      } catch (error) {
+        console.error('Error applying for ID card:', error);
+        alert('Error: ' + (error.message || error));
+        
+        // Reset button state on error
+        idCardBtn.textContent = 'Apply For ID Card';
+        idCardBtn.className = 'btn orange';
+        idCardBtn.disabled = false;
+      }
+    }
 
     // Load field order from CSV
     async function loadFieldOrder(){
