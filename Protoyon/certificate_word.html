@@ -123,6 +123,46 @@
 
     function defaultDate(raw){ if (raw) return raw; const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); return `${dd}-${mm}-${yyyy}`; }
 
+    // Convert English numbers to Bengali
+    function englishToBengaliNumber(num) {
+      if (!num) return '';
+      const englishDigits = '0123456789';
+      const bengaliDigits = '০১২৩৪৫৬৭৮৯';
+      return String(num).replace(/[0-9]/g, digit => bengaliDigits[englishDigits.indexOf(digit)]);
+    }
+
+    // Convert class numbers to Bengali with suffix
+    function convertClassToBengali(classNum) {
+      if (!classNum) return '';
+      const num = String(classNum).trim();
+      
+      // Map for class numbers to Bengali
+      const classMap = {
+        '6': '৬ষ্ঠ',
+        '7': '৭ম',
+        '8': '৮ম', 
+        '9': '৯ম',
+        '10': '১০ম'
+      };
+      
+      return classMap[num] || englishToBengaliNumber(num);
+    }
+
+    // Convert section names to Bengali
+    function convertSectionToBengali(section) {
+      if (!section) return '';
+      const sectionName = String(section).trim().toUpperCase();
+      
+      // Map for section names to Bengali
+      const sectionMap = {
+        'SHAPLA': 'শাপলা',
+        'GOLAP': 'গোলাপ', 
+        'MORNING': 'প্রভাতী'
+      };
+      
+      return sectionMap[sectionName] || section;
+    }
+
     function buildRecord(row){
       return {
         name: row.student_name_bn || '',
@@ -133,7 +173,7 @@
         sl: row.protoyon_sl || '',
         issue_date: row.created_at ? new Date(row.created_at).toLocaleDateString('bn-BD') : '',
         date: row.created_at ? new Date(row.created_at).toLocaleDateString('bn-BD') : defaultDate(''),
-        // Bangla fields - direct mapping from protoyon_data
+        // Bangla fields - direct mapping from protoyon_data with number conversion
         name_bangla: row.student_name_bn || '',
         father_bangla: row.father_name_bn || '',
         mother_bangla: row.mother_name_bn || '',
@@ -141,9 +181,9 @@
         postoffice_bangla: row.postoffice_bn || '',
         upazila_bangla: row.upazilla_bn || '',
         zilla_bangla: row.district_bn || '',
-        class_bangla: row.active_class || '',
-        shift_bangla: row.active_section || '',
-        roll_bangla: row.active_roll || '',
+        class_bangla: convertClassToBengali(row.active_class),
+        shift_bangla: convertSectionToBengali(row.active_section),
+        roll_bangla: englishToBengaliNumber(row.active_roll),
       };
     }
 
@@ -327,7 +367,9 @@
       const infoBox = document.getElementById('infoBox');
         if(infoBox){
           const yr = rec.year || (rec.issue_date && (String(rec.issue_date).match(/\d{4}/)||[])[0]) || String(new Date().getFullYear());
-          const slHtml = rec.sl ? ('স্বারক নং - ' + escHtml(rec.sl + '/' + yr)) : '';
+          const slBengali = rec.sl ? englishToBengaliNumber(rec.sl) : '';
+          const yearBengali = englishToBengaliNumber(yr);
+          const slHtml = rec.sl ? ('স্বারক নং - ' + escHtml(slBengali + '/' + yearBengali)) : '';
           const dateHtml = rec.issue_date ? ('তারিখ : ' + escHtml(rec.issue_date) +'  ইং') : '';
           const firstRow = (slHtml || dateHtml)
             ? `<div class="row"><span class="left">${slHtml}</span><span class="right">${dateHtml}</span></div>`

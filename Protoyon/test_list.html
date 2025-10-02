@@ -91,8 +91,27 @@
         pdfLink.rel = 'noopener';
         pdfLink.title = 'Open certificate (use browser Print to save as PDF)';
         
+        // Create Edit button
+        const editLink = document.createElement('a');
+        editLink.className = 'link';
+        editLink.textContent = 'Edit';
+        editLink.href = '#';
+        editLink.title = 'Edit this record';
+        editLink.onclick = (e) => {
+          e.preventDefault();
+          editRecord(obj);
+        };
+        
+        // Create container for both buttons
+        const buttonContainer = document.createElement('div');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '0.5rem';
+        buttonContainer.style.alignItems = 'center';
+        buttonContainer.appendChild(editLink);
+        buttonContainer.appendChild(pdfLink);
+        
         const tr=document.createElement('tr');
-        createRow(tr,[sl, name, father, iid, klass, section, roll, {element: pdfLink}]);
+        createRow(tr,[sl, name, father, iid, klass, section, roll, {element: buttonContainer}]);
         rows.push(tr);
       }
       return rows;
@@ -106,7 +125,7 @@
       statusEl.textContent='Loading…';
       try{
         const { data, error } = await client.from(tableName)
-          .select('protoyon_sl, student_name_bn, father_name_bn, iid, active_class, active_section, active_roll')
+          .select('*')
           .order('protoyon_sl', { ascending:false })
           .limit(1000);
         if(error) throw error;
@@ -128,6 +147,32 @@
     window.addEventListener('DOMContentLoaded', () => {
       loadData();
     });
+
+    // Function to edit an existing record
+    function editRecord(record) {
+      // Fill the form with existing data
+      document.getElementById('iidInputProtoyon').value = record.iid || '';
+      document.getElementById('student_name_bn').value = record.student_name_bn || '';
+      document.getElementById('father_name_bn').value = record.father_name_bn || '';
+      document.getElementById('mother_name_bn').value = record.mother_name_bn || '';
+      document.getElementById('village_bn').value = record.village_bn || '';
+      document.getElementById('postoffice_bn').value = record.postoffice_bn || '';
+      document.getElementById('upazilla_bn').value = record.upazilla_bn || '';
+      document.getElementById('district_bn').value = record.district_bn || '';
+      document.getElementById('active_class').value = record.active_class || '';
+      document.getElementById('active_section').value = record.active_section || '';
+      document.getElementById('active_roll').value = record.active_roll || '';
+      
+      // Store the original record for update
+      window.editingRecord = record;
+      
+      // Update modal title and status
+      document.getElementById('protoyonModalTitle').textContent = 'প্রত্যয়ন এন্ট্রি সম্পাদনা';
+      document.getElementById('protoyonModalStatus').textContent = 'তথ্য সম্পাদনা করুন এবং সেভ করুন';
+      
+      // Show the modal
+      showModal();
+    }
   </script>
 </head>
 <body>
@@ -181,34 +226,34 @@
             </div>
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">ছাত্রের নাম (বাংলা)
-            <input name="student_name_bn" id="student_name_bn" readonly />
+            <input name="student_name_bn" id="student_name_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">পিতার নাম (বাংলা)
-            <input name="father_name_bn" id="father_name_bn" readonly />
+            <input name="father_name_bn" id="father_name_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">মাতার নাম (বাংলা)
-            <input name="mother_name_bn" id="mother_name_bn" readonly />
+            <input name="mother_name_bn" id="mother_name_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">গ্রাম (বাংলা)
-            <input name="village_bn" id="village_bn" readonly />
+            <input name="village_bn" id="village_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">ডাকঘর (বাংলা)
-            <input name="postoffice_bn" id="postoffice_bn" readonly />
+            <input name="postoffice_bn" id="postoffice_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">উপজেলা (বাংলা)
-            <input name="upazilla_bn" id="upazilla_bn" readonly />
+            <input name="upazilla_bn" id="upazilla_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">জেলা (বাংলা)
-            <input name="district_bn" id="district_bn" readonly />
+            <input name="district_bn" id="district_bn" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান শ্রেণী
-            <input name="active_class" id="active_class" readonly />
+            <input name="active_class" id="active_class" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান শাখা
-            <input name="active_section" id="active_section" readonly />
+            <input name="active_section" id="active_section" />
           </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান রোল
-            <input name="active_roll" id="active_roll" readonly />
+            <input name="active_roll" id="active_roll" />
           </label>
         </div>
         <div style="display:flex;gap:.7rem;margin-top:1rem;flex-wrap:wrap;">
@@ -231,13 +276,41 @@
     const entryStatus = document.getElementById('protoyonModalStatus');
     const form = document.getElementById('protoyonEntryForm');
     
+    // Function to toggle field editability
+    function setFieldsEditable(editable) {
+      const fields = ['student_name_bn', 'father_name_bn', 'mother_name_bn', 'village_bn', 'postoffice_bn', 'upazilla_bn', 'district_bn', 'active_class', 'active_section', 'active_roll'];
+      fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.readOnly = !editable;
+          field.style.backgroundColor = editable ? '#fff' : '#f9fafb';
+          field.style.cursor = editable ? 'text' : 'default';
+        }
+      });
+    }
+
     function showModal(){ 
       modal.style.display='flex'; 
-      entryStatus.textContent='IID দিন এবং ছাত্রের তথ্য লোড করুন'; 
+      // Only reset status if not editing
+      if (!window.editingRecord) {
+        entryStatus.textContent='IID দিন এবং ছাত্রের তথ্য লোড করুন';
+        document.getElementById('protoyonModalTitle').textContent = 'নতুন প্রত্যয়ন এন্ট্রি';
+        setFieldsEditable(false); // Fields readonly for new entry until data is loaded
+      } else {
+        setFieldsEditable(true); // All fields editable in edit mode
+      }
       entryStatus.style.color='';
       document.getElementById('iidInputProtoyon').focus(); 
     }
-    function hideModal(){ modal.style.display='none'; form.reset(); }
+    
+    function hideModal(){ 
+      modal.style.display='none'; 
+      form.reset(); 
+      // Clear editing state
+      window.editingRecord = null;
+      // Reset modal title
+      document.getElementById('protoyonModalTitle').textContent = 'নতুন প্রত্যয়ন এন্ট্রি';
+    }
     
     if(openBtn) openBtn.addEventListener('click', (e) => { e.preventDefault(); showModal(); });
     closeBtn?.addEventListener('click', hideModal);
@@ -266,7 +339,10 @@
         document.getElementById('active_section').value = row.active_section || row.section || '';
         document.getElementById('active_roll').value = row.active_roll || row.roll || '';
         
-        entryStatus.textContent='তথ্য লোড হয়েছে। সেভ করুন।';
+        // Make fields editable after loading data
+        setFieldsEditable(true);
+        
+        entryStatus.textContent='তথ্য লোড হয়েছে। প্রয়োজনে সম্পাদনা করুন এবং সেভ করুন।';
       } catch(e){ 
         console.error(e); 
         entryStatus.textContent='লোড ব্যর্থ'; 
@@ -279,14 +355,25 @@
     document.getElementById('resetProtoyonForm')?.addEventListener('click', ()=>{ 
       const keepIID=document.getElementById('iidInputProtoyon').value; 
       form.reset(); 
-      document.getElementById('iidInputProtoyon').value=keepIID; 
-      entryStatus.textContent='ফর্ম রিসেট'; 
+      
+      if (window.editingRecord) {
+        // If editing, restore original values
+        editRecord(window.editingRecord);
+        entryStatus.textContent='মূল তথ্য পুনরুদ্ধার করা হয়েছে'; 
+      } else {
+        // If creating new, just keep IID
+        document.getElementById('iidInputProtoyon').value=keepIID; 
+        entryStatus.textContent='ফর্ম রিসেট'; 
+      }
       entryStatus.style.color='';
     });
     
     form?.addEventListener('submit', async e=>{
       e.preventDefault();
-      entryStatus.textContent='সেভ করা হচ্ছে…'; entryStatus.style.color='';
+      const isEditing = !!window.editingRecord;
+      entryStatus.textContent = isEditing ? 'আপডেট করা হচ্ছে…' : 'সেভ করা হচ্ছে…'; 
+      entryStatus.style.color='';
+      
       const payload = {
         iid: form.iid.value.trim(),
         student_name_bn: form.student_name_bn.value.trim(),
@@ -304,15 +391,28 @@
       if(!payload.iid){ entryStatus.textContent='IID প্রয়োজন'; entryStatus.style.color='#b91c1c'; return; }
       
       try {
-        // Check if already exists
-        const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
-        if(existErr) throw existErr;
-        if(existing && existing.length){ entryStatus.textContent='ইতিমধ্যে আছে (iid)'; entryStatus.style.color='#b91c1c'; return; }
+        if (isEditing) {
+          // Update existing record
+          const { data: updated, error } = await client.from(tableName)
+            .update(payload)
+            .eq('protoyon_sl', window.editingRecord.protoyon_sl)
+            .select('protoyon_sl')
+            .single();
+          
+          if(error) throw error;
+          entryStatus.textContent='আপডেট হয়েছে ✔'; entryStatus.style.color='#15803d';
+        } else {
+          // Create new record
+          // Check if already exists
+          const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
+          if(existErr) throw existErr;
+          if(existing && existing.length){ entryStatus.textContent='ইতিমধ্যে আছে (iid)'; entryStatus.style.color='#b91c1c'; return; }
+          
+          const { data: inserted, error } = await client.from(tableName).insert(payload).select('protoyon_sl').single();
+          if(error) throw error;
+          entryStatus.textContent='সেভ হয়েছে ✔'; entryStatus.style.color='#15803d';
+        }
         
-        const { data: inserted, error } = await client.from(tableName).insert(payload).select('protoyon_sl').single();
-        if(error) throw error;
-        
-        entryStatus.textContent='সেভ হয়েছে ✔'; entryStatus.style.color='#15803d';
         // Auto-close modal and refresh data
         setTimeout(()=>{ 
           try{ 
@@ -322,7 +422,7 @@
         }, 800);
       } catch(err){ 
         console.error(err); 
-        entryStatus.textContent='সেভ ব্যর্থ'; 
+        entryStatus.textContent = isEditing ? 'আপডেট ব্যর্থ' : 'সেভ ব্যর্থ'; 
         entryStatus.style.color='#b91c1c'; 
       }
     });
