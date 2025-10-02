@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ID card list </title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <!-- Kalp          <thead>
+            <tr>
+              <th>idcard_sl</th>
+              <th>iid</th>
+              <th>student_name_en</th>
+              <th>father_name_en</th>
+              <th>father_mobile</th>
+              <th>student_blood_group</th>
+              <th>student_photo_url</th>
+              <th>status</th>
+              <th>action</th>
+            </tr>
+          </thead>ngla font -->
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+  <style>
+    :root { color-scheme: light dark; }
+  body { font-family: 'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f6f7f9; color: #111; }
+  /* match indicator styles */
+  .match-ok{color:#15803d;font-weight:600;}
+  .match-bad{color:#b91c1c;font-weight:600;}
+  .sig{display:inline-block;min-width:1.1em;text-align:center;font-size:.8rem;line-height:1;}
+  .sig + .sig{margin-left:4px;}
+    .toolbar { display: flex; gap: .75rem; align-items: center; margin: 0.75rem 0 1.1rem; flex-wrap:wrap; justify-content:center; }
+    .nav-btn { background:#2563eb; color:#fff; text-decoration:none; padding:.55rem .9rem; font-size:.7rem; font-weight:600; border-radius:6px; letter-spacing:.4px; display:inline-block; }
+    .nav-btn:hover { background:#1d4ed8; }
+    .nav-btn.secondary { background:#64748b; }
+    .nav-btn.secondary:hover { background:#475569; }
+    input[type="search"]{ padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: 8px; min-width: 240px; }
+    .table-wrap { overflow: auto; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    table { border-collapse: collapse; width: 100%; min-width: 100%; }
+    thead th { position: sticky; top: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: left; padding: .75rem; font-size: .9rem; }
+    tbody td { border-top: 1px solid #f1f5f9; padding: .65rem .75rem; font-size: .92rem; vertical-align: middle; }
+    tbody tr:hover { background: #f9fafb; }
+    .photo-cell img { width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s; }
+    .photo-cell img:hover { transform: scale(1.1); }
+    .muted { color: #6b7280; }
+    .link { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .link:hover { text-decoration: underline; }
+    .status { margin-left: .5rem; font-size: .9rem; }
+    .error { color: #b91c1c; }
+    .sep { color: #9ca3af; margin: 0 .25rem; }
+  /* PDF badge */
+  .pdf-badge { display:inline-block; background:#dc2626; color:#fff; font-size:.65rem; font-weight:600; padding:.35rem .6rem .4rem; border-radius:999px; text-decoration:none; letter-spacing:.5px; box-shadow:0 2px 4px rgba(0,0,0,.15); line-height:1; }
+  .pdf-badge:hover { background:#b91c1c; text-decoration:none; }
+  
+  /* Modal styles for entry form */
+  .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+  .modal-content { background-color: #fefefe; margin: 5% auto; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .modal-title { font-size: 1.25rem; font-weight: 600; margin: 0; }
+  .close { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+  .close:hover { color: #000; }
+  .form-group { margin-bottom: 1rem; }
+  .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; font-size: 0.9rem; }
+  .form-input { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.9rem; }
+  .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+  .btn-primary { background: #2563eb; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-secondary { background: #6b7280; color: white; padding: 0.75rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; margin-right: 0.5rem; }
+  .btn-secondary:hover { background: #4b5563; }
+  #genAllBtn { background:#0d9488; }
+  #genAllBtn:hover { background:#0f766e; }
+  .cert-card { position:relative; padding:1rem; background:#fff; border:1px solid #e5e7eb; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,.08); font-size:.7rem; line-height:1.4; }
+  .cert-card h3 { margin:.1rem 0 .4rem; font-size:.85rem; }
+  .cert-qr { position:absolute; top:1rem; right:1rem; text-align:center; font-size:.55rem; }
+  .cert-qr img { width:80px; height:80px; display:block; }
+  #allCertificates { display:none; margin-top:2rem; display:block; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0b1020; color: #e5e7eb; }
+      header, .table-wrap { background: #111729; border-color: #263148; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+      thead th { background: #0f162a; border-bottom-color: #263148; }
+      tbody td { border-top-color: #1d2845; }
+      input[type="search"]{ background: #0f162a; color: #e5e7eb; border-color: #263148; }
+      .muted { color: #9aa5b1; }
+    }
+    /* Printable styles */
+    @media print {
+      body { background: white; color: black; font-size: 8px; margin: 1cm; }
+      .container { max-width: none; padding: 0; }
+      header { position: static; background: white; border: none; padding: 0; }
+      .toolbar { display: none; }
+      .table-wrap { overflow: visible; box-shadow: none; border: 1px solid black; border-radius: 0; }
+      table { min-width: auto; width: 100%; border-collapse: collapse; }
+  thead th { background: white; border-bottom: 2px solid black; position: static; padding: 0.3cm; height: 1cm; font-size: 8px; word-wrap: break-word; white-space: normal; }
+  tbody td { border-top: 1px solid black; padding: 0.3cm; height: 2.2cm; min-height: 2.2cm; vertical-align: middle; font-size: 8px; word-wrap: break-word; white-space: normal; }
+  tbody tr { height: 2.2cm; min-height: 2.2cm; }
+      .muted { color: black; }
+      .link { color: black; text-decoration: none; }
+      .pdf-badge { display: none; }
+      .nav-btn { display: none; }
+      h1 { font-size: 1rem; }
+      main { padding: 0; }
+      .status { display: none; }
+  /* Photo styling for print: ensure printed photos are 2.2cm x 2.2cm */
+  tbody td img { width: 2.2cm !important; height: 2.2cm !important; border: 1px solid #000 !important; border-radius: 2px !important; object-fit: cover !important; }
+      .photo-cell { text-align: center; }
+      .photo-cell img { max-width: 100%; max-height: 100%; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Supabase client for matching names -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase credentials (same as other page) - consider moving to env / restricted key if possible
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    // Modal functions for entry form
+    function openEntryModal() {
+      document.getElementById('entryModal').style.display = 'block';
+      document.getElementById('entryIid').focus();
+    }
+    
+    function closeEntryModal() {
+      document.getElementById('entryModal').style.display = 'none';
+      document.getElementById('entryForm').reset();
+    }
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('entryModal');
+      if (event.target === modal) {
+        closeEntryModal();
+      }
+    }
+    
+    // Close modal with ESC key
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') {
+        const modal = document.getElementById('entryModal');
+        if (modal.style.display === 'block') {
+          closeEntryModal();
+        }
+      }
+    });
+    
+    // Handle form submission
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('entryForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const iid = document.getElementById('entryIid').value;
+        const status = document.getElementById('entryStatus').value;
+        
+        try {
+          // Insert into idcard_data table
+          const { data, error } = await supabaseClient
+            .from('idcard_data')
+            .insert([
+              { iid: parseInt(iid), status: status }
+            ]);
+            
+          if (error) throw error;
+          
+          alert('Entry saved successfully!');
+          closeEntryModal();
+          
+          // Reload the data
+          loadIdCardData();
+          
+        } catch (error) {
+          console.error('Error saving entry:', error);
+          alert('Error saving entry: ' + error.message);
+        }
+      });
+    });
+  </script>
+  <script>
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
+    
+    // New function to load ID card data from Supabase
+    async function loadIdCardData() {
+      const status = document.querySelector('#status');
+      status.textContent = 'Loading ID card data...';
+      status.classList.remove('error');
+      
+      try {
+        // First, get all records from idcard_data table
+        const { data: idCardData, error: idCardError } = await supabaseClient
+          .from('idcard_data')
+          .select('*')
+          .order('idcard_sl', { ascending: true });
+          
+        if (idCardError) throw idCardError;
+        
+        if (!idCardData || idCardData.length === 0) {
+          status.textContent = 'No ID card data found';
+          renderTable([]);
+          return;
+        }
+        
+        // Extract IIDs for student database lookup
+        const iids = idCardData.map(record => record.iid).filter(Boolean);
+        
+        // Get corresponding student data
+        const { data: studentData, error: studentError } = await supabaseClient
+          .from('student_database')
+          .select('iid, student_name_en, father_name_en, father_mobile, student_blood_group, student_photo_url')
+          .in('iid', iids);
+          
+        if (studentError) throw studentError;
+        
+        // Create a map for easy lookup
+        const studentMap = {};
+        (studentData || []).forEach(student => {
+          studentMap[student.iid] = student;
+        });
+        
+        // Build table rows
+        const rows = [];
+        idCardData.forEach(idCard => {
+          const student = studentMap[idCard.iid] || {};
+          
+          const tr = document.createElement('tr');
+          
+          // ID Card SL
+          const slCell = document.createElement('td');
+          slCell.textContent = idCard.idcard_sl || '';
+          tr.appendChild(slCell);
+          
+          // IID
+          const iidCell = document.createElement('td');
+          iidCell.textContent = idCard.iid || '';
+          tr.appendChild(iidCell);
+          
+          // Student Name (EN) with link
+          const nameCell = document.createElement('td');
+          const nameLink = document.createElement('a');
+          nameLink.className = 'link';
+          nameLink.textContent = student.student_name_en || '(No Name)';
+          nameLink.href = `verify.html?iid=${encodeURIComponent(idCard.iid)}`;
+          nameCell.appendChild(nameLink);
+          tr.appendChild(nameCell);
+          
+          // Father Name (EN)
+          const fatherCell = document.createElement('td');
+          fatherCell.textContent = student.father_name_en || '';
+          tr.appendChild(fatherCell);
+          
+          // Father Mobile
+          const mobileCell = document.createElement('td');
+          mobileCell.textContent = student.father_mobile || '';
+          tr.appendChild(mobileCell);
+          
+          // Blood Group
+          const bloodCell = document.createElement('td');
+          bloodCell.textContent = student.student_blood_group || '';
+          tr.appendChild(bloodCell);
+          
+          // Photo
+          const photoCell = document.createElement('td');
+          photoCell.className = 'photo-cell';
+          if (student.student_photo_url) {
+            const img = document.createElement('img');
+            img.alt = 'Student Photo';
+            const photoUrl = student.student_photo_url;
+            
+            // Handle different photo URL formats
+            const trySrcs = [];
+            if (/^https?:\/\//i.test(photoUrl)) {
+              trySrcs.push(photoUrl);
+            } else {
+              trySrcs.push(photoUrl);
+              trySrcs.push('/photo/' + photoUrl);
+              trySrcs.push('/photo/uploads/' + photoUrl);
+              trySrcs.push(SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/public/student_photo/' + photoUrl);
+              trySrcs.push(SUPABASE_URL.replace(/\/+$/, '') + '/storage/v1/object/public/photos/' + photoUrl);
+            }
+            
+            let idx = 0;
+            img.onerror = () => {
+              idx++;
+              if (idx < trySrcs.length) {
+                img.src = trySrcs[idx];
+              } else {
+                img.style.display = 'none';
+                photoCell.textContent = 'No Photo';
+              }
+            };
+            img.onload = () => { /* photo loaded successfully */ };
+            img.src = trySrcs[0];
+            photoCell.appendChild(img);
+          } else {
+            photoCell.textContent = 'No Photo';
+          }
+          tr.appendChild(photoCell);
+          
+          // Status
+          const statusCell = document.createElement('td');
+          statusCell.textContent = idCard.status || '';
+          tr.appendChild(statusCell);
+          
+          // Action (PDF button)
+          const actionCell = document.createElement('td');
+          const pdfBtn = document.createElement('a');
+          pdfBtn.className = 'pdf-badge';
+          pdfBtn.textContent = 'PDF';
+          pdfBtn.href = `verify.html?iid=${encodeURIComponent(idCard.iid)}`;
+          pdfBtn.target = '_blank';
+          actionCell.appendChild(pdfBtn);
+          tr.appendChild(actionCell);
+          
+          rows.push(tr);
+        });
+        
+        setupFilter(rows);
+        status.textContent = 'Loaded';
+        
+      } catch (error) {
+        console.error('Error loading ID card data:', error);
+        status.textContent = 'Error loading data: ' + error.message;
+        status.classList.add('error');
+        showRetry('Database error');
+      }
+    }
+
+    function getVal(row, headers, key){ const h = headers[key]; const v = h ? row[h] : ''; return v == null ? '' : String(v).trim(); }
+
+    function buildHeaderMap(fields){
+      const map={};
+      const norm = s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'');
+      const want={
+        sl:['sl','serial','serialno','serialnumber','serial_no'],
+        name:['name_bangla','studentname','fullname','student_name'],
+        father:['father_bangla','fathername','fathersname','father_s_name','fname','father_name'],
+        mother:['mother_bangla','mothername','mothersname','m_name'],
+        roll:['roll_bangla','roll','rollnumber'],
+        iid:['iid','id','studentid','sid','uniqueid'],
+        registrationnumber:['registrationnumber','registration number','registration','regno','reg no','reg_number'],
+        dob:['dob','dateofbirth','birthdate','date of birth'],
+        sscmonth:['sscmonth','exammonth','exam month','month'],
+        session:['session','academic session','sess','sessionyear','year'],
+        class:['class','cls','standard'],
+        section:['section','sec','division'],
+        phone:['phone','mobile','contact','contactno','phone_number'],
+        bloodgroup:['bloodgroup','blood group','blood','blood_group'],
+        photo:['photo','image','pic','photourl','imageurl'],
+        comment:['comment','remarks','note','comments']
+      };
+      for(const f of fields){
+        const nf=norm(f);
+        for(const key of Object.keys(want)){
+          if(map[key]) continue;
+            if(want[key].some(w=>nf===norm(w))){ map[key]=f; }
+        }
+      }
+      return map;
+    }
+
+    function createRow(tr, cells){
+      cells.forEach(c => { const td = document.createElement('td'); if(c && c.element) td.appendChild(c.element); else td.textContent = c ?? ''; tr.appendChild(td); });
+      return tr;
+    }
+
+    function renderTable(rows){ const tbody=document.querySelector('#tbody'); tbody.innerHTML=''; rows.forEach(r=>tbody.appendChild(r)); document.querySelector('#count').textContent=`${rows.length}`; }
+
+  // Map of iid -> { student_name_en, father_name_en }
+  let __DB_NAME_MAP = {};
+
+  async function fetchSupabaseData(iids){
+    __DB_NAME_MAP = {};
+    if(!iids || iids.length===0) return;    
+    const unique = Array.from(new Set(iids.filter(Boolean)));
+    const batchSize = 900; // stay under URL length / limit
+    for(let i=0;i<unique.length;i+=batchSize){
+      const slice = unique.slice(i,i+batchSize);
+      const { data, error } = await supabaseClient
+        .from('student_database')
+        // include student_photo_url so we can render photos directly from DB when available
+        .select('iid, student_name_en, father_name_en, student_photo_url')
+        .in('iid', slice.map(v=>Number(v)))
+        .limit(batchSize);
+      if(error){ console.warn('Supabase fetch error', error); continue; }
+      (data||[]).forEach(r=>{ if(r && r.iid!=null) __DB_NAME_MAP[String(r.iid)] = { student_name_en: r.student_name_en||'', father_name_en: r.father_name_en||'', student_photo_url: r.student_photo_url || '' }; });
+    }
+  }
+
+  function buildRows(data, headers){
+    const rows=[];
+    const norm = s => String(s||'').trim().toLowerCase();
+    const matched = [];
+    const unmatched = [];
+    for(const obj of data){
+      const sl=getVal(obj, headers,'sl');
+      const name=getVal(obj, headers,'name');
+      const father=getVal(obj, headers,'father');
+      const roll=getVal(obj, headers,'roll');
+      const iid=getVal(obj, headers,'iid');
+      const cls=getVal(obj, headers,'class');
+      const section=getVal(obj, headers,'section');
+      const phone=getVal(obj, headers,'phone');
+      const bloodgroup=getVal(obj, headers,'bloodgroup');
+      const photo=getVal(obj, headers,'photo');
+      const comment=getVal(obj, headers,'comment');
+      
+      // Prefer student_photo_url from DB (fetched into __DB_NAME_MAP), else find matching photo from photo links
+      let photoUrl = '';
+      const dbRecord = __DB_NAME_MAP[String(iid)] || {};
+      if(dbRecord && dbRecord.student_photo_url){
+        // If stored value looks like a URL, use it; otherwise keep the filename for later resolution
+        const raw = String(dbRecord.student_photo_url||'').trim();
+        if(/^https?:\/\//i.test(raw)) photoUrl = raw;
+        else photoUrl = raw; // may be a filename like avatar-123.jpg; we'll try candidates below
+      }
+      // no local CSV fallback; rely on DB value and guessed public paths
+      
+      // Create photo element
+      let photoElement = document.createElement('span');
+      photoElement.textContent = photo || 'No Photo';
+      photoElement.className = 'photo-cell';
+      if(photoUrl){
+        const img = document.createElement('img');
+        img.alt = 'Student Photo';
+        img.className = '';
+        // If photoUrl is a full URL use it directly; otherwise try resolving filename against common paths and link.csv
+        const trySrcs = [];
+        if(/^https?:\/\//i.test(photoUrl)){
+          trySrcs.push(photoUrl);
+        } else {
+          // raw filename
+          trySrcs.push(photoUrl);
+          trySrcs.push('/photo/' + photoUrl);
+          trySrcs.push('/photo/uploads/' + photoUrl);
+          trySrcs.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/student_photo/' + photoUrl);
+          trySrcs.push(SUPABASE_URL.replace(/\/+$/,'') + '/storage/v1/object/public/photos/' + photoUrl);
+          // no CSV fallback — try only guessed paths and Supabase public URLs
+        }
+        let idx = 0;
+        img.onerror = () => { idx++; if(idx < trySrcs.length) img.src = trySrcs[idx]; else { img.style.display='none'; photoElement.textContent = 'No Photo'; } };
+        img.onload = () => { /* ok */ };
+        photoElement.innerHTML = '';
+        photoElement.appendChild(img);
+        img.src = trySrcs[0];
+      }
+      
+      // Name link
+      const nameLink=document.createElement('a');
+      nameLink.className='link';
+      nameLink.textContent=name||'(No Name)';
+      const hrefBase='verify.html';
+      let certHref = hrefBase;
+      if(iid) certHref = `${hrefBase}?iid=${encodeURIComponent(iid)}`;
+      else if(sl) certHref = `${hrefBase}?sl=${encodeURIComponent(sl)}`;
+      nameLink.href = certHref;
+
+      // DB match info
+  const dbEntry = dbRecord || { student_name_en:'', father_name_en:'' };
+  const dbName = dbEntry.student_name_en || '';
+  const dbFather = dbEntry.father_name_en || '';
+      const nameOk = dbName ? (norm(dbName) === norm(name)) : false;
+      const fatherOk = dbFather ? (norm(dbFather) === norm(father)) : false;
+
+      const dbNameSpan = document.createElement('span');
+      dbNameSpan.textContent = dbName || '-';
+      const dbFatherSpan = document.createElement('span');
+      dbFatherSpan.textContent = dbFather || '-';
+
+      const signalSpan = document.createElement('span');
+      signalSpan.innerHTML = `<span class="sig sig-name ${nameOk?'match-ok':'match-bad'}" title="Name ${nameOk?'matches':'differs'}">${nameOk?'✔':'✖'}</span> <span class="sig sig-father ${fatherOk?'match-ok':'match-bad'}" title="Father ${fatherOk?'matches':'differs'}">${fatherOk?'✔':'✖'}</span>`;
+
+      const tr=document.createElement('tr');
+      createRow(tr,[sl,iid,{element:nameLink},father,phone,bloodgroup,{element:photoElement},comment,{element:dbNameSpan},{element:dbFatherSpan},{element:signalSpan}]);
+      if(!nameOk || !fatherOk) unmatched.push(tr); else matched.push(tr);
+    }
+    // return unmatched rows first so they appear at the top
+    return unmatched.concat(matched);
+  }
+
+    function setupFilter(allRows){ const input=document.querySelector('#search'); const apply=()=>{ const q=input.value.toLowerCase().trim(); if(!q) return renderTable(allRows); const filtered=allRows.filter(tr=>tr.textContent.toLowerCase().includes(q)); renderTable(filtered); }; input.addEventListener('input',apply); apply(); }
+
+  function loadFromCache(){ return null; }
+  function saveCache(){ /* no-op */ }
+
+    function showRetry(msg){
+      const status=document.querySelector('#status');
+      status.textContent=msg;
+      status.classList.add('error');
+      if(!document.getElementById('retryBtn')){
+        const btn=document.createElement('button');
+        btn.id='retryBtn'; btn.textContent='Retry'; btn.style.marginLeft='.75rem'; btn.style.padding='.35rem .7rem'; btn.style.fontSize='.65rem'; btn.style.cursor='pointer'; btn.onclick=()=>{ btn.remove(); initLoad(true); };
+        status.parentElement.appendChild(btn);
+      }
+    }
+
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 900;
+    let attemptNo = 0;
+    const DEBUG = new URLSearchParams(location.search).has('debug');
+
+    function logDbg(...a){ if(DEBUG) console.log('[TL]', ...a); }
+
+    async function parseAndRender(results, source){
+      const status=document.querySelector('#status');
+      if(!results || !results.data){ throw new Error('Empty results'); }
+      const fields = (results.meta && results.meta.fields) || Object.keys(results.data[0]||{});
+      const headers=buildHeaderMap(fields);
+      if(Object.keys(headers).length === 0){ throw new Error('Header map empty'); }
+      // collect iids first for supabase fetch
+      const iids = results.data.map(r => getVal(r, headers, 'iid')).filter(Boolean);
+      try { await fetchSupabaseData(iids); } catch(e){ console.warn('Supabase fetch failed', e); }
+      const rows=buildRows(results.data, headers);
+      setupFilter(rows);
+      status.textContent = 'Loaded';
+      if(DEBUG) status.textContent += ' ('+source+')';
+      window.__ALL_CERT_DATA = results.data;
+      window.__ALL_CERT_HEADERS = headers;
+    }
+
+    async function manualFetchFallback(){
+      logDbg('Manual fetch fallback fetching text...');
+      const res = await fetch(CSV_URL, { cache:'no-store' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const text = await res.text();
+      return new Promise((resolve,reject)=>{
+        Papa.parse(text, { header:true, skipEmptyLines:true, complete: r=>resolve(r), error: e=>reject(e) });
+      });
+    }
+
+    function attemptLoad(){
+      attemptNo++;
+      const status=document.querySelector('#status');
+      status.classList.remove('error');
+      status.textContent = 'Loading… (Attempt '+attemptNo+'/'+MAX_ATTEMPTS+')';
+      logDbg('Attempt', attemptNo);
+      Papa.parse(CSV_URL, {
+        download:true, header:true, skipEmptyLines:true,
+        complete:async (results)=>{
+          try { await parseAndRender(results, 'direct'); }
+          catch(e){
+            console.error('Primary parse render error', e);
+            if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Parse error'); }
+            // Last resort: manual fetch parse
+            manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
+              .catch(e2 => { console.error('Fallback parse failed', e2); showRetry('Failed to load CSV'); });
+          }
+        },
+        error:(err)=>{
+          console.error('Papa error', err);
+          if(attemptNo < MAX_ATTEMPTS){ return scheduleRetry('Load error'); }
+          manualFetchFallback().then(r=>{ parseAndRender(r, 'fallback'); })
+            .catch(e2 => { console.error('Fallback fetch failed', e2); showRetry('Failed to load CSV'); });
+        }
+      });
+    }
+
+    function scheduleRetry(reason){
+      const status=document.querySelector('#status');
+      status.textContent = 'Retrying… '+reason+' ('+attemptNo+'/'+MAX_ATTEMPTS+')';
+      setTimeout(attemptLoad, RETRY_DELAY_MS * attemptNo); // backoff
+    }
+
+    function initLoad(){
+      loadIdCardData();
+    }
+
+    function pronouns(gRaw){
+      const g=(gRaw||'').toLowerCase();
+      const isFem=/^(f|female|girl|she)/.test(g);
+      const isMale=/^(m|male|boy|he)/.test(g)&&!isFem;
+      const child=isFem?'Daughter':isMale?'Son':'Son/Daughter';
+      const he=isFem?'she':isMale?'he':'he / she';
+      const his=isFem?'her':isMale?'his':'his / her';
+      const him=isFem?'her':isMale?'him':'him / her';
+      return {child,he,his,him,He:he.charAt(0).toUpperCase()+he.slice(1),His:his.charAt(0).toUpperCase()+his.slice(1)};
+    }
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+    function buildCertHtml(r){
+      const p=pronouns(r.gender);
+      const line1=`This is to certify that <strong><u>${esc(r.name)}</u></strong> ${p.child} of ${esc(r.father)} and ${esc(r.mother)} duly passed the S.S.C Examination held in the month of ${esc(r.sscmonth)} under the Board of Intermediate and Secondary Education, Cumilla as a regular/irregular candidate in ${esc(r.group)} group and secured G.P.A ${esc(r.gpa)} on a scale of 5.00. ${p.His} S.S.C registration number is ${esc(r.registrationnumber)} & S.S.C roll is ${esc(r.roll)}.`;
+      const line2=`${p.His} date of birth is ${esc(r.dob)}. In so far as I know, ${p.he} bears a good moral character and did not take part in any activities subversive of the state or of the school during ${p.his} stay in the school.`;
+      const line3=`I wish ${p.him} every success in life.`;
+      return `<div class="cert-body">${line1}<br><br><em>${line2}</em><br><br><em>${line3}</em></div>`;
+    }
+    function generateAll(){
+      const url = 'verify.html';
+      window.open(url, '_blank');
+    }
+
+    // Photo link CSV removed: photo URLs are resolved from DB `student_photo_url` or guessed public paths.
+
+    // Download PDF function with 1cm high cells and 1cm margins
+    // Features:
+    // - 1cm margins on all sides
+    // - 1cm high cells (rows)
+    // - Text wrapping within cells
+    // - Proper header and data alignment
+    async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'cm', 'a4'); // Portrait, cm, A4
+
+      // Get table data
+      const table = document.querySelector('table');
+      const rows = Array.from(table.querySelectorAll('tbody tr'));
+      const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+
+      // Remove Action column from headers if it exists
+      const filteredHeaders = headers.filter(h => h !== 'Action');
+
+      // Set up PDF styling
+      doc.setFontSize(8);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 1; // 1cm margin on all sides
+  const cellHeight = 2.2; // 2.2cm high cells
+
+      // Define custom column widths (in cm) as requested:
+      // SL. NO, Class, Roll => 1.0 cm each
+      // Section => 1.3 cm
+      // Phone => 2.5 cm
+      const availableWidth = pageWidth - 2 * margin;
+      const fixedWidthMap = {
+        'SL. NO': 1.0,
+        'Class': 1.0,
+        'Roll': 1.0,
+        'Section': 1.3,
+        'Phone': 2.5
+      };
+
+      // Sum fixed widths for headers present
+      let fixedColumnsWidth = 0;
+      let fixedColumnsCount = 0;
+      filteredHeaders.forEach(h => {
+        const w = fixedWidthMap[h];
+        if (w && !isNaN(w)) { fixedColumnsWidth += w; fixedColumnsCount++; }
+      });
+
+      const remainingColumns = Math.max(0, filteredHeaders.length - fixedColumnsCount);
+      const remainingWidth = Math.max(0, availableWidth - fixedColumnsWidth);
+      const defaultWidth = remainingColumns > 0 ? (remainingWidth / remainingColumns) : Math.max(0, remainingWidth);
+
+      // Create column width mapping
+      const columnWidths = {};
+      filteredHeaders.forEach((header, index) => {
+        if (Object.prototype.hasOwnProperty.call(fixedWidthMap, header)) {
+          columnWidths[index] = fixedWidthMap[header];
+        } else {
+          columnWidths[index] = defaultWidth;
+        }
+      });
+
+      let yPosition = margin;
+      let currentPage = 1;
+
+  // Add title
+  doc.setFontSize(12);
+  doc.text('Student ID Card List', pageWidth / 2, yPosition + 0.5, { align: 'center' });
+  yPosition += 0.8;
+
+  // header height separate
+  const headerHeight = 1; // 1 cm header as requested
+
+  // Add headers
+  doc.setFontSize(8);
+  doc.setFillColor(240, 240, 240);
+  doc.rect(margin, yPosition, pageWidth - 2 * margin, headerHeight, 'F');
+      doc.setTextColor(0, 0, 0);
+
+      let currentX = margin;
+      filteredHeaders.forEach((header, index) => {
+        const colWidth = columnWidths[index];
+        const x = currentX + (colWidth / 2);
+
+        // Wrap header text if needed
+        const wrappedHeader = doc.splitTextToSize(header, colWidth - 0.2);
+
+        // If header is too tall for the header cell, truncate it
+        const maxLines = Math.floor(headerHeight / 0.3);
+        if (wrappedHeader.length > maxLines) {
+          wrappedHeader.splice(maxLines - 1);
+          if (typeof wrappedHeader[wrappedHeader.length - 1] === 'string') {
+            wrappedHeader[wrappedHeader.length - 1] = wrappedHeader[wrappedHeader.length - 1].substring(0, wrappedHeader[wrappedHeader.length - 1].length - 3) + '...';
+          }
+        }
+
+        const headerTextHeight = wrappedHeader.length * 0.3;
+        const headerY = yPosition + (headerHeight - headerTextHeight) / 2 + 0.3;
+        doc.text(wrappedHeader, x, headerY, { align: 'center' });
+
+        currentX += colWidth;
+      });
+
+  yPosition += headerHeight;
+
+      // Add data rows
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = Array.from(row.querySelectorAll('td'));
+
+        // Check if we need a new page
+        if (yPosition + cellHeight > pageHeight - margin) {
+          doc.addPage();
+          currentPage++;
+          yPosition = margin;
+
+          // Re-add headers on new page
+          doc.setFillColor(240, 240, 240);
+          doc.rect(margin, yPosition, pageWidth - 2 * margin, headerHeight, 'F');
+          doc.setTextColor(0, 0, 0);
+
+          let headerX = margin;
+          filteredHeaders.forEach((header, index) => {
+            const colWidth = columnWidths[index];
+            const x = headerX + (colWidth / 2);
+            const wrappedHeader = doc.splitTextToSize(header, colWidth - 0.2);
+
+            // If header is too tall for the cell, truncate it
+            const maxLines = Math.floor(headerHeight / 0.3);
+            if (wrappedHeader.length > maxLines) {
+              wrappedHeader.splice(maxLines - 1);
+              if (typeof wrappedHeader[wrappedHeader.length - 1] === 'string') {
+                wrappedHeader[wrappedHeader.length - 1] = wrappedHeader[wrappedHeader.length - 1].substring(0, wrappedHeader[wrappedHeader.length - 1].length - 3) + '...';
+              }
+            }
+
+            const headerTextHeight = wrappedHeader.length * 0.3;
+            const headerY = yPosition + (headerHeight - headerTextHeight) / 2 + 0.3;
+            doc.text(wrappedHeader, x, headerY, { align: 'center' });
+
+            headerX += colWidth;
+          });
+
+          yPosition += headerHeight;
+        }
+
+        // Draw cell borders
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.01);
+
+        let cellX = margin;
+        for (let j = 0; j < filteredHeaders.length; j++) {
+          const colWidth = columnWidths[j];
+          doc.rect(cellX, yPosition, colWidth, cellHeight);
+          cellX += colWidth;
+        }
+
+        // Add cell content
+        let contentX = margin;
+        for (let index = 0; index < filteredHeaders.length; index++) {
+          const colWidth = columnWidths[index] || defaultWidth;
+          if (index >= cells.length) { contentX += colWidth; continue; }
+          const cell = cells[index];
+          const x = contentX + (colWidth / 2);
+          let text = (cell && cell.textContent) ? cell.textContent.trim() : '';
+
+          // Handle photo cells: try to embed the actual image at 2.2cm x 2.2cm
+          const img = cell ? cell.querySelector('img') : null;
+          if (img && img.src) {
+            try {
+              const imgData = await (async function(src){
+                return new Promise(resolve => {
+                  try {
+                    const image = new Image();
+                    image.crossOrigin = 'anonymous';
+                    image.onload = () => {
+                      try {
+                        const canvas = document.createElement('canvas');
+                        const maxDim = 400; // limit for safety
+                        let w = image.naturalWidth;
+                        let h = image.naturalHeight;
+                        if (w > maxDim || h > maxDim) {
+                          const ratio = Math.min(maxDim / w, maxDim / h);
+                          w = Math.round(w * ratio);
+                          h = Math.round(h * ratio);
+                        }
+                        canvas.width = w;
+                        canvas.height = h;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(image, 0, 0, w, h);
+                        const data = canvas.toDataURL('image/jpeg', 0.85);
+                        resolve(data);
+                      } catch (err) { resolve(null); }
+                    };
+                    image.onerror = () => resolve(null);
+                    image.src = src;
+                  } catch (e) { resolve(null); }
+                });
+              })(img.src);
+
+              if (imgData) {
+                const imgW = 2.2; // cm
+                const imgH = 2.2; // cm
+                const imgX = contentX + (colWidth - imgW) / 2;
+                const imgY = yPosition + (cellHeight - imgH) / 2;
+                try { doc.addImage(imgData, 'JPEG', imgX, imgY, imgW, imgH); }
+                catch (e) { doc.text('[Photo]', contentX + (colWidth / 2), yPosition + 0.5, { align: 'center' }); }
+              } else {
+                doc.text('[Photo]', contentX + (colWidth / 2), yPosition + 0.5, { align: 'center' });
+              }
+            } catch (e) {
+              doc.text('[Photo]', contentX + (colWidth / 2), yPosition + 0.5, { align: 'center' });
+            }
+          } else {
+            // Wrap text within cell
+            const wrappedText = doc.splitTextToSize(text, colWidth - 0.2);
+            const maxLines = Math.floor(cellHeight / 0.3);
+            if (wrappedText.length > maxLines) {
+              wrappedText.splice(maxLines - 1);
+              if (typeof wrappedText[wrappedText.length - 1] === 'string') {
+                wrappedText[wrappedText.length - 1] = wrappedText[wrappedText.length - 1].substring(0, wrappedText[wrappedText.length - 1].length - 3) + '...';
+              }
+            }
+            const finalTextHeight = wrappedText.length * 0.3;
+            const textY = yPosition + (cellHeight - finalTextHeight) / 2 + 0.3; // Center vertically
+            doc.text(wrappedText, x, textY, { align: 'center' });
+          }
+
+          contentX += colWidth;
+        }
+
+        yPosition += cellHeight;
+      }
+
+      // Save the PDF
+      doc.save('student_list.pdf');
+    }
+
+    // Test PDF settings function
+    function testPDFSettings() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('l', 'cm', 'a4');
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 1;
+  const cellHeight = 2.2;
+
+      // Test margins
+      doc.setDrawColor(255, 0, 0);
+      doc.setLineWidth(0.05);
+      doc.rect(margin, margin, pageWidth - 2 * margin, pageHeight - 2 * margin);
+
+      // Test cell height
+      doc.setDrawColor(0, 255, 0);
+      doc.rect(margin, margin, pageWidth - 2 * margin, cellHeight);
+
+      // Add test text
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text('PDF Settings Test', pageWidth / 2, margin + 0.5, { align: 'center' });
+      doc.text('Red border = 1cm margins', pageWidth / 2, margin + 0.8, { align: 'center' });
+      doc.text('Green rectangle = 1cm cell height', pageWidth / 2, margin + 1.1, { align: 'center' });
+
+      // Test text wrapping
+      const testText = 'This is a long text that should wrap within the cell boundaries when using the PDF generation function.';
+      const wrappedText = doc.splitTextToSize(testText, 5);
+      doc.text(wrappedText, pageWidth / 2, margin + 1.5, { align: 'center' });
+
+      doc.save('pdf_settings_test.pdf');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initLoad();
+      const b1=document.getElementById('genAllBtn');
+      const b2=document.getElementById('genAllBtnBottom');
+      if(b1) b1.addEventListener('click', generateAll);
+      if(b2) b2.addEventListener('click', generateAll);
+    });
+  </script>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>ID Card List <span class="muted status" id="status"></span></h1>
+      <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted"> Please wait 5 minutes for processing after ID card entry.</p>
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
+        <span class="muted">Rows: <span id="count">0</span></span>
+        <button class="nav-btn" onclick="openEntryModal()" style="background:#059669;">➕ Add New Entry</button>
+        <button class="nav-btn" onclick="downloadPDF()" style="background:#dc2626;">📄 Download PDF</button>
+        <button class="nav-btn" onclick="testPDFSettings()" style="background:#059669;">🧪 Test PDF Settings</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      <div class="table-wrap">
+        <table role="table" aria-label="Testimonials">
+          <thead>
+            <tr>
+              <th>ID Card SL</th>
+              <th>IID</th>
+              <th>Student Name (EN)</th>
+              <th>Father Name (EN)</th>
+              <th>Father Mobile</th>
+              <th>Blood Group</th>
+              <th>Photo</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+  <div id="allCertificates"></div>
+      <div class="toolbar" style="justify-content:center; margin-top:1.5rem;">
+        <a id="genAllBtnBottom" class="nav-btn" href="javascript:void(0)">Generate All</a>
+      </div>
+    </div>
+  </main>
+  <script>
+    // another DOMContentLoaded listener removed duplication; initLoad already attached above
+  </script>
+  
+  <!-- Entry Modal -->
+  <div id="entryModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Add New ID Card Entry</h2>
+        <span class="close" onclick="closeEntryModal()">&times;</span>
+      </div>
+      <form id="entryForm">
+        <div class="form-group">
+          <label class="form-label" for="entryIid">IID (Student ID):</label>
+          <input type="number" id="entryIid" class="form-input" required placeholder="Enter student IID">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="entryStatus">Status:</label>
+          <select id="entryStatus" class="form-input" required>
+            <option value="">Select Status</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </div>
+        <div style="text-align: right; margin-top: 1.5rem;">
+          <button type="button" class="btn-secondary" onclick="closeEntryModal()">Cancel</button>
+          <button type="submit" class="btn-primary">Save Entry</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
