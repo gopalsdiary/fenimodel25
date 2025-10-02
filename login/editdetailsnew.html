@@ -713,6 +713,19 @@
               const displayName = fieldDisplayNames[key] || key;
               label.textContent = displayName;
               
+              // Add view link for URL fields
+              if (isUploadField(key)) {
+                const viewLink = document.createElement('span');
+                viewLink.textContent = ' *view';
+                viewLink.style.color = '#ff6b35';
+                viewLink.style.cursor = 'pointer';
+                viewLink.style.fontSize = '12px';
+                viewLink.style.textDecoration = 'underline';
+                viewLink.setAttribute('data-view-field', key);
+                viewLink.addEventListener('click', () => openUrlInNewTab(key));
+                label.appendChild(viewLink);
+              }
+              
               // Field-specific selects (religion/gender/class/section/blood/group/freedom)
               let input;
               const lk = String(key).toLowerCase();
@@ -773,6 +786,19 @@
               const label = document.createElement('label');
               const displayName = fieldDisplayNames[key] || key;
               label.textContent = displayName + ':';
+
+              // Add view link for URL fields
+              if (isUploadField(key)) {
+                const viewLink = document.createElement('span');
+                viewLink.textContent = ' *view';
+                viewLink.style.color = '#ff6b35';
+                viewLink.style.cursor = 'pointer';
+                viewLink.style.fontSize = '12px';
+                viewLink.style.textDecoration = 'underline';
+                viewLink.setAttribute('data-view-field', key);
+                viewLink.addEventListener('click', () => openUrlInNewTab(key));
+                label.appendChild(viewLink);
+              }
 
               let input;
               if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note') || key.toLowerCase().includes('comment')){
@@ -845,6 +871,19 @@
             const displayName = fieldDisplayNames[key] || key;
             label.textContent = displayName;
             
+            // Add view link for URL fields
+            if (isUploadField(key)) {
+              const viewLink = document.createElement('span');
+              viewLink.textContent = ' *view';
+              viewLink.style.color = '#ff6b35';
+              viewLink.style.cursor = 'pointer';
+              viewLink.style.fontSize = '12px';
+              viewLink.style.textDecoration = 'underline';
+              viewLink.setAttribute('data-view-field', key);
+              viewLink.addEventListener('click', () => openUrlInNewTab(key));
+              label.appendChild(viewLink);
+            }
+            
             // Field-specific selects
             let input;
             const lk = String(key).toLowerCase();
@@ -905,6 +944,19 @@
             const label = document.createElement('label');
             const displayName = fieldDisplayNames[key] || key;
             label.textContent = displayName + ':';
+
+            // Add view link for URL fields
+            if (isUploadField(key)) {
+              const viewLink = document.createElement('span');
+              viewLink.textContent = ' *view';
+              viewLink.style.color = '#ff6b35';
+              viewLink.style.cursor = 'pointer';
+              viewLink.style.fontSize = '12px';
+              viewLink.style.textDecoration = 'underline';
+              viewLink.setAttribute('data-view-field', key);
+              viewLink.addEventListener('click', () => openUrlInNewTab(key));
+              label.appendChild(viewLink);
+            }
 
             // Field-specific selects
             let input;
@@ -1088,6 +1140,18 @@
         const fieldName = btn.getAttribute('data-upload-field');
         updateUploadButtonColor(btn, fieldName);
       });
+    }
+
+    function openUrlInNewTab(fieldName) {
+      // Find the input field with the corresponding data-field attribute
+      const input = document.querySelector(`[data-field="${fieldName}"]`);
+      if (input && input.value && input.value.trim() !== '') {
+        const url = input.value.trim();
+        // Open URL in new tab
+        window.open(url, '_blank');
+      } else {
+        alert('No URL available to view');
+      }
     }
 
     // Global variables for upload functionality
