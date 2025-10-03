@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID Card - Font Side</title>
+    <style>
+        :root {
+            /* ID card dimensions: 53mm x 84mm */
+            --card-width: 53mm;
+            --card-height: 84mm;
+            --card-dpi: 300;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Arial', 'Helvetica', 'Times New Roman', sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+        
+        .controls {
+            position: fixed !important;
+            bottom: 20px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            display: flex !important;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            z-index: 9999 !important;
+            background-color: rgba(255, 255, 255, 0.98) !important;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid #FF6600;
+            backdrop-filter: blur(5px);
+            width: auto;
+            max-width: 90%;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            background-color: #007bff !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none !important;
+            display: inline-block !important;
+            transition: all 0.3s ease;
+            min-width: 140px;
+            text-align: center;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: relative !important;
+        }
+        
+        .btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn.download {
+            background-color: #28a745;
+        }
+        
+        .btn.download:hover {
+            background-color: #1e7e34;
+        }
+        
+        .btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .card-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .id-card {
+            width: var(--card-width);
+            height: var(--card-height);
+            position: relative;
+            background-image: url('font_side.png');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            border: 1px solid #ccc;
+            overflow: hidden;
+        }
+        
+        .card-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            color: #000;
+        }
+        
+        .student-name {
+            position: absolute;
+            font-weight: bold;
+            font-size: 3.5mm;
+            text-align: center;
+            width: 90%;
+            left: 5%;
+            top: 58%;
+            line-height: 1.2;
+        }
+        
+        .father-info {
+            position: absolute;
+            font-size: 2.5mm;
+            left: 5%;
+            top: 62%;
+            width: 90%;
+            line-height: 1.3;
+        }
+        
+        .mobile-info {
+            position: absolute;
+            font-size: 2.5mm;
+            left: 5%;
+            top: 66%;
+            width: 90%;
+        }
+        
+        .iid-info {
+            position: absolute;
+            font-size: 2.2mm;
+            font-weight: regular;
+            left: 5%;
+            top: 69.5%;
+            width: 90%;
+        }
+        
+        .qr-code {
+            position: absolute;
+            bottom: 6%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 17.16mm;
+            height: 17.16mm;
+            background-color: white;
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+        }
+            border: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+        }
+        
+        .qr-code img, .qr-code canvas {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain;
+        }
+        
+        .student-photo {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 21.6mm;
+            height: 26.4mm;
+            border: 2px solid #FF6600;
+            overflow: hidden;
+            background-color: white;
+        }
+        
+        .student-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .student-name {
+            position: absolute;
+            font-family:  'Times New Roman', sans-serif;
+            font-weight: bold;
+            font-size: 2.8mm;
+            text-align: center;
+            width: 90%;
+            left: 5%;
+            top: 58%;
+            line-height: 1.2;
+            color: #000;
+        }
+        
+        .father-info {
+            position: absolute;
+            font-family:  'Times New Roman', sans-serif;
+            font-size: 2.3mm;
+            text-align: center;
+            width: 90%;
+            left: 5%;
+            top: 62%;
+            line-height: 1.2;
+            color: #000;
+            font-weight: 500;
+        }
+        
+        .mobile-info {
+            position: absolute;
+            font-family: 'Times New Roman', sans-serif;
+            font-size: 2.3mm;
+            text-align: center;
+            width: 90%;
+            left: 5%;
+            top: 66%;
+            color: #000;
+            font-weight: 500;
+        }
+        
+        .iid-info {
+            position: absolute;
+            font-family:  'Times New Roman', sans-serif;
+            font-size: 2.5mm;
+            font-weight: regular;
+            text-align: center;
+            width: 90%;
+            left: 5%;
+            top: 69.5%;
+            color: #000;
+        }
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: white;
+            }
+            
+            .controls, .info-display {
+                display: none;
+            }
+            
+            .card-container {
+                background-color: transparent;
+                padding: 0;
+                border-radius: 0;
+                box-shadow: none;
+                margin: 0;
+            }
+            
+            .id-card {
+                width: 53mm;
+                height: 84mm;
+                border: none;
+            }
+            
+            @page {
+                size: 53mm 84mm;
+                margin: 0;
+            }
+        }
+        
+        /* Responsive design for better button visibility */
+        @media (max-width: 768px) {
+            .controls {
+                position: fixed !important;
+                bottom: 10px !important;
+                left: 50% !important;
+                transform: translateX(-50%) !important;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                padding: 10px;
+                max-width: 95%;
+                width: auto;
+                z-index: 9999 !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 280px;
+                padding: 14px 20px;
+                font-size: 16px;
+            }
+        }
+        
+        .page-wrapper {
+            width: 100%;
+            max-width: 100vw;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 100px; /* Extra space for fixed controls */
+        }
+
+        /* Fallback for browsers that don't support fixed positioning */
+        body {
+            margin: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        /* Ensure controls are always on top */
+        .controls * {
+            pointer-events: auto !important;
+            z-index: inherit !important;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <!-- Fixed Controls Panel -->
+    <div class="controls">
+        <button class="btn download" onclick="downloadAsImage()">📥 Download 53×84mm (300 DPI)</button>
+        <button class="btn download" onclick="downloadAsImagePNG()">🖼️ Download PNG (High Quality)</button>
+    </div>
+
+    <div class="page-wrapper">
+        
+        <div class="card-container">
+        <div class="id-card">
+            <div class="card-content">
+                <div class="student-photo" id="studentPhoto">
+                    <!-- Student photo will be loaded here -->
+                </div>
+                <div class="student-name" id="studentName">Student Name</div>
+                <div class="father-info" id="fatherInfo">Father's Name: </div>
+                <div class="mobile-info" id="mobileInfo">Mobile: </div>
+                <div class="iid-info" id="iidInfo">ID: </div>
+                <div class="qr-code" id="qrCode">
+                    <!-- QR code will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Function to get URL parameters
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            var results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        // Function to generate QR code with fallback
+        async function generateQRCode(text, elementId) {
+            const qrContainer = document.getElementById(elementId);
+            if (!qrContainer) {
+                console.error('QR container not found');
+                return;
+            }
+            
+            try {
+                console.log('Generating QR for:', text);
+                
+                // Method 1: Try using QRCode library
+                if (typeof QRCode !== 'undefined') {
+                    qrContainer.innerHTML = '';
+                    const canvas = document.createElement('canvas');
+                    
+                    await QRCode.toCanvas(canvas, text, {
+                        width: 172,
+                        height: 172,
+                        margin: 2,
+                        color: {
+                            dark: '#FF6600',
+                            light: '#FFFFFF'
+                        }
+                    });
+                    
+                    canvas.style.width = '100%';
+                    canvas.style.height = '100%';
+                    canvas.style.objectFit = 'contain';
+                    qrContainer.appendChild(canvas);
+                    
+                    console.log('QR generated successfully with QRCode library');
+                    return;
+                }
+                
+                // Method 2: Fallback - use external QR service
+                throw new Error('QRCode library not available');
+                
+            } catch (error) {
+                console.error('QR generation error:', error);
+                
+                // Fallback: Use external QR code service
+                qrContainer.innerHTML = '';
+                const img = document.createElement('img');
+                const encodedText = encodeURIComponent(text);
+                img.src = `https://api.qrserver.com/v1/create-qr-code/?size=172x172&color=FF6600&bgcolor=FFFFFF&data=${encodedText}`;
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'contain';
+                img.onerror = function() {
+                    qrContainer.innerHTML = '<div style="font-size: 8px; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%; color: #FF6600; border: 1px solid #FF6600;">QR Error</div>';
+                };
+                qrContainer.appendChild(img);
+                console.log('QR generated with fallback service');
+            }
+        }
+        
+        // Simplified PNG download function
+        async function downloadAsImagePNG() {
+            let btn = null;
+            try {
+                console.log('Starting PNG download...');
+                
+                // Show loading message
+                btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '⏳ Generating...';
+                btn.disabled = true;
+                
+                // Get student info for filename
+                const iid = getUrlParameter('iid') || 'unknown';
+                const studentName = getUrlParameter('student_name_en') || 'student';
+                
+                // Check if html2canvas is available
+                if (typeof html2canvas !== 'undefined') {
+                    console.log('Using html2canvas...');
+                    
+                    // Use html2canvas to capture the ID card
+                    const cardElement = document.querySelector('.id-card');
+                    
+                    if (!cardElement) {
+                        throw new Error('ID card element not found');
+                    }
+                    
+                    const canvas = await html2canvas(cardElement, {
+                        scale: 3,
+                        backgroundColor: '#ffffff',
+                        allowTaint: true,
+                        useCORS: true,
+                        logging: false
+                    });
+                    
+                    if (!canvas) {
+                        throw new Error('Failed to generate canvas');
+                    }
+                    
+                    // Download the image
+                    const dataURL = canvas.toDataURL('image/png', 1.0);
+                    
+                    if (!dataURL || dataURL === 'data:,') {
+                        throw new Error('Failed to convert canvas to image');
+                    }
+                    
+                    const link = document.createElement('a');
+                    link.download = `idcard_${iid}_${studentName.replace(/\s+/g, '_')}_hq.png`;
+                    link.href = dataURL;
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    console.log('PNG download completed successfully');
+                    
+                } else {
+                    throw new Error('html2canvas library not loaded');
+                }
+                
+                // Restore button
+                btn.textContent = originalText;
+                btn.disabled = false;
+                
+            } catch (error) {
+                console.error('Error in PNG download:', error);
+                
+                // Restore button
+                if (btn) {
+                    btn.textContent = '🖼️ Download PNG (High Quality)';
+                    btn.disabled = false;
+                }
+                
+                alert(`PNG download failed: ${error.message}. Please try the 53×84mm option instead.`);
+            }
+        }
+        
+        // Function to download as high-resolution image
+        async function downloadAsImage() {
+            let btn = null;
+            try {
+                console.log('Starting download process...');
+                
+                // Show loading message
+                btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '⏳ Generating 300 DPI...';
+                btn.disabled = true;
+                
+                // Get student info for filename
+                const iid = getUrlParameter('iid') || 'unknown';
+                const studentName = getUrlParameter('student_name_en') || 'student';
+                
+                // Get the ID card element
+                const cardElement = document.querySelector('.id-card');
+                
+                if (!cardElement) {
+                    throw new Error('ID card element not found');
+                }
+                
+                // Calculate scale for 300 DPI at 53x84mm
+                const mmToInch = 1 / 25.4;
+                const targetDPI = 300;
+                const cardWidthMm = 53;
+                const cardHeightMm = 84;
+                
+                // Target dimensions in pixels at 300 DPI
+                const targetWidth = Math.round(cardWidthMm * mmToInch * targetDPI); // 626px
+                const targetHeight = Math.round(cardHeightMm * mmToInch * targetDPI); // 992px
+                
+                // Get current card dimensions
+                const cardRect = cardElement.getBoundingClientRect();
+                const scaleX = targetWidth / cardRect.width;
+                const scaleY = targetHeight / cardRect.height;
+                const scale = Math.max(scaleX, scaleY); // Use larger scale to ensure full coverage
+                
+                console.log(`Target: ${targetWidth}x${targetHeight}, Current: ${cardRect.width}x${cardRect.height}, Scale: ${scale}`);
+                
+                // Use html2canvas to capture the exact HTML layout
+                const canvas = await html2canvas(cardElement, {
+                    scale: scale,
+                    backgroundColor: '#ffffff',
+                    allowTaint: false,
+                    useCORS: true,
+                    logging: false,
+                    width: cardRect.width,
+                    height: cardRect.height,
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: cardRect.width,
+                    windowHeight: cardRect.height
+                });
+                
+                console.log(`Generated canvas: ${canvas.width}x${canvas.height}`);
+                
+                // Create final canvas with exact 53x84mm dimensions
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = targetWidth;
+                finalCanvas.height = targetHeight;
+                const ctx = finalCanvas.getContext('2d');
+                
+                // Fill white background
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, targetWidth, targetHeight);
+                
+                // Calculate position to center the captured image
+                const sourceWidth = canvas.width;
+                const sourceHeight = canvas.height;
+                
+                // Scale to fit within target dimensions while maintaining aspect ratio
+                const fitScale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
+                const finalWidth = sourceWidth * fitScale;
+                const finalHeight = sourceHeight * fitScale;
+                
+                const offsetX = (targetWidth - finalWidth) / 2;
+                const offsetY = (targetHeight - finalHeight) / 2;
+                
+                // Draw the captured image onto final canvas
+                ctx.drawImage(canvas, offsetX, offsetY, finalWidth, finalHeight);
+                
+                console.log('Converting canvas to image...');
+                
+                // Download the image
+                const dataURL = finalCanvas.toDataURL('image/png', 1.0);
+                
+                if (!dataURL || dataURL === 'data:,') {
+                    throw new Error('Failed to convert canvas to image');
+                }
+                
+                const link = document.createElement('a');
+                link.download = `idcard_${iid}_${studentName.replace(/\s+/g, '_')}_53x84mm_300dpi.png`;
+                link.href = dataURL;
+                
+                // Add to document, click, then remove
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('Download initiated successfully');
+                
+                // Restore button
+                btn.textContent = originalText;
+                btn.disabled = false;
+                
+            } catch (error) {
+                console.error('Error generating high-resolution image:', error);
+                
+                // Restore button
+                if (btn) {
+                    btn.textContent = '📥 Download 53×84mm (300 DPI)';
+                    btn.disabled = false;
+                }
+                
+                alert(`Error generating download: ${error.message}. Please try again or use the PNG option.`);
+            }
+        }
+        
+        // Initialize the page when DOM loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            
+            // Get URL parameters
+            const iid = getUrlParameter('iid');
+            const studentName = getUrlParameter('student_name_en');
+            const fatherName = getUrlParameter('father_name_en');
+            const mobile = getUrlParameter('father_phone');
+            const photoUrl = getUrlParameter('student_photo_url');
+            
+            console.log('Parameters:', { iid, studentName, fatherName, mobile, photoUrl });
+            
+            // Update card display
+            document.getElementById('studentName').textContent = studentName || 'Student Name';
+            document.getElementById('fatherInfo').textContent = `Father's Name: ${fatherName || ''}`;
+            document.getElementById('mobileInfo').textContent = `Mobile: ${mobile || ''}`;
+            document.getElementById('iidInfo').textContent = `ID: ${iid || ''}`;
+            
+            // Load student photo
+            if (photoUrl) {
+                const photoContainer = document.getElementById('studentPhoto');
+                const img = document.createElement('img');
+                img.src = photoUrl;
+                img.alt = 'Student Photo';
+                img.onerror = function() {
+                    photoContainer.innerHTML = '<div style="font-size: 8px; text-align: center; padding: 10px;">No Photo</div>';
+                };
+                photoContainer.appendChild(img);
+            } else {
+                document.getElementById('studentPhoto').innerHTML = '<div style="font-size: 8px; text-align: center; padding: 10px;">No Photo</div>';
+            }
+            
+            // Generate QR code
+            if (iid) {
+                const qrUrl = `https://modelresult.netlify.app/idcard/verify.html?iid=${iid}`;
+                console.log('Generating QR code for URL:', qrUrl);
+                
+                // Add delay to ensure everything is loaded
+                setTimeout(function() {
+                    generateQRCode(qrUrl, 'qrCode');
+                }, 500);
+            } else {
+                document.getElementById('qrCode').innerHTML = '<div style="font-size: 8px; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%; color: #FF6600;">No IID</div>';
+            }
+        });
+    </script>
+</body>
+</html> 

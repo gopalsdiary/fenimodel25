@@ -345,7 +345,7 @@
           const pdfBtn = document.createElement('a');
           pdfBtn.className = 'pdf-badge';
           pdfBtn.textContent = 'PDF';
-          pdfBtn.href = `verify.html?iid=${encodeURIComponent(idCard.iid)}`;
+          pdfBtn.href = `font_side.html?iid=${encodeURIComponent(idCard.iid)}&student_name_en=${encodeURIComponent(student.student_name_en || '')}&father_name_en=${encodeURIComponent(student.father_name_en || '')}&father_phone=${encodeURIComponent(student.father_mobile || '')}&student_photo_url=${encodeURIComponent(student.student_photo_url || '')}`;
           pdfBtn.target = '_blank';
           actionCell.appendChild(pdfBtn);
           tr.appendChild(actionCell);
