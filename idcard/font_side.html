@@ -152,7 +152,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             z-index: 0;
         }
         
@@ -203,7 +203,7 @@
         
         .qr-code {
             position: absolute;
-            bottom: 3%;
+            bottom: 3.6%;
             left: 50%;
             transform: translateX(-50%);
             width: 17.16mm;
@@ -241,7 +241,7 @@
         .student-photo img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             object-position: center center;
             display: block;
         }
@@ -253,7 +253,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-size: cover;
+            background-size: contain;
             background-position: center center;
             background-repeat: no-repeat;
         }
@@ -584,7 +584,7 @@
         }
 
         // Function to convert image to base64 (helps with CORS)
-        async function imageToBase64(img) {
+        async function imageToBase64(img, containerWidth, containerHeight) {
             return new Promise((resolve, reject) => {
                 try {
                     // Check if image is loaded
@@ -593,14 +593,38 @@
                         return;
                     }
                     
+                    // Use container dimensions if provided, otherwise use natural dimensions
+                    const canvasWidth = containerWidth || img.naturalWidth;
+                    const canvasHeight = containerHeight || img.naturalHeight;
+                    
                     const canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth;
-                    canvas.height = img.naturalHeight;
+                    canvas.width = canvasWidth;
+                    canvas.height = canvasHeight;
                     
                     const ctx = canvas.getContext('2d');
                     
-                    // Draw image
-                    ctx.drawImage(img, 0, 0);
+                    // Calculate scaling to fit image within container (object-fit: contain behavior)
+                    const imgAspect = img.naturalWidth / img.naturalHeight;
+                    const containerAspect = canvasWidth / canvasHeight;
+                    
+                    let drawWidth, drawHeight, drawX, drawY;
+                    
+                    if (imgAspect > containerAspect) {
+                        // Image is wider than container
+                        drawWidth = canvasWidth;
+                        drawHeight = canvasWidth / imgAspect;
+                        drawX = 0;
+                        drawY = (canvasHeight - drawHeight) / 2;
+                    } else {
+                        // Image is taller than container
+                        drawHeight = canvasHeight;
+                        drawWidth = canvasHeight * imgAspect;
+                        drawX = (canvasWidth - drawWidth) / 2;
+                        drawY = 0;
+                    }
+                    
+                    // Draw image centered and scaled
+                    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
                     
                     // Convert to base64
                     try {
@@ -911,18 +935,7 @@
                     }
                 }
                 
-                // Convert student photo
-                const studentPhotoImg = cardElement.querySelector('.student-photo img');
-                if (studentPhotoImg && studentPhotoImg.complete && studentPhotoImg.naturalWidth > 0) {
-                    console.log('Converting student photo to base64...');
-                    try {
-                        const base64 = await imageToBase64(studentPhotoImg);
-                        studentPhotoImg.src = base64;
-                        console.log('✅ Student photo converted');
-                    } catch (e) {
-                        console.warn('⚠️ Student photo conversion failed:', e.message);
-                    }
-                }
+               
                 
                 // Convert QR code image (if it's an img, not canvas)
                 const qrImg = cardElement.querySelector('.qr-code img');
@@ -934,6 +947,25 @@
                         console.log('✅ QR code converted');
                     } catch (e) {
                         console.warn('⚠️ QR code conversion failed:', e.message);
+                    }
+                }
+                
+                // Convert student photo image
+                const studentPhotoImg = cardElement.querySelector('.student-photo img');
+                if (studentPhotoImg) {
+                    console.log('Converting student photo to base64...');
+                    try {
+                        // Get the container element to get its actual dimensions
+                        const photoContainer = cardElement.querySelector('.student-photo');
+                        const containerWidth = photoContainer.offsetWidth;
+                        const containerHeight = photoContainer.offsetHeight;
+                        
+                        console.log(`Photo container size: ${containerWidth}x${containerHeight}`);
+                        const base64 = await imageToBase64(studentPhotoImg, containerWidth, containerHeight);
+                        if (base64) studentPhotoImg.src = base64;
+                        console.log('✅ Student photo converted');
+                    } catch (e) {
+                        console.warn('⚠️ Student photo conversion failed:', e.message);
                     }
                 }
                 
@@ -1170,16 +1202,23 @@
                     for (const c of candidates) {
                         const dataUrl = await fetchToBase64(c);
                         if (dataUrl) {
-                            const fill = document.createElement('div');
-                            fill.className = 'photo-bg';
-                            fill.style.backgroundImage = `url('${dataUrl}')`;
-                            photoContainer.appendChild(fill);
-                            await waitForBackgroundImage(fill);
-                            // slight repaint to ensure layout updates
-                            photoContainer.style.opacity = '0.99';
-                            setTimeout(() => { photoContainer.style.opacity = '1'; }, 10);
-                            try { setPhotoCache(iid, dataUrl); } catch(_){}
-                            return;
+                        const img = document.createElement('img');
+                        img.src = dataUrl;
+                        img.style.width = '100%';
+                        img.style.height = '100%';
+                        img.style.objectFit = 'contain';
+                        img.crossOrigin = 'anonymous';
+                        photoContainer.appendChild(img);
+                        // Wait for image to load
+                        await new Promise((resolve) => {
+                            img.onload = resolve;
+                            img.onerror = resolve; // resolve anyway to avoid hanging
+                        });
+                        // slight repaint to ensure layout updates
+                        photoContainer.style.opacity = '0.99';
+                        setTimeout(() => { photoContainer.style.opacity = '1'; }, 10);
+                        try { setPhotoCache(iid, dataUrl); } catch(_){}
+                        return;
                         }
                     }
                 } catch (e) {
