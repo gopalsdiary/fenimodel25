@@ -196,7 +196,6 @@
     });
   </script>
   <script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9VIF2PCcYdHzOYJbq6y-uI4gZimQlDeoBL-9wi7cbavaPgB9-k42z0smwJ7GDWnpeQ3S4rVT9L-It/pub?gid=0&single=true&output=csv';
     
     // New function to load ID card data from Supabase
     async function loadIdCardData() {
@@ -345,7 +344,8 @@
           const pdfBtn = document.createElement('a');
           pdfBtn.className = 'pdf-badge';
           pdfBtn.textContent = 'PDF';
-          pdfBtn.href = `font_side.html?iid=${encodeURIComponent(idCard.iid)}&student_name_en=${encodeURIComponent(student.student_name_en || '')}&father_name_en=${encodeURIComponent(student.father_name_en || '')}&father_phone=${encodeURIComponent(student.father_mobile || '')}&student_photo_url=${encodeURIComponent(student.student_photo_url || '')}`;
+          // Open only with IID; font_side.html will fetch rest from Supabase
+          pdfBtn.href = `font_side.html?iid=${encodeURIComponent(idCard.iid)}`;
           pdfBtn.target = '_blank';
           actionCell.appendChild(pdfBtn);
           tr.appendChild(actionCell);

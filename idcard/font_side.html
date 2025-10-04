@@ -85,6 +85,47 @@
             transform: none;
         }
         
+        /* Loading overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            flex-direction: column;
+        }
+        
+        .loading-overlay.active {
+            display: flex;
+        }
+        
+        .loading-spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #FF6600;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .loading-text {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         .card-container {
             background-color: white;
             padding: 20px;
@@ -99,12 +140,20 @@
             width: var(--card-width);
             height: var(--card-height);
             position: relative;
-            background-image: url('font_side.png');
-            background-size: 100% 100%;
-            background-position: center;
-            background-repeat: no-repeat;
+            background-color: #f5f5f5;
             border: 1px solid #ccc;
             overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
         }
         
         .card-content {
@@ -112,6 +161,7 @@
             width: 100%;
             height: 100%;
             color: #000;
+            z-index: 1;
         }
         
         .student-name {
@@ -165,12 +215,6 @@
             justify-content: center;
             border-radius: 2px;
         }
-            border: 1px solid #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 2px;
-        }
         
         .qr-code img, .qr-code canvas {
             width: 100% !important;
@@ -180,20 +224,38 @@
         
         .student-photo {
             position: absolute;
-            top: 25%;
+            top: 22%;
             left: 50%;
             transform: translateX(-50%);
-            width: 21.6mm;
-            height: 26.4mm;
-            border: 2px solid #FF6600;
+            width: 26mm;
+            height: 32mm;
+            border: 2.5px solid #FF6600;
             overflow: hidden;
-            background-color: white;
+            background-color: transparent; /* keep transparent when no photo */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
         }
         
         .student-photo img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            object-position: center center;
+            display: block;
+        }
+
+        /* Background fill variant (more reliable for html2canvas) */
+        .student-photo .photo-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
         }
         
         .student-name {
@@ -245,6 +307,8 @@
             top: 69.5%;
             color: #000;
         }
+        
+        @media print {
             body {
                 margin: 0;
                 padding: 0;
@@ -326,8 +390,15 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loadingText">Loading images...</div>
+    </div>
+    
     <!-- Fixed Controls Panel -->
     <div class="controls">
         <button class="btn download" onclick="downloadAsImage()">📥 Download 53×84mm (300 DPI)</button>
@@ -338,6 +409,7 @@
         
         <div class="card-container">
         <div class="id-card">
+            <img src="background.png" alt="Background" class="background-image" crossorigin="anonymous">
             <div class="card-content">
                 <div class="student-photo" id="studentPhoto">
                     <!-- Student photo will be loaded here -->
@@ -354,12 +426,239 @@
     </div>
 
     <script>
+    // Base URL for Supabase public storage (used to construct photo candidates when only filename is provided)
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
         // Function to get URL parameters
         function getUrlParameter(name) {
             name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
             var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
             var results = regex.exec(location.search);
             return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+
+        // Safe decode that tries multiple times in case of double-encoding
+        function safeDecode(value) {
+            if (!value) return '';
+            let v = String(value);
+            try { v = decodeURIComponent(v); } catch(e) {}
+            try { v = decodeURIComponent(v); } catch(e) {}
+            return v;
+        }
+
+        // Build a list of candidate URLs for the student photo based on the provided raw value
+        function buildPhotoCandidates(raw) {
+            const candidates = [];
+            if (!raw) return candidates;
+            const trimmed = String(raw).trim();
+            if (!trimmed) return candidates;
+
+            const norm = trimmed.replace(/\s+/g, '%20'); // normalize spaces
+
+            // Data URL (already inline)
+            if (/^data:/i.test(norm)) {
+                candidates.push(norm);
+                return candidates;
+            }
+            // Protocol-relative
+            if (/^\/\//.test(norm)) {
+                candidates.push('https:' + norm);
+            }
+            // Absolute http(s)
+            if (/^https?:\/\//i.test(norm)) {
+                candidates.push(norm);
+            } else if (/^\//.test(norm)) {
+                // Absolute path on current origin
+                candidates.push(norm);
+                try { candidates.push(new URL(norm, location.origin).toString()); } catch (e) {}
+            } else {
+                // Likely a filename or relative path
+                candidates.push(norm);
+                candidates.push('/photo/' + norm);
+                candidates.push('/photo/uploads/' + norm);
+                // Supabase public buckets commonly used in this repo
+                const base = (SUPABASE_URL || '').replace(/\/+$/, '');
+                if (base) {
+                    candidates.push(base + '/storage/v1/object/public/student_photo/' + norm);
+                    candidates.push(base + '/storage/v1/object/public/photos/' + norm);
+                }
+            }
+
+            // Deduplicate while preserving order
+            const seen = new Set();
+            return candidates.filter(u => {
+                if (!u) return false;
+                if (seen.has(u)) return false;
+                seen.add(u);
+                return true;
+            });
+        }
+
+        // Fetch a URL and convert to base64 (data URL). Returns null on failure.
+        async function fetchToBase64(url) {
+            try {
+                const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
+                if (!res.ok) return null;
+                const blob = await res.blob();
+                return await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (e) {
+                console.warn('fetchToBase64 failed for', url, e);
+                return null;
+            }
+        }
+        
+        // Ensure the student photo is ready (base64 background) just before capture
+    async function ensurePhotoPrepared() {
+            try {
+                const container = document.getElementById('studentPhoto');
+                if (!container) return;
+        const iidVal = getUrlParameter('iid');
+
+                // If already a background image with data: URL, ensure it's loaded
+                const fill = container.querySelector('.photo-bg');
+                if (fill) {
+                    const bg = getComputedStyle(fill).backgroundImage || '';
+                    if (/^url\(\"?data:/i.test(bg)) { await waitForBackgroundImage(fill); return; }
+                    // If it's not data URL, try to convert it
+                    const m = bg.match(/url\(["']?(.*?)["']?\)/);
+                    const raw = m && m[1];
+                    if (raw) {
+                        const dataUrl = await fetchToBase64(raw);
+                        if (dataUrl) {
+                            fill.style.backgroundImage = `url('${dataUrl}')`;
+                            await waitForBackgroundImage(fill);
+                            try { setPhotoCache(iidVal, dataUrl); } catch(_){}
+                            return;
+                        } else {
+                            // Can't convert due to CORS → keep existing (may render empty) to remain transparent
+                            return;
+                        }
+                    }
+                }
+
+                // If there's an <img>, convert and switch to background
+                const img = container.querySelector('img');
+                if (img && img.complete && img.naturalWidth > 0) {
+                    try {
+                        const dataUrl = await imageToBase64(img);
+                        container.innerHTML = '';
+                        const div = document.createElement('div');
+                        div.className = 'photo-bg';
+                        div.style.backgroundImage = `url('${dataUrl}')`;
+                        container.appendChild(div);
+                        await waitForBackgroundImage(div);
+                        try { setPhotoCache(iidVal, dataUrl); } catch(_){}
+                        return;
+                    } catch (_) {}
+                }
+
+                // Last attempt: rebuild from dataset photo url
+                const rawParam = (container.dataset && container.dataset.photoUrl) || '';
+                const decoded = safeDecode(rawParam);
+                const candidates = buildPhotoCandidates(decoded);
+                for (const u of candidates) {
+                    const dataUrl = await fetchToBase64(u);
+                    if (dataUrl) {
+                        container.innerHTML = '';
+                        const div = document.createElement('div');
+                        div.className = 'photo-bg';
+                        div.style.backgroundImage = `url('${dataUrl}')`;
+                        container.appendChild(div);
+                        await waitForBackgroundImage(div);
+                        try { setPhotoCache(iidVal, dataUrl); } catch(_){}
+                        return;
+                    }
+                }
+                // If everything fails, keep transparent frame (no image)
+                container.innerHTML = '';
+            } catch (e) {
+                console.warn('ensurePhotoPrepared error', e);
+            }
+        }
+
+        // Function to convert image to base64 (helps with CORS)
+        async function imageToBase64(img) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Check if image is loaded
+                    if (!img.complete || !img.naturalWidth) {
+                        reject(new Error('Image not loaded'));
+                        return;
+                    }
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Draw image
+                    ctx.drawImage(img, 0, 0);
+                    
+                    // Convert to base64
+                    try {
+                        const dataURL = canvas.toDataURL('image/png');
+                        resolve(dataURL);
+                    } catch (e) {
+                        // If canvas is tainted, return original src
+                        console.warn('Canvas tainted, using original src');
+                        resolve(img.src);
+                    }
+                } catch (error) {
+                    console.error('Failed to convert image to base64:', error);
+                    reject(error);
+                }
+            });
+        }
+
+        // Wait for an element's background-image to load
+        async function waitForBackgroundImage(el) {
+            const bg = getComputedStyle(el).backgroundImage;
+            const match = bg && bg.match(/url\(["']?(.*?)["']?\)/);
+            const url = match && match[1];
+            if (!url) return;
+            await new Promise((resolve) => {
+                const img = document.createElement('img');
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+                img.src = url;
+            });
+        }
+
+        // Simple sessionStorage-backed cache for prepared photo data URLs
+        const PHOTO_CACHE_KEY_PREFIX = 'photoCache:';
+        const PHOTO_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+        function getPhotoCache(iid) {
+            try {
+                if (!iid) return null;
+                const raw = sessionStorage.getItem(PHOTO_CACHE_KEY_PREFIX + iid);
+                if (!raw) return null;
+                const obj = JSON.parse(raw);
+                if (!obj || !obj.dataUrl) return null;
+                if (obj.t && Date.now() - obj.t > PHOTO_CACHE_TTL_MS) {
+                    sessionStorage.removeItem(PHOTO_CACHE_KEY_PREFIX + iid);
+                    return null;
+                }
+                return obj;
+            } catch (_) { return null; }
+        }
+
+        function setPhotoCache(iid, dataUrl) {
+            try {
+                if (!iid || !dataUrl) return;
+                // guard to avoid very large entries
+                if (dataUrl.length > 2_000_000) return; // ~2MB
+                const obj = { dataUrl, t: Date.now() };
+                sessionStorage.setItem(PHOTO_CACHE_KEY_PREFIX + iid, JSON.stringify(obj));
+            } catch (_) { /* ignore quota errors */ }
         }
         
         // Function to generate QR code with fallback
@@ -392,7 +691,6 @@
                     canvas.style.height = '100%';
                     canvas.style.objectFit = 'contain';
                     qrContainer.appendChild(canvas);
-                    
                     console.log('QR generated successfully with QRCode library');
                     return;
                 }
@@ -406,106 +704,268 @@
                 // Fallback: Use external QR code service
                 qrContainer.innerHTML = '';
                 const img = document.createElement('img');
+                img.crossOrigin = 'anonymous'; // Enable CORS
                 const encodedText = encodeURIComponent(text);
                 img.src = `https://api.qrserver.com/v1/create-qr-code/?size=172x172&color=FF6600&bgcolor=FFFFFF&data=${encodedText}`;
                 img.style.width = '100%';
                 img.style.height = '100%';
                 img.style.objectFit = 'contain';
                 img.onerror = function() {
+                    console.error('QR service failed');
                     qrContainer.innerHTML = '<div style="font-size: 8px; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%; color: #FF6600; border: 1px solid #FF6600;">QR Error</div>';
+                };
+                img.onload = function() {
+                    console.log('QR code loaded successfully');
                 };
                 qrContainer.appendChild(img);
                 console.log('QR generated with fallback service');
             }
         }
-        
-        // Simplified PNG download function
-        async function downloadAsImagePNG() {
-            let btn = null;
+
+    // Simplified PNG download function (captures the current card as PNG)
+    async function downloadAsImagePNG() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+
             try {
-                console.log('Starting PNG download...');
-                
-                // Show loading message
-                btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '⏳ Generating...';
+                console.log('� Starting PNG download...');
+
+                // Show loading overlay
+                loadingOverlay.classList.add('active');
+                loadingText.textContent = '⏳ Loading all images...';
+
+                btn.textContent = '⏳ Please wait...';
                 btn.disabled = true;
-                
+
                 // Get student info for filename
                 const iid = getUrlParameter('iid') || 'unknown';
                 const studentName = getUrlParameter('student_name_en') || 'student';
-                
-                // Check if html2canvas is available
-                if (typeof html2canvas !== 'undefined') {
-                    console.log('Using html2canvas...');
-                    
-                    // Use html2canvas to capture the ID card
-                    const cardElement = document.querySelector('.id-card');
-                    
-                    if (!cardElement) {
-                        throw new Error('ID card element not found');
-                    }
-                    
-                    const canvas = await html2canvas(cardElement, {
-                        scale: 3,
-                        backgroundColor: '#ffffff',
-                        allowTaint: true,
-                        useCORS: true,
-                        logging: false
-                    });
-                    
-                    if (!canvas) {
-                        throw new Error('Failed to generate canvas');
-                    }
-                    
-                    // Download the image
-                    const dataURL = canvas.toDataURL('image/png', 1.0);
-                    
-                    if (!dataURL || dataURL === 'data:,') {
-                        throw new Error('Failed to convert canvas to image');
-                    }
-                    
-                    const link = document.createElement('a');
-                    link.download = `idcard_${iid}_${studentName.replace(/\s+/g, '_')}_hq.png`;
-                    link.href = dataURL;
-                    
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    
-                    console.log('PNG download completed successfully');
-                    
-                } else {
-                    throw new Error('html2canvas library not loaded');
+
+                // Get the ID card element
+                const cardElement = document.querySelector('.id-card');
+                if (!cardElement) {
+                    throw new Error('ID card element not found');
                 }
-                
-                // Restore button
-                btn.textContent = originalText;
-                btn.disabled = false;
-                
-            } catch (error) {
-                console.error('Error in PNG download:', error);
-                
-                // Restore button
-                if (btn) {
-                    btn.textContent = '🖼️ Download PNG (High Quality)';
+
+                // Ensure student photo is fully prepared (base64 background) with cache fast-path
+                {
+                    const iidVal = getUrlParameter('iid');
+                    let usedCache = false;
+                    try{
+                        const c = getPhotoCache(iidVal);
+                        if(c && c.dataUrl){
+                            const container = document.getElementById('studentPhoto');
+                            container.innerHTML = '';
+                            const fill = document.createElement('div'); fill.className='photo-bg';
+                            fill.style.backgroundImage = `url('${c.dataUrl}')`;
+                            container.appendChild(fill);
+                            await waitForBackgroundImage(fill);
+                            usedCache = true;
+                        }
+                    }catch(_){ }
+                    if(!usedCache){ await ensurePhotoPrepared(); }
+                }
+                // Wait for ALL images to load completely
+                await waitForAllImagesToLoad(cardElement);
+
+                loadingText.textContent = '📸 Capturing high quality...';
+                console.log('📸 Capturing with html2canvas...');
+
+                // Compute exact target size (53x84mm at 300 DPI)
+                const dpi = 300;
+                const mmToInch = 1 / 25.4;
+                const widthMm = 53;
+                const heightMm = 84;
+                const targetWidth = Math.round(widthMm * mmToInch * dpi);  // 626 px
+                const targetHeight = Math.round(heightMm * mmToInch * dpi); // 992 px
+                const elemWidth = cardElement.getBoundingClientRect().width;
+                const scaleFactor = Math.max(1, targetWidth / Math.max(1, elemWidth));
+
+                // Use html2canvas to capture at precise scale
+                let canvas = await html2canvas(cardElement, {
+                    scale: scaleFactor,
+                    backgroundColor: '#ffffff',
+                    allowTaint: false,
+                    useCORS: true,
+                    logging: false,
+                    imageTimeout: 0,
+                    removeContainer: false
+                });
+
+                // If the resulting canvas is not exact size, resample once
+                if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                    const tmp = document.createElement('canvas');
+                    tmp.width = targetWidth;
+                    tmp.height = targetHeight;
+                    const tctx = tmp.getContext('2d');
+                    tctx.imageSmoothingEnabled = true;
+                    tctx.imageSmoothingQuality = 'high';
+                    tctx.fillStyle = '#ffffff';
+                    tctx.fillRect(0, 0, targetWidth, targetHeight);
+                    tctx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+                    canvas = tmp;
+                }
+
+                console.log(`✅ Canvas created: ${canvas.width}x${canvas.height}`);
+
+                // Convert to PNG
+                const dataURL = canvas.toDataURL('image/png', 1.0);
+
+                if (!dataURL || dataURL === 'data:,') {
+                    throw new Error('Failed to convert canvas to image');
+                }
+
+                // Download
+                const link = document.createElement('a');
+                link.download = `idcard_${iid}_${studentName.replace(/\s+/g, '_')}_hq.png`;
+                link.href = dataURL;
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                console.log('✅ PNG download completed successfully');
+
+                // Hide loading overlay
+                loadingOverlay.classList.remove('active');
+
+                btn.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
                     btn.disabled = false;
-                }
-                
-                alert(`PNG download failed: ${error.message}. Please try the 53×84mm option instead.`);
+                }, 2000);
+
+            } catch (error) {
+                console.error('❌ Error in PNG download:', error);
+
+                // Hide loading overlay
+                loadingOverlay.classList.remove('active');
+
+                btn.textContent = '❌ Failed';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
+
+                alert(`Error: ${error.message}\n\nPlease check:\n1. All images are loaded\n2. Browser console (F12) for details`);
             }
         }
         
-        // Function to download as high-resolution image
-        async function downloadAsImage() {
-            let btn = null;
+        // Function to check if all images are loaded
+        async function waitForAllImagesToLoad(cardElement) {
+            const allImages = cardElement.querySelectorAll('img');
+            const allCanvases = cardElement.querySelectorAll('canvas');
+            
+            console.log(`Waiting for ${allImages.length} images and ${allCanvases.length} canvases to load...`);
+            
+            // Create array of promises for all images
+            const imagePromises = Array.from(allImages).map((img, index) => {
+                return new Promise((resolve) => {
+                    if (img.complete && img.naturalWidth > 0) {
+                        console.log(`✅ Image ${index + 1} already loaded: ${img.src.substring(0, 50)}...`);
+                        resolve();
+                    } else {
+                        console.log(`⏳ Waiting for image ${index + 1}: ${img.src.substring(0, 50)}...`);
+                        
+                        const loadHandler = () => {
+                            console.log(`✅ Image ${index + 1} loaded successfully`);
+                            resolve();
+                        };
+                        
+                        const errorHandler = () => {
+                            console.warn(`⚠️ Image ${index + 1} failed to load, continuing anyway`);
+                            resolve(); // Resolve anyway to not block
+                        };
+                        
+                        img.addEventListener('load', loadHandler, { once: true });
+                        img.addEventListener('error', errorHandler, { once: true });
+                        
+                        // Timeout after 10 seconds
+                        setTimeout(() => {
+                            console.warn(`⏱️ Timeout waiting for image ${index + 1}`);
+                            resolve();
+                        }, 10000);
+                    }
+                });
+            });
+            
+            // Wait for all images
+            await Promise.all(imagePromises);
+            
+            // Convert ALL external images to base64 to bypass CORS issues
             try {
-                console.log('Starting download process...');
+                console.log('🔄 Converting images to base64...');
                 
-                // Show loading message
-                btn = event.target;
-                const originalText = btn.textContent;
-                btn.textContent = '⏳ Generating 300 DPI...';
+                // Convert background image
+                const backgroundImg = cardElement.querySelector('.background-image');
+                if (backgroundImg && backgroundImg.complete && backgroundImg.naturalWidth > 0) {
+                    console.log('Converting background to base64...');
+                    try {
+                        const base64 = await imageToBase64(backgroundImg);
+                        backgroundImg.src = base64;
+                        console.log('✅ Background converted');
+                    } catch (e) {
+                        console.warn('⚠️ Background conversion failed:', e.message);
+                    }
+                }
+                
+                // Convert student photo
+                const studentPhotoImg = cardElement.querySelector('.student-photo img');
+                if (studentPhotoImg && studentPhotoImg.complete && studentPhotoImg.naturalWidth > 0) {
+                    console.log('Converting student photo to base64...');
+                    try {
+                        const base64 = await imageToBase64(studentPhotoImg);
+                        studentPhotoImg.src = base64;
+                        console.log('✅ Student photo converted');
+                    } catch (e) {
+                        console.warn('⚠️ Student photo conversion failed:', e.message);
+                    }
+                }
+                
+                // Convert QR code image (if it's an img, not canvas)
+                const qrImg = cardElement.querySelector('.qr-code img');
+                if (qrImg && qrImg.complete && qrImg.naturalWidth > 0) {
+                    console.log('Converting QR code to base64...');
+                    try {
+                        const base64 = await imageToBase64(qrImg);
+                        qrImg.src = base64;
+                        console.log('✅ QR code converted');
+                    } catch (e) {
+                        console.warn('⚠️ QR code conversion failed:', e.message);
+                    }
+                }
+                
+                // Wait for browser to update with new base64 sources
+                await new Promise(resolve => setTimeout(resolve, 500));
+                console.log('✅ All images converted to base64');
+            } catch (error) {
+                console.warn('⚠️ Image conversion error:', error);
+            }
+            
+            // Extra wait to ensure rendering is complete
+            console.log('⏳ Waiting additional 500ms for rendering...');
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            console.log('✅ All images loaded and rendered!');
+        }
+        
+        // Function to download as high-resolution image
+    async function downloadAsImage() {
+            const btn = event.target;
+            const originalText = btn.textContent;
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const loadingText = document.getElementById('loadingText');
+            
+            try {
+                console.log('🚀 Starting download process...');
+                
+                // Show loading overlay
+                loadingOverlay.classList.add('active');
+                loadingText.textContent = '⏳ Loading all images...';
+                
+                btn.textContent = '⏳ Please wait...';
                 btn.disabled = true;
                 
                 // Get student info for filename
@@ -514,118 +974,154 @@
                 
                 // Get the ID card element
                 const cardElement = document.querySelector('.id-card');
-                
                 if (!cardElement) {
                     throw new Error('ID card element not found');
                 }
                 
-                // Calculate scale for 300 DPI at 53x84mm
+                // Ensure student photo is fully prepared (base64 background) with cache fast-path
+                {
+                    const iidVal = getUrlParameter('iid');
+                    let usedCache = false;
+                    try{
+                        const c = getPhotoCache(iidVal);
+                        if(c && c.dataUrl){
+                            const container = document.getElementById('studentPhoto');
+                            container.innerHTML = '';
+                            const fill = document.createElement('div'); fill.className='photo-bg';
+                            fill.style.backgroundImage = `url('${c.dataUrl}')`;
+                            container.appendChild(fill);
+                            await waitForBackgroundImage(fill);
+                            usedCache = true;
+                        }
+                    }catch(_){ }
+                    if(!usedCache){ await ensurePhotoPrepared(); }
+                }
+                // Wait for ALL images to load completely
+                await waitForAllImagesToLoad(cardElement);
+                
+                loadingText.textContent = '📸 Capturing at 300 DPI...';
+                
+                // Calculate exact dimensions for 53x84mm at 300 DPI
+                const dpi = 300;
                 const mmToInch = 1 / 25.4;
-                const targetDPI = 300;
-                const cardWidthMm = 53;
-                const cardHeightMm = 84;
+                const widthMm = 53;
+                const heightMm = 84;
                 
-                // Target dimensions in pixels at 300 DPI
-                const targetWidth = Math.round(cardWidthMm * mmToInch * targetDPI); // 626px
-                const targetHeight = Math.round(cardHeightMm * mmToInch * targetDPI); // 992px
+                // Calculate pixel dimensions at 300 DPI
+                const targetWidth = Math.round(widthMm * mmToInch * dpi);  // 626 pixels
+                const targetHeight = Math.round(heightMm * mmToInch * dpi); // 992 pixels
                 
-                // Get current card dimensions
-                const cardRect = cardElement.getBoundingClientRect();
-                const scaleX = targetWidth / cardRect.width;
-                const scaleY = targetHeight / cardRect.height;
-                const scale = Math.max(scaleX, scaleY); // Use larger scale to ensure full coverage
+                console.log(`🎯 Target dimensions: ${targetWidth}x${targetHeight} pixels`);
                 
-                console.log(`Target: ${targetWidth}x${targetHeight}, Current: ${cardRect.width}x${cardRect.height}, Scale: ${scale}`);
-                
-                // Use html2canvas to capture the exact HTML layout
-                const canvas = await html2canvas(cardElement, {
-                    scale: scale,
+                // Use html2canvas with precise scale to hit target pixels and avoid extra resample
+                const elemWidth2 = cardElement.getBoundingClientRect().width;
+                const scaleFactor2 = Math.max(1, targetWidth / Math.max(1, elemWidth2));
+                let canvas = await html2canvas(cardElement, {
+                    scale: scaleFactor2,
                     backgroundColor: '#ffffff',
                     allowTaint: false,
                     useCORS: true,
                     logging: false,
-                    width: cardRect.width,
-                    height: cardRect.height,
-                    scrollX: 0,
-                    scrollY: 0,
-                    windowWidth: cardRect.width,
-                    windowHeight: cardRect.height
+                    imageTimeout: 0,
+                    removeContainer: false
                 });
-                
-                console.log(`Generated canvas: ${canvas.width}x${canvas.height}`);
-                
-                // Create final canvas with exact 53x84mm dimensions
-                const finalCanvas = document.createElement('canvas');
-                finalCanvas.width = targetWidth;
-                finalCanvas.height = targetHeight;
-                const ctx = finalCanvas.getContext('2d');
-                
-                // Fill white background
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, targetWidth, targetHeight);
-                
-                // Calculate position to center the captured image
-                const sourceWidth = canvas.width;
-                const sourceHeight = canvas.height;
-                
-                // Scale to fit within target dimensions while maintaining aspect ratio
-                const fitScale = Math.min(targetWidth / sourceWidth, targetHeight / sourceHeight);
-                const finalWidth = sourceWidth * fitScale;
-                const finalHeight = sourceHeight * fitScale;
-                
-                const offsetX = (targetWidth - finalWidth) / 2;
-                const offsetY = (targetHeight - finalHeight) / 2;
-                
-                // Draw the captured image onto final canvas
-                ctx.drawImage(canvas, offsetX, offsetY, finalWidth, finalHeight);
-                
-                console.log('Converting canvas to image...');
-                
-                // Download the image
-                const dataURL = finalCanvas.toDataURL('image/png', 1.0);
+
+                // If small mismatch, adjust once
+                if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+                    const tmp2 = document.createElement('canvas');
+                    tmp2.width = targetWidth;
+                    tmp2.height = targetHeight;
+                    const c2 = tmp2.getContext('2d');
+                    c2.imageSmoothingEnabled = true;
+                    c2.imageSmoothingQuality = 'high';
+                    c2.fillStyle = '#ffffff';
+                    c2.fillRect(0, 0, targetWidth, targetHeight);
+                    c2.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+                    canvas = tmp2;
+                }
+
+                // Convert to PNG with maximum quality
+                const dataURL = canvas.toDataURL('image/png', 1.0);
                 
                 if (!dataURL || dataURL === 'data:,') {
                     throw new Error('Failed to convert canvas to image');
                 }
                 
+                // Create download link
                 const link = document.createElement('a');
-                link.download = `idcard_${iid}_${studentName.replace(/\s+/g, '_')}_53x84mm_300dpi.png`;
+                const filename = `idcard_${iid}_${studentName.replace(/\s+/g, '_')}_53x84mm_300dpi.png`;
+                link.download = filename;
                 link.href = dataURL;
                 
-                // Add to document, click, then remove
+                // Trigger download
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 
-                console.log('Download initiated successfully');
+                console.log('Download completed successfully:', filename);
+                
+                // Hide loading overlay
+                loadingOverlay.classList.remove('active');
                 
                 // Restore button
-                btn.textContent = originalText;
-                btn.disabled = false;
+                btn.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }, 2000);
                 
             } catch (error) {
-                console.error('Error generating high-resolution image:', error);
+                console.error('❌ Error generating high-resolution image:', error);
+                
+                // Hide loading overlay
+                loadingOverlay.classList.remove('active');
                 
                 // Restore button
-                if (btn) {
-                    btn.textContent = '📥 Download 53×84mm (300 DPI)';
+                btn.textContent = '❌ Download Failed';
+                setTimeout(() => {
+                    btn.textContent = originalText;
                     btn.disabled = false;
-                }
+                }, 2000);
                 
-                alert(`Error generating download: ${error.message}. Please try again or use the PNG option.`);
+                alert(`Error: ${error.message}\n\nPlease ensure:\n1. All images are loaded\n2. You have an active internet connection\n3. Try the PNG download option instead`);
             }
         }
         
+        async function fetchStudentByIid(iid){
+            if(!supabaseClient){ return null; }
+            try{
+                const iidNum = parseInt(iid,10);
+                const { data, error } = await supabaseClient
+                    .from('student_database')
+                    .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url')
+                    .eq('iid', iidNum)
+                    .limit(1);
+                if(error){ console.error('Supabase error:', error); return null; }
+                return (data && data[0]) || null;
+            }catch(e){ console.error('Fetch by IID failed', e); return null; }
+        }
+
         // Initialize the page when DOM loads
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             console.log('DOM Content Loaded');
             
             // Get URL parameters
             const iid = getUrlParameter('iid');
-            const studentName = getUrlParameter('student_name_en');
-            const fatherName = getUrlParameter('father_name_en');
-            const mobile = getUrlParameter('father_phone');
-            const photoUrl = getUrlParameter('student_photo_url');
+            let studentName = getUrlParameter('student_name_en');
+            let fatherName = getUrlParameter('father_name_en');
+            let mobile = getUrlParameter('father_phone');
+            let photoUrl = getUrlParameter('student_photo_url');
+
+            // If only iid is passed, fetch rest from Supabase
+            if(iid && (!studentName || !fatherName || !mobile || !photoUrl)){
+                const rec = await fetchStudentByIid(iid);
+                if(rec){
+                    studentName = studentName || rec.student_name_en || '';
+                    fatherName = fatherName || rec.father_name_en || '';
+                    mobile = mobile || rec.father_mobile || '';
+                    photoUrl = photoUrl || rec.student_photo_url || '';
+                }
+            }
             
             console.log('Parameters:', { iid, studentName, fatherName, mobile, photoUrl });
             
@@ -635,33 +1131,135 @@
             document.getElementById('mobileInfo').textContent = `Mobile: ${mobile || ''}`;
             document.getElementById('iidInfo').textContent = `ID: ${iid || ''}`;
             
-            // Load student photo
-            if (photoUrl) {
+            // Load student photo (robust with fallbacks)
+            (async function loadStudentPhoto() {
                 const photoContainer = document.getElementById('studentPhoto');
+                photoContainer.innerHTML = '';
+                // Store raw URL for rebuild during download
+                try { if (photoUrl) photoContainer.dataset.photoUrl = String(photoUrl); } catch(_){}
+
+                let candidates = [];
+                if (photoUrl && String(photoUrl).trim()) {
+                    const decoded = safeDecode(photoUrl);
+                    candidates = buildPhotoCandidates(decoded);
+                } else if (iid) {
+                    // Derive sensible defaults from iid if URL missing
+                    const baseNames = [
+                        `avatar-${iid}.jpg`, `avatar-${iid}.jpeg`, `avatar-${iid}.png`,
+                        `${iid}.jpg`, `${iid}.jpeg`, `${iid}.png`
+                    ];
+                    const seen = new Set();
+                    for (const name of baseNames) {
+                        for (const u of buildPhotoCandidates(name)) {
+                            if (!seen.has(u)) { seen.add(u); candidates.push(u); }
+                        }
+                    }
+                    // Also store first derived raw for later rebuild
+                    try { if (!photoContainer.dataset.photoUrl && baseNames[0]) photoContainer.dataset.photoUrl = baseNames[0]; } catch(_){}
+                }
+                console.log('🖼️ Photo candidates:', candidates);
+
+                if (!candidates.length) {
+                    console.warn('⚠️ No valid photo candidates; rendering transparent frame');
+                    // leave container empty → transparent
+                    return;
+                }
+
+                // Try to prefetch as base64 first (best for reliable capture)
+                try {
+                    for (const c of candidates) {
+                        const dataUrl = await fetchToBase64(c);
+                        if (dataUrl) {
+                            const fill = document.createElement('div');
+                            fill.className = 'photo-bg';
+                            fill.style.backgroundImage = `url('${dataUrl}')`;
+                            photoContainer.appendChild(fill);
+                            await waitForBackgroundImage(fill);
+                            // slight repaint to ensure layout updates
+                            photoContainer.style.opacity = '0.99';
+                            setTimeout(() => { photoContainer.style.opacity = '1'; }, 10);
+                            try { setPhotoCache(iid, dataUrl); } catch(_){}
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Prefetch as base64 failed, falling back to IMG loading');
+                }
+
                 const img = document.createElement('img');
-                img.src = photoUrl;
                 img.alt = 'Student Photo';
-                img.onerror = function() {
-                    photoContainer.innerHTML = '<div style="font-size: 8px; text-align: center; padding: 10px;">No Photo</div>';
-                };
                 photoContainer.appendChild(img);
-            } else {
-                document.getElementById('studentPhoto').innerHTML = '<div style="font-size: 8px; text-align: center; padding: 10px;">No Photo</div>';
-            }
+
+                let idx = 0;
+                let triedNoCors = false;
+
+                function tryNext(src) {
+                    if (!src && idx >= candidates.length) {
+                        // All failed → transparent frame
+                        console.error('❌ All photo candidates failed, leaving transparent');
+                        img.remove();
+                        photoContainer.innerHTML = '';
+                        return;
+                    }
+
+                    const url = src || candidates[idx++];
+                    console.log('🔎 Trying photo URL:', url);
+                    img.crossOrigin = 'anonymous';
+                    img.src = url;
+                }
+
+                img.onerror = function() {
+                    console.warn('⚠️ Photo failed:', img.src);
+                    // Retry same URL without CORS once
+                    if (!triedNoCors) {
+                        triedNoCors = true;
+                        const current = img.src;
+                        console.log('🔄 Retrying without CORS for:', current);
+                        img.crossOrigin = null;
+                        img.src = '';
+                        setTimeout(() => tryNext(current), 50);
+                        return;
+                    }
+                    triedNoCors = false; // reset for next candidate
+                    tryNext();
+                };
+
+                img.onload = function() {
+                    console.log(`✅ Photo loaded: ${img.src} (${this.naturalWidth}x${this.naturalHeight})`);
+                    // Convert to base64 and switch to background fill for reliable capture
+                    imageToBase64(this).then(async base64 => {
+                        // replace IMG with background fill div
+                        photoContainer.innerHTML = '';
+                        const fill = document.createElement('div');
+                        fill.className = 'photo-bg';
+                        fill.style.backgroundImage = `url('${base64}')`;
+                        photoContainer.appendChild(fill);
+                        await waitForBackgroundImage(fill);
+                        // repaint
+                        photoContainer.style.opacity = '0.99';
+                        setTimeout(() => { photoContainer.style.opacity = '1'; }, 10);
+                        try { setPhotoCache(iid, base64); } catch(_){}
+                    }).catch(err => console.warn('⚠️ Base64 convert failed:', err));
+                };
+
+                tryNext();
+            })();
             
             // Generate QR code
             if (iid) {
                 const qrUrl = `https://modelresult.netlify.app/idcard/verify.html?iid=${iid}`;
                 console.log('Generating QR code for URL:', qrUrl);
                 
-                // Add delay to ensure everything is loaded
-                setTimeout(function() {
-                    generateQRCode(qrUrl, 'qrCode');
-                }, 500);
+                // Wait for photo to load first, then generate QR
+                setTimeout(async function() {
+                    console.log('⏳ Starting QR code generation...');
+                    await generateQRCode(qrUrl, 'qrCode');
+                    console.log('✅ QR code generation completed');
+                }, 1500); // Increased delay to 1.5 seconds
             } else {
                 document.getElementById('qrCode').innerHTML = '<div style="font-size: 8px; text-align: center; display: flex; align-items: center; justify-content: center; height: 100%; color: #FF6600;">No IID</div>';
             }
         });
     </script>
 </body>
-</html> 
+</html>
