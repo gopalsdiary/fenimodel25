@@ -9,7 +9,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-body{margin:0;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f7fb;color:#1f2d3d;}header{padding:14px 20px;border-bottom:4px double #1f2d3d;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;background:#fff;}h1{font-size:1.35rem;margin:0;letter-spacing:.5px;text-transform:uppercase;font-weight:800;} .sub{font-size:.7rem;font-weight:600;letter-spacing:1px;color:#334155;margin-top:4px;} .top-actions{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}button, input{font-family:inherit;} .btn{cursor:pointer;border:1px solid #334155;background:#1e3a8a;color:#fff;padding:.55rem .9rem;border-radius:8px;font-size:.65rem;font-weight:600;letter-spacing:.5px;display:inline-flex;align-items:center;gap:.35rem;} .btn.outline{background:#fff;color:#1f2d3d;} .search-box{display:flex;align-items:center;gap:.4rem;background:#fff;padding:.45rem .6rem;border:1px solid #cbd5e1;border-radius:10px;} .search-box input{border:none;outline:none;font-size:.7rem;min-width:190px;} main{padding:18px 26px;max-width:900px;margin:0 auto;} #formContainer{background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 18px -4px rgba(0,0,0,.07);padding:26px 30px;border-radius:18px;min-height:400px;position:relative;}
+body{margin:0;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f7fb;color:#1f2d3d;}header{padding:14px 20px;border-bottom:4px double #1f2d3d;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:1rem;background:#fff;}h1{font-size:1.35rem;margin:0;letter-spacing:.5px;text-transform:uppercase;font-weight:800;text-align:center;} .sub{font-size:.7rem;font-weight:600;letter-spacing:1px;color:#334155;margin-top:4px;text-align:center;} .top-actions{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;width:100%;justify-content:center;}button, input{font-family:inherit;} .btn{cursor:pointer;border:1px solid #334155;background:#1e3a8a;color:#fff;padding:.55rem .9rem;border-radius:8px;font-size:.65rem;font-weight:600;letter-spacing:.5px;display:inline-flex;align-items:center;gap:.35rem;} .btn.outline{background:#fff;color:#1f2d3d;} 
+.search-box{display:flex;align-items:center;gap:.4rem;background:#fff;padding:.45rem .6rem;border:1px solid #cbd5e1;border-radius:10px;} .search-box input{border:none;outline:none;font-size:.7rem;min-width:190px;} 
+/* Make the Download PDF button orange */
+#printBtn{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.25);} 
+#printBtn:hover{filter:brightness(1.05);transform:translateY(-1px);} 
+main{padding:18px 26px;max-width:900px;margin:0 auto;} #formContainer{background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 18px -4px rgba(0,0,0,.07);padding:26px 30px;border-radius:18px;min-height:400px;position:relative;}
 @media print{body{background:#fff;} header{border:none;padding:6px 0;margin-bottom:6px;} .top-actions{display:none!important;} .search-box{display:none!important;} main{padding:0;max-width:100%;} #formContainer{box-shadow:none;border:none;padding:0;} }
 </style>
 </head>
@@ -19,12 +24,13 @@ body{margin:0;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI'
 			<h1>Feni Model High School</h1>
 			<div class="sub">Admission Application Form</div>
 		</div>
-		<div class="top-actions">
+			<div class="top-actions">
 			<div class="search-box">
 				<input id="birthInput" placeholder="Birth Registration Number" />
 				<button class="btn outline" id="loadBtn">Load</button>
 			</div>
-			<button class="btn" id="printBtn">⬇️ Download PDF</button>
+				<button class="btn" id="printBtn">⬇️ Download PDF</button>
+				<button class="btn" id="editBtn">✏️ Edit Application</button>
 		</div>
 	</header>
 	<main>
@@ -44,7 +50,49 @@ document.getElementById('printBtn').addEventListener('click',()=>generatePdf());
 document.getElementById('loadBtn').addEventListener('click',loadApplication);
 birthInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ loadApplication(); }});
 
+// Check URL parameters and auto-load if birth registration number is provided
+function checkUrlParams(){
+	const urlParams = new URLSearchParams(window.location.search);
+	// Get the first parameter value (support both ?25305661133 and ?birth_reg=25305661133)
+	let birthReg = null;
+	
+	// Check if there's a parameter without a key (just ?25305661133)
+	const fullQuery = window.location.search.substring(1); // Remove the '?'
+	if(fullQuery && !fullQuery.includes('=')) {
+		birthReg = decodeURIComponent(fullQuery);
+	} else {
+		// Check for named parameters
+		birthReg = urlParams.get('birth_reg') || urlParams.get('birth_registration') || urlParams.get('br');
+	}
+	
+	if(birthReg){
+		birthInput.value = birthReg;
+		// Auto-load after a short delay to ensure Supabase is ready
+		setTimeout(()=>loadApplication(), 500);
+	}
+}
+
+// Run URL check when page loads
+window.addEventListener('DOMContentLoaded', checkUrlParams);
+checkUrlParams(); // Also run immediately in case DOMContentLoaded already fired
+
 function setStatus(msg,type='info'){ statusEl.textContent=msg; statusEl.style.color= type==='error'? '#b91c1c':'#475569'; }
+
+// Wire up Edit button
+const editBtn = document.getElementById('editBtn');
+function updateEditBtnState(){
+	const br = (birthInput.value||'').trim();
+	if(!br){ editBtn.disabled = true; editBtn.style.opacity = 0.6; }
+	else { editBtn.disabled = false; editBtn.style.opacity = 1; }
+}
+updateEditBtnState();
+birthInput.addEventListener('input', updateEditBtnState);
+editBtn.addEventListener('click', ()=>{
+	const br = (birthInput.value||'').trim();
+	if(!br){ setStatus('Enter birth registration number first','error'); return; }
+	// navigate to edit page with birth reg as query string
+	window.location.href = `edit_application.html?${encodeURIComponent(br)}`;
+});
 
 async function loadApplication(){
 	const br=birthInput.value.trim();
@@ -147,7 +195,7 @@ function render(o){
 			['Session', o.session], ['Admission Class', o.admisson_class], ['Admission Section', o.admission_section]
 		]},
 		{ title: 'Basic Information', fields: [
-			['Student Name English', o.student_name_en], ['Student Name Bangla', o.student_name_bn], ['Birth Registration', o.birth_registration], ['Student Date of Birth', o.student_dateofbirth], ['Religion', o.religion], ['Student Gender', o.student_gender], ['Student Photo URL', o.student_photo_url], ['Blood Group', o.student_blood_group]
+			['Student Name English', o.student_name_en], ['Student Name Bangla', o.student_name_bn], ['Birth Registration', o.birth_registration], ['Student Date of Birth', o.student_dateofbirth], ['Religion', o.religion], ['Student Gender', o.student_gender], ['Blood Group', o.student_blood_group]
 		]},
 		{ title: 'Father Information', fields: [
 			['Father Name English', o.father_name_en], ['Father Name Bangla', o.father_name_bn], ['Father NID', o.father_nid], ['Father Mobile', o.father_mobile], ['Father Occupation', o.father_occupation], ['Father Date of Birth', o.father_dob], ['Father Blood Group', o.father_blood_group]
@@ -183,11 +231,19 @@ function render(o){
 
 	// assemble html
 	const groupsHtml = groups.map(renderGroup).join('');
+	
+	// Student photo HTML
+	const photoHtml = o.student_photo_url ? 
+		`<img src="${escapeHtml(o.student_photo_url)}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+		<div style="display:none;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;text-align:center;">No Photo</div>` :
+		`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;text-align:center;">No Photo Available</div>`;
+	
 	formContainer.innerHTML = `
 		<div class="sheet" id="sheetRoot">
 			<div class="sheet-head">
+				<div class="photo-box">${photoHtml}</div>
 				<div class="school">Feni Model High School</div>
-				<div class="subtitle">Admission Application (${o.session||''})</div>
+				<div class="subtitle">Admission Form (${o.session||''})</div>
 				<div class="meta">Birth Registration: <strong>${escapeHtml(o.birth_registration||'')}</strong></div>
 			</div>
 			${groupsHtml}
@@ -209,10 +265,11 @@ style.textContent=`
 	/* Portrait A4 sheet styling (compact) */
 	/* 20% yellow tint */
 	.sheet{position:relative;box-sizing:border-box;width:210mm;max-width:100%;margin:0 auto;background:rgba(255,243,205,0.2);padding:14mm 12mm;border-radius:4px;box-shadow:0 6px 20px rgba(2,6,23,.06);font-family:inherit;color:#0b1220}
-	.sheet-head{text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(15,23,42,0.035);padding-bottom:8px}
-	.sheet-head .school{font-size:18px;font-weight:800;letter-spacing:.4px;color:#92400e}
-	.sheet-head .subtitle{font-size:12px;font-weight:700;margin-top:3px;color:#6b4226}
-	.sheet-head .meta{font-size:11px;margin-top:4px;color:#475569}
+	.sheet-head{position:relative;text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(15,23,42,0.035);padding-bottom:8px;min-height:120px}
+	.photo-box{position:absolute;top:0;right:12px;width:100px;height:120px;border:2px solid #dc2626;border-radius:4px;overflow:hidden;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+	.sheet-head .school{font-size:18px;font-weight:800;letter-spacing:.4px;color:#92400e;text-align:center}
+	.sheet-head .subtitle{font-size:12px;font-weight:700;margin-top:3px;color:#6b4226;text-align:center}
+	.sheet-head .meta{font-size:11px;margin-top:4px;color:#475569;text-align:center}
 	.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 	section{background:transparent;border-radius:4px;padding:4px 2px}
 	.f{display:flex;font-size:11px;padding:4px 4px;border-bottom:1px dashed #f1f6fb;gap:6px;align-items:flex-start;line-height:1.15}
@@ -223,9 +280,9 @@ style.textContent=`
 	.group.section h3{font-size:12px;margin:0 0 6px}
 	.sign-row{display:flex;justify-content:space-between;font-size:11px;margin-top:12px;gap:8px}
 	/* Responsive for small screens */
-	@media (max-width:760px){ .cols{grid-template-columns:1fr} .sheet{padding:10mm} .f .l{flex-basis:110px} }
+	@media (max-width:760px){ .cols{grid-template-columns:1fr} .sheet{padding:10mm} .f .l{flex-basis:110px} .photo-box{width:80px;height:100px;right:8px} }
 	/* Print rules - portrait A4 */
-	@media print{ html,body{background:#fff} @page{size:A4 portrait;margin:12mm} body{margin:0} .sheet{box-shadow:none;border-radius:0;padding:8mm 10mm;width:100%;} .top-actions{display:none!important} }
+	@media print{ html,body{background:#fff} @page{size:A4 portrait;margin:12mm} body{margin:0} .sheet{box-shadow:none;border-radius:0;padding:8mm 10mm;width:100%;} .top-actions{display:none!important} .photo-box{border:2px solid #000 !important} }
 `;
 document.head.appendChild(style);
 </script>

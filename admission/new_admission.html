@@ -8,38 +8,139 @@
 <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
 
 <style>
-html{font-size:115%;}
-:root{--bg:#f5f7fb;--bg-alt:#ffffff;--text:#1f2d3d;--text-soft:#5b6675;--border:#e2e8f0;--brand:#2563eb;--danger:#dc2626;--success:#15803d;--warn:#f59e0b;--shadow:0 6px 20px -2px rgba(0,0,0,.08),0 2px 6px -1px rgba(0,0,0,.04);} 
+html{font-size:126.5%;}
+:root{--bg:#e8edf2;--bg-alt:#ffffff;--text:#1f2937;--text-soft:#6b7280;--border:#d1d5db;--brand:#2563eb;--danger:#dc2626;--success:#15803d;--warn:#f59e0b;--shadow:0 1px 3px rgba(0,0,0,.08);} 
 .dark{--bg:#0d1117;--bg-alt:#161b22;--text:#e6edf3;--text-soft:#93a4b8;--border:#273649;--shadow:0 6px 28px -4px rgba(0,0,0,.65);} 
-*{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;} body{margin:0;background:var(--bg);color:var(--text);} a{text-decoration:none;color:var(--brand);} 
-header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;flex-wrap:wrap;gap:1rem;} .title{margin:0;font-size:clamp(1.4rem,2.5vw,2.05rem);font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;} 
-.mode-btn{background:var(--bg-alt);border:1px solid var(--border);padding:.55rem .85rem;border-radius:10px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--text-soft);display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);} 
-.shadow-orange{box-shadow:0 8px 30px -6px rgba(249,115,22,.35), 0 4px 18px -4px rgba(249,115,22,.25) !important;}
-.mode-btn.orange{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 6px 18px -4px rgba(249,115,22,.32);} 
-.mode-btn.orange:hover{filter:brightness(.97);}
-.container{width:100%;max-width:1180px;margin:0 auto;padding:0 1.1rem 4rem;} 
-.form-head{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin:.2rem 0 1rem;} .badge{background:var(--brand);color:#fff;font-size:.55rem;padding:.27rem .55rem;border-radius:999px;font-weight:600;letter-spacing:.5px;} 
-.section{background:var(--bg-alt);border:1px solid var(--border);border-radius:20px;padding:1.05rem 1.15rem 1.3rem;box-shadow:var(--shadow);margin:0 0 1.25rem;position:relative;} .section h3{margin:0 0 .65rem;font-size:.83rem;letter-spacing:.6px;font-weight:700;display:flex;align-items:center;gap:.5rem;} .section h3 span.icon{font-size:1rem;} 
-.grid{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));} 
-label.field{display:flex;flex-direction:column;gap:.3rem;font-size:.6rem;font-weight:600;letter-spacing:.5px;color:var(--text-soft);} 
-label.field input, label.field select{padding:.6rem .7rem;border:1px solid var(--border);border-radius:12px;background:var(--bg);font-size:.72rem;color:var(--text);} 
-.actions{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.5rem;} .btn{border:none;cursor:pointer;font-weight:600;font-size:.7rem;padding:.75rem 1.15rem;border-radius:12px;display:inline-flex;align-items:center;gap:.45rem;letter-spacing:.5px;} .btn.primary{background:linear-gradient(90deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 4px 14px -2px rgba(37,99,235,.45);} .btn.secondary{background:var(--bg-alt);border:1px solid var(--border);color:var(--text-soft);} .btn.danger{background:linear-gradient(90deg,#ef4444,#dc2626);color:#fff;} 
-.notice{margin:.85rem 0 0;font-size:.65rem;color:var(--text-soft);} .alert{display:none;margin:.9rem 0 0;padding:.75rem .85rem;border-radius:14px;font-size:.65rem;border:1px solid transparent;} .alert.success{display:block;background:#dcfce7;border-color:#86efac;color:#166534;} .alert.error{display:block;background:#fee2e2;border-color:#fecaca;color:#991b1b;} 
-.autofill{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.6rem;margin-top:.4rem;color:var(--text-soft);} .autofill label{display:flex;align-items:center;gap:.35rem;font-weight:600;} 
-footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-soft);} 
+*{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;} 
+body{margin:0;background:var(--bg);color:var(--text);} 
+a{text-decoration:none;color:var(--brand);} 
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;flex-wrap:wrap;gap:1rem;background:#fff;border-bottom:1px solid #e5e7eb;} 
+.title{margin:0;font-size:clamp(1.4rem,2.5vw,2.05rem);font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;} 
+.mode-btn{background:var(--bg-alt);border:1px solid var(--border);padding:.55rem .85rem;border-radius:8px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--text-soft);display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);transition:all .2s;} 
+.shadow-orange{box-shadow:0 2px 8px rgba(249,115,22,.25) !important;}
+.mode-btn.orange{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.3);} 
+.mode-btn.orange:hover{filter:brightness(1.05);transform:translateY(-1px);}
+.container{width:100%;max-width:1600px;margin:0 auto;padding:1.5rem 2rem 4rem;} 
+.form-head{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin:.2rem 0 1rem;} 
+.badge{background:var(--brand);color:#fff;font-size:.55rem;padding:.27rem .55rem;border-radius:999px;font-weight:600;letter-spacing:.5px;} 
+.section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:1.5rem 1.8rem;box-shadow:0 1px 2px rgba(0,0,0,.05);margin:0 0 1.5rem;position:relative;} 
+.section h3{margin:0 0 1.2rem;font-size:.88rem;letter-spacing:.3px;font-weight:700;display:flex;align-items:center;gap:.5rem;color:#111827;padding-bottom:.8rem;border-bottom:1px solid #f3f4f6;} 
+.section h3 span.icon{font-size:1.1rem;} 
+.grid{display:grid;gap:.95rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));} 
+label.field{display:flex;flex-direction:column;gap:.4rem;font-size:.65rem;font-weight:600;letter-spacing:.3px;color:#374151;} 
+label.field input, label.field select{padding:.7rem .85rem;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:.75rem;color:var(--text);transition:all .2s;outline:none;}
+label.field input:focus, label.field select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+label.field input::placeholder{color:#9ca3af;}
+.actions{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.8rem;} 
+.btn{border:none;cursor:pointer;font-weight:600;font-size:.75rem;padding:.85rem 1.4rem;border-radius:6px;display:inline-flex;align-items:center;gap:.5rem;letter-spacing:.3px;transition:all .2s;} 
+.btn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.3);} 
+.btn.primary:hover{box-shadow:0 4px 12px rgba(37,99,235,.4);transform:translateY(-1px);}
+.btn.secondary{background:#fff;border:1px solid #d1d5db;color:#6b7280;box-shadow:0 1px 2px rgba(0,0,0,.05);} 
+.btn.secondary:hover{background:#f9fafb;border-color:#9ca3af;}
+.btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 2px 8px rgba(239,68,68,.3);} 
+.btn-upload{padding:.6rem 1rem;font-size:.7rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;white-space:nowrap;}
+.btn-upload:hover{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 2px 8px rgba(16,185,129,.4);}
+.btn-icon-upload{
+  width:40px;
+  height:40px;
+  border:none;
+  border-radius:8px;
+  background:linear-gradient(135deg,#f97316,#ea580c);
+  color:#fff;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all .3s;
+  box-shadow:0 2px 6px rgba(249,115,22,.3);
+  flex-shrink:0;
+}
+.btn-icon-upload:hover{
+  background:linear-gradient(135deg,#ea580c,#c2410c);
+  box-shadow:0 4px 10px rgba(249,115,22,.4);
+  transform:translateY(-2px);
+}
+.btn-icon-upload.uploaded{
+  background:linear-gradient(135deg,#10b981,#059669);
+  box-shadow:0 2px 6px rgba(16,185,129,.3);
+}
+.btn-icon-upload.uploaded:hover{
+  background:linear-gradient(135deg,#059669,#047857);
+  box-shadow:0 4px 10px rgba(16,185,129,.4);
+}
+.crop-modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.7);
+  z-index:9999;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+.crop-modal.active{display:flex;}
+.crop-panel{
+  background:#fff;
+  border-radius:12px;
+  padding:2rem;
+  max-width:700px;
+  width:100%;
+  max-height:90vh;
+  overflow-y:auto;
+}
+.crop-panel h3{margin:0 0 1rem;font-size:1.2rem;color:#111;}
+.crop-info{font-size:.7rem;color:#6b7280;margin-bottom:1rem;line-height:1.5;}
+.crop-area{
+  border:2px solid #e5e7eb;
+  border-radius:8px;
+  overflow:hidden;
+  margin:1rem 0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#f9fafb;
+}
+.crop-canvas{
+  max-width:100%;
+  cursor:crosshair;
+  display:block;
+}
+.crop-controls{
+  display:flex;
+  gap:.8rem;
+  flex-wrap:wrap;
+  margin-top:1.5rem;
+  justify-content:center;
+}
+.notice{margin:1rem 0 0;font-size:.65rem;color:var(--text-soft);line-height:1.5;} 
+.download-section{display:flex;align-items:center;gap:1rem;margin:1.5rem 0;flex-wrap:wrap;}
+.search-box{display:flex;gap:.5rem;flex:1;min-width:300px;}
+.search-box input{flex:1;padding:.6rem .8rem;border:1px solid #d1d5db;border-radius:6px;font-size:.72rem;font-family:inherit;}
+.search-box input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+.alert{display:none;margin:1rem 0 0;padding:.8rem 1rem;border-radius:6px;font-size:.68rem;border:1px solid transparent;} 
+.alert.success{display:block;background:#d1fae5;border-color:#6ee7b7;color:#065f46;} 
+.alert.error{display:block;background:#fee2e2;border-color:#fca5a5;color:#991b1b;} 
+.autofill{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.62rem;margin-top:.4rem;color:var(--text-soft);} 
+.autofill label{display:flex;align-items:center;gap:.4rem;font-weight:600;cursor:pointer;} 
+footer{margin:3rem 0 1.5rem;text-align:center;font-size:.58rem;color:var(--text-soft);} 
 .required::after{content:' *';color:var(--danger);} 
-/* invalid field highlight */
-.invalid{border-color:var(--danger) !important;box-shadow:0 0 0 4px rgba(220,38,38,0.06) !important}
-@media (max-width:640px){ .grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));} }
+.invalid{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.1) !important}
+@media (max-width:768px){ 
+  .container{padding:1rem .8rem 3rem;}
+  .section{padding:1.2rem 1rem;}
+  .grid{grid-template-columns:1fr;gap:.8rem;} 
+}
 </style>
 </head>
 <body>
 <header style="text-align:center;padding:1rem 1.2rem;">
   <div style="width:100%;max-width:900px;margin:0 auto;">
     <div style="font-weight:800;font-size:1.15rem;letter-spacing:.6px;">Feni Model High School</div>
-    <h1 class="title" style="margin:.35rem 0 0">New Admission Application</h1>
+    <h1 class="title" style="margin:.35rem 0 0">Admission Form</h1>
     <div style="margin-top:.6rem;">
-  <a href="download_form.html" class="mode-btn orange shadow-orange" title="Back to Dashboard">🔙 Download application</a>
     </div>
   </div>
 </header>
@@ -55,9 +156,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
       <label class="field required">Session
         <select id="session" required>
           <option value="">Select</option>
-          <option>2025</option>
           <option>2026</option>
-          <option>2027</option>
 
         </select>
       </label>
@@ -97,7 +196,40 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
           <option>Female</option>
         </select>
       </label>
-      <label class="field">Student Photo URL<input id="student_photo_url" placeholder="https://" /></label>
+      <div class="field-with-upload">
+        <label class="field">Student Photo
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <img id="student_photo_preview" src="" alt="" style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+            <span id="student_photo_placeholder" style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No Photo</span>
+          </div>
+          <input id="student_photo_url" type="hidden" />
+        </label>
+        <button type="button" id="upload_photo_btn" class="btn-icon-upload" onclick="uploadStudentPhoto()" title="Upload Photo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <input type="file" id="student_photo_file" accept="image/*" style="display:none;" />
+      </div>
+      <div class="field-with-upload">
+        <label class="field">Birth Certificate
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <img id="certificate_preview" src="" alt="" style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+            <span id="certificate_placeholder" style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No Certificate</span>
+          </div>
+          <input id="birth_certificate_url" type="hidden" />
+        </label>
+        <button type="button" id="upload_certificate_btn" class="btn-icon-upload" onclick="uploadBirthCertificate()" title="Upload Certificate">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <input type="file" id="birth_certificate_file" accept="image/*" style="display:none;" />
+      </div>
       <label class="field">Blood Group
         <select id="student_blood_group">
           <option value="">Select</option>
@@ -117,7 +249,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
       <label class="field required">Father Name English<input id="father_name_en" /></label>
       <label class="field">Father Name Bangla<input id="father_name_bn" /></label>
       <label class="field">Father NID<input id="father_nid" /></label>
-      <label class="field">Father Mobile<input id="father_mobile" type="tel" /></label>
+      <label class="field">Father Mobile<input id="father_mobile" type="tel" value="880" placeholder="880XXXXXXXXXX" /></label>
       <label class="field">Father Occupation<input id="father_occupation" /></label>
       <label class="field">Father Date of Birth<input id="father_dob" type="date" /></label>
       <label class="field">Father Blood Group
@@ -139,7 +271,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
       <label class="field">Mother Name English<input id="mother_name_en" /></label>
       <label class="field">Mother Name Bangla<input id="mother_name_bn" /></label>
       <label class="field">Mother NID<input id="mother_nid" /></label>
-      <label class="field">Mother Mobile<input id="mother_mobile" type="tel" /></label>
+      <label class="field">Mother Mobile<input id="mother_mobile" type="tel" value="880" placeholder="880XXXXXXXXXX" /></label>
       <label class="field">Mother Occupation<input id="mother_occupation" /></label>
       <label class="field">Mother Date of Birth<input id="mother_dob" type="date" /></label>
       <label class="field">Mother Blood Group
@@ -165,7 +297,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
       <label class="field">Guardian Name English<input id="guardian_name_en" /></label>
       <label class="field">Guardian Name Bangla<input id="guardian_name_bn" /></label>
       <label class="field">Guardian NID<input id="guardian_nid" /></label>
-      <label class="field">Guardian Mobile<input id="guardian_mobile" type="tel" /></label>
+      <label class="field">Guardian Mobile<input id="guardian_mobile" type="tel" value="880" placeholder="880XXXXXXXXXX" /></label>
       <label class="field">Guardian Occupation<input id="guardian_occupation" /></label>
     </div>
   </div>
@@ -234,11 +366,383 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
   </div>
   <div id="alertBox" class="alert"></div>
   <p class="notice">After saving you can view / edit. Make sure sensitive data is correct after approval you can't edit.</p>
+  
+  <div class="download-section">
+    <div class="search-box">
+      <input type="text" id="searchBirthReg" placeholder="Enter Birth Registration Number" maxlength="17" />
+      <button type="button" class="btn primary" onclick="searchApplication()">🔍 Search</button>
+    </div>
+    <a href="download_form.html" class="mode-btn orange shadow-orange" title="Back to Dashboard">🔙 Download application</a>
+  </div>
+
+<!-- Crop Modal -->
+<div id="cropModal" class="crop-modal">
+  <div class="crop-panel">
+    <h3>📸 Crop Student Photo</h3>
+    <p class="crop-info">Click and drag to create a rectangular crop area (944:1181 ratio). The cropped image will be resized to 944x1181 pixels (96 DPI).</p>
+    
+    <div class="crop-area">
+      <canvas id="cropCanvas" class="crop-canvas"></canvas>
+    </div>
+
+    <div class="crop-controls">
+      <button type="button" class="btn secondary" onclick="resetCrop()">🔄 Reset</button>
+      <button type="button" class="btn primary" onclick="confirmCrop()">✅ Confirm & Upload</button>
+      <button type="button" class="btn secondary" onclick="cancelCrop()">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
 <footer>© <span id="year"></span> Feni Model High School · Admission</footer>
 </div>
-<footer>© <span id="year"></span> Feni Model High School · Admission</footer>
 <script src="district.text"></script>
 <script>
+
+// ImageBB Configuration
+const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+
+// Cropping variables
+let cropCanvas, cropContext, originalImage, cropSelection, isDragging = false, startX, startY;
+
+// Upload Student Photo
+window.uploadStudentPhoto = function() {
+  const fileInput = document.getElementById('student_photo_file');
+  fileInput.click();
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      showAlert('Please select an image file', 'error');
+      return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      showAlert('File size too large. Please select an image under 10MB', 'error');
+      return;
+    }
+    
+    // Load image for cropping
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      loadImageForCropping(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+}
+
+// Upload Birth Certificate
+window.uploadBirthCertificate = function() {
+  const fileInput = document.getElementById('birth_certificate_file');
+  const uploadBtn = document.getElementById('upload_certificate_btn');
+  fileInput.click();
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      showAlert('Please select an image file', 'error');
+      return;
+    }
+    
+    try {
+      uploadBtn.disabled = true;
+      uploadBtn.style.opacity = '0.6';
+      showAlert('Uploading birth certificate...', 'success');
+      const url = await uploadToImageBB(file, 'birth_certificate');
+      document.getElementById('birth_certificate_url').value = url;
+      
+      // Update preview
+      const preview = document.getElementById('certificate_preview');
+      const placeholder = document.getElementById('certificate_placeholder');
+      preview.src = url;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+      
+      uploadBtn.classList.add('uploaded');
+      uploadBtn.disabled = false;
+      uploadBtn.style.opacity = '1';
+      showAlert('Birth certificate uploaded successfully!', 'success');
+    } catch (error) {
+      console.error('Upload error:', error);
+      uploadBtn.disabled = false;
+      uploadBtn.style.opacity = '1';
+      showAlert('Upload failed: ' + error.message, 'error');
+    }
+  };
+}
+
+// Upload to ImageBB
+async function uploadToImageBB(file, prefix) {
+  const formData = new FormData();
+  formData.append('key', IMGBB_API_KEY);
+  formData.append('image', file);
+  
+  const response = await fetch(IMGBB_UPLOAD_URL, {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (!response.ok) {
+    throw new Error('Upload failed: ' + response.statusText);
+  }
+  
+  const data = await response.json();
+  
+  if (!data.success) {
+    throw new Error('Upload failed: ' + (data.error?.message || 'Unknown error'));
+  }
+  
+  return data.data.url;
+}
+
+// Load image for cropping
+function loadImageForCropping(imageSrc) {
+  const img = new Image();
+  img.onload = function() {
+    originalImage = img;
+    setupCropCanvas();
+    document.getElementById('cropModal').classList.add('active');
+  };
+  img.src = imageSrc;
+}
+
+// Setup crop canvas
+function setupCropCanvas() {
+  cropCanvas = document.getElementById('cropCanvas');
+  cropContext = cropCanvas.getContext('2d');
+
+  // Calculate canvas size maintaining aspect ratio
+  const maxWidth = 600;
+  const maxHeight = 400;
+  let canvasWidth = originalImage.width;
+  let canvasHeight = originalImage.height;
+
+  if (canvasWidth > maxWidth) {
+    canvasHeight = (canvasHeight * maxWidth) / canvasWidth;
+    canvasWidth = maxWidth;
+  }
+
+  if (canvasHeight > maxHeight) {
+    canvasWidth = (canvasWidth * maxHeight) / canvasHeight;
+    canvasHeight = maxHeight;
+  }
+
+  cropCanvas.width = canvasWidth;
+  cropCanvas.height = canvasHeight;
+
+  // Draw image
+  cropContext.drawImage(originalImage, 0, 0, canvasWidth, canvasHeight);
+
+  // Initialize crop selection (944x1181 ratio rectangle in center)
+  const aspectRatio = 944 / 1181; // width / height
+  let cropWidth, cropHeight;
+  
+  if (canvasWidth / canvasHeight > aspectRatio) {
+    cropHeight = canvasHeight * 0.8;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    cropWidth = canvasWidth * 0.8;
+    cropHeight = cropWidth / aspectRatio;
+  }
+  
+  cropSelection = {
+    x: (canvasWidth - cropWidth) / 2,
+    y: (canvasHeight - cropHeight) / 2,
+    width: cropWidth,
+    height: cropHeight
+  };
+
+  drawCropOverlay();
+  
+  // Add event listeners
+  cropCanvas.addEventListener('mousedown', startCrop);
+  cropCanvas.addEventListener('mousemove', updateCrop);
+  cropCanvas.addEventListener('mouseup', endCrop);
+  cropCanvas.addEventListener('mouseleave', endCrop);
+}
+
+// Draw crop overlay
+function drawCropOverlay() {
+  cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+  cropContext.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+  // Draw overlay
+  cropContext.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+
+  // Clear crop area
+  cropContext.clearRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+  cropContext.drawImage(
+    originalImage,
+    (cropSelection.x / cropCanvas.width) * originalImage.width,
+    (cropSelection.y / cropCanvas.height) * originalImage.height,
+    (cropSelection.width / cropCanvas.width) * originalImage.width,
+    (cropSelection.height / cropCanvas.height) * originalImage.height,
+    cropSelection.x,
+    cropSelection.y,
+    cropSelection.width,
+    cropSelection.height
+  );
+
+  // Draw crop border
+  cropContext.strokeStyle = '#3b82f6';
+  cropContext.lineWidth = 2;
+  cropContext.strokeRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+}
+
+// Start crop
+function startCrop(e) {
+  const rect = cropCanvas.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+  isDragging = true;
+}
+
+// Update crop
+function updateCrop(e) {
+  if (!isDragging) return;
+
+  const rect = cropCanvas.getBoundingClientRect();
+  const currentX = e.clientX - rect.left;
+  const currentY = e.clientY - rect.top;
+
+  const width = Math.abs(currentX - startX);
+  const height = Math.abs(currentY - startY);
+  const aspectRatio = 944 / 1181;
+
+  // Maintain 944:1181 aspect ratio
+  let cropWidth, cropHeight;
+  if (width / height > aspectRatio) {
+    cropHeight = height;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    cropWidth = width;
+    cropHeight = cropWidth / aspectRatio;
+  }
+
+  cropSelection.x = Math.min(startX, currentX);
+  cropSelection.y = Math.min(startY, currentY);
+  cropSelection.width = cropWidth;
+  cropSelection.height = cropHeight;
+
+  // Keep within canvas bounds
+  if (cropSelection.x + cropSelection.width > cropCanvas.width) {
+    cropSelection.width = cropCanvas.width - cropSelection.x;
+    cropSelection.height = cropSelection.width / aspectRatio;
+  }
+  if (cropSelection.y + cropSelection.height > cropCanvas.height) {
+    cropSelection.height = cropCanvas.height - cropSelection.y;
+    cropSelection.width = cropSelection.height * aspectRatio;
+  }
+
+  drawCropOverlay();
+}
+
+// End crop
+function endCrop() {
+  isDragging = false;
+}
+
+// Reset crop
+window.resetCrop = function() {
+  const aspectRatio = 944 / 1181;
+  let cropWidth, cropHeight;
+  
+  if (cropCanvas.width / cropCanvas.height > aspectRatio) {
+    cropHeight = cropCanvas.height * 0.8;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    cropWidth = cropCanvas.width * 0.8;
+    cropHeight = cropWidth / aspectRatio;
+  }
+  
+  cropSelection = {
+    x: (cropCanvas.width - cropWidth) / 2,
+    y: (cropCanvas.height - cropHeight) / 2,
+    width: cropWidth,
+    height: cropHeight
+  };
+  drawCropOverlay();
+}
+
+// Cancel crop
+window.cancelCrop = function() {
+  document.getElementById('cropModal').classList.remove('active');
+  document.getElementById('student_photo_file').value = '';
+  originalImage = null;
+}
+
+// Confirm crop and upload
+window.confirmCrop = async function() {
+  if (!originalImage || cropSelection.width === 0) {
+    showAlert('Please select a crop area', 'error');
+    return;
+  }
+
+  const uploadBtn = document.getElementById('upload_photo_btn');
+  
+  try {
+    uploadBtn.disabled = true;
+    uploadBtn.style.opacity = '0.6';
+    showAlert('Processing and uploading...', 'success');
+
+    // Create cropped image
+    const croppedCanvas = document.createElement('canvas');
+    const croppedContext = croppedCanvas.getContext('2d');
+
+    // Set target size (944x1181)
+    const targetWidth = 944;
+    const targetHeight = 1181;
+    croppedCanvas.width = targetWidth;
+    croppedCanvas.height = targetHeight;
+
+    // Calculate source coordinates
+    const scaleX = originalImage.width / cropCanvas.width;
+    const scaleY = originalImage.height / cropCanvas.height;
+    
+    const sourceX = cropSelection.x * scaleX;
+    const sourceY = cropSelection.y * scaleY;
+    const sourceWidth = cropSelection.width * scaleX;
+    const sourceHeight = cropSelection.height * scaleY;
+
+    // Draw cropped image
+    croppedContext.drawImage(
+      originalImage,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      0, 0, targetWidth, targetHeight
+    );
+
+    // Convert to blob
+    const blob = await new Promise(resolve => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.95));
+
+    // Upload to ImageBB
+    const url = await uploadToImageBB(blob, 'student_photo');
+    document.getElementById('student_photo_url').value = url;
+    
+    // Update preview
+    const preview = document.getElementById('student_photo_preview');
+    const placeholder = document.getElementById('student_photo_placeholder');
+    preview.src = url;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+    
+    uploadBtn.classList.add('uploaded');
+    uploadBtn.disabled = false;
+    uploadBtn.style.opacity = '1';
+    showAlert('Photo uploaded successfully!', 'success');
+    
+    // Close modal
+    document.getElementById('cropModal').classList.remove('active');
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    uploadBtn.disabled = false;
+    uploadBtn.style.opacity = '1';
+    showAlert('Upload failed: ' + error.message, 'error');
+  }
+}
 
 // unions.text is in PHP array(...) format. We don't include it directly because
 // that would break the page as it's not valid JS. Instead we fetch and parse it
@@ -316,50 +820,70 @@ $('guardian_from_mother').addEventListener('change',()=>{ if($('guardian_from_mo
 function copyParent(src,dst){ const fields=['name_en','name_bn','nid','mobile','occupation']; fields.forEach(f=>{ setVal(dst+'_'+f, val(src+'_'+f)); }); }
 
 function gatherPayload(){
+  // Helper function to convert to uppercase, handling null values
+  const upper = (str) => str ? str.toString().toUpperCase() : null;
+  
+  // Helper function to get selected option text from dropdown
+  const getSelectedText = (id) => {
+    const el = $(id);
+    if(!el || !el.value) return null;
+    const selectedOption = el.options[el.selectedIndex];
+    return selectedOption ? selectedOption.text : null;
+  };
+  
+  // Helper function to ensure mobile number has 880 prefix
+  const ensureMobile880 = (num) => {
+    if (!num) return null;
+    const clean = num.replace(/\D/g, ''); // Remove non-digits
+    if (!clean) return null;
+    return clean.startsWith('880') ? clean : '880' + clean;
+  };
+  
   return {
-    session:val('session')||null,
-    admisson_class:val('admisson_class')||null,
-    admission_section:val('admission_section')||null,
-    student_name_en:val('student_name_en')||null,
+    session:upper(val('session')),
+    admisson_class:upper(val('admisson_class')),
+    admission_section:upper(val('admission_section')),
+    student_name_en:upper(val('student_name_en')),
     student_name_bn:val('student_name_bn')||null,
-    birth_registration:val('birth_registration')||null,
+    birth_registration:upper(val('birth_registration')),
     student_dateofbirth:val('student_dateofbirth')||null,
-    religion:val('religion')||null,
-    student_gender:val('student_gender')||null,
+    religion:upper(val('religion')),
+    student_gender:upper(val('student_gender')),
     student_photo_url:val('student_photo_url')||null,
-    student_blood_group:val('student_blood_group')||null,
-    father_name_en:val('father_name_en')||null,
+    birth_certificate_url:val('birth_certificate_url')||null,
+    student_blood_group:upper(val('student_blood_group')),
+    father_name_en:upper(val('father_name_en')),
     father_name_bn:val('father_name_bn')||null,
-    father_nid:val('father_nid')||null,
-    father_mobile:val('father_mobile')||null,
-    father_occupation:val('father_occupation')||null,
+    father_nid:upper(val('father_nid')),
+    father_mobile:ensureMobile880(val('father_mobile')),
+    father_occupation:upper(val('father_occupation')),
     father_dob:val('father_dob')||null,
-    father_blood_group:val('father_blood_group')||null,
-    mother_name_en:val('mother_name_en')||null,
+    father_blood_group:upper(val('father_blood_group')),
+    mother_name_en:upper(val('mother_name_en')),
     mother_name_bn:val('mother_name_bn')||null,
-    mother_nid:val('mother_nid')||null,
-    mother_mobile:val('mother_mobile')||null,
-    mother_occupation:val('mother_occupation')||null,
+    mother_nid:upper(val('mother_nid')),
+    mother_mobile:ensureMobile880(val('mother_mobile')),
+    mother_occupation:upper(val('mother_occupation')),
     mother_dob:val('mother_dob')||null,
-    mother_blood_group:val('mother_blood_group')||null,
-    guardian_name_en:val('guardian_name_en')||null,
+    mother_blood_group:upper(val('mother_blood_group')),
+    guardian_name_en:upper(val('guardian_name_en')),
     guardian_name_bn:val('guardian_name_bn')||null,
-    guardian_nid:val('guardian_nid')||null,
-    guardian_mobile:val('guardian_mobile')||null,
-    guardian_occupation:val('guardian_occupation')||null,
+    guardian_nid:upper(val('guardian_nid')),
+    guardian_mobile:ensureMobile880(val('guardian_mobile')),
+    guardian_occupation:upper(val('guardian_occupation')),
     village_bn:val('village_bn')||null,
-    village_en:val('village_en')||null,
+    village_en:upper(val('village_en')),
     postoffice_bn:val('postoffice_bn')||null,
-    postoffice_en:val('postoffice_en')||null,
-    upazilla_bn:val('upazilla_bn')||null,
-    upazilla_en:val('upazilla_en')||null,
-    district_bn:val('district_bn')||null,
-    district_en:val('district_en')||null,
-    previous_school:val('previous_school')||null,
-    previous_class_roll:val('previous_class_roll')||null,
-    quote_freedomfighter:val('quote_freedomfighter')||null,
-    union_bn:val('union_bn')||null,
-    union_en:val('union_en')||null
+    postoffice_en:upper(val('postoffice_en')),
+    upazilla_bn:getSelectedText('upazilla_bn'),
+    upazilla_en:upper(getSelectedText('upazilla_en')),
+    district_bn:getSelectedText('district_bn'),
+    district_en:upper(getSelectedText('district_en')),
+    previous_school:upper(val('previous_school')),
+    previous_class_roll:upper(val('previous_class_roll')),
+    quote_freedomfighter:upper(val('quote_freedomfighter')),
+    union_bn:getSelectedText('union_bn'),
+    union_en:upper(getSelectedText('union_en'))
   };
 }
 
@@ -390,12 +914,34 @@ async function save(stay){
     const { error } = await sb.from(TABLE).insert(payload);
     if(error) throw error;
   showAlert('Submitted successfully','success');
-    if(!stay){ setTimeout(()=>{ window.location.href='admission_dashboard.html'; }, 900); }
+    if(!stay){ 
+      const birthReg = val('birth_registration');
+      setTimeout(()=>{ 
+        window.location.href= birthReg ? `download_form.html?${encodeURIComponent(birthReg)}` : 'download_form.html';
+      }, 900); 
+    }
     else { // reset minimal
       $('birth_registration').focus();
     }
   }catch(e){ console.error(e); showAlert('Save failed: '+(e.message||e),'error'); }
 }
+
+// Search application by birth registration number
+function searchApplication(){
+  const birthReg = $('searchBirthReg').value.trim();
+  if(!birthReg){
+    showAlert('Please enter a birth registration number','error');
+    return;
+  }
+  window.location.href = `download_form.html?${encodeURIComponent(birthReg)}`;
+}
+
+// Allow Enter key to trigger search
+$('searchBirthReg').addEventListener('keypress', function(e){
+  if(e.key === 'Enter'){
+    searchApplication();
+  }
+});
 
 $('saveBtn').addEventListener('click',()=>save(false));
 // saveNewBtn removed
@@ -441,6 +987,59 @@ function validateAll(){
 // Clear invalid class when user interacts
 document.addEventListener('input', e=>{ const t=e.target; if(t && (t.matches('input')||t.matches('select')||t.matches('textarea'))){ t.classList.remove('invalid'); } });
 document.addEventListener('change', e=>{ const t=e.target; if(t && (t.matches('input')||t.matches('select')||t.matches('textarea'))){ t.classList.remove('invalid'); } });
+
+// Mobile number handling - ensure 880 prefix
+;(function handleMobileNumbers(){
+  const mobileFields = ['father_mobile', 'mother_mobile', 'guardian_mobile'];
+  
+  mobileFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if(!field) return;
+    
+    // Prevent deleting 880 prefix
+    field.addEventListener('input', function(e) {
+      let val = this.value;
+      
+      // Always ensure it starts with 880
+      if(!val.startsWith('880')) {
+        // If user deleted 880, restore it
+        this.value = '880';
+      }
+      
+      // Remove any non-digit characters except at position 0-2 (880)
+      const prefix = this.value.substring(0, 3);
+      const rest = this.value.substring(3).replace(/\D/g, '');
+      this.value = prefix + rest;
+      
+      // Limit to 880 + 11 digits = 14 total
+      if(this.value.length > 14) {
+        this.value = this.value.substring(0, 14);
+      }
+    });
+    
+    // On focus, if empty, set to 880
+    field.addEventListener('focus', function() {
+      if(!this.value || this.value.length < 3) {
+        this.value = '880';
+      }
+    });
+    
+    // Prevent cursor from going before position 3
+    field.addEventListener('click', function() {
+      if(this.selectionStart < 3) {
+        this.setSelectionRange(3, 3);
+      }
+    });
+    
+    field.addEventListener('keydown', function(e) {
+      // Prevent backspace/delete from removing 880
+      if((e.key === 'Backspace' || e.key === 'Delete') && this.selectionStart <= 3) {
+        e.preventDefault();
+        this.setSelectionRange(3, 3);
+      }
+    });
+  });
+})();
 
 function applyTheme(m){ document.documentElement.classList.toggle('dark',m==='dark'); }
 // Guard theme toggle in case the element is not present on this page

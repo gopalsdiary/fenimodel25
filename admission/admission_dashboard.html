@@ -9,7 +9,7 @@
 <style>
 :root { --bg:#f5f7fb;--bg-alt:#ffffff;--text:#1f2d3d;--text-soft:#526173;--border:#e2e8f0;--brand:#2563eb;--danger:#dc2626;--radius:18px;--shadow:0 6px 20px -2px rgba(0,0,0,.08),0 2px 6px -1px rgba(0,0,0,.04);--success:#15803d;--warn:#f59e0b; }
 .dark { --bg:#0d1117;--bg-alt:#161b22;--text:#e6edf3;--text-soft:#94a3b8;--border:#273649;--shadow:0 6px 24px -4px rgba(0,0,0,.65); }
-*{box-sizing:border-box;font-family:'Kalpurush','Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
+*{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
 body{margin:0;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:14px;}
 header{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;flex-wrap:wrap;gap:1rem;}
 .h1{font-size:clamp(1.6rem,2.5vw,2.2rem);margin:0;font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -55,11 +55,11 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 <header>
   <div style="display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;">
     <h1 class="h1">Admission Dashboard</h1>
-    <span class="badge">Beta</span>
+    <span class="badge">Active</span>
   </div>
   <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
     <button class="mode-btn" id="themeToggle">🌓 Theme</button>
-  <a class="btn" id="addNewBtn" href="new_admission.html" style="text-decoration:none;">➕ New Application</a>
+  <a class="btn" id="addNewBtn" href="https://modelresult.netlify.app/admission/new_admission.html" style="text-decoration:none;">➕ New Application</a>
     <button class="btn secondary" id="exportCsvBtn">⬇️ Export CSV</button>
   </div>
 </header>
@@ -69,10 +69,15 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
     <div class="stat"><h3>Male</h3><div class="val" id="statMale">—</div></div>
     <div class="stat"><h3>Female</h3><div class="val" id="statFemale">—</div></div>
     <div class="stat"><h3>Freedom Fighter</h3><div class="val" id="statFF">—</div></div>
-    <div class="stat"><h3>Blood Groups</h3><div class="val" id="statBlood">—</div></div>
+    <div class="stat"><h3>Approved</h3><div class="val" id="statApproved">—</div></div>
   </div>
 
   <div class="filters" aria-label="Filters">
+    <select id="filterStatus" title="Admission Status">
+      <option value="">Admission Status</option>
+      <option value="approved">Approved</option>
+      <option value="pending">Pending</option>
+    </select>
     <select id="filterSession" title="Session">
       <option value="">Session</option>
     </select>
@@ -100,12 +105,20 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 <div class="modal" id="formModal" aria-hidden="true" role="dialog" aria-label="Admission form dialog">
   <div class="modal-card">
     <button class="close-btn" id="closeModalBtn">✕</button>
+    
+    <!-- Student Photo in Form -->
+    <div id="formPhotoContainer" style="display:none;text-align:center;margin:0 0 1rem;padding:1rem;background:linear-gradient(135deg,rgba(37,99,235,0.05),rgba(99,102,241,0.05));border-radius:16px;border:2px solid var(--border);">
+      <img id="formStudentPhoto" src="" alt="Student Photo" style="width:120px;height:180px;object-fit:cover;border-radius:12px;border:4px solid var(--brand);box-shadow:0 8px 20px rgba(0,0,0,.15);margin:0 auto;">
+      <h3 id="formStudentName" style="margin:0.6rem 0 0.2rem;font-size:1rem;font-weight:700;color:var(--text);"></h3>
+      <p id="formStudentDetails" style="margin:0;font-size:0.7rem;color:var(--text-soft);"></p>
+    </div>
+    
     <h2 style="margin:0 0 .2rem;font-size:1.1rem;">Admission Form</h2>
     <p style="margin:.15rem 0 .9rem;font-size:.65rem;color:var(--text-soft);">Fill required fields. Guardian section can auto-copy Father or Mother info.</p>
     <div id="formSections"></div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.1rem;">
       <button class="btn" id="saveFormBtn">💾 Save</button>
-      <button class="btn secondary" id="saveAndNewBtn">💾➕ Save & New</button>
+      <button class="btn" id="approveBtn" style="display:none;background:linear-gradient(90deg,#10b981,#059669);">✅ Approve Admission</button>
       <button class="btn danger" id="deleteBtn" style="display:none;">🗑️ Delete</button>
     </div>
     <div class="alert" id="formAlert" style="display:none;"></div>
@@ -125,10 +138,10 @@ const CACHE_TTL = 5 * 60 * 1000; // 5m
 // Field metadata grouped (derived from read admission.md)
 const FIELD_GROUPS = [
   {title:'Admission Selection', icon:'🎯', fields:[
-    ['session','Session (2025/2026)'],['admisson_class','Admission Class'],['admission_section','Admission Section (Day/Morning)']
+    ['session','Session '],['admisson_class','Admission Class'],['admission_section','Admission Section (Day/Morning)']
   ]},
   {title:'Basic Information', icon:'🧒', fields:[
-    ['student_name_en','Student Name English*'],['student_name_bn','Student Name Bangla'],['birth_registration','Birth Registration'],['student_dateofbirth','Student Date of Birth'],['religion','Religion'],['student_gender','Student Gender'],['student_photo_url','Student Photo URL'],['student_blood_group','Blood Group']
+    ['student_name_en','Student Name English*'],['student_name_bn','Student Name Bangla'],['birth_registration','Birth Registration'],['student_dateofbirth','Student Date of Birth'],['religion','Religion'],['student_gender','Student Gender'],['student_photo_url','Student Photo URL'],['birth_certificate_url','Birth Certificate URL'],['student_blood_group','Blood Group']
   ]},
   {title:'Father Information', icon:'👨', fields:[
     ['father_name_en','Father Name English*'],['father_name_bn','Father Name Bangla'],['father_nid','Father NID'],['father_mobile','Father Mobile'],['father_occupation','Father Occupation'],['father_dob','Father Date of Birth'],['father_blood_group','Father Blood Group']
@@ -198,16 +211,25 @@ async function fetchAndRender(force=false){
 
 // Filters
 function applyFilters(){
+  const stat = filterStatus.value.trim();
   const ses = filterSession.value.trim();
   const cls = filterClass.value.trim();
   const sec = filterSection.value.trim();
   const q = searchBox.value.trim().toLowerCase();
-  filtered = allRows.filter(r => (
-    (!ses || String(r.session)===ses) &&
-    (!cls || (r.admisson_class||'')===cls) &&
-    (!sec || (r.admission_section||'')===sec) &&
-    (!q || ( (r.student_name_en||'').toLowerCase().includes(q) || (r.birth_registration||'').toLowerCase().includes(q) ))
-  ));
+  filtered = allRows.filter(r => {
+    // Status filter
+    if(stat){
+      if(stat === 'approved' && r.admission_status !== true) return false;
+      if(stat === 'pending' && r.admission_status === true) return false;
+    }
+    // Other filters
+    return (
+      (!ses || String(r.session)===ses) &&
+      (!cls || (r.admisson_class||'')===cls) &&
+      (!sec || (r.admission_section||'')===sec) &&
+      (!q || ( (r.student_name_en||'').toLowerCase().includes(q) || (r.birth_registration||'').toLowerCase().includes(q) ))
+    );
+  });
   currentPage=1;
   renderTable();
   updateStats();
@@ -233,7 +255,7 @@ function renderTable(){
   const body = document.getElementById('tableBody');
   if(filtered.length===0){ headRow.innerHTML='<th>SL</th>'; body.innerHTML='<tr><td style="padding:.8rem;font-size:.7rem;">No data</td></tr>'; return; }
   // dynamic columns (small subset for dashboard view)
-  const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration','student_gender','student_blood_group'];
+  const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration','student_gender','admission_status'];
   headRow.innerHTML = '<th>SL</th>'+cols.map(c=>`<th>${c}</th>`).join('');
   const start=(currentPage-1)*PAGE_SIZE;
   const rows=filtered.slice(start,start+PAGE_SIZE);
@@ -265,19 +287,45 @@ function updateStats(){
   document.getElementById('statMale').textContent = male;
   document.getElementById('statFemale').textContent = female;
   const ff = filtered.filter(r=> (r.quote_freedomfighter||'').trim()!=='' ).length; document.getElementById('statFF').textContent=ff;
-  const bloodSet = new Set(filtered.map(r=>r.student_blood_group).filter(Boolean)); document.getElementById('statBlood').textContent=bloodSet.size;
+  const approved = filtered.filter(r=> r.admission_status===true ).length; document.getElementById('statApproved').textContent=approved;
 }
 
 // Form modal build
 function buildForm(row){
   const container = document.getElementById('formSections');
   container.innerHTML='';
+  
+  // Show student photo in form if available
+  const formPhotoContainer = document.getElementById('formPhotoContainer');
+  const formStudentPhoto = document.getElementById('formStudentPhoto');
+  const formStudentName = document.getElementById('formStudentName');
+  const formStudentDetails = document.getElementById('formStudentDetails');
+  
+  if(row && row.student_photo_url && row.student_photo_url.trim() !== ''){
+    formStudentPhoto.src = row.student_photo_url;
+    formStudentPhoto.onerror = function(){
+      formPhotoContainer.style.display = 'none';
+    };
+    formStudentName.textContent = row.student_name_en || row.student_name_bn || 'Student';
+    formStudentDetails.textContent = `${row.admisson_class || ''} ${row.admission_section || ''} | Birth Reg: ${row.birth_registration || 'N/A'}`;
+    formPhotoContainer.style.display = 'block';
+  } else {
+    formPhotoContainer.style.display = 'none';
+  }
+  
   FIELD_GROUPS.forEach(g=>{
     const block=document.createElement('div'); block.className='section-block';
     const h=document.createElement('h3'); h.className='section-title'; h.innerHTML=`${g.icon} ${g.title}`; block.appendChild(h);
     const fg=document.createElement('div'); fg.className='form-grid';
     g.fields.forEach(([name,label])=>{
-      const w=document.createElement('label'); w.innerHTML=`${label}<input name="${name}" />`; fg.appendChild(w);
+      const w=document.createElement('label'); 
+      // Check if this is a URL field that needs a view button
+      if(name === 'student_photo_url' || name === 'birth_certificate_url'){
+        w.innerHTML=`${label}<div style="display:flex;gap:0.4rem;align-items:center;"><input name="${name}" style="flex:1;" /><button type="button" class="btn" style="padding:0.4rem 0.6rem;font-size:0.65rem;display:none;" data-view-btn="${name}">👁️ View</button></div>`;
+      } else {
+        w.innerHTML=`${label}<input name="${name}" />`;
+      }
+      fg.appendChild(w);
     });
     block.appendChild(fg);
     container.appendChild(block);
@@ -291,13 +339,48 @@ function buildForm(row){
   }
   if(row){ // populate
     [...container.querySelectorAll('input,select,textarea')].forEach(inp=>{ const n=inp.name; if(n && n in row) inp.value=row[n]??''; });
+    // Show view buttons for URL fields that have values
+    updateViewButtons();
   }
+  
+  // Add input event listeners to URL fields to show/hide view buttons
+  container.addEventListener('input', e => {
+    if(e.target.name === 'student_photo_url' || e.target.name === 'birth_certificate_url'){
+      updateViewButtons();
+    }
+  });
+  
   // autofill logic
   container.addEventListener('change',e=>{
     if(e.target.id==='copyFather' || e.target.id==='copyMother'){
       const cf=document.getElementById('copyFather').checked; const cm=document.getElementById('copyMother').checked;
       if(cf){ copyParent('father','guardian'); }
       if(cm){ copyParent('mother','guardian'); }
+    }
+  });
+  
+  // View button click handler
+  container.addEventListener('click', e => {
+    const viewBtn = e.target.closest('[data-view-btn]');
+    if(viewBtn){
+      e.preventDefault();
+      const fieldName = viewBtn.dataset.viewBtn;
+      const input = container.querySelector(`input[name="${fieldName}"]`);
+      if(input && input.value.trim()){
+        window.open(input.value.trim(), '_blank');
+      }
+    }
+  });
+}
+
+// Update view buttons visibility
+function updateViewButtons(){
+  const urlFields = ['student_photo_url', 'birth_certificate_url'];
+  urlFields.forEach(fieldName => {
+    const input = document.querySelector(`input[name="${fieldName}"]`);
+    const btn = document.querySelector(`button[data-view-btn="${fieldName}"]`);
+    if(input && btn){
+      btn.style.display = input.value.trim() ? 'inline-flex' : 'none';
     }
   });
 }
@@ -308,7 +391,29 @@ function copyParent(srcPrefix,dstPrefix){
   });
 }
 
-function openForm(row){ editingRow=row||null; buildForm(row||{}); document.getElementById('formModal').classList.add('open'); document.getElementById('formModal').setAttribute('aria-hidden','false'); document.getElementById('deleteBtn').style.display = row? 'inline-flex':'none'; }
+function openForm(row){ 
+  editingRow=row||null; 
+  buildForm(row||{}); 
+  document.getElementById('formModal').classList.add('open'); 
+  document.getElementById('formModal').setAttribute('aria-hidden','false'); 
+  document.getElementById('deleteBtn').style.display = row? 'inline-flex':'none'; 
+  const approveBtn = document.getElementById('approveBtn');
+  if(row){
+    if(row.admission_status === true){
+      approveBtn.textContent = '✅ Approved';
+      approveBtn.style.display = 'inline-flex';
+      approveBtn.style.cursor = 'default';
+      approveBtn.style.opacity = '0.7';
+    } else {
+      approveBtn.textContent = '✅ Approve Admission';
+      approveBtn.style.display = 'inline-flex';
+      approveBtn.style.cursor = 'pointer';
+      approveBtn.style.opacity = '1';
+    }
+  } else {
+    approveBtn.style.display = 'none';
+  }
+}
 function closeForm(){ document.getElementById('formModal').classList.remove('open'); document.getElementById('formModal').setAttribute('aria-hidden','true'); }
 
 // Save form
@@ -339,6 +444,27 @@ async function saveForm(stayOpen=false){
 // Delete
 async function deleteRow(){ if(!editingRow) return; if(!confirm('Delete this record?')) return; const sb=initSupabase(); const { error } = await sb.from(TABLE).delete().eq('admission_sl', editingRow.admission_sl); if(error){ alert('Delete failed'); return; } closeForm(); fetchAndRender(true); }
 
+// Approve Admission
+async function approveAdmission(){ 
+  if(!editingRow) return; 
+  if(!confirm('Approve this admission?')) return; 
+  const sb=initSupabase(); 
+  const { error } = await sb.from(TABLE).update({ admission_status: true }).eq('admission_sl', editingRow.admission_sl); 
+  if(error){ 
+    alert('Approval failed: ' + error.message); 
+    return; 
+  } 
+  const formAlert=document.getElementById('formAlert'); 
+  formAlert.style.display='block'; 
+  formAlert.style.background='#dcfce7'; 
+  formAlert.style.color='#166534'; 
+  formAlert.style.borderColor='#86efac'; 
+  formAlert.textContent='Admission approved successfully!';
+  setTimeout(()=>{ formAlert.style.display='none'; }, 2000);
+  fetchAndRender(true); 
+  setTimeout(closeForm, 1000);
+}
+
 // Export CSV
 function exportCsv(){ const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration']; let csv=cols.join(',')+'\n'; filtered.forEach(r=>{ csv+=cols.map(c=>`"${(r[c]??'').toString().replace(/"/g,'""')}"`).join(',')+'\n'; }); const blob=new Blob([csv],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='admission_export.csv'; a.click(); }
 
@@ -354,14 +480,14 @@ addEventListener('click',e=>{
   if(e.target.id==='addNewBtn'){ openForm(null); }
   if(e.target.id==='closeModalBtn'){ closeForm(); }
   if(e.target.id==='saveFormBtn'){ saveForm(false); }
-  if(e.target.id==='saveAndNewBtn'){ saveForm(true); }
   if(e.target.id==='deleteBtn'){ deleteRow(); }
+  if(e.target.id==='approveBtn'){ if(editingRow && editingRow.admission_status !== true) approveAdmission(); }
   if(e.target.id==='exportCsvBtn'){ exportCsv(); }
   if(e.target.id==='themeToggle'){ toggleTheme(); }
   const tr=e.target.closest('#dataTable tbody tr'); if(tr){ const id=Number(tr.dataset.id); const row=allRows.find(r=>r.admission_sl===id); openForm(row); }
 });
-['change','keyup'].forEach(ev=>{ filterSession.addEventListener(ev,applyFilters); filterClass.addEventListener(ev,applyFilters); filterSection.addEventListener(ev,applyFilters); searchBox.addEventListener(ev, debounce(applyFilters,250)); });
-clearFiltersBtn.addEventListener('click',()=>{ filterSession.value=''; filterClass.value=''; filterSection.value=''; searchBox.value=''; applyFilters(); });
+['change','keyup'].forEach(ev=>{ filterStatus.addEventListener(ev,applyFilters); filterSession.addEventListener(ev,applyFilters); filterClass.addEventListener(ev,applyFilters); filterSection.addEventListener(ev,applyFilters); searchBox.addEventListener(ev, debounce(applyFilters,250)); });
+clearFiltersBtn.addEventListener('click',()=>{ filterStatus.value=''; filterSession.value=''; filterClass.value=''; filterSection.value=''; searchBox.value=''; applyFilters(); });
 
 function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); } }
 
