@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ওয়েব অ্যাডমিন ড্যাশবোর্ড - ফেনী মডেল স্কুল</title>
+    <title>Web Admin Dashboard - Feni Model School</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -30,15 +30,131 @@
         }
 
         body {
-            font-family: 'Noto Sans Bengali', sans-serif;
+            font-family: 'Inter', sans-serif;
             background: var(--primary-bg);
             color: var(--text-dark);
             min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            background: var(--card-bg);
+            box-shadow: 
+                8px 0 16px var(--shadow-dark),
+                -8px 0 16px var(--shadow-light);
+            overflow-y: auto;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+
+        /* Custom Scrollbar for Sidebar */
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: var(--card-bg);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: var(--shadow-dark);
+            border-radius: 10px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 2px solid var(--shadow-dark);
+            background: var(--card-bg);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .sidebar-header h1 {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header p {
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        /* Navigation Tabs - Now Vertical */
+        .nav-tabs {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 20px 15px;
+        }
+
+        .nav-tab {
+            width: 100%;
+            padding: 14px 18px;
+            background: var(--card-bg);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-dark);
+            transition: all 0.3s ease;
+            box-shadow: 
+                5px 5px 10px var(--shadow-dark),
+                -5px -5px 10px var(--shadow-light);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-tab i {
+            width: 20px;
+            font-size: 1.1rem;
+        }
+
+        .nav-tab:hover {
+            transform: translateX(5px);
+            box-shadow: 
+                8px 8px 16px var(--shadow-dark),
+                -8px -8px 16px var(--shadow-light);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(145deg, #4CAF50, #45a049);
+            color: white;
+            box-shadow: 
+                inset 3px 3px 6px rgba(0,0,0,0.2),
+                inset -3px -3px 6px rgba(255,255,255,0.1);
+            transform: translateX(5px);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
             padding: 20px;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -66,51 +182,28 @@
             font-size: 1.1rem;
         }
 
-        /* Navigation Tabs */
-        .nav-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: var(--card-bg);
-            border-radius: 20px;
-            box-shadow: 
-                inset 4px 4px 8px var(--shadow-dark),
-                inset -4px -4px 8px var(--shadow-light);
-        }
-
-        .nav-tab {
-            flex: 1;
-            min-width: 150px;
-            padding: 15px 20px;
-            background: var(--card-bg);
+        /* Hamburger Menu for Mobile */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 200;
+            background: var(--primary-color);
+            color: white;
             border: none;
+            width: 50px;
+            height: 50px;
             border-radius: 12px;
+            font-size: 1.5rem;
             cursor: pointer;
-            font-family: 'Noto Sans Bengali', sans-serif;
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-dark);
-            transition: all 0.3s ease;
             box-shadow: 
                 5px 5px 10px var(--shadow-dark),
                 -5px -5px 10px var(--shadow-light);
         }
 
-        .nav-tab:hover {
-            transform: translateY(-2px);
-            box-shadow: 
-                8px 8px 16px var(--shadow-dark),
-                -8px -8px 16px var(--shadow-light);
-        }
-
-        .nav-tab.active {
-            background: linear-gradient(145deg, #4CAF50, #45a049);
-            color: white;
-            box-shadow: 
-                inset 3px 3px 6px rgba(0,0,0,0.2),
-                inset -3px -3px 6px rgba(255,255,255,0.1);
+        .menu-toggle:hover {
+            transform: scale(1.05);
         }
 
         /* Content Section */
@@ -165,7 +258,7 @@
             padding: 12px 24px;
             border: none;
             border-radius: 12px;
-            font-family: 'Noto Sans Bengali', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 1rem;
             font-weight: 500;
             cursor: pointer;
@@ -274,7 +367,7 @@
             border: none;
             border-radius: 12px;
             background: var(--card-bg);
-            font-family: 'Noto Sans Bengali', sans-serif;
+            font-family: 'Inter', sans-serif;
             font-size: 1rem;
             color: var(--text-dark);
             box-shadow: 
@@ -494,17 +587,27 @@
         }
 
         /* Responsive Design */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-280px);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 1.8rem;
-            }
-
-            .nav-tabs {
-                flex-direction: column;
-            }
-
-            .nav-tab {
-                min-width: 100%;
             }
 
             .card {
@@ -525,6 +628,19 @@
 
             .action-btns {
                 flex-direction: column;
+            }
+
+            .sidebar {
+                width: 260px;
+            }
+
+            .sidebar-header h1 {
+                font-size: 1.3rem;
+            }
+
+            .nav-tab {
+                font-size: 0.9rem;
+                padding: 12px 15px;
             }
         }
 
@@ -602,24 +718,40 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1><i class="fas fa-school"></i> ওয়েব অ্যাডমিন ড্যাশবোর্ড</h1>
-            <p>ফেনী মডেল স্কুল - ডাটা ম্যানেজমেন্ট সিস্টেম</p>
+    <!-- Hamburger Menu Toggle -->
+    <button class="menu-toggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h1><i class="fas fa-school"></i> Admin Panel</h1>
+            <p>Feni Model School</p>
         </div>
-
-        <!-- Alert Messages -->
-        <div id="alertContainer"></div>
-
+        
         <!-- Navigation Tabs -->
         <div class="nav-tabs" id="navTabs">
             <!-- Tabs will be generated dynamically -->
         </div>
+    </div>
 
-        <!-- Content Sections -->
-        <div id="contentContainer">
-            <!-- Content sections will be generated dynamically -->
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-database"></i> Data Management System</h1>
+                <p>Manage all data in one place</p>
+            </div>
+
+            <!-- Alert Messages -->
+            <div id="alertContainer"></div>
+
+            <!-- Content Sections -->
+            <div id="contentContainer">
+                <!-- Content sections will be generated dynamically -->
+            </div>
         </div>
     </div>
 
@@ -627,7 +759,7 @@
     <div class="modal" id="formModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 class="modal-title" id="modalTitle">নতুন যোগ করুন</h2>
+                <h2 class="modal-title" id="modalTitle">Add New</h2>
                 <button class="close-btn" onclick="closeModal()">&times;</button>
             </div>
             <form id="dataForm">
@@ -636,10 +768,10 @@
                 </div>
                 <div class="action-btns">
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> সংরক্ষণ করুন
+                        <i class="fas fa-save"></i> Save
                     </button>
                     <button type="button" class="btn btn-danger" onclick="closeModal()">
-                        <i class="fas fa-times"></i> বাতিল করুন
+                        <i class="fas fa-times"></i> Cancel
                     </button>
                 </div>
             </form>
@@ -650,260 +782,264 @@
         // Supabase Configuration
         const SUPABASE_URL = 'https://iujlulmdjudhcbeqynit.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx1bG1kanVkaGNiZXF5bml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjE4MDgsImV4cCI6MjA3Mjk5NzgwOH0.d0s84VID4VD76TB0Qtpmx4pgoQ_7T96JVH0Rm03h3rU';
-           const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ImageBB Configuration
+        const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+        const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
 
         // Table Definitions
         const tables = {
             about_us: {
-                title: 'আমাদের সম্পর্কে',
+                title: 'About Us',
                 icon: 'fa-info-circle',
                 fields: {
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text', required: true },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text', required: true },
-                    content_bn: { label: 'বিষয়বস্তু (বাংলা)', type: 'textarea', required: true },
-                    content_en: { label: 'বিষয়বস্তু (ইংরেজি)', type: 'textarea', required: true },
-                    section_order: { label: 'ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    title_bn: { label: 'Title (Bengali)', type: 'text', required: true },
+                    title_en: { label: 'Title (English)', type: 'text', required: true },
+                    content_bn: { label: 'Content (Bengali)', type: 'textarea', required: true },
+                    content_en: { label: 'Content (English)', type: 'textarea', required: true },
+                    section_order: { label: 'Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             gallery: {
-                title: 'গ্যালারি',
+                title: 'Gallery',
                 icon: 'fa-images',
                 fields: {
-                    image_url: { label: 'ছবির URL', type: 'url', required: true },
-                    caption_bn: { label: 'ক্যাপশন (বাংলা)', type: 'text', required: true },
-                    caption_en: { label: 'ক্যাপশন (ইংরেজি)', type: 'text', required: true },
-                    category_bn: { label: 'ক্যাটাগরি (বাংলা)', type: 'text' },
-                    category_en: { label: 'ক্যাটাগরি (ইংরেজি)', type: 'text' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    image_url: { label: 'Image URL', type: 'url', required: true },
+                    caption_bn: { label: 'Caption (Bengali)', type: 'text', required: true },
+                    caption_en: { label: 'Caption (English)', type: 'text', required: true },
+                    category_bn: { label: 'Category (Bengali)', type: 'text' },
+                    category_en: { label: 'Category (English)', type: 'text' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             notices: {
-                title: 'নোটিশ',
+                title: 'Notices',
                 icon: 'fa-bell',
                 fields: {
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text', required: true },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text', required: true },
-                    content_bn: { label: 'বিষয়বস্তু (বাংলা)', type: 'textarea', required: true },
-                    content_en: { label: 'বিষয়বস্তু (ইংরেজি)', type: 'textarea', required: true },
-                    notice_date: { label: 'তারিখ', type: 'date', required: true },
-                    attachment_url: { label: 'সংযুক্তি URL', type: 'url' },
-                    category_bn: { label: 'ক্যাটাগরি (বাংলা)', type: 'text' },
-                    category_en: { label: 'ক্যাটাগরি (ইংরেজি)', type: 'text' },
-                    is_important: { label: 'গুরুত্বপূর্ণ', type: 'checkbox', default: false },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    title_bn: { label: 'Title (Bengali)', type: 'text', required: true },
+                    title_en: { label: 'Title (English)', type: 'text', required: true },
+                    content_bn: { label: 'Content (Bengali)', type: 'textarea', required: true },
+                    content_en: { label: 'Content (English)', type: 'textarea', required: true },
+                    notice_date: { label: 'Date', type: 'date', required: true },
+                    attachment_url: { label: 'Attachment URL', type: 'url' },
+                    category_bn: { label: 'Category (Bengali)', type: 'text' },
+                    category_en: { label: 'Category (English)', type: 'text' },
+                    is_important: { label: 'Important', type: 'checkbox', default: false },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             school_history: {
-                title: 'স্কুলের ইতিহাস',
+                title: 'School History',
                 icon: 'fa-history',
                 fields: {
-                    year: { label: 'বছর', type: 'number', required: true },
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text', required: true },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text', required: true },
-                    description_bn: { label: 'বর্ণনা (বাংলা)', type: 'textarea', required: true },
-                    description_en: { label: 'বর্ণনা (ইংরেজি)', type: 'textarea', required: true },
-                    image_url: { label: 'ছবির URL', type: 'url' },
-                    milestone_type_bn: { label: 'মাইলফলক ধরন (বাংলা)', type: 'text' },
-                    milestone_type_en: { label: 'মাইলফলক ধরন (ইংরেজি)', type: 'text' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    year: { label: 'Year', type: 'number', required: true },
+                    title_bn: { label: 'Title (Bengali)', type: 'text', required: true },
+                    title_en: { label: 'Title (English)', type: 'text', required: true },
+                    description_bn: { label: 'Description (Bengali)', type: 'textarea', required: true },
+                    description_en: { label: 'Description (English)', type: 'textarea', required: true },
+                    image_url: { label: 'Image URL', type: 'url' },
+                    milestone_type_bn: { label: 'Milestone Type (Bengali)', type: 'text' },
+                    milestone_type_en: { label: 'Milestone Type (English)', type: 'text' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             sliding_images: {
-                title: 'স্লাইডিং ছবি',
+                title: 'Sliding Images',
                 icon: 'fa-image',
                 fields: {
-                    image_url: { label: 'ছবির URL', type: 'url', required: true },
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text' },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text' },
-                    description_bn: { label: 'বর্ণনা (বাংলা)', type: 'textarea' },
-                    description_en: { label: 'বর্ণনা (ইংরেজি)', type: 'textarea' },
-                    link_url: { label: 'লিংক URL', type: 'url' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    image_url: { label: 'Image URL', type: 'url', required: true },
+                    title_bn: { label: 'Title (Bengali)', type: 'text' },
+                    title_en: { label: 'Title (English)', type: 'text' },
+                    description_bn: { label: 'Description (Bengali)', type: 'textarea' },
+                    description_en: { label: 'Description (English)', type: 'textarea' },
+                    link_url: { label: 'Link URL', type: 'url' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             floating_notifications: {
-                title: 'ফ্লোটিং নোটিফিকেশন',
+                title: 'Floating Notifications',
                 icon: 'fa-comment-dots',
                 fields: {
-                    message_bn: { label: 'বার্তা (বাংলা)', type: 'text', required: true },
-                    message_en: { label: 'বার্তা (ইংরেজি)', type: 'text', required: true },
-                    link_url: { label: 'লিংক URL', type: 'url' },
-                    priority: { label: 'অগ্রাধিকার', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true },
-                    start_date: { label: 'শুরুর তারিখ', type: 'datetime-local' },
-                    end_date: { label: 'শেষ তারিখ', type: 'datetime-local' }
+                    message_bn: { label: 'Message (Bengali)', type: 'text', required: true },
+                    message_en: { label: 'Message (English)', type: 'text', required: true },
+                    link_url: { label: 'Link URL', type: 'url' },
+                    priority: { label: 'Priority', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true },
+                    start_date: { label: 'Start Date', type: 'datetime-local' },
+                    end_date: { label: 'End Date', type: 'datetime-local' }
                 }
             },
             academic_calender: {
-                title: 'একাডেমিক ক্যালেন্ডার',
+                title: 'Academic Calendar',
                 icon: 'fa-calendar',
                 fields: {
-                    event_date_bn: { label: 'ইভেন্ট তারিখ (বাংলা)', type: 'text' },
-                    event_date_en: { label: 'ইভেন্ট তারিখ (ইংরেজি)', type: 'text' },
-                    event_name_bn: { label: 'ইভেন্ট নাম (বাংলা)', type: 'text' },
-                    event_name_en: { label: 'ইভেন্ট নাম (ইংরেজি)', type: 'text' },
-                    event_year: { label: 'বছর', type: 'text' },
-                    month_name_bn: { label: 'মাস (বাংলা)', type: 'text' },
-                    month_name_en: { label: 'মাস (ইংরেজি)', type: 'text' },
-                    action: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    event_date_bn: { label: 'Event Date (Bengali)', type: 'text' },
+                    event_date_en: { label: 'Event Date (English)', type: 'text' },
+                    event_name_bn: { label: 'Event Name (Bengali)', type: 'text' },
+                    event_name_en: { label: 'Event Name (English)', type: 'text' },
+                    event_year: { label: 'Year', type: 'text' },
+                    month_name_bn: { label: 'Month (Bengali)', type: 'text' },
+                    month_name_en: { label: 'Month (English)', type: 'text' },
+                    action: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             assignment: {
-                title: 'এসাইনমেন্ট',
+                title: 'Assignment',
                 icon: 'fa-tasks',
                 fields: {
-                    class_bn: { label: 'ক্লাস (বাংলা)', type: 'text' },
-                    class_en: { label: 'ক্লাস (ইংরেজি)', type: 'text' },
-                    subject_bn: { label: 'বিষয় (বাংলা)', type: 'text' },
-                    subject_en: { label: 'বিষয় (ইংরেজি)', type: 'text' },
-                    teacher_bn: { label: 'শিক্ষক (বাংলা)', type: 'text' },
-                    teacher_en: { label: 'শিক্ষক (ইংরেজি)', type: 'text' },
-                    topic: { label: 'বিষয়বস্তু', type: 'text' },
-                    'assignment-description': { label: 'বর্ণনা', type: 'textarea' },
-                    'submission-date_bn': { label: 'জমা দেওয়ার তারিখ (বাংলা)', type: 'text' },
-                    'submission-date_en': { label: 'জমা দেওয়ার তারিখ (ইংরেজি)', type: 'text' },
-                    status: { label: 'স্ট্যাটাস', type: 'text' }
+                    class_bn: { label: 'Class (Bengali)', type: 'text' },
+                    class_en: { label: 'Class (English)', type: 'text' },
+                    subject_bn: { label: 'Subject (Bengali)', type: 'text' },
+                    subject_en: { label: 'Subject (English)', type: 'text' },
+                    teacher_bn: { label: 'Teacher (Bengali)', type: 'text' },
+                    teacher_en: { label: 'Teacher (English)', type: 'text' },
+                    topic: { label: 'Topic', type: 'text' },
+                    'assignment-description': { label: 'Description', type: 'textarea' },
+                    'submission-date_bn': { label: 'Submission Date (Bengali)', type: 'text' },
+                    'submission-date_en': { label: 'Submission Date (English)', type: 'text' },
+                    status: { label: 'Status', type: 'text' }
                 }
             },
             class_routine: {
-                title: 'ক্লাস রুটিন',
+                title: 'Class Routine',
                 icon: 'fa-clock',
                 fields: {
-                    class_name_bn: { label: 'ক্লাসের নাম (বাংলা)', type: 'text' },
-                    class_name_en: { label: 'ক্লাসের নাম (ইংরেজি)', type: 'text' },
-                    year_bn: { label: 'বছর (বাংলা)', type: 'text' },
-                    year_en: { label: 'বছর (ইংরেজি)', type: 'text' },
-                    class_routine_url: { label: 'রুটিন URL', type: 'url' },
-                    action: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    class_name_bn: { label: 'Class Name (Bengali)', type: 'text' },
+                    class_name_en: { label: 'Class Name (English)', type: 'text' },
+                    year_bn: { label: 'Year (Bengali)', type: 'text' },
+                    year_en: { label: 'Year (English)', type: 'text' },
+                    class_routine_url: { label: 'Routine URL', type: 'url' },
+                    action: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             cultural_events: {
-                title: 'সাংস্কৃতিক অনুষ্ঠান',
+                title: 'Cultural Events',
                 icon: 'fa-music',
                 fields: {
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text', required: true },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text', required: true },
-                    description_bn: { label: 'বর্ণনা (বাংলা)', type: 'textarea' },
-                    description_en: { label: 'বর্ণনা (ইংরেজি)', type: 'textarea' },
-                    event_date: { label: 'অনুষ্ঠানের তারিখ', type: 'date', required: true },
-                    image_url: { label: 'ছবির URL', type: 'url', required: true },
-                    category_bn: { label: 'ক্যাটাগরি (বাংলা)', type: 'text', required: true },
-                    category_en: { label: 'ক্যাটাগরি (ইংরেজি)', type: 'text', required: true },
-                    venue_bn: { label: 'স্থান (বাংলা)', type: 'text' },
-                    venue_en: { label: 'স্থান (ইংরেজি)', type: 'text' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    title_bn: { label: 'Title (Bengali)', type: 'text', required: true },
+                    title_en: { label: 'Title (English)', type: 'text', required: true },
+                    description_bn: { label: 'Description (Bengali)', type: 'textarea' },
+                    description_en: { label: 'Description (English)', type: 'textarea' },
+                    event_date: { label: 'Event Date', type: 'date', required: true },
+                    image_url: { label: 'Image URL', type: 'url', required: true },
+                    category_bn: { label: 'Category (Bengali)', type: 'text', required: true },
+                    category_en: { label: 'Category (English)', type: 'text', required: true },
+                    venue_bn: { label: 'Venue (Bengali)', type: 'text' },
+                    venue_en: { label: 'Venue (English)', type: 'text' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             curriculum: {
-                title: 'পাঠ্যক্রম',
+                title: 'Curriculum',
                 icon: 'fa-book',
                 fields: {
-                    class_level: { label: 'শ্রেণী স্তর', type: 'number', required: true },
-                    subject_bn: { label: 'বিষয় (বাংলা)', type: 'text', required: true },
-                    subject_en: { label: 'বিষয় (ইংরেজি)', type: 'text', required: true },
-                    description_bn: { label: 'বর্ণনা (বাংলা)', type: 'textarea' },
-                    description_en: { label: 'বর্ণনা (ইংরেজি)', type: 'textarea' },
-                    books_bn: { label: 'বই (বাংলা)', type: 'text' },
-                    books_en: { label: 'বই (ইংরেজি)', type: 'text' },
+                    class_level: { label: 'Class Level', type: 'number', required: true },
+                    subject_bn: { label: 'Subject (Bengali)', type: 'text', required: true },
+                    subject_en: { label: 'Subject (English)', type: 'text', required: true },
+                    description_bn: { label: 'Description (Bengali)', type: 'textarea' },
+                    description_en: { label: 'Description (English)', type: 'textarea' },
+                    books_bn: { label: 'Books (Bengali)', type: 'text' },
+                    books_en: { label: 'Books (English)', type: 'text' },
                     pdf_url: { label: 'PDF URL', type: 'url' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             exam_routine: {
-                title: 'পরীক্ষার রুটিন',
+                title: 'Exam Routine',
                 icon: 'fa-file-alt',
                 fields: {
-                    exam_name_bn: { label: 'পরীক্ষার নাম (বাংলা)', type: 'text' },
-                    exam_name_en: { label: 'পরীক্ষার নাম (ইংরেজি)', type: 'text' },
-                    year_bn: { label: 'বছর (বাংলা)', type: 'text' },
-                    year_en: { label: 'বছর (ইংরেজি)', type: 'text' },
-                    exam_routine_url: { label: 'রুটিন URL', type: 'url' },
-                    action: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    exam_name_bn: { label: 'Exam Name (Bengali)', type: 'text' },
+                    exam_name_en: { label: 'Exam Name (English)', type: 'text' },
+                    year_bn: { label: 'Year (Bengali)', type: 'text' },
+                    year_en: { label: 'Year (English)', type: 'text' },
+                    exam_routine_url: { label: 'Routine URL', type: 'url' },
+                    action: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             facilities: {
-                title: 'সুবিধাসমূহ',
+                title: 'Facilities',
                 icon: 'fa-building',
                 fields: {
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text', required: true },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text', required: true },
-                    description_bn: { label: 'বর্ণনা (বাংলা)', type: 'textarea', required: true },
-                    description_en: { label: 'বর্ণনা (ইংরেজি)', type: 'textarea', required: true },
-                    image_url: { label: 'ছবির URL', type: 'url', required: true },
-                    category_bn: { label: 'ক্যাটাগরি (বাংলা)', type: 'text', required: true },
-                    category_en: { label: 'ক্যাটাগরি (ইংরেজি)', type: 'text', required: true },
-                    capacity: { label: 'ধারণক্ষমতা', type: 'text' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    title_bn: { label: 'Title (Bengali)', type: 'text', required: true },
+                    title_en: { label: 'Title (English)', type: 'text', required: true },
+                    description_bn: { label: 'Description (Bengali)', type: 'textarea', required: true },
+                    description_en: { label: 'Description (English)', type: 'textarea', required: true },
+                    image_url: { label: 'Image URL', type: 'url', required: true },
+                    category_bn: { label: 'Category (Bengali)', type: 'text', required: true },
+                    category_en: { label: 'Category (English)', type: 'text', required: true },
+                    capacity: { label: 'Capacity', type: 'text' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             speeches: {
-                title: 'বক্তৃতা',
+                title: 'Speeches',
                 icon: 'fa-microphone',
                 fields: {
-                    speaker_name_bn: { label: 'বক্তার নাম (বাংলা)', type: 'text', required: true },
-                    speaker_name_en: { label: 'বক্তার নাম (ইংরেজি)', type: 'text', required: true },
-                    designation_bn: { label: 'পদবী (বাংলা)', type: 'text', required: true },
-                    designation_en: { label: 'পদবী (ইংরেজি)', type: 'text', required: true },
-                    speech_title_bn: { label: 'বক্তৃতার শিরোনাম (বাংলা)', type: 'text' },
-                    speech_title_en: { label: 'বক্তৃতার শিরোনাম (ইংরেজি)', type: 'text' },
-                    speech_content_bn: { label: 'বক্তৃতা (বাংলা)', type: 'textarea', required: true },
-                    speech_content_en: { label: 'বক্তৃতা (ইংরেজি)', type: 'textarea', required: true },
-                    speaker_image_url: { label: 'বক্তার ছবি URL', type: 'url' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    speaker_name_bn: { label: 'Speaker Name (Bengali)', type: 'text', required: true },
+                    speaker_name_en: { label: 'Speaker Name (English)', type: 'text', required: true },
+                    designation_bn: { label: 'Designation (Bengali)', type: 'text', required: true },
+                    designation_en: { label: 'Designation (English)', type: 'text', required: true },
+                    speech_title_bn: { label: 'Speech Title (Bengali)', type: 'text' },
+                    speech_title_en: { label: 'Speech Title (English)', type: 'text' },
+                    speech_content_bn: { label: 'Speech (Bengali)', type: 'textarea', required: true },
+                    speech_content_en: { label: 'Speech (English)', type: 'textarea', required: true },
+                    speaker_image_url: { label: 'Speaker Image URL', type: 'url' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             sports: {
-                title: 'ক্রীড়া',
+                title: 'Sports',
                 icon: 'fa-trophy',
                 fields: {
-                    title_bn: { label: 'শিরোনাম (বাংলা)', type: 'text', required: true },
-                    title_en: { label: 'শিরোনাম (ইংরেজি)', type: 'text', required: true },
-                    description_bn: { label: 'বর্ণনা (বাংলা)', type: 'textarea' },
-                    description_en: { label: 'বর্ণনা (ইংরেজি)', type: 'textarea' },
-                    event_date: { label: 'ইভেন্টের তারিখ', type: 'date' },
-                    image_url: { label: 'ছবির URL', type: 'url', required: true },
-                    sport_type_bn: { label: 'খেলার ধরন (বাংলা)', type: 'text', required: true },
-                    sport_type_en: { label: 'খেলার ধরন (ইংরেজি)', type: 'text', required: true },
-                    venue_bn: { label: 'স্থান (বাংলা)', type: 'text' },
-                    venue_en: { label: 'স্থান (ইংরেজি)', type: 'text' },
-                    achievements_bn: { label: 'অর্জন (বাংলা)', type: 'text' },
-                    achievements_en: { label: 'অর্জন (ইংরেজি)', type: 'text' },
-                    display_order: { label: 'প্রদর্শন ক্রম', type: 'number', default: 0 },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    title_bn: { label: 'Title (Bengali)', type: 'text', required: true },
+                    title_en: { label: 'Title (English)', type: 'text', required: true },
+                    description_bn: { label: 'Description (Bengali)', type: 'textarea' },
+                    description_en: { label: 'Description (English)', type: 'textarea' },
+                    event_date: { label: 'Event Date', type: 'date' },
+                    image_url: { label: 'Image URL', type: 'url', required: true },
+                    sport_type_bn: { label: 'Sport Type (Bengali)', type: 'text', required: true },
+                    sport_type_en: { label: 'Sport Type (English)', type: 'text', required: true },
+                    venue_bn: { label: 'Venue (Bengali)', type: 'text' },
+                    venue_en: { label: 'Venue (English)', type: 'text' },
+                    achievements_bn: { label: 'Achievements (Bengali)', type: 'text' },
+                    achievements_en: { label: 'Achievements (English)', type: 'text' },
+                    display_order: { label: 'Display Order', type: 'number', default: 0 },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             syllabus: {
-                title: 'সিলেবাস',
+                title: 'Syllabus',
                 icon: 'fa-list',
                 fields: {
-                    class_bn: { label: 'ক্লাস (বাংলা)', type: 'text' },
-                    class_en: { label: 'ক্লাস (ইংরেজি)', type: 'text' },
-                    year_bn: { label: 'বছর (বাংলা)', type: 'text' },
-                    year_en: { label: 'বছর (ইংরেজি)', type: 'text' },
+                    class_bn: { label: 'Class (Bengali)', type: 'text' },
+                    class_en: { label: 'Class (English)', type: 'text' },
+                    year_bn: { label: 'Year (Bengali)', type: 'text' },
+                    year_en: { label: 'Year (English)', type: 'text' },
                     pdf_url: { label: 'PDF URL', type: 'url' },
-                    is_active: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             teachers_list: {
-                title: 'শিক্ষকদের তালিকা',
+                title: 'Teachers List',
                 icon: 'fa-chalkboard-teacher',
                 fields: {
-                    teacher_name_bn: { label: 'শিক্ষকের নাম (বাংলা)', type: 'text' },
-                    teacher_name_en: { label: 'শিক্ষকের নাম (ইংরেজি)', type: 'text' },
-                    teacher_photo_url: { label: 'ছবি URL', type: 'url' },
-                    degination_bn: { label: 'পদবী (বাংলা)', type: 'text' },
-                    degination_en: { label: 'পদবী (ইংরেজি)', type: 'text' },
-                    methodologies_bn: { label: 'পদ্ধতি (বাংলা)', type: 'textarea' },
-                    methodologies_en: { label: 'পদ্ধতি (ইংরেজি)', type: 'textarea' },
-                    action: { label: 'সক্রিয়', type: 'checkbox', default: true }
+                    teacher_name_bn: { label: 'Teacher Name (Bengali)', type: 'text' },
+                    teacher_name_en: { label: 'Teacher Name (English)', type: 'text' },
+                    teacher_photo_url: { label: 'Photo URL', type: 'url' },
+                    degination_bn: { label: 'Designation (Bengali)', type: 'text' },
+                    degination_en: { label: 'Designation (English)', type: 'text' },
+                    methodologies_bn: { label: 'Methodologies (Bengali)', type: 'textarea' },
+                    methodologies_en: { label: 'Methodologies (English)', type: 'textarea' },
+                    action: { label: 'Active', type: 'checkbox', default: true }
                 }
             }
         };
@@ -939,8 +1075,17 @@
             currentTable = tableName;
             
             // Update active tab
-            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.onclick && tab.onclick.toString().includes(tableName)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // Close sidebar on mobile after selection
+            if (window.innerWidth <= 992) {
+                document.getElementById('sidebar').classList.remove('active');
+            }
             
             // Load table data
             await loadTableData(tableName);
@@ -953,10 +1098,21 @@
         async function loadTableData(tableName) {
             try {
                 showLoading(true);
-                const { data, error } = await supabase
+                
+                // Try with created_at first
+                let { data, error } = await supabase
                     .from(tableName)
                     .select('*')
                     .order('created_at', { ascending: false });
+                
+                // If created_at doesn't exist, try without ordering
+                if (error && error.message.includes('created_at')) {
+                    const result = await supabase
+                        .from(tableName)
+                        .select('*');
+                    data = result.data;
+                    error = result.error;
+                }
                 
                 if (error) throw error;
                 
@@ -964,7 +1120,7 @@
                 showLoading(false);
             } catch (error) {
                 console.error('Error loading data:', error);
-                showAlert('ডাটা লোড করতে ত্রুটি হয়েছে: ' + error.message, 'error');
+                showAlert('Error loading data: ' + error.message, 'error');
                 showLoading(false);
             }
         }
@@ -983,18 +1139,18 @@
                                 <i class="fas ${table.icon}"></i> ${table.title}
                             </h2>
                             <button class="btn btn-primary" onclick="openAddModal()">
-                                <i class="fas fa-plus"></i> নতুন যোগ করুন
+                                <i class="fas fa-plus"></i> Add New
                             </button>
                         </div>
                         
                         <div class="search-box">
-                            <input type="text" class="form-control" placeholder="খুঁজুন..." 
+                            <input type="text" class="form-control" placeholder="Search..." 
                                    onkeyup="searchTable(this.value)">
                         </div>
                         
                         <div class="loading" id="loading">
                             <div class="spinner"></div>
-                            <p>লোড হচ্ছে...</p>
+                            <p>Loading...</p>
                         </div>
                         
                         <div class="table-container">
@@ -1002,7 +1158,7 @@
                                 <thead>
                                     <tr>
                                         ${generateTableHeaders(table.fields)}
-                                        <th>অ্যাকশন</th>
+                                        <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tableBody">
@@ -1026,7 +1182,7 @@
         // Generate Table Rows
         function generateTableRows(data, fields) {
             if (data.length === 0) {
-                return '<tr><td colspan="100%" style="text-align: center;">কোনো ডাটা পাওয়া যায়নি</td></tr>';
+                return '<tr><td colspan="100%" style="text-align: center;">No data found</td></tr>';
             }
             
             return data.map(row => {
@@ -1035,7 +1191,7 @@
                     if (fields[key].type === 'checkbox') {
                         value = value ? '✓' : '✗';
                     } else if (fields[key].type === 'url' && value) {
-                        value = `<a href="${value}" target="_blank">লিংক</a>`;
+                        value = `<a href="${value}" target="_blank">Link</a>`;
                     } else if (!value) {
                         value = '-';
                     }
@@ -1049,10 +1205,10 @@
                         <td>
                             <div class="action-btns">
                                 <button class="btn btn-secondary btn-sm" onclick="openEditModal('${idField}')">
-                                    <i class="fas fa-edit"></i> সম্পাদনা
+                                    <i class="fas fa-edit"></i> Edit
                                 </button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteRecord('${idField}')">
-                                    <i class="fas fa-trash"></i> মুছুন
+                                    <i class="fas fa-trash"></i> Delete
                                 </button>
                             </div>
                         </td>
@@ -1064,7 +1220,7 @@
         // Open Add Modal
         function openAddModal() {
             currentEditId = null;
-            document.getElementById('modalTitle').textContent = 'নতুন যোগ করুন';
+            document.getElementById('modalTitle').textContent = 'Add New';
             generateFormFields();
             document.getElementById('formModal').classList.add('active');
         }
@@ -1072,7 +1228,7 @@
         // Open Edit Modal
         async function openEditModal(id) {
             currentEditId = id;
-            document.getElementById('modalTitle').textContent = 'সম্পাদনা করুন';
+            document.getElementById('modalTitle').textContent = 'Edit';
             
             const data = tableData[currentTable].find(item => item.id === id);
             generateFormFields(data);
@@ -1103,6 +1259,22 @@
                             <label class="form-label">${field.label}</label>
                             <textarea name="${key}" class="form-control" 
                                 ${field.required ? 'required' : ''}>${value}</textarea>
+                        </div>
+                    `;
+                } else if (field.type === 'url') {
+                    return `
+                        <div class="form-group">
+                            <label class="form-label">${field.label}</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <input type="url" name="${key}" id="input_${key}" class="form-control" 
+                                       value="${value}" ${field.required ? 'required' : ''} style="flex: 1;">
+                                <button type="button" class="btn btn-secondary" onclick="openImageUpload('${key}')" 
+                                        style="white-space: nowrap; padding: 12px 16px;">
+                                    <i class="fas fa-upload"></i> Upload
+                                </button>
+                            </div>
+                            ${value ? `<img src="${value}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--shadow-dark);">` : ''}
+                            <input type="file" id="file_${key}" accept="image/*" style="display: none;" onchange="handleImageUpload(event, '${key}')">
                         </div>
                     `;
                 } else {
@@ -1156,7 +1328,7 @@
                         .eq('id', currentEditId);
                     
                     if (error) throw error;
-                    showAlert('সফলভাবে আপডেট হয়েছে!', 'success');
+                    showAlert('Successfully updated!', 'success');
                 } else {
                     // Insert
                     const { error } = await supabase
@@ -1164,7 +1336,7 @@
                         .insert([data]);
                     
                     if (error) throw error;
-                    showAlert('সফলভাবে যোগ হয়েছে!', 'success');
+                    showAlert('Successfully added!', 'success');
                 }
                 
                 closeModal();
@@ -1172,13 +1344,13 @@
                 renderTableContent(currentTable);
             } catch (error) {
                 console.error('Error saving data:', error);
-                showAlert('সংরক্ষণে ত্রুটি হয়েছে: ' + error.message, 'error');
+                showAlert('Error saving: ' + error.message, 'error');
             }
         });
 
         // Delete Record
         async function deleteRecord(id) {
-            if (!confirm('আপনি কি নিশ্চিত যে এটি মুছে ফেলতে চান?')) {
+            if (!confirm('Are you sure you want to delete this?')) {
                 return;
             }
             
@@ -1190,12 +1362,12 @@
                 
                 if (error) throw error;
                 
-                showAlert('সফলভাবে মুছে ফেলা হয়েছে!', 'success');
+                showAlert('Successfully deleted!', 'success');
                 await loadTableData(currentTable);
                 renderTableContent(currentTable);
             } catch (error) {
                 console.error('Error deleting data:', error);
-                showAlert('মুছে ফেলতে ত্রুটি হয়েছে: ' + error.message, 'error');
+                showAlert('Error deleting: ' + error.message, 'error');
             }
         }
 
@@ -1231,6 +1403,105 @@
             if (loading) {
                 loading.classList.toggle('active', show);
             }
+        }
+
+        // Toggle Sidebar for Mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            const menuToggle = document.querySelector('.menu-toggle');
+            
+            if (window.innerWidth <= 992) {
+                if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                    sidebar.classList.remove('active');
+                }
+            }
+        });
+
+        // Image Upload Functions
+        function openImageUpload(fieldKey) {
+            const fileInput = document.getElementById(`file_${fieldKey}`);
+            if (fileInput) {
+                fileInput.click();
+            }
+        }
+
+        async function handleImageUpload(event, fieldKey) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                showAlert('Please select an image file', 'error');
+                return;
+            }
+
+            // Validate file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert('Image size should be less than 5MB', 'error');
+                return;
+            }
+
+            try {
+                showAlert('Uploading image...', 'info');
+
+                // Upload to ImageBB
+                const imageUrl = await uploadToImageBB(file);
+
+                // Update the input field
+                const inputField = document.getElementById(`input_${fieldKey}`);
+                if (inputField) {
+                    inputField.value = imageUrl;
+                    
+                    // Update preview if exists
+                    const formGroup = inputField.closest('.form-group');
+                    let preview = formGroup.querySelector('.image-preview');
+                    
+                    if (preview) {
+                        preview.src = imageUrl;
+                    } else {
+                        const previewHTML = `<img src="${imageUrl}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--shadow-dark);">`;
+                        const uploadBtn = formGroup.querySelector('button');
+                        uploadBtn.insertAdjacentHTML('afterend', previewHTML);
+                    }
+                }
+
+                showAlert('Image uploaded successfully!', 'success');
+            } catch (error) {
+                console.error('Error uploading image:', error);
+                showAlert('Error uploading image: ' + error.message, 'error');
+            }
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        async function uploadToImageBB(file) {
+            const formData = new FormData();
+            formData.append('key', IMGBB_API_KEY);
+            formData.append('image', file);
+
+            const response = await fetch(IMGBB_UPLOAD_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('ImageBB upload failed: ' + response.statusText);
+            }
+
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error('ImageBB upload failed: ' + (data.error?.message || 'Unknown error'));
+            }
+
+            return data.data.url;
         }
 
         // Initialize on page load
