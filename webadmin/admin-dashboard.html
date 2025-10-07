@@ -1316,7 +1316,9 @@
                                     <i class="fas fa-upload"></i> Upload
                                 </button>
                             </div>
-                            ${stringValue ? `<img src="${stringValue}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--shadow-dark);">` : ''}
+                            <div id="preview_${key}" style="margin-top: 10px;">
+                                ${stringValue ? `<img src="${stringValue}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid var(--shadow-dark); display: block;">` : ''}
+                            </div>
                             <input type="file" id="file_${key}" accept="image/*" style="display: none;" onchange="handleImageUpload(event, '${key}')">
                         </div>
                     `;
@@ -1490,27 +1492,33 @@
                 return;
             }
 
+            // Show loading in preview area
+            const previewContainer = document.getElementById(`preview_${fieldKey}`);
+            if (previewContainer) {
+                previewContainer.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px; padding: 10px;">
+                        <div class="spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
+                        <span style="color: var(--text-light);">Uploading...</span>
+                    </div>
+                `;
+            }
+
             try {
-                showAlert('Uploading image...', 'info');
+                console.log('Starting upload for file:', file.name, 'Size:', file.size);
 
                 // Upload to ImageBB
                 const imageUrl = await uploadToImageBB(file);
+
+                console.log('Upload successful! URL:', imageUrl);
 
                 // Update the input field
                 const inputField = document.getElementById(`input_${fieldKey}`);
                 if (inputField) {
                     inputField.value = imageUrl;
                     
-                    // Update preview if exists
-                    const formGroup = inputField.closest('.form-group');
-                    let preview = formGroup.querySelector('.image-preview');
-                    
-                    if (preview) {
-                        preview.src = imageUrl;
-                    } else {
-                        const previewHTML = `<img src="${imageUrl}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--shadow-dark);">`;
-                        const uploadBtn = formGroup.querySelector('button');
-                        uploadBtn.insertAdjacentHTML('afterend', previewHTML);
+                    // Update preview container
+                    if (previewContainer) {
+                        previewContainer.innerHTML = `<img src="${imageUrl}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; border-radius: 8px; border: 1px solid var(--shadow-dark); display: block;">`;
                     }
                 }
 
@@ -1518,6 +1526,11 @@
             } catch (error) {
                 console.error('Error uploading image:', error);
                 showAlert('Error uploading image: ' + error.message, 'error');
+                
+                // Clear loading from preview area
+                if (previewContainer) {
+                    previewContainer.innerHTML = '';
+                }
             }
 
             // Reset file input
@@ -1525,26 +1538,47 @@
         }
 
         async function uploadToImageBB(file) {
-            const formData = new FormData();
-            formData.append('key', IMGBB_API_KEY);
-            formData.append('image', file);
+            try {
+                // Convert file to base64
+                const base64 = await fileToBase64(file);
+                
+                const formData = new FormData();
+                formData.append('key', IMGBB_API_KEY);
+                formData.append('image', base64.split(',')[1]); // Remove data:image/xxx;base64, prefix
 
-            const response = await fetch(IMGBB_UPLOAD_URL, {
-                method: 'POST',
-                body: formData
+                const response = await fetch(IMGBB_UPLOAD_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('ImageBB error response:', errorText);
+                    throw new Error('ImageBB upload failed: ' + response.statusText);
+                }
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    console.error('ImageBB error:', data);
+                    throw new Error('ImageBB upload failed: ' + (data.error?.message || 'Unknown error'));
+                }
+
+                return data.data.url;
+            } catch (error) {
+                console.error('Upload error:', error);
+                throw error;
+            }
+        }
+
+        // Helper function to convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
             });
-
-            if (!response.ok) {
-                throw new Error('ImageBB upload failed: ' + response.statusText);
-            }
-
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error('ImageBB upload failed: ' + (data.error?.message || 'Unknown error'));
-            }
-
-            return data.data.url;
         }
 
         // Initialize on page load
