@@ -1198,16 +1198,17 @@
                     return `<td>${value}</td>`;
                 }).join('');
                 
+                // Store the id as is (could be number or string)
                 const idField = row.id;
                 return `
-                    <tr>
+                    <tr data-row-id="${idField}">
                         ${columns}
                         <td>
                             <div class="action-btns">
-                                <button class="btn btn-secondary btn-sm" onclick="openEditModal('${idField}')">
+                                <button class="btn btn-secondary btn-sm" onclick="openEditModal(${typeof idField === 'number' ? idField : `'${idField}'`})">
                                     <i class="fas fa-edit"></i> Edit
                                 </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteRecord('${idField}')">
+                                <button class="btn btn-danger btn-sm" onclick="deleteRecord(${typeof idField === 'number' ? idField : `'${idField}'`})">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                             </div>
@@ -1230,7 +1231,32 @@
             currentEditId = id;
             document.getElementById('modalTitle').textContent = 'Edit';
             
-            const data = tableData[currentTable].find(item => item.id === id);
+            // Debug logs
+            console.log('Opening edit modal for id:', id, 'Type:', typeof id);
+            console.log('Current table:', currentTable);
+            console.log('Table data:', tableData[currentTable]);
+            
+            // Try to find the data - check both as number and string
+            let data = tableData[currentTable].find(item => item.id === id);
+            if (!data) {
+                // Try converting id to number if it's a string
+                const numId = typeof id === 'string' ? parseInt(id) : id;
+                data = tableData[currentTable].find(item => item.id === numId);
+            }
+            if (!data) {
+                // Try converting id to string if it's a number
+                const strId = String(id);
+                data = tableData[currentTable].find(item => String(item.id) === strId);
+            }
+            
+            if (!data) {
+                console.error('Data not found for id:', id);
+                console.error('Available ids:', tableData[currentTable].map(item => ({id: item.id, type: typeof item.id})));
+                showAlert('Error: Data not found', 'error');
+                return;
+            }
+            
+            console.log('Edit data:', data); // Debug log
             generateFormFields(data);
             document.getElementById('formModal').classList.add('active');
         }
@@ -1240,15 +1266,32 @@
             const formFields = document.getElementById('formFields');
             const fields = tables[currentTable].fields;
             
+            console.log('Generating form with data:', data); // Debug log
+            
             formFields.innerHTML = Object.keys(fields).map(key => {
                 const field = fields[key];
-                const value = data ? (data[key] || '') : (field.default || '');
+                let value = '';
+                
+                if (data) {
+                    // Check if value exists in data, handle null/undefined properly
+                    if (data[key] !== null && data[key] !== undefined) {
+                        value = data[key];
+                    } else if (field.default !== undefined) {
+                        value = field.default;
+                    }
+                } else {
+                    value = field.default || '';
+                }
+                
+                // Convert value to string for text/url inputs, except for checkbox
+                const stringValue = (field.type === 'checkbox') ? value : String(value || '');
                 
                 if (field.type === 'checkbox') {
+                    const isChecked = value === true || value === 'true' || value === 1;
                     return `
                         <div class="form-group">
                             <label class="form-label">
-                                <input type="checkbox" name="${key}" ${value ? 'checked' : ''}>
+                                <input type="checkbox" name="${key}" ${isChecked ? 'checked' : ''}>
                                 ${field.label}
                             </label>
                         </div>
@@ -1258,7 +1301,7 @@
                         <div class="form-group">
                             <label class="form-label">${field.label}</label>
                             <textarea name="${key}" class="form-control" 
-                                ${field.required ? 'required' : ''}>${value}</textarea>
+                                ${field.required ? 'required' : ''}>${stringValue}</textarea>
                         </div>
                     `;
                 } else if (field.type === 'url') {
@@ -1267,13 +1310,13 @@
                             <label class="form-label">${field.label}</label>
                             <div style="display: flex; gap: 10px; align-items: flex-start;">
                                 <input type="url" name="${key}" id="input_${key}" class="form-control" 
-                                       value="${value}" ${field.required ? 'required' : ''} style="flex: 1;">
+                                       value="${stringValue}" ${field.required ? 'required' : ''} style="flex: 1;">
                                 <button type="button" class="btn btn-secondary" onclick="openImageUpload('${key}')" 
                                         style="white-space: nowrap; padding: 12px 16px;">
                                     <i class="fas fa-upload"></i> Upload
                                 </button>
                             </div>
-                            ${value ? `<img src="${value}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--shadow-dark);">` : ''}
+                            ${stringValue ? `<img src="${stringValue}" class="image-preview" alt="Preview" style="max-width: 150px; max-height: 150px; margin-top: 10px; border-radius: 8px; border: 1px solid var(--shadow-dark);">` : ''}
                             <input type="file" id="file_${key}" accept="image/*" style="display: none;" onchange="handleImageUpload(event, '${key}')">
                         </div>
                     `;
@@ -1282,7 +1325,7 @@
                         <div class="form-group">
                             <label class="form-label">${field.label}</label>
                             <input type="${field.type}" name="${key}" class="form-control" 
-                                   value="${value}" ${field.required ? 'required' : ''}>
+                                   value="${stringValue}" ${field.required ? 'required' : ''}>
                         </div>
                     `;
                 }
