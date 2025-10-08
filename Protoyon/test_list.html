@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>প্রত্যয়ন তালিকা </title>
+  <script src="../login/auth-check_copy.js"></script>>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>প্রত্যয়ন তালিকা </title>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-sca        
 
   <title>প্রত্যয়ন তালিকা </title>
@@ -59,7 +71,16 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
     const tableName = 'protoyon_data';
     const studentTable = 'student_database';
-    const client = window.supabase.createClient(supabaseUrl, supabaseKey);
+    const client = window.supabase.createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true
+      }
+    });
+
+    console.log('✓ Supabase client initialized');
+    console.log('Table:', tableName);
+    console.log('URL:', supabaseUrl);
 
     const DEBUG = new URLSearchParams(location.search).has('debug');
     function logDbg(...a){ if(DEBUG) console.log('[PROTOYON-LIST]', ...a); }
@@ -134,8 +155,12 @@
         setupFilter(rows);
         statusEl.textContent='Loaded';
       }catch(e){
-        console.error('Load failed', e);
-        statusEl.textContent='Failed to load';
+        console.error('Load failed:', e);
+        console.error('Error Message:', e.message);
+        console.error('Error Code:', e.code);
+        console.error('Error Details:', JSON.stringify(e, null, 2));
+        
+        statusEl.textContent = 'Failed to load' + (e.message ? ': ' + e.message : '');
         statusEl.classList.add('error');
         if(!document.getElementById('retryBtn')){
           const btn=document.createElement('button');
@@ -290,7 +315,9 @@
     }
 
     function showModal(){ 
-      modal.style.display='flex'; 
+      modal.style.display='flex';
+      modal.removeAttribute('aria-hidden'); // Remove aria-hidden when showing
+      
       // Only reset status if not editing
       if (!window.editingRecord) {
         entryStatus.textContent='IID দিন এবং ছাত্রের তথ্য লোড করুন';
@@ -300,11 +327,16 @@
         setFieldsEditable(true); // All fields editable in edit mode
       }
       entryStatus.style.color='';
-      document.getElementById('iidInputProtoyon').focus(); 
+      
+      // Focus after a small delay to ensure modal is rendered
+      setTimeout(() => {
+        document.getElementById('iidInputProtoyon')?.focus();
+      }, 50);
     }
     
     function hideModal(){ 
-      modal.style.display='none'; 
+      modal.style.display='none';
+      modal.setAttribute('aria-hidden', 'true'); // Set aria-hidden when hiding
       form.reset(); 
       // Clear editing state
       window.editingRecord = null;
@@ -388,6 +420,11 @@
         active_roll: form.active_roll.value.trim()
       };
       
+      // Add created_at for new records
+      if (!isEditing) {
+        payload.created_at = new Date().toISOString();
+      }
+      
       if(!payload.iid){ entryStatus.textContent='IID প্রয়োজন'; entryStatus.style.color='#b91c1c'; return; }
       
       try {
@@ -421,8 +458,17 @@
           }catch(_e){} 
         }, 800);
       } catch(err){ 
-        console.error(err); 
-        entryStatus.textContent = isEditing ? 'আপডেট ব্যর্থ' : 'সেভ ব্যর্থ'; 
+        console.error('Save/Update Error:', err); 
+        console.error('Error Message:', err.message);
+        console.error('Error Code:', err.code);
+        console.error('Payload:', payload);
+        
+        let errorMsg = isEditing ? 'আপডেট ব্যর্থ' : 'সেভ ব্যর্থ';
+        if (err.message) {
+          errorMsg += ': ' + err.message;
+        }
+        
+        entryStatus.textContent = errorMsg; 
         entryStatus.style.color='#b91c1c'; 
       }
     });
