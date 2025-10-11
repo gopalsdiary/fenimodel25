@@ -48,8 +48,6 @@
     <div id="loadStatus" class="status"></div>
     <div id="teacherDetails"></div>
     <div class="actions">
-      <button type="button" class="outline" id="editBtn">Edit Teacher</button>
-      <button type="button" class="outline" id="backBtn">Back to List</button>
     </div>
   </div>
 
@@ -190,19 +188,6 @@ function buildDisplay(row){
 
 const loadStatus=document.getElementById('loadStatus');
 
-document.getElementById('backBtn').addEventListener('click', ()=>{ 
-  window.close(); // Try to close the tab if opened in new tab
-  // Fallback to redirect if close doesn't work
-  setTimeout(() => {
-    location.href='teacherlist.html';
-  }, 100);
-});
-
-document.getElementById('editBtn').addEventListener('click', ()=>{ 
-  if(currentTeacher) {
-    location.href='teacher_edit.html?iid=' + encodeURIComponent(currentTeacher.iid);
-  }
-});
 
 load();
 </script>
