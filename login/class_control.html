@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teacher Access Control Panel</title>
+    <link rel="icon" href="../logo2.png" />
+    <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f5f7fb;
+            --bg-alt: #ffffff;
+            --text: #1f2d3d;
+            --text-soft: #526173;
+            --border: #e2e8f0;
+            --brand: #2563eb;
+            --danger: #dc2626;
+            --success: #10b981;
+            --radius: 18px;
+            --shadow: 0 6px 20px -2px rgba(0,0,0,.08), 0 2px 6px -1px rgba(0,0,0,.04);
+        }
+        
+        * {
+            box-sizing: border-box;
+            font-family: 'Noto Sans Bengali', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        }
+        
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
+            font-size: 14px;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+            margin: 0 0 0.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: linear-gradient(90deg, #0ea5e9, #6366f1, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .subtitle {
+            color: var(--text-soft);
+            font-size: 0.85rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card {
+            background: var(--bg-alt);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 1.5rem;
+        }
+        
+        .card h2 {
+            margin: 0 0 1rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .form-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+        
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        
+        .form-field label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-soft);
+            letter-spacing: 0.5px;
+        }
+        
+        .form-field input,
+        .form-field select {
+            padding: 0.65rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--bg);
+            font-size: 0.85rem;
+            width: 100%;
+        }
+        
+        .form-field input:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .btn {
+            background: linear-gradient(90deg, #2563eb, #1d4ed8);
+            color: #fff;
+            border: none;
+            padding: 0.75rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 14px -2px rgba(37, 99, 235, 0.4);
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.danger {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 14px -2px rgba(239, 68, 68, 0.4);
+        }
+        
+        .btn.secondary {
+            background: var(--bg-alt);
+            color: var(--text-soft);
+            border: 1px solid var(--border);
+            box-shadow: none;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .table-wrap {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        
+        th, td {
+            border: 1px solid var(--border);
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+        }
+        
+        th {
+            background: linear-gradient(90deg, var(--bg), var(--bg-alt));
+            font-weight: 600;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+        
+        tbody tr:hover {
+            background: rgba(37, 99, 235, 0.06);
+        }
+        
+        .action-btn {
+            padding: 0.4rem 0.7rem;
+            font-size: 0.7rem;
+            margin: 0 0.2rem;
+        }
+        
+        .alert {
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .alert.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        
+        .alert.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .status-bar {
+            font-size: 0.75rem;
+            color: var(--text-soft);
+            margin-top: 0.5rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-soft);
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            overflow: auto;
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .modal-content {
+            background: var(--bg-alt);
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            animation: slideDown 0.3s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        
+        .close-btn {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-soft);
+            transition: all 0.2s;
+        }
+        
+        .close-btn:hover {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👨‍🏫 Teacher Access Control Panel</h1>
+        <p class="subtitle">Manage teacher class and section access</p>
+        
+        <div id="alertBox" class="alert"></div>
+        
+        <!-- Entry Form -->
+        <div class="card">
+            <h2>➕ Add New Access</h2>
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="teacherSelect">Select Teacher *</label>
+                    <select id="teacherSelect" required>
+                        <option value="">-- Select Teacher --</option>
+                    </select>
+                </div>
+                
+                <div class="form-field">
+                    <label for="teacherEmail">Teacher Email</label>
+                    <div id="teacherEmail" style="padding: 0.65rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-alt); font-size: 0.85rem; min-height: 2.5rem; color: var(--text);">-</div>
+                </div>
+                
+                <div class="form-field">
+                    <label for="teacherIID">Teacher IID</label>
+                    <input type="text" id="teacherIID" readonly placeholder="Auto-filled">
+                </div>
+                
+                <div class="form-field">
+                    <label for="accessClass">Access Class (Optional)</label>
+                    <input type="number" id="accessClass" placeholder="e.g., 6, 7, 8, 9, 10">
+                </div>
+                
+                <div class="form-field">
+                    <label for="accessSection">Access Section (Optional)</label>
+                    <select id="accessSection">
+                        <option value="">-- Select Section --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn" id="saveBtn" onclick="saveAccess()">💾 Save Access</button>
+                <button class="btn secondary" id="clearBtn" onclick="clearForm()">🔄 Clear Form</button>
+            </div>
+            
+            <div class="status-bar" id="statusBar">Ready to add new access...</div>
+        </div>
+        
+        <!-- Existing Data Table -->
+        <div class="card">
+            <h2>📋 Current Access List</h2>
+            <div class="table-wrap">
+                <table id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>SL</th>
+                            <th>Teacher Name</th>
+                            <th>Teacher Email</th>
+                            <th>Access Class</th>
+                            <th>Access Section</th>
+                            <th>IID</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="7" class="loading">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="status-bar" id="dataStatus">Loading existing data...</div>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>✏️ Edit Teacher Access</h2>
+                <button class="close-btn" onclick="closeEditModal()">✕</button>
+            </div>
+            
+            <div id="editAlert" class="alert"></div>
+            
+            <div class="form-grid">
+                <div class="form-field">
+                    <label for="editTeacherSelect">Select Teacher *</label>
+                    <select id="editTeacherSelect" required>
+                        <option value="">-- Select Teacher --</option>
+                    </select>
+                </div>
+                
+                <div class="form-field">
+                    <label for="editTeacherEmail">Teacher Email</label>
+                    <div id="editTeacherEmail" style="padding: 0.65rem; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-alt); font-size: 0.85rem; min-height: 2.5rem; color: var(--text);">-</div>
+                </div>
+                
+                <div class="form-field">
+                    <label for="editTeacherIID">Teacher IID</label>
+                    <input type="text" id="editTeacherIID" readonly placeholder="Auto-filled">
+                </div>
+                
+                <div class="form-field">
+                    <label for="editAccessClass">Access Class (Optional)</label>
+                    <input type="number" id="editAccessClass" placeholder="e.g., 6, 7, 8, 9, 10">
+                </div>
+                
+                <div class="form-field">
+                    <label for="editAccessSection">Access Section (Optional)</label>
+                    <select id="editAccessSection">
+                        <option value="">-- Select Section --</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn" id="updateBtn" onclick="updateAccess()">💾 Update Access</button>
+                <button class="btn secondary" onclick="closeEditModal()">❌ Cancel</button>
+            </div>
+            
+            <div class="status-bar" id="editStatusBar"></div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./auth-check_copy.js"></script>
+    <script>
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        let teachersData = [];
+        let sectionsData = [];
+        let editingId = null;
+        
+        // Initialize
+        async function init() {
+            await loadTeachers();
+            await loadSections();
+            await loadAccessData();
+        }
+        
+        // Load sections from student_database
+        async function loadSections() {
+            try {
+                const { data, error } = await sb.from('student_database').select('active_section');
+                
+                if (error) throw error;
+                
+                // Get unique sections
+                const uniqueSections = [...new Set(data.map(item => item.active_section).filter(s => s))];
+                sectionsData = uniqueSections.sort();
+                
+                // Populate both dropdowns
+                const sectionSelects = [
+                    document.getElementById('accessSection'),
+                    document.getElementById('editAccessSection')
+                ];
+                
+                sectionSelects.forEach(select => {
+                    select.innerHTML = '<option value="">-- Select Section --</option>';
+                    sectionsData.forEach(section => {
+                        const option = document.createElement('option');
+                        option.value = section;
+                        option.textContent = section;
+                        select.appendChild(option);
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Error loading sections:', error);
+                showAlert('Failed to load sections: ' + error.message, 'error');
+            }
+        }
+        
+        // Load teachers from teacher_database
+        async function loadTeachers() {
+            try {
+                const { data, error } = await sb.from('teacher_database').select('*').order('teacher_name_en');
+                
+                if (error) throw error;
+                
+                teachersData = data || [];
+                const select = document.getElementById('teacherSelect');
+                select.innerHTML = '<option value="">-- Select Teacher --</option>';
+                
+                teachersData.forEach(teacher => {
+                    const option = document.createElement('option');
+                    option.value = teacher.iid || '';
+                    option.textContent = teacher.teacher_name_en || teacher.teacher_name_bn || 'Unknown';
+                    option.dataset.email = teacher.teacher_email_id || '';
+                    option.dataset.iid = teacher.iid || '';
+                    select.appendChild(option);
+                });
+                
+                showStatus('Teachers loaded successfully', 'success');
+            } catch (error) {
+                console.error('Error loading teachers:', error);
+                showAlert('Failed to load teachers: ' + error.message, 'error');
+            }
+        }
+        
+        // Handle teacher selection
+        document.getElementById('teacherSelect').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                document.getElementById('teacherEmail').textContent = selectedOption.dataset.email || '-';
+                document.getElementById('teacherIID').value = selectedOption.dataset.iid || '';
+            } else {
+                document.getElementById('teacherEmail').textContent = '-';
+                document.getElementById('teacherIID').value = '';
+            }
+        });
+        
+        // Load existing access data
+        async function loadAccessData() {
+            try {
+                const { data, error } = await sb.from('admin_teacher').select('*').order('teacher_iid', { ascending: false });
+                
+                if (error) throw error;
+                
+                const tbody = document.getElementById('tableBody');
+                
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--text-soft);">No data found</td></tr>';
+                    document.getElementById('dataStatus').textContent = 'No access records found';
+                    return;
+                }
+                
+                // Create a map of teachers by IID for quick lookup
+                const teacherMap = {};
+                teachersData.forEach(teacher => {
+                    if (teacher.iid) {
+                        teacherMap[teacher.iid] = teacher.teacher_name_en || teacher.teacher_name_bn || 'Unknown';
+                    }
+                });
+                
+                tbody.innerHTML = '';
+                data.forEach((row, index) => {
+                    const teacherName = teacherMap[row.iid] || '-';
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${teacherName}</td>
+                        <td>${row.teacher_email || '-'}</td>
+                        <td>${row.access_class || '-'}</td>
+                        <td>${row.access_section || '-'}</td>
+                        <td>${row.iid || '-'}</td>
+                        <td>
+                            <button class="btn action-btn" onclick="editAccess(${row.teacher_iid})">✏️ Edit</button>
+                            <button class="btn danger action-btn" onclick="deleteAccess(${row.teacher_iid})">🗑️ Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                document.getElementById('dataStatus').textContent = `Total ${data.length} access record(s) found`;
+            } catch (error) {
+                console.error('Error loading access data:', error);
+                showAlert('Failed to load data: ' + error.message, 'error');
+            }
+        }
+        
+        // Save or update access
+        async function saveAccess() {
+            const teacherSelect = document.getElementById('teacherSelect');
+            const teacherEmail = document.getElementById('teacherEmail').textContent.trim();
+            const teacherIID = document.getElementById('teacherIID').value.trim();
+            const accessClass = document.getElementById('accessClass').value.trim();
+            const accessSection = document.getElementById('accessSection').value.trim();
+            
+            // Validation - only teacher selection is required
+            if (!teacherSelect.value) {
+                showAlert('Please select a teacher', 'error');
+                return;
+            }
+            
+            const payload = {
+                teacher_email: (teacherEmail && teacherEmail !== '-') ? teacherEmail : null,
+                access_class: accessClass ? parseInt(accessClass) : null,
+                access_section: accessSection ? accessSection : null,
+                iid: teacherIID ? parseFloat(teacherIID) : null
+            };
+            
+            console.log('Saving payload:', payload); // Debug log
+            
+            try {
+                document.getElementById('saveBtn').disabled = true;
+                showStatus('Saving...', 'info');
+                
+                // Insert new only (edit moved to modal)
+                const { error } = await sb.from('admin_teacher').insert(payload);
+                if (error) throw error;
+                showAlert('Access added successfully!', 'success');
+                
+                clearForm();
+                await loadAccessData();
+                showStatus('Data saved successfully', 'success');
+            } catch (error) {
+                console.error('Save error:', error);
+                showAlert('Failed to save: ' + error.message, 'error');
+            } finally {
+                document.getElementById('saveBtn').disabled = false;
+            }
+        }
+        
+        // Edit access - Open modal
+        async function editAccess(id) {
+            try {
+                const { data, error } = await sb.from('admin_teacher').select('*').eq('teacher_iid', id).single();
+                
+                if (error) throw error;
+                
+                editingId = id;
+                
+                // Populate edit modal teachers dropdown if not already done
+                const editSelect = document.getElementById('editTeacherSelect');
+                if (editSelect.options.length === 1) {
+                    teachersData.forEach(teacher => {
+                        const option = document.createElement('option');
+                        option.value = teacher.iid || '';
+                        option.textContent = teacher.teacher_name_en || teacher.teacher_name_bn || 'Unknown';
+                        option.dataset.email = teacher.teacher_email_id || '';
+                        option.dataset.iid = teacher.iid || '';
+                        editSelect.appendChild(option);
+                    });
+                }
+                
+                // Find and select the teacher in dropdown
+                for (let i = 0; i < editSelect.options.length; i++) {
+                    if (editSelect.options[i].dataset.iid == data.iid) {
+                        editSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+                
+                // Set email from selected option's dataset (which has teacher_email_id)
+                const selectedOption = editSelect.options[editSelect.selectedIndex];
+                document.getElementById('editTeacherEmail').textContent = selectedOption.dataset.email || '-';
+                document.getElementById('editTeacherIID').value = data.iid || '';
+                document.getElementById('editAccessClass').value = data.access_class || '';
+                document.getElementById('editAccessSection').value = data.access_section || '';
+                
+                // Open modal
+                document.getElementById('editModal').classList.add('show');
+            } catch (error) {
+                console.error('Edit error:', error);
+                showAlert('Failed to load record: ' + error.message, 'error');
+            }
+        }
+        
+        // Update access from modal
+        async function updateAccess() {
+            const editSelect = document.getElementById('editTeacherSelect');
+            const teacherEmail = document.getElementById('editTeacherEmail').textContent.trim();
+            const teacherIID = document.getElementById('editTeacherIID').value.trim();
+            const accessClass = document.getElementById('editAccessClass').value.trim();
+            const accessSection = document.getElementById('editAccessSection').value.trim();
+            
+            // Validation - only teacher selection is required
+            if (!editSelect.value) {
+                showEditAlert('Please select a teacher', 'error');
+                return;
+            }
+            
+            const payload = {
+                teacher_email: teacherEmail ? teacherEmail : null,
+                access_class: accessClass ? parseInt(accessClass) : null,
+                access_section: accessSection ? accessSection : null,
+                iid: teacherIID ? parseFloat(teacherIID) : null
+            };
+            
+            console.log('Updating payload:', payload); // Debug log
+            
+            try {
+                document.getElementById('updateBtn').disabled = true;
+                
+                const { error } = await sb.from('admin_teacher').update(payload).eq('teacher_iid', editingId);
+                if (error) throw error;
+                
+                showAlert('Access updated successfully!', 'success');
+                closeEditModal();
+                await loadAccessData();
+            } catch (error) {
+                console.error('Update error:', error);
+                showEditAlert('Failed to update: ' + error.message, 'error');
+            } finally {
+                document.getElementById('updateBtn').disabled = false;
+            }
+        }
+        
+        // Close edit modal
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+            editingId = null;
+            const editAlert = document.getElementById('editAlert');
+            editAlert.classList.remove('show');
+        }
+        
+        // Handle edit teacher selection change
+        document.getElementById('editTeacherSelect').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption.value) {
+                document.getElementById('editTeacherEmail').value = selectedOption.dataset.email || '';
+                document.getElementById('editTeacherIID').value = selectedOption.dataset.iid || '';
+            } else {
+                document.getElementById('editTeacherEmail').value = '';
+                document.getElementById('editTeacherIID').value = '';
+            }
+        });
+        
+        // Show alert in edit modal
+        function showEditAlert(message, type) {
+            const editAlert = document.getElementById('editAlert');
+            editAlert.textContent = message;
+            editAlert.className = `alert ${type} show`;
+            
+            setTimeout(() => {
+                editAlert.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        }
+        
+        // Delete access
+        async function deleteAccess(id) {
+            if (!confirm('Are you sure you want to delete this access record?')) {
+                return;
+            }
+            
+            try {
+                const { error } = await sb.from('admin_teacher').delete().eq('teacher_iid', id);
+                
+                if (error) throw error;
+                
+                showAlert('Access deleted successfully!', 'success');
+                await loadAccessData();
+            } catch (error) {
+                console.error('Delete error:', error);
+                showAlert('Failed to delete: ' + error.message, 'error');
+            }
+        }
+        
+        // Clear form
+        function clearForm() {
+            document.getElementById('teacherSelect').selectedIndex = 0;
+            document.getElementById('teacherEmail').textContent = '-';
+            document.getElementById('teacherIID').value = '';
+            document.getElementById('accessClass').value = '';
+            document.getElementById('accessSection').selectedIndex = 0;
+            showStatus('Form cleared', 'success');
+        }
+        
+        // Show alert
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert ${type} show`;
+            
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Show status
+        function showStatus(message, type) {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = message;
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+
+
