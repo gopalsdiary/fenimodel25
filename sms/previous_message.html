@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Previous Messages - SMS Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../login/auth-check_copy.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-light {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-light:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .filter-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        .messages-section {
+            margin-bottom: 30px;
+        }
+
+        .messages-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .messages-table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background: #667eea;
+            color: white;
+            z-index: 10;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .message-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .export-btn {
+            background: #28a745;
+            color: white;
+            margin-left: 10px;
+        }
+
+        .export-btn:hover {
+            background: #218838;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📜 Previous Messages</h1>
+            <p>View all sent SMS history</p>
+            <div class="header-actions">
+                <a href="sms_api.html" class="btn btn-light">← Back to SMS Panel</a>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Statistics -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalMessages">0</div>
+                    <div class="stat-label">Total Messages</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="successMessages">0</div>
+                    <div class="stat-label">Successful</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="failedMessages">0</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayMessages">0</div>
+                    <div class="stat-label">Today</div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <h3>🔍 Filter Messages</h3>
+                <div class="filter-row">
+                    <div class="form-group">
+                        <label for="filterIID">IID:</label>
+                        <input type="text" id="filterIID" placeholder="Enter student IID">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterMobile">Mobile Number:</label>
+                        <input type="text" id="filterMobile" placeholder="Enter mobile number">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterDateFrom">Date From:</label>
+                        <input type="date" id="filterDateFrom">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterDateTo">Date To:</label>
+                        <input type="date" id="filterDateTo">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterStatus">Status:</label>
+                        <select id="filterStatus">
+                            <option value="">All Status</option>
+                            <option value="202">Success (202)</option>
+                            <option value="ERROR">Error</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="loadMessages()">🔍 Search</button>
+                    <button class="btn btn-primary" onclick="clearFilters()">🔄 Clear Filters</button>
+                    <button class="btn btn-primary export-btn" onclick="exportToCSV()">📥 Export CSV</button>
+                </div>
+            </div>
+
+            <!-- Messages Table -->
+            <div class="messages-section">
+                <h3>📨 Message History</h3>
+                <div class="messages-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Message ID</th>
+                                <th>Date & Time</th>
+                                <th>IID</th>
+                                <th>Mobile Number</th>
+                                <th>Message</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="messagesTableBody">
+                            <tr>
+                                <td colspan="6" class="loading-spinner">
+                                    Loading messages...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase Configuration
+        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let allMessages = [];
+
+        // Initialize page
+        window.addEventListener('DOMContentLoaded', async function() {
+            await loadMessages();
+        });
+
+        // Load messages from database
+        async function loadMessages() {
+            const tbody = document.getElementById('messagesTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="loading-spinner">Loading messages...</td></tr>';
+
+            try {
+                let query = supabase
+                    .from('sended_message')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                // Apply filters
+                const filterIID = document.getElementById('filterIID').value.trim();
+                const filterMobile = document.getElementById('filterMobile').value.trim();
+                const filterDateFrom = document.getElementById('filterDateFrom').value;
+                const filterDateTo = document.getElementById('filterDateTo').value;
+                const filterStatus = document.getElementById('filterStatus').value;
+
+                if (filterIID) {
+                    query = query.eq('iid', filterIID);
+                }
+
+                if (filterMobile) {
+                    query = query.eq('father_mobile', filterMobile);
+                }
+
+                if (filterDateFrom) {
+                    query = query.gte('created_at', filterDateFrom + 'T00:00:00');
+                }
+
+                if (filterDateTo) {
+                    query = query.lte('created_at', filterDateTo + 'T23:59:59');
+                }
+
+                if (filterStatus) {
+                    query = query.eq('response_code', filterStatus);
+                }
+
+                const { data, error } = await query;
+
+                if (error) throw error;
+
+                allMessages = data;
+                renderMessagesTable(data);
+                updateStatistics(data);
+
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="no-data">
+                            Error loading messages: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Render messages table
+        function renderMessagesTable(messages) {
+            const tbody = document.getElementById('messagesTableBody');
+
+            if (messages.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="no-data">
+                            No messages found
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = messages.map(msg => {
+                const date = new Date(msg.created_at);
+                const formattedDate = date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
+                const isSuccess = msg.response_code === '202';
+                
+                return `
+                    <tr>
+                        <td>${msg.message_id || 'N/A'}</td>
+                        <td>${formattedDate}</td>
+                        <td>${msg.iid || 'N/A'}</td>
+                        <td>${msg.father_mobile || 'N/A'}</td>
+                        <td class="message-preview" title="${msg.sms_body || ''}">${msg.sms_body || 'N/A'}</td>
+                        <td>
+                            <span class="status-badge ${isSuccess ? 'status-success' : 'status-error'}">
+                                ${isSuccess ? '✅ Success' : '❌ ' + (msg.response_code || 'Error')}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Update statistics
+        function updateStatistics(messages) {
+            const total = messages.length;
+            const success = messages.filter(m => m.response_code === '202').length;
+            const failed = total - success;
+            
+            // Count today's messages
+            const today = new Date().toDateString();
+            const todayCount = messages.filter(m => {
+                const msgDate = new Date(m.created_at).toDateString();
+                return msgDate === today;
+            }).length;
+
+            document.getElementById('totalMessages').textContent = total;
+            document.getElementById('successMessages').textContent = success;
+            document.getElementById('failedMessages').textContent = failed;
+            document.getElementById('todayMessages').textContent = todayCount;
+        }
+
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('filterIID').value = '';
+            document.getElementById('filterMobile').value = '';
+            document.getElementById('filterDateFrom').value = '';
+            document.getElementById('filterDateTo').value = '';
+            document.getElementById('filterStatus').value = '';
+            loadMessages();
+        }
+
+        // Export to CSV
+        function exportToCSV() {
+            if (allMessages.length === 0) {
+                alert('No messages to export');
+                return;
+            }
+
+            // Create CSV content
+            const headers = ['Message ID', 'Date & Time', 'IID', 'Mobile Number', 'Message', 'Response Code'];
+            const csvContent = [
+                headers.join(','),
+                ...allMessages.map(msg => {
+                    const date = new Date(msg.created_at);
+                    const formattedDate = date.toLocaleDateString('en-GB') + ' ' + date.toLocaleTimeString('en-GB');
+                    const message = (msg.sms_body || '').replace(/"/g, '""'); // Escape quotes
+                    
+                    return [
+                        msg.message_id || '',
+                        formattedDate,
+                        msg.iid || '',
+                        msg.father_mobile || '',
+                        `"${message}"`,
+                        msg.response_code || ''
+                    ].join(',');
+                })
+            ].join('\n');
+
+            // Create download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `sms_messages_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
