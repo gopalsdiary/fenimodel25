@@ -31,7 +31,7 @@
     .actions{margin-top:auto;display:flex;gap:8px}
     .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block}
     .btn.ghost{background:transparent;border:1px solid #e6e9ee;color:var(--muted);font-weight:500}
-    footer{margin-top:22px;color:var(--muted);font-size:13px}
+    footer{margin-top:22px;color:var(--muted);font-size:16px}
     @media (max-width:420px){.wrap{padding:12px}.icon{width:40px;height:40px}}
   </style>
 </head>
@@ -70,29 +70,40 @@
         <div class="actions"><span class="btn">View</span><span class="btn ghost">Print</span></div>
       </a>
 
+       <a class="card" href="attend_today.html">
+        <div class="title">
+          <div class="icon view">👁️</div>
+          <div>
+            <h3>Class Attendance</h3>
+            <p>Quickly view the present/absent list for today.</p>
+          </div>
+        </div>
+        <div class="actions"><span class="btn">View</span><span class="btn ghost">Print</span></div>
+      </a>
+
       <a class="card" href="attend_report.html">
         <div class="title">
           <div class="icon report">📊</div>
           <div>
-            <h3>Reports</h3>
+            <h3>All Reports</h3>
             <p>Filter and generate monthly or yearly attendance reports.</p>
           </div>
         </div>
         <div class="actions"><span class="btn">Reports</span><span class="btn ghost">Export CSV</span></div>
       </a>
 
-      <a class="card" href="attend_report.html">
+      <a class="card" href="attend_rfid.html">
         <div class="title">
           <div class="icon manage">👥</div>
           <div>
-            <h3>Students Management</h3>
+            <h3>Students - Assign RFID</h3>
             <p>Add new students or edit existing student information.</p>
           </div>
         </div>
         <div class="actions"><span class="btn">Manage</span><span class="btn ghost">Import List</span></div>
       </a>
 
-      <a class="card" href="import_export.html">
+      <a class="card" href="#">
         <div class="title">
           <div class="icon import">⬆️⬇️</div>
           <div>
@@ -103,7 +114,7 @@
         <div class="actions"><span class="btn">Import</span><span class="btn ghost">Export</span></div>
       </a>
 
-      <a class="card" href="attend_settings.html">
+      <a class="card" href="#">
         <div class="title">
           <div class="icon settings">⚙️</div>
           <div>
@@ -116,7 +127,7 @@
     </div>
 
     <footer>
-  Helpful links: If any page is missing, create the files with the shown names — e.g. `attend_mark.html`, `attend_today.html`, etc.
+  Helpful : রোল এর পাশে * মার্ক থাকলে বুঝতে হবে, তার rfid card এসাইন করা নেই। তার এটেনডেনশ শুধু মাত্র ক্লাস টিচার তার অপস এ লগইন করে দিতে হবে.
     </footer>
   </div>
 </body>

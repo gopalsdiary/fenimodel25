@@ -3,25 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Attendance Report</title>
+  <title>RFID Assignment</title>
+  <!-- Prevent favicon 404 error -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🆔</text></svg>">
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:18px;background:#f7fafc;color:#0f1724}
-    .container{max-width:980px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;box-shadow:0 8px 24px rgba(15,23,36,.06)}
-    h1{margin:0 0 8px;font-size:20px}
-    .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px}
-    .btn{background:#0b74de;color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
-    th{background:#f1f5f9}
-    .muted{color:#64748b;font-size:13px}
-    .error{color:#b91c1c}
+    body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;margin:0;padding:20px;background:linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);color:#1e293b;min-height:100vh}
+    .container{max-width:1200px;margin:0 auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 20px 40px rgba(14, 165, 233, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);border:1px solid #bae6fd}
+    h1{margin:0 0 20px;font-size:28px;color:#0ea5e9;text-align:center;font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,0.1)}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;justify-content:center;flex-wrap:wrap}
+    .btn{background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;border:none;padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:600;font-size:16px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(14, 165, 233, 0.3)}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(14, 165, 233, 0.4)}
+    .btn:active{transform:translateY(0)}
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08);border:2px solid #bae6fd}
+    th,td{padding:16px;text-align:left;border:1px solid #bae6fd;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
+    th{background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);color:#fff;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    tbody tr{background:#fff;transition:background 0.2s ease}
+    tbody tr:nth-child(even){background:#f0f9ff}
+    tbody tr:hover{background:#bae6fd}
+    .muted{color:#64748b;font-size:14px;text-align:center;padding:40px}
+    .error{color:#dc2626;background:#fef2f2;padding:12px;border-radius:8px;border-left:4px solid #dc2626;margin-bottom:20px;display:none}
+    .rfid-code{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:#f1f5f9;padding:4px 8px;border-radius:6px;font-size:14px;font-weight:500}
+    .btn-assign{background:linear-gradient(135deg, #f59e0b 0%, #d97706 100%);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.3s ease}
+    .btn-assign:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(245, 158, 11, 0.4)}
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Attendance Report ALL</h1>
+    <h1>📋 Unassigned RFID Cards - Assign to Students</h1>
     <div class="controls">
-      <button id="refresh" class="btn">Refresh</button>
+      <button id="refresh" class="btn">🔄 Refresh</button>
       <div id="status" class="muted">Ready</div>
     </div>
 
@@ -106,20 +116,32 @@
           return;
         }
 
+        // Filter to show only unassigned RFIDs
+        let unassignedCount = 0;
+        
         for (const row of data) {
-          const tr = document.createElement('tr');
-          const date = row.attendence_date ? new Date(row.attendence_date).toLocaleDateString() : '';
           const studentData = rfidToData.get(row.rfid_card_no);
           const iid = studentData?.iid || '';
+          
+          // Skip if RFID is already assigned (has IID)
+          if (iid) {
+            continue;
+          }
+          
+          // Only show unassigned entries
+          unassignedCount++;
+          const tr = document.createElement('tr');
+          const date = row.attendence_date ? new Date(row.attendence_date).toLocaleDateString() : '';
           const name = studentData?.name || '';
           const studentClass = studentData?.class || '';
           const section = studentData?.section || '';
           const roll = studentData?.roll || '';
-          const iidCell = iid ? iid : `<button style="background: #ff9800; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;" onclick="assignRfid('${row.rfid_card_no}', this)">Assign</button>`;
+          const iidCell = `<button class="btn-assign" onclick="assignRfid('${row.rfid_card_no}', this)">Assign</button>`;
+          
           tr.innerHTML = `
             <td>${row.attendence_sl ?? ''}</td>
             <td>${date}</td>
-            <td>${row.rfid_card_no ?? ''}</td>
+            <td class="rfid-code">${row.rfid_card_no ?? ''}</td>
             <td>${row.attendence_time ?? ''}</td>
             <td>${iidCell}</td>
             <td>${name}</td>
@@ -130,7 +152,12 @@
           tableBody.appendChild(tr);
         }
 
-        statusEl.textContent = `Loaded ${data.length} rows`;
+        if (unassignedCount === 0) {
+          tableBody.innerHTML = '<tr><td colspan="9" class="muted">All RFIDs have been assigned! ✅</td></tr>';
+          statusEl.textContent = 'All RFIDs assigned';
+        } else {
+          statusEl.textContent = `Showing ${unassignedCount} unassigned RFID(s)`;
+        }
       } catch (err) {
         console.error(err);
         errorEl.style.display = 'block';
