@@ -8,12 +8,18 @@
     body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;margin:0;padding:20px;background:linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);color:#1f2937;min-height:100vh}
     .container{max-width:1200px;margin:0 auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 20px 40px rgba(249, 115, 22, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);border:1px solid #fed7aa}
     h1{margin:0 0 20px;font-size:28px;color:#ea580c;text-align:center;font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,0.1)}
-    .controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;justify-content:center}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;justify-content:center;flex-wrap:wrap}
+    .filter-group{display:flex;gap:8px;align-items:center}
+    .filter-group label{font-weight:600;color:#374151}
+    .filter-group select,.filter-group input[type="date"]{padding:8px 16px;border:2px solid #fed7aa;border-radius:8px;font-size:14px;background:#fff;color:#374151;cursor:pointer;transition:all 0.3s ease}
+    .filter-group select:hover,.filter-group input[type="date"]:hover{border-color:#f97316}
+    .filter-group select:focus,.filter-group input[type="date"]:focus{outline:none;border-color:#ea580c;box-shadow:0 0 0 3px rgba(234, 88, 12, 0.1)}
+    .filter-group select:disabled{background:#f3f4f6;cursor:not-allowed;opacity:0.6}
     .btn{background:linear-gradient(135deg, #ea580c 0%, #dc2626 100%);color:#fff;border:none;padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:600;font-size:16px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(249, 115, 22, 0.3)}
     .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(249, 115, 22, 0.4)}
     .btn:active{transform:translateY(0)}
-    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08)}
-    th,td{padding:16px;text-align:left;border-bottom:1px solid #f3f4f6;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08);border:2px solid #fed7aa}
+    th,td{padding:16px;text-align:left;border:1px solid #fed7aa;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
     th{background:linear-gradient(135deg, #ea580c 0%, #f97316 100%);color:#fff;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
     tbody tr{background:#fff;transition:background 0.2s ease}
     tbody tr:nth-child(even){background:#fef7f0}
@@ -30,44 +36,343 @@
     .btn-print{background: linear-gradient(135deg, #059669 0%, #047857 100%);}
     .btn-assign{background:#f59e0b;color:#111827;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px}
     .btn-assign:hover{background:#f59e0bcc}
+    .stats-container{display:flex;gap:20px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+    .stat-box{background:linear-gradient(135deg, #fff 0%, #fef7f0 100%);padding:20px 30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);border:2px solid #fed7aa;min-width:150px;text-align:center}
+    .stat-label{font-size:14px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+    .stat-value{font-size:32px;font-weight:700;color:#ea580c}
+    .stat-box.present .stat-value{color:#10b981}
+    .stat-box.absent .stat-value{color:#ef4444}
+    .no-rfid-marker{color:#ef4444;font-weight:700;margin-left:4px}
+    .print-header{display:none}
+    .print-info{display:none}
     @media print {
-      .btn, .btn-print, .controls, .print-section { display: none !important; }
-      .container { box-shadow: none; border: 1px solid #ccc; }
-      h1 { color: #000; font-size: 24px; }
-      body { background: white; }
+      /* Hide interactive elements */
+      .btn, .btn-print, .controls, .print-section, #status { display: none !important; }
+      
+      /* Reset body and container */
+      body { 
+        background: white !important; 
+        margin: 0;
+        padding: 8mm;
+        font-size: 10pt;
+      }
+      
+      .container { 
+        box-shadow: none; 
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      
+      /* Header styling */
+      h1 { 
+        color: #000 !important; 
+        font-size: 16pt !important; 
+        text-align: center;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 6px;
+        text-shadow: none !important;
+      }
+      
+      /* Statistics box styling */
+      .stats-container { 
+        display: flex !important; 
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+      }
+      
+      .stat-box { 
+        box-shadow: none !important;
+        border: 1.5px solid #333 !important;
+        background: white !important;
+        padding: 6px 15px !important;
+        min-width: 100px;
+      }
+      
+      .stat-label {
+        color: #000 !important;
+        font-size: 8pt;
+        margin-bottom: 3px;
+      }
+      
+      .stat-value {
+        color: #000 !important;
+        font-size: 18pt;
+      }
+      
+      /* Table styling */
+      table { 
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 5px;
+        box-shadow: none !important;
+        border: 1.5px solid #000 !important;
+        page-break-inside: auto;
+      }
+      
+      thead {
+        display: table-header-group;
+      }
+      
+      tbody {
+        orphans: 5;
+        widows: 5;
+      }
+      
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      
+      th, td { 
+        padding: 4px 6px !important;
+        border: 0.5px solid #666 !important;
+        font-size: 9pt;
+        text-align: left;
+        line-height: 1.3;
+      }
+      
+      th { 
+        background: #e8e8e8 !important;
+        color: #000 !important;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 8pt;
+        letter-spacing: 0.3px;
+        padding: 5px 6px !important;
+      }
+      
+      tbody tr {
+        background: white !important;
+      }
+      
+      tbody tr:nth-child(even) {
+        background: #f9f9f9 !important;
+      }
+      
+      tbody tr:hover {
+        background: inherit !important;
+      }
+      
+      /* Maintain present student highlighting */
+      tbody tr[style*="background-color: rgb(209, 250, 229)"],
+      tbody tr[style*="background-color:#d1fae5"] {
+        background: #e8e8e8 !important;
+      }
+      
+      /* Bold present students in print */
+      tbody tr[style*="background-color"] .student-name {
+        font-weight: bold !important;
+      }
+      
+      /* Student name styling */
+      .student-name {
+        font-weight: normal !important;
+        color: #000 !important;
+        font-size: 9pt;
+      }
+      
+      .time-display {
+        color: #000 !important;
+        font-family: 'Courier New', monospace;
+        font-size: 8.5pt;
+      }
+      
+      /* RFID marker */
+      .no-rfid-marker {
+        color: #000 !important;
+        font-weight: bold;
+        font-size: 10pt;
+      }
+      
+      /* Error messages */
+      .error {
+        display: none !important;
+      }
+      
+      .muted {
+        color: #666 !important;
+      }
+      
+      /* Page break settings */
+      @page {
+        margin: 10mm 12mm;
+        size: A4 portrait;
+      }
+      
+      /* First page with more header space */
+      @page :first {
+        margin-top: 10mm;
+      }
+      
+      /* Footer with page numbers */
+      @page {
+        @bottom-right {
+          content: "Page " counter(page);
+          font-size: 8pt;
+          color: #666;
+        }
+      }
+      
+      /* Show print-only elements */
+      .print-header {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 6px;
+      }
+      
+      .print-header h2 {
+        margin: 0 !important;
+        font-size: 14pt !important;
+        line-height: 1.2;
+      }
+      
+      .print-header p {
+        margin: 3px 0 !important;
+        font-size: 9pt !important;
+      }
+      
+      .print-info {
+        display: flex !important;
+        justify-content: space-between;
+        margin-top: 5px;
+        margin-bottom: 8px;
+        font-size: 8.5pt;
+        padding: 5px 8px;
+        border: 1px solid #ccc;
+        background: #f5f5f5;
+      }
+      
+      .print-info-item {
+        display: flex;
+        gap: 4px;
+      }
+      
+      .print-info-label {
+        font-weight: bold;
+      }
+      
+      /* Show print footer */
+      .print-footer {
+        display: block !important;
+        page-break-inside: avoid;
+        margin-top: 15px !important;
+        padding-top: 10px !important;
+        font-size: 8pt !important;
+      }
+      
+      .print-footer p {
+        margin: 3px 0 !important;
+        font-size: 8pt !important;
+      }
+      
+      .print-footer strong {
+        font-size: 8.5pt;
+      }
     }
   </style>
 </head>
 <body>
   <div class="container">
+    <!-- Print-only header -->
+    <div class="print-header">
+      <h2 style="margin:0;font-size:18pt;">FENI MODEL SCHOOL</h2>
+      <p style="margin:5px 0;font-size:11pt;">Daily Attendance Report</p>
+    </div>
+    
     <h1 id="pageTitle">📅 Today's Attendance</h1>
+    
+    <!-- Print-only info section -->
+    <div class="print-info" id="printInfo">
+      <div class="print-info-item">
+        <span class="print-info-label">Class:</span>
+        <span id="printClass">-</span>
+      </div>
+      <div class="print-info-item">
+        <span class="print-info-label">Section:</span>
+        <span id="printSection">-</span>
+      </div>
+      <div class="print-info-item">
+        <span class="print-info-label">Date:</span>
+        <span id="printDate">-</span>
+      </div>
+      <div class="print-info-item">
+        <span class="print-info-label">Printed:</span>
+        <span id="printTime">-</span>
+      </div>
+    </div>
+    
     <div class="controls">
+      <div class="filter-group">
+        <label for="dateFilter">📅 Date:</label>
+        <input type="date" id="dateFilter" />
+      </div>
+      <div class="filter-group">
+        <label for="classFilter">Class:</label>
+        <select id="classFilter">
+          <option value="">Select Class</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="sectionFilter">Section:</label>
+        <select id="sectionFilter" disabled>
+          <option value="">Select Section</option>
+        </select>
+      </div>
       <button id="refresh" class="btn">🔄 Refresh</button>
       <div id="status" class="muted">Ready</div>
     </div>
 
     <div id="error" class="error"></div>
 
-    <div class="table-header">
-      <div class="table-title">Attendance Records</div>
-      <div id="recordCount" class="record-count">0 records</div>
+    <div class="stats-container">
+      <div class="stat-box">
+        <div class="stat-label">মোট শিক্ষার্থী</div>
+        <div class="stat-value" id="totalCount">0</div>
+      </div>
+      <div class="stat-box present">
+        <div class="stat-label">উপস্থিত</div>
+        <div class="stat-value" id="presentCount">0</div>
+      </div>
+      <div class="stat-box absent">
+        <div class="stat-label">অনুপস্থিত</div>
+        <div class="stat-value" id="absentCount">0</div>
+      </div>
     </div>
 
     <table id="reportTable">
       <thead>
-        <tr><th>SL</th><th>📅 Date</th><th>⏰ Time</th><th>🎫 RFID</th><th>🆔 IID</th><th>👤 Student Name</th></tr>
+        <tr><th>Roll</th><th>🆔 IID</th><th>👤 Student Name</th><th>⏰ In Time</th><th>⏰ Out Time</th></tr>
       </thead>
       <tbody></tbody>
     </table>
 
+    <div class="print-footer" style="display:none;margin-top:20px;padding-top:15px;border-top:1px solid #ccc;font-size:10pt;color:#666;">
+      <p style="margin:5px 0;"><strong>Note:</strong> * indicates student without RFID card | Highlighted rows indicate present students</p>
+      <div style="display:flex;justify-content:space-between;margin-top:15px;">
+        <div>
+          <p style="margin:5px 0;">__________________________</p>
+          <p style="margin:0;font-size:9pt;">Teacher's Signature</p>
+        </div>
+        <div>
+          <p style="margin:5px 0;">__________________________</p>
+          <p style="margin:0;font-size:9pt;">Head Teacher's Signature</p>
+        </div>
+      </div>
+    </div>
+
     <div class="print-section">
-      <button onclick="window.print()" class="btn btn-print">🖨️ Print Report</button>
+      <button onclick="preparePrint()" class="btn btn-print">🖨️ Print Report</button>
     </div>
   </div>
 
   <!-- Load Supabase UMD (creates window.supabase). If not present, the module import will be used. -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	  <script src="../login/auth-check_copy.js"></script>
   <script type="module">
     // --- CONFIG: replace with your project's values ---
     const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
@@ -88,98 +393,228 @@
     const tableBody = document.querySelector('#reportTable tbody');
     const statusEl = document.getElementById('status');
     const errorEl = document.getElementById('error');
-    const recordCountEl = document.getElementById('recordCount');
+    const classFilter = document.getElementById('classFilter');
+    const sectionFilter = document.getElementById('sectionFilter');
+    const dateFilter = document.getElementById('dateFilter');
+    const totalCountEl = document.getElementById('totalCount');
+    const presentCountEl = document.getElementById('presentCount');
+    const absentCountEl = document.getElementById('absentCount');
 
     // Today's date in YYYY-MM-DD format
     const today = new Date().toISOString().split('T')[0];
-    const formattedDate = new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
+    
+    // Set default date to today
+    dateFilter.value = today;
 
-    // Update page title with date
-    const titleElement = document.getElementById('pageTitle');
-    if (titleElement) {
-      titleElement.textContent = `📅 ${formattedDate} Attendance`;
+    // Update page title with selected date
+    function updatePageTitle() {
+      const selectedDate = new Date(dateFilter.value + 'T00:00:00');
+      const formattedDate = selectedDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const titleElement = document.getElementById('pageTitle');
+      if (titleElement) {
+        titleElement.textContent = `📅 ${formattedDate} Attendance`;
+      }
+    }
+    
+    updatePageTitle();
+
+    // Load class filter
+    async function loadClassFilter() {
+      try {
+        const { data: classes, error: classError } = await supabase
+          .from('student_database')
+          .select('active_class')
+          .not('active_class', 'is', null)
+          .order('active_class');
+
+        if (classError) throw classError;
+
+        const uniqueClasses = [...new Set(classes.map(c => c.active_class))].sort();
+        
+        // Clear existing options except first
+        classFilter.innerHTML = '<option value="">Select Class</option>';
+        
+        uniqueClasses.forEach(cls => {
+          const option = document.createElement('option');
+          option.value = cls;
+          option.textContent = cls;
+          classFilter.appendChild(option);
+        });
+      } catch (err) {
+        console.error('Error loading class filter:', err);
+      }
     }
 
-    // Map for rfid to student data lookup
-    let rfidToData = new Map();
+    // Load sections based on selected class
+    async function loadSectionFilter() {
+      const selectedClass = classFilter.value;
+      
+      // Reset section dropdown
+      sectionFilter.innerHTML = '<option value="">Select Section</option>';
+      
+      if (!selectedClass) {
+        sectionFilter.disabled = true;
+        return;
+      }
 
-    async function loadStudents() {
       try {
-        const { data, error } = await supabase
+        const { data: sections, error: sectionError } = await supabase
           .from('student_database')
-          .select('iid, rfid_card_no, student_name_en')
-          .not('rfid_card_no', 'is', null);
+          .select('active_section')
+          .eq('active_class', selectedClass)
+          .not('active_section', 'is', null)
+          .order('active_section');
 
-        if (error) throw error;
+        if (sectionError) throw sectionError;
 
-        rfidToData = new Map(data.map(row => [row.rfid_card_no, { iid: row.iid, name: row.student_name_en }]));
+        const uniqueSections = [...new Set(sections.map(s => s.active_section))].sort();
+        
+        uniqueSections.forEach(sec => {
+          const option = document.createElement('option');
+          option.value = sec;
+          option.textContent = sec;
+          sectionFilter.appendChild(option);
+        });
+        
+        sectionFilter.disabled = false;
       } catch (err) {
-        console.warn('Could not load student data for lookup:', err);
+        console.error('Error loading section filter:', err);
+        sectionFilter.disabled = true;
       }
     }
 
     async function loadEntries() {
       statusEl.textContent = 'Loading...';
       errorEl.style.display = 'none';
+      
+      const selectedClass = classFilter.value;
+      const selectedSection = sectionFilter.value;
+      
+      // Validate filters
+      if (!selectedClass) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="muted">Please select a class first. 📋</td></tr>';
+        statusEl.textContent = 'Please select a class';
+        totalCountEl.textContent = '0';
+        presentCountEl.textContent = '0';
+        absentCountEl.textContent = '0';
+        return;
+      }
+      
+      if (!selectedSection) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="muted">Please select a section. 📋</td></tr>';
+        statusEl.textContent = 'Please select a section';
+        totalCountEl.textContent = '0';
+        presentCountEl.textContent = '0';
+        absentCountEl.textContent = '0';
+        return;
+      }
+      
       try {
-        const { data, error } = await supabase
+        // Build student query with filters (include students without RFID)
+        let studentQuery = supabase
+          .from('student_database')
+          .select('iid, rfid_card_no, student_name_en, active_roll, active_class, active_section')
+          .eq('active_class', selectedClass)
+          .eq('active_section', selectedSection)
+          .order('active_roll', { ascending: true });
+
+        const { data: students, error: studentError } = await studentQuery;
+        if (studentError) throw studentError;
+
+        // Get selected date
+        const selectedDate = dateFilter.value;
+
+        // Get all attendance entries for selected date
+        const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendence_entry')
           .select('*')
-          .eq('attendence_date', today)
-          .order('attendence_sl', { ascending: false });
+          .eq('attendence_date', selectedDate)
+          .order('attendence_time', { ascending: true });
 
-        if (error) throw error;
+        if (attendanceError) throw attendanceError;
+
+        // Group attendance by RFID to find first and last scan times
+        const rfidScans = new Map();
+        if (attendanceData && attendanceData.length > 0) {
+          attendanceData.forEach(entry => {
+            const rfid = entry.rfid_card_no;
+            if (!rfid) return;
+            
+            if (!rfidScans.has(rfid)) {
+              rfidScans.set(rfid, { first: entry.attendence_time, last: entry.attendence_time });
+            } else {
+              rfidScans.get(rfid).last = entry.attendence_time;
+            }
+          });
+        }
+
+        // Helper function to format time
+        function formatTime(timeStr) {
+          if (!timeStr) return '-';
+          if (timeStr.includes(':')) {
+            const [hours, minutes] = timeStr.split(':');
+            const hour24 = parseInt(hours);
+            const ampm = hour24 >= 12 ? 'PM' : 'AM';
+            const hour12 = hour24 % 12 || 12;
+            return `${hour12}:${minutes} ${ampm}`;
+          }
+          return timeStr;
+        }
 
         tableBody.innerHTML = '';
-        if (!data || data.length === 0) {
-          tableBody.innerHTML = '<tr><td colspan="6" class="muted">No attendance records found for today. 📭</td></tr>';
-          statusEl.textContent = `No records for ${today}`;
-          recordCountEl.textContent = '0 records';
+        if (!students || students.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5" class="muted">No students found with the selected filters. 📭</td></tr>';
+          statusEl.textContent = 'No students found';
+          totalCountEl.textContent = '0';
+          presentCountEl.textContent = '0';
+          absentCountEl.textContent = '0';
           return;
         }
 
-        recordCountEl.textContent = `${data.length} records`;
-
-        for (const row of data) {
+        let presentCount = 0;
+        
+        for (const student of students) {
           const tr = document.createElement('tr');
-          const date = row.attendence_date ? new Date(row.attendence_date).toLocaleDateString() : '';
+          const hasRfid = student.rfid_card_no && student.rfid_card_no.trim() !== '';
+          const scans = hasRfid ? rfidScans.get(student.rfid_card_no) : null;
+          const inTime = scans ? formatTime(scans.first) : '-';
+          const outTime = scans ? formatTime(scans.last) : '-';
           
-          // Format time properly
-          let timeDisplay = '';
-          if (row.attendence_time) {
-            const timeStr = row.attendence_time;
-            // Handle different time formats from database
-            if (timeStr.includes(':')) {
-              const [hours, minutes] = timeStr.split(':');
-              const hour24 = parseInt(hours);
-              const ampm = hour24 >= 12 ? 'PM' : 'AM';
-              const hour12 = hour24 % 12 || 12;
-              timeDisplay = `${hour12}:${minutes} ${ampm}`;
-            } else {
-              timeDisplay = timeStr;
-            }
-          }
+          // Check if present
+          const isPresent = !!scans;
+          if (isPresent) presentCount++;
           
-          const studentData = rfidToData.get(row.rfid_card_no);
-          const iid = studentData?.iid || '';
-          const name = studentData?.name || '';
-          const iidCell = iid ? iid : `<button class="btn-assign" onclick="assignRfid('${row.rfid_card_no}', this)">Assign</button>`;
+          // Add * marker if no RFID
+          const rollDisplay = hasRfid 
+            ? (student.active_roll ?? '-')
+            : `${student.active_roll ?? '-'}<span class="no-rfid-marker">*</span>`;
+          
           tr.innerHTML = `
-            <td>${row.attendence_sl ?? ''}</td>
-            <td class="date-highlight">${date}</td>
-            <td class="time-display">${timeDisplay}</td>
-            <td class="rfid-code">${row.rfid_card_no ?? ''}</td>
-            <td>${iidCell}</td>
-            <td class="student-name">${name}</td>
+            <td>${rollDisplay}</td>
+            <td>${student.iid ?? '-'}</td>
+            <td class="student-name">${student.student_name_en ?? '-'}</td>
+            <td class="time-display">${inTime}</td>
+            <td class="time-display">${outTime}</td>
           `;
+          if (isPresent) {
+            tr.style.backgroundColor = '#d1fae5';
+          }
           tableBody.appendChild(tr);
         }
 
-        statusEl.textContent = `Loaded ${data.length} attendance records for ${today} ✅`;
+        // Update statistics
+        const totalStudents = students.length;
+        const absentCount = totalStudents - presentCount;
+        
+        totalCountEl.textContent = totalStudents;
+        presentCountEl.textContent = presentCount;
+        absentCountEl.textContent = absentCount;
+        
+        statusEl.textContent = `Loaded ${totalStudents} students (${presentCount} present, ${absentCount} absent) ✅`;
       } catch (err) {
         console.error(err);
         errorEl.style.display = 'block';
@@ -188,56 +623,53 @@
       }
     }
 
-    // Function to handle Assign button click
-    window.assignRfid = async function(rfid, buttonEl) {
-      const enteredIid = prompt(`Enter IID to assign RFID: ${rfid}`);
-      if (enteredIid && enteredIid.trim()) {
-        const iid = enteredIid.trim();
-        try {
-          // Check if IID exists
-          const { data: existing, error: checkError } = await supabase
-            .from('student_database')
-            .select('iid, rfid_card_no')
-            .eq('iid', iid)
-            .single();
-
-          if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is "not found"
-            throw checkError;
-          }
-
-          if (!existing) {
-            alert('Error: IID not found in student database. Please enter a valid IID.');
-            return;
-          }
-
-          if (existing.rfid_card_no) {
-            const confirmOverwrite = confirm(`IID ${iid} already has RFID: ${existing.rfid_card_no}. Overwrite?`);
-            if (!confirmOverwrite) return;
-          }
-
-          // Proceed with update
-          const { error: updateError } = await supabase
-            .from('student_database')
-            .update({ rfid_card_no: rfid })
-            .eq('iid', iid);
-
-          if (updateError) throw updateError;
-
-          alert('RFID assigned successfully to IID: ' + iid);
-          // Refresh data to reflect changes
-          await loadStudents();
-          await loadEntries();
-        } catch (err) {
-          alert('Error: ' + (err.message || 'Unknown error'));
-          console.error('Assign error:', err);
-        }
+    // Event listeners
+    document.getElementById('refresh').addEventListener('click', loadEntries);
+    
+    classFilter.addEventListener('change', () => {
+      loadSectionFilter();
+      // Clear table when class changes
+      tableBody.innerHTML = '<tr><td colspan="5" class="muted">Please select a section. 📋</td></tr>';
+      statusEl.textContent = 'Please select a section';
+      totalCountEl.textContent = '0';
+      presentCountEl.textContent = '0';
+      absentCountEl.textContent = '0';
+    });
+    
+    sectionFilter.addEventListener('change', loadEntries);
+    
+    dateFilter.addEventListener('change', () => {
+      updatePageTitle();
+      if (classFilter.value && sectionFilter.value) {
+        loadEntries();
       }
+    });
+
+    // Prepare print information
+    window.preparePrint = function() {
+      // Update print info
+      document.getElementById('printClass').textContent = classFilter.value || 'All';
+      document.getElementById('printSection').textContent = sectionFilter.value || 'All';
+      document.getElementById('printDate').textContent = dateFilter.value;
+      
+      const now = new Date();
+      const printTime = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.getElementById('printTime').textContent = printTime;
+      
+      // Trigger print
+      setTimeout(() => {
+        window.print();
+      }, 100);
     };
 
-    document.getElementById('refresh').addEventListener('click', loadEntries);
-
     // Initial load
-    loadStudents().then(() => loadEntries());
+    loadClassFilter();
   </script>
 </body>
 </html>
