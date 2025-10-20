@@ -164,21 +164,8 @@
           <label for="quantity">Quantity *</label>
           <input type="number" id="quantity" name="quantity" required min="1" value="1">
         </div>
-        <div class="form-group">
-          <label for="book_status">Book Status</label>
-          <select id="book_status" name="book_status">
-            <option value="usable">Usable</option>
-            <option value="damaged">Damaged</option>
-            <option value="unusable">Unusable</option>
-          </select>
-        </div>
       </div>
       
-      <div class="form-group">
-        <label for="notes">Notes</label>
-        <textarea id="notes" name="notes" placeholder="Additional information about the book"></textarea>
-      </div>
-
       <div class="button-group">
         <button type="submit" class="btn btn-primary">💾 Save Book</button>
         <button type="reset" class="btn btn-secondary">🔄 Reset</button>
@@ -212,8 +199,8 @@
       try {
         const { data, error } = await supabase
           .from('library_book')
-          .select('tracking_number')
-          .order('tracking_number', { ascending: false })
+          .select('tracking_number', { count: 'exact' })
+          .order('created_at', { ascending: false })
           .limit(1);
 
         if (error) throw error;
@@ -240,15 +227,13 @@
       
       const formData = new FormData(e.target);
       const bookData = {
-        tracking_number: formData.get('tracking_number'),
-        book_title: formData.get('book_title'),
+        tracking_number: parseInt(formData.get('tracking_number')),
+        title: formData.get('book_title'),
         author: formData.get('author'),
         category: formData.get('category'),
         publisher: formData.get('publisher'),
         publication_year: formData.get('publication_year') ? parseInt(formData.get('publication_year')) : null,
-        quantity: parseInt(formData.get('quantity')),
-        book_status: formData.get('book_status'),
-        notes: formData.get('notes')
+        quantity: parseInt(formData.get('quantity'))
       };
 
       try {

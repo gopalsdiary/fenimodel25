@@ -243,9 +243,6 @@
           <label>Status</label>
           <select id="filterStatus">
             <option value="">All Status</option>
-            <option value="usable">Usable</option>
-            <option value="damaged">Damaged</option>
-            <option value="unusable">Unusable</option>
           </select>
         </div>
         <button class="btn btn-primary" onclick="loadBooks()" style="margin-top: 18px;">🔍 Search</button>
@@ -261,7 +258,6 @@
             <th>Tracking #</th>
             <th>Title</th>
             <th>Author</th>
-            <th>Category</th>
             <th>Publisher</th>
             <th>Year</th>
             <th>Qty</th>
@@ -286,7 +282,7 @@
         <button class="close-btn" onclick="closeModal()">✕</button>
       </div>
       <form id="editBookForm">
-        <input type="hidden" id="edit_id" name="id">
+        <input type="hidden" id="edit_tracking_number_hidden" name="tracking_number">
         <div class="form-grid">
           <div class="form-group">
             <label>Tracking Number</label>
@@ -318,16 +314,11 @@
           </div>
           <div class="form-group">
             <label>Status</label>
-            <select id="edit_book_status">
+            <select id="edit_status">
               <option value="usable">Usable</option>
-              <option value="damaged">Damaged</option>
               <option value="unusable">Unusable</option>
             </select>
           </div>
-        </div>
-        <div class="form-group">
-          <label>Notes</label>
-          <textarea id="edit_notes"></textarea>
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
           <button type="submit" class="btn btn-primary">💾 Update Book</button>
@@ -363,7 +354,6 @@
           .order('tracking_number', { ascending: false });
 
         if (category) query = query.eq('category', category);
-        if (status) query = query.eq('book_status', status);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -371,34 +361,29 @@
         let filteredData = data;
         if (search) {
           filteredData = data.filter(book => 
-            (book.book_title?.toLowerCase().includes(search)) ||
+            (book.title?.toLowerCase().includes(search)) ||
             (book.author?.toLowerCase().includes(search)) ||
-            (book.tracking_number?.toLowerCase().includes(search))
+            (book.tracking_number?.toString().includes(search))
           );
         }
 
         tbody.innerHTML = '';
         if (!filteredData || filteredData.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #9ca3af;">No books found</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #9ca3af;">No books found</td></tr>';
           return;
         }
 
         filteredData.forEach(book => {
-          let statusClass = 'status-usable';
-          if (book.book_status === 'damaged') statusClass = 'status-damaged';
-          if (book.book_status === 'unusable') statusClass = 'status-unusable';
-
           const row = document.createElement('tr');
           row.innerHTML = `
             <td>${book.tracking_number || '-'}</td>
-            <td><strong>${book.book_title || '-'}</strong></td>
+            <td><strong>${book.title || '-'}</strong></td>
             <td>${book.author || '-'}</td>
-            <td>${book.category || '-'}</td>
             <td>${book.publisher || '-'}</td>
             <td>${book.publication_year || '-'}</td>
             <td>${book.quantity || 0}</td>
-            <td><span class="status-badge ${statusClass}">${book.book_status || 'usable'}</span></td>
-            <td><button class="btn-edit" onclick="editBook(${book.id})">✏️ Edit</button></td>
+            <td><span class="status-badge">${book.status || 'usable'}</span></td>
+            <td><button class="btn-edit" onclick="editBook(${book.tracking_number})">✏️ Edit</button></td>
           `;
           tbody.appendChild(row);
         });
@@ -408,27 +393,27 @@
       }
     };
 
-    window.editBook = async function(id) {
+    window.editBook = async function(trackingNumber) {
       try {
         const { data, error } = await supabase
           .from('library_book')
           .select('*')
-          .eq('id', id)
+          .eq('tracking_number', trackingNumber)
           .single();
 
         if (error) throw error;
 
-        document.getElementById('edit_id').value = data.id;
         document.getElementById('edit_tracking_number').value = data.tracking_number || '';
-        document.getElementById('edit_book_title').value = data.book_title || '';
+        document.getElementById('edit_book_title').value = data.title || '';
         document.getElementById('edit_author').value = data.author || '';
         document.getElementById('edit_category').value = data.category || '';
         document.getElementById('edit_publisher').value = data.publisher || '';
         document.getElementById('edit_publication_year').value = data.publication_year || '';
         document.getElementById('edit_quantity').value = data.quantity || 1;
-        document.getElementById('edit_book_status').value = data.book_status || 'usable';
-        document.getElementById('edit_notes').value = data.notes || '';
+        document.getElementById('edit_status').value = data.status || 'usable';
 
+        // Store tracking number for update
+        document.getElementById('edit_tracking_number_hidden').value = trackingNumber;
         document.getElementById('editModal').classList.add('active');
       } catch (err) {
         console.error('Error loading book:', err);
@@ -442,24 +427,23 @@
 
     document.getElementById('editBookForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const id = document.getElementById('edit_id').value;
+      const trackingNumber = parseInt(document.getElementById('edit_tracking_number_hidden').value);
 
       const updateData = {
-        book_title: document.getElementById('edit_book_title').value,
+        title: document.getElementById('edit_book_title').value,
         author: document.getElementById('edit_author').value,
         category: document.getElementById('edit_category').value,
         publisher: document.getElementById('edit_publisher').value,
         publication_year: document.getElementById('edit_publication_year').value ? parseInt(document.getElementById('edit_publication_year').value) : null,
         quantity: parseInt(document.getElementById('edit_quantity').value),
-        book_status: document.getElementById('edit_book_status').value,
-        notes: document.getElementById('edit_notes').value
+        status: document.getElementById('edit_status').value
       };
 
       try {
         const { error } = await supabase
           .from('library_book')
           .update(updateData)
-          .eq('id', id);
+          .eq('tracking_number', trackingNumber);
 
         if (error) throw error;
 

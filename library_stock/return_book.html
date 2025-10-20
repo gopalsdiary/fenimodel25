@@ -226,23 +226,22 @@
         let filteredData = data;
         if (search) {
           filteredData = data.filter(issue => 
-            (issue.student_iid?.toLowerCase().includes(search)) ||
-            (issue.student_name?.toLowerCase().includes(search)) ||
-            (issue.book_title?.toLowerCase().includes(search)) ||
-            (issue.book_tracking_number?.toLowerCase().includes(search))
+            (issue.iid?.toString().includes(search)) ||
+            (issue.student_name_en?.toLowerCase().includes(search)) ||
+            (issue.tracking_number?.toString().includes(search))
           );
         }
 
         tbody.innerHTML = '';
         if (!filteredData || filteredData.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #9ca3af;">No issued books found</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #9ca3af;">No issued books found</td></tr>';
           return;
         }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        filteredData.forEach(issue => {
+        for (const issue of filteredData) {
           const dueDate = new Date(issue.due_date);
           dueDate.setHours(0, 0, 0, 0);
           const diffDays = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
@@ -260,24 +259,31 @@
             statusText = `${diffDays} days left`;
           }
 
+          // Get book title from library_book table
+          const { data: bookData } = await supabase
+            .from('library_book')
+            .select('title')
+            .eq('tracking_number', issue.tracking_number)
+            .single();
+
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${issue.id || '-'}</td>
-            <td>${issue.student_iid || '-'}</td>
-            <td><strong>${issue.student_name || '-'}</strong></td>
-            <td>${issue.student_class || '-'} (${issue.student_section || '-'})</td>
-            <td>${issue.book_tracking_number || '-'}</td>
-            <td>${issue.book_title || '-'}</td>
+            <td>${issue.issue_id || '-'}</td>
+            <td>${issue.iid || '-'}</td>
+            <td><strong>${issue.student_name_en || '-'}</strong></td>
+            <td>${issue.active_class || '-'} (${issue.active_section || '-'})</td>
+            <td>${issue.tracking_number || '-'}</td>
+            <td>${bookData?.title || '-'}</td>
             <td>${issue.issue_date || '-'}</td>
             <td>${issue.due_date || '-'}</td>
             <td class="${statusClass}">${statusText}</td>
-            <td><button class="btn-return" onclick="returnBook(${issue.id})">✅ Return</button></td>
+            <td><button class="btn-return" onclick="returnBook(${issue.issue_id})">✅ Return</button></td>
           `;
           tbody.appendChild(row);
-        });
+        }
       } catch (err) {
         console.error('Error loading issued books:', err);
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #dc2626;">Error loading data</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #dc2626;">Error loading data</td></tr>';
       }
     };
 
@@ -291,9 +297,9 @@
           .from('library_book_issue')
           .update({ 
             return_date: returnDate,
-            status: 'returned'
+            return_status: 'returned'
           })
-          .eq('id', issueId);
+          .eq('issue_id', issueId);
 
         if (error) throw error;
 

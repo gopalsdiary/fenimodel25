@@ -404,11 +404,11 @@
 
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${issue.student_iid || '-'}</td>
-            <td><strong>${issue.student_name || '-'}</strong></td>
-            <td>${issue.student_class || '-'} (${issue.student_section || '-'})</td>
-            <td>${issue.book_title || '-'}</td>
-            <td>${issue.book_tracking_number || '-'}</td>
+            <td>${issue.iid || '-'}</td>
+            <td><strong>${issue.student_name_en || '-'}</strong></td>
+            <td>${issue.active_class || '-'} (${issue.active_section || '-'})</td>
+            <td>${issue.tracking_number || '-'}</td>
+            <td>-</td>
             <td>${issue.issue_date || '-'}</td>
             <td>${issue.due_date || '-'}</td>
             <td class="${diffDays < 0 ? 'status-overdue' : ''}">${diffDays} days</td>
@@ -450,11 +450,11 @@
 
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${issue.student_iid || '-'}</td>
-            <td><strong>${issue.student_name || '-'}</strong></td>
-            <td>${issue.student_class || '-'} (${issue.student_section || '-'})</td>
+            <td>${issue.iid || '-'}</td>
+            <td><strong>${issue.student_name_en || '-'}</strong></td>
+            <td>${issue.active_class || '-'} (${issue.active_section || '-'})</td>
             <td>${issue.father_mobile || '-'}</td>
-            <td>${issue.book_title || '-'}</td>
+            <td>-</td>
             <td>${issue.due_date || '-'}</td>
             <td class="status-overdue">${daysOverdue} days</td>
           `;
@@ -471,19 +471,15 @@
       try {
         const { data, error } = await supabase
           .from('library_book_issue')
-          .select('book_tracking_number, book_title');
+          .select('tracking_number');
 
         if (error) throw error;
 
         // Count occurrences
         const bookCounts = {};
-        const bookInfo = {};
         data.forEach(issue => {
-          const tracking = issue.book_tracking_number;
+          const tracking = issue.tracking_number;
           bookCounts[tracking] = (bookCounts[tracking] || 0) + 1;
-          if (!bookInfo[tracking]) {
-            bookInfo[tracking] = { title: issue.book_title };
-          }
         });
 
         // Get book details
@@ -501,14 +497,14 @@
           const [tracking, count] = popularBooks[i];
           const { data: bookData } = await supabase
             .from('library_book')
-            .select('book_title, author, category')
-            .eq('tracking_number', tracking)
+            .select('title, author, category')
+            .eq('tracking_number', parseInt(tracking))
             .single();
 
           const row = document.createElement('tr');
           row.innerHTML = `
             <td><strong>#${i + 1}</strong></td>
-            <td>${bookData?.book_title || bookInfo[tracking].title || '-'}</td>
+            <td>${bookData?.title || '-'}</td>
             <td>${bookData?.author || '-'}</td>
             <td>${bookData?.category || '-'}</td>
             <td><strong>${count}</strong></td>

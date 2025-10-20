@@ -284,30 +284,17 @@
         const { data, error } = await supabase
           .from('library_book')
           .select('*')
-          .eq('tracking_number', tracking)
+          .eq('tracking_number', parseInt(tracking))
           .single();
 
         if (error) throw error;
 
         if (data) {
-          // Check availability
-          const { count: issuedCount } = await supabase
-            .from('library_book_issue')
-            .select('*', { count: 'exact', head: true })
-            .eq('book_tracking_number', tracking)
-            .is('return_date', null);
-
-          const available = (data.quantity || 0) - (issuedCount || 0);
-
           selectedBook = data;
-          document.getElementById('bookTitle').textContent = data.book_title || '-';
+          document.getElementById('bookTitle').textContent = data.title || '-';
           document.getElementById('bookAuthor').textContent = data.author || '-';
-          document.getElementById('bookAvailable').textContent = `${available} / ${data.quantity || 0}`;
+          document.getElementById('bookAvailable').textContent = data.quantity || 0;
           document.getElementById('bookInfoCard').style.display = 'block';
-
-          if (available <= 0) {
-            showMessage('⚠️ No copies available for this book!', 'error');
-          }
         }
       } catch (err) {
         document.getElementById('bookInfoCard').style.display = 'none';
@@ -337,18 +324,17 @@
       }
 
       const issueData = {
-        student_iid: selectedStudent.iid,
-        student_name: selectedStudent.student_name_en,
-        student_class: selectedStudent.active_class,
-        student_section: selectedStudent.active_section,
-        student_roll: selectedStudent.active_roll,
+        tracking_number: selectedBook.tracking_number,
+        iid: selectedStudent.iid,
+        student_name_en: selectedStudent.student_name_en,
         father_mobile: selectedStudent.father_mobile,
-        book_tracking_number: selectedBook.tracking_number,
-        book_title: selectedBook.book_title,
+        active_class: selectedStudent.active_class,
+        active_section: selectedStudent.active_section,
+        active_roll: selectedStudent.active_roll,
         issue_date: document.getElementById('issue_date').value,
         due_date: document.getElementById('due_date').value,
         return_date: null,
-        status: 'issued'
+        return_status: 'issued'
       };
 
       try {

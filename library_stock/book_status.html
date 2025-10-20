@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Book Status - Library Management</title>
+  <title>Book Inventory - Library Management</title>
   <script src="../login/auth-check_copy.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,70 +21,69 @@
       padding: 30px;
       box-shadow: 0 20px 60px rgba(249, 115, 22, 0.15);
     }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
     h1 {
       color: #ea580c;
-      margin-bottom: 10px;
       font-size: 28px;
     }
     .subtitle {
       color: #6b7280;
-      margin-bottom: 20px;
       font-size: 14px;
+      margin-top: 5px;
     }
-    .stats-row {
+    .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin-bottom: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
     }
-    .stat-box {
-      padding: 12px 16px;
-      border-radius: 10px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    .stat-box.usable {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      color: white;
-    }
-    .stat-box.damaged {
+    .stat-card {
       background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
       color: white;
-    }
-    .stat-box.unusable {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      color: white;
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(249, 115, 22, 0.25);
+      text-align: center;
     }
     .stat-label {
-      font-size: 12px;
+      font-size: 13px;
       opacity: 0.95;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
     .stat-value {
-      font-size: 20px;
+      font-size: 26px;
       font-weight: 700;
     }
-    .top-bar {
+    .filter-bar {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
+      gap: 10px;
       margin-bottom: 20px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .filter-section {
-      display: flex;
-      gap: 10px;
       align-items: center;
+      flex-wrap: wrap;
     }
-    select {
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 150px;
+    }
+    .filter-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    input, select {
       padding: 10px;
       border: 2px solid #e5e7eb;
       border-radius: 8px;
       font-size: 14px;
-      min-width: 150px;
     }
-    select:focus {
+    input:focus, select:focus {
       outline: none;
       border-color: #f97316;
     }
@@ -96,8 +95,6 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
-      text-decoration: none;
-      display: inline-block;
     }
     .btn-primary {
       background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
@@ -148,83 +145,81 @@
       border-radius: 12px;
       font-size: 12px;
       font-weight: 600;
-    }
-    .status-usable {
       background: #d1fae5;
       color: #059669;
-    }
-    .status-damaged {
-      background: #fed7aa;
-      color: #c2410c;
     }
     .status-unusable {
       background: #fecaca;
       color: #dc2626;
     }
-    .btn-change {
-      background: #3b82f6;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      border: none;
-      cursor: pointer;
-    }
-    .btn-change:hover {
-      background: #2563eb;
-    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>✅ Book Status Management</h1>
-    <p class="subtitle">Track and update book conditions</p>
-
-    <!-- Statistics -->
-    <div class="stats-row">
-      <div class="stat-box usable">
-        <div class="stat-label">Usable Books</div>
-        <div class="stat-value" id="usableCount">0</div>
-      </div>
-      <div class="stat-box damaged">
-        <div class="stat-label">Damaged Books</div>
-        <div class="stat-value" id="damagedCount">0</div>
-      </div>
-      <div class="stat-box unusable">
-        <div class="stat-label">Unusable Books</div>
-        <div class="stat-value" id="unusableCount">0</div>
-      </div>
-    </div>
-
-    <div class="top-bar">
-      <div class="filter-section">
-        <select id="statusFilter" onchange="loadBooks()">
-          <option value="">All Status</option>
-          <option value="usable">Usable</option>
-          <option value="damaged">Damaged</option>
-          <option value="unusable">Unusable</option>
-        </select>
-        <button class="btn btn-secondary" onclick="clearFilter()">✖️ Clear</button>
+    <div class="header">
+      <div>
+        <h1>📚 Book Inventory</h1>
+        <p class="subtitle">Monitor library book stock and availability</p>
       </div>
       <a href="library_dashboard.html" class="btn btn-secondary">← Dashboard</a>
     </div>
 
+    <!-- Statistics -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Books</div>
+        <div class="stat-value" id="totalBooks">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Quantity</div>
+        <div class="stat-value" id="totalQty">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Usable</div>
+        <div class="stat-value" id="usableBooks">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Unusable</div>
+        <div class="stat-value" id="unusableBooks">0</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Search</label>
+        <input type="text" id="searchInput" placeholder="Title, Author, Tracking#">
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select id="filterStatus">
+          <option value="">All Status</option>
+          <option value="usable">Usable</option>
+          <option value="unusable">Unusable</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="loadInventory()">🔍 Filter</button>
+      <button class="btn btn-secondary" onclick="clearFilters()">✖️ Clear</button>
+    </div>
+
+    <!-- Table -->
     <div class="table-container">
       <table>
         <thead>
           <tr>
             <th>Tracking #</th>
-            <th>Book Title</th>
+            <th>Title</th>
             <th>Author</th>
             <th>Category</th>
-            <th>Quantity</th>
-            <th>Current Status</th>
+            <th>Publisher</th>
+            <th>Qty</th>
+            <th>Status</th>
             <th>Action</th>
           </tr>
         </thead>
-        <tbody id="booksTableBody">
+        <tbody id="inventoryBody">
           <tr>
-            <td colspan="7" style="text-align: center; color: #9ca3af;">Loading...</td>
+            <td colspan="8" style="text-align: center; color: #9ca3af;">Loading...</td>
           </tr>
         </tbody>
       </table>
@@ -244,29 +239,32 @@
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
-    async function updateStats() {
+    async function loadStatistics() {
       try {
-        const { data, error } = await supabase
+        const { data: books, error } = await supabase
           .from('library_book')
-          .select('book_status');
+          .select('*');
 
         if (error) throw error;
 
-        const usable = data.filter(b => b.book_status === 'usable').length;
-        const damaged = data.filter(b => b.book_status === 'damaged').length;
-        const unusable = data.filter(b => b.book_status === 'unusable').length;
+        const totalBooks = books?.length || 0;
+        const totalQty = books?.reduce((sum, b) => sum + (b.quantity || 0), 0) || 0;
+        const usable = books?.filter(b => b.status === 'usable').length || 0;
+        const unusable = books?.filter(b => b.status === 'unusable').length || 0;
 
-        document.getElementById('usableCount').textContent = usable;
-        document.getElementById('damagedCount').textContent = damaged;
-        document.getElementById('unusableCount').textContent = unusable;
+        document.getElementById('totalBooks').textContent = totalBooks;
+        document.getElementById('totalQty').textContent = totalQty;
+        document.getElementById('usableBooks').textContent = usable;
+        document.getElementById('unusableBooks').textContent = unusable;
       } catch (err) {
-        console.error('Error updating stats:', err);
+        console.error('Error loading statistics:', err);
       }
     }
 
-    window.loadBooks = async function() {
-      const status = document.getElementById('statusFilter').value;
-      const tbody = document.getElementById('booksTableBody');
+    window.loadInventory = async function() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('filterStatus').value;
+      const tbody = document.getElementById('inventoryBody');
 
       try {
         let query = supabase
@@ -274,37 +272,45 @@
           .select('*')
           .order('tracking_number', { ascending: false });
 
-        if (status) {
-          query = query.eq('book_status', status);
+        if (statusFilter) {
+          query = query.eq('status', statusFilter);
         }
 
         const { data, error } = await query;
         if (error) throw error;
 
+        let filtered = data || [];
+
+        // Search filter
+        if (search) {
+          filtered = filtered.filter(book =>
+            (book.title?.toLowerCase().includes(search)) ||
+            (book.author?.toLowerCase().includes(search)) ||
+            (book.tracking_number?.toString().includes(search))
+          );
+        }
+
         tbody.innerHTML = '';
-        if (!data || data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #9ca3af;">No books found</td></tr>';
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #9ca3af;">No books found</td></tr>';
           return;
         }
 
-        data.forEach(book => {
-          let statusClass = 'status-usable';
-          if (book.book_status === 'damaged') statusClass = 'status-damaged';
-          if (book.book_status === 'unusable') statusClass = 'status-unusable';
-
+        filtered.forEach(book => {
+          const statusClass = book.status === 'unusable' ? 'status-unusable' : '';
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${book.tracking_number || '-'}</td>
-            <td><strong>${book.book_title || '-'}</strong></td>
+            <td><strong>${book.tracking_number}</strong></td>
+            <td>${book.title || '-'}</td>
             <td>${book.author || '-'}</td>
             <td>${book.category || '-'}</td>
+            <td>${book.publisher || '-'}</td>
             <td>${book.quantity || 0}</td>
-            <td><span class="status-badge ${statusClass}">${book.book_status || 'usable'}</span></td>
+            <td><span class="status-badge ${statusClass}">${book.status || 'usable'}</span></td>
             <td>
-              <select onchange="changeStatus(${book.id}, this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid #e5e7eb;">
-                <option value="">Change Status</option>
+              <select onchange="changeStatus(${book.tracking_number}, this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 12px;">
+                <option value="">Change</option>
                 <option value="usable">Usable</option>
-                <option value="damaged">Damaged</option>
                 <option value="unusable">Unusable</option>
               </select>
             </td>
@@ -312,12 +318,12 @@
           tbody.appendChild(row);
         });
       } catch (err) {
-        console.error('Error loading books:', err);
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #dc2626;">Error loading data</td></tr>';
+        console.error('Error loading inventory:', err);
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #dc2626;">Error loading data</td></tr>';
       }
     };
 
-    window.changeStatus = async function(bookId, newStatus) {
+    window.changeStatus = async function(trackingNumber, newStatus) {
       if (!newStatus) return;
 
       if (!confirm(`Change book status to "${newStatus}"?`)) {
@@ -327,27 +333,28 @@
       try {
         const { error } = await supabase
           .from('library_book')
-          .update({ book_status: newStatus })
-          .eq('id', bookId);
+          .update({ status: newStatus })
+          .eq('tracking_number', trackingNumber);
 
         if (error) throw error;
 
         alert('✅ Status updated successfully!');
-        loadBooks();
-        updateStats();
+        loadInventory();
+        loadStatistics();
       } catch (err) {
         console.error('Error updating status:', err);
         alert('❌ Error: ' + err.message);
       }
     };
 
-    window.clearFilter = function() {
-      document.getElementById('statusFilter').value = '';
-      loadBooks();
+    window.clearFilters = function() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterStatus').value = '';
+      loadInventory();
     };
 
-    updateStats();
-    loadBooks();
+    loadStatistics();
+    loadInventory();
   </script>
 </body>
 </html>
