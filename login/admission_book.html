@@ -11,23 +11,98 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
  body{ margin:0; font-family:Inter, system-ui, Arial, sans-serif; background:#f5f7fa; color:#111; }
- header{ background:#fff; border-bottom:1px solid #e2e8f0; padding:1rem 1.25rem; }
+ header{ background:#fff; border-bottom:1px solid #e2e8f0; padding:1rem 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
  .header-row{ display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-bottom:.75rem; }
  .header-row:last-child{ margin-bottom:0; }
- h1{ font-size:1.25rem; margin:0; min-width:180px; }
- select, button, input[type=search]{ padding:.55rem .8rem; font-size:.9rem; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-family:inherit; min-width:120px; }
- button{ background:#0ea5e9; color:#fff; border-color:#0284c7; cursor:pointer; font-weight:600; }
- button:disabled{ opacity:.6; cursor:not-allowed; }
- #pdfAdvancedBtn{ background:#059669; border-color:#047857; }
- #pdfAdvancedBtn:hover{ background:#047857; }
- .status{ font-size:.85rem; color:#475569; min-width:160px; }
- input[type=search]{ min-width:200px; }
+ h1{ font-size:1.25rem; margin:0; min-width:180px; font-weight:700; color:#1e293b; }
+ select, button, input[type=search]{ padding:.55rem .8rem; font-size:.9rem; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-family:inherit; min-width:120px; transition:all .2s ease; }
+ select:hover, input[type=search]:focus { border-color:#94a3b8; }
+ select:focus, input[type=search]:focus { outline:none; border-color:#0ea5e9; box-shadow:0 0 0 3px rgba(14,165,233,.1); }
+ 
+ .print-options{ display:flex; gap:.5rem; align-items:center; }
+ .btn-primary, .btn-secondary, .btn-tertiary{ 
+   display:inline-flex; 
+   align-items:center; 
+   gap:.4rem; 
+   padding:.55rem 1rem; 
+   font-size:.9rem; 
+   border:none; 
+   border-radius:8px; 
+   font-family:inherit; 
+   font-weight:600; 
+   cursor:pointer; 
+   transition:all .2s ease;
+   min-width:auto;
+ }
+ .btn-icon{ font-size:1.1rem; }
+ 
+ .btn-primary{ 
+   background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); 
+   color:#fff; 
+   box-shadow:0 2px 8px rgba(14,165,233,.3); 
+ }
+ .btn-primary:hover{ 
+   transform:translateY(-2px); 
+   box-shadow:0 4px 12px rgba(14,165,233,.4); 
+   background:linear-gradient(135deg, #0284c7 0%, #0262a8 100%); 
+ }
+ .btn-primary:active{ transform:translateY(0); }
+ 
+ .btn-secondary{ 
+   background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); 
+   color:#fff; 
+   box-shadow:0 2px 8px rgba(139,92,246,.3); 
+ }
+ .btn-secondary:hover{ 
+   transform:translateY(-2px); 
+   box-shadow:0 4px 12px rgba(139,92,246,.4); 
+   background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); 
+ }
+ .btn-secondary:active{ transform:translateY(0); }
+ 
+ .btn-tertiary{ 
+   background:linear-gradient(135deg, #059669 0%, #047857 100%); 
+   color:#fff; 
+   box-shadow:0 2px 8px rgba(5,150,105,.3); 
+ }
+ .btn-tertiary:hover{ 
+   transform:translateY(-2px); 
+   box-shadow:0 4px 12px rgba(5,150,105,.4); 
+   background:linear-gradient(135deg, #047857 0%, #065f46 100%); 
+ }
+ .btn-tertiary:active{ transform:translateY(0); }
+ 
+ button:disabled{ 
+   opacity:.5; 
+   cursor:not-allowed; 
+   transform:none !important; 
+   box-shadow:none !important; 
+ }
+ 
+ /* Responsive button design */
+ @media (max-width: 768px) {
+   .print-options{ flex-wrap:wrap; gap:.4rem; }
+   .btn-primary, .btn-secondary, .btn-tertiary{ padding:.5rem .8rem; font-size:.85rem; }
+   .btn-icon{ font-size:1rem; }
+ }
+ 
+ .status{ font-size:.85rem; color:#64748b; min-width:160px; font-weight:500; }
+ input[type=search]{ min-width:200px; background:#f8fafc; }
+ input[type=search]::placeholder{ color:#cbd5e1; }
  main{ max-width: 1400px; margin:1rem auto 2rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.04); }
  table{ border-collapse:collapse; width:100%; font-size:.72rem; }
- thead th{ background:#dfeff5; padding:.5rem .4rem; text-align:left; border:1px solid #e2e8f0; font-weight:600; }
- tbody td{ padding:.45rem .4rem; border:1px solid #eef2f5; vertical-align:top; background:#f9fbfc; }
+ thead th{ background:#dfeff5; padding:.5rem .4rem; text-align:center; border:1px solid #e2e8f0; font-weight:600; }
+ tbody td{ padding:.45rem .4rem; border:1px solid #eef2f5; vertical-align:top; background:#f9fbfc; text-align:center; }
+ tbody td:nth-child(3){ text-align:left; }
+ tbody td:nth-child(6){ text-align:left; }
  tbody tr:nth-child(even) td{ background:#f3f8fa; }
+ tbody td:nth-child(8){ display:none; }
+ thead th:nth-child(8){ display:none; }
  .group-row td{ background:#f0f6f8; font-weight:600; font-size:.78rem; letter-spacing:.4px; }
+
+  /* Photo column and image styling */
+  tbody td.photo-cell{ text-align:center; padding:0.25rem; }
+  tbody td.photo-cell img.student-photo{ width:60px; height:75px; object-fit:cover; border:1px solid #ddd; background:#f5f5f5; display:block; margin:0 auto; }
  .sticky-head thead th{ position:sticky; top:0; z-index:5; }
  .small{ font-size:.65rem; color:#555; }
  .toolbar-spacer{ flex:1 1 auto; }
@@ -45,7 +120,7 @@
    header{ position:static; padding:0.8rem; border:none; page-break-inside:avoid; }
    .header-row{ justify-content:center; margin-bottom:0.5rem; }
    h1{ font-size:20px; text-align:center; font-weight:bold; margin-bottom:10px; }
-   button, #searchBox, select, .status{ display:none !important; }
+   button, #searchBox, select, .status, .print-options{ display:none !important; }
    main{ box-shadow:none; border:none; margin:0; border-radius:0; max-width:none; height:auto; }
    table{ 
      font-size:12px; 
@@ -109,8 +184,8 @@
    }
    .small{ font-size:9px; }
    img{ 
-     max-width:35px !important; 
-     max-height:40px !important; 
+     max-width:60px !important; 
+     max-height:75px !important; 
      object-fit:cover;
    }
    @page{ 
@@ -205,8 +280,12 @@
   </div>
   <div class="header-row">
    <input id="searchBox" type="search" placeholder="Search name / IID / roll" />
-   <button id="printBtn" onclick="window.print()">Print (Ctrl+P)</button>
    <div style="flex:1;"></div>
+   <div class="print-options">
+    <button id="pdfBtn" class="btn-secondary" title="Download as PDF">
+     <span class="btn-icon">�</span> PDF
+    </button>
+   </div>
   </div>
  </header>
  <main>
@@ -452,7 +531,7 @@
      tempDiv.style.background = 'white';
      tempDiv.style.width = '1400px';
      tempDiv.style.fontFamily = 'Arial, sans-serif';
-     tempDiv.style.fontSize = '10px'; // Smaller font for better fit
+     tempDiv.style.fontSize = '10px'; // Larger font size
      tempDiv.style.color = 'black';
      
      // Clone and modify table for PDF
@@ -460,70 +539,83 @@
      
      // Apply PDF-specific styles to the cloned table
      tableClone.style.width = '100%';
-     tableClone.style.fontSize = '8px';
+     tableClone.style.fontSize = '10px';
      tableClone.style.borderCollapse = 'collapse';
      
      // Style header
      const headers = tableClone.querySelectorAll('thead th');
      headers.forEach(th => {
        th.style.background = '#f0f0f0';
-       th.style.padding = '4px 2px';
+       th.style.padding = '3px 1px';
        th.style.border = '1px solid #ccc';
-       th.style.fontSize = '7px';
+       th.style.fontSize = '9.5px';
        th.style.fontWeight = 'bold';
+       th.style.textAlign = 'center';
+       th.style.lineHeight = '1.3';
      });
      
      // Style body cells
      const cells = tableClone.querySelectorAll('tbody td');
      cells.forEach(td => {
-       td.style.padding = '3px 2px';
+       td.style.padding = '2.5px 1px';
        td.style.border = '1px solid #ddd';
-       td.style.fontSize = '7px';
-       td.style.lineHeight = '1.2';
+       td.style.fontSize = '9.5px';
+       td.style.lineHeight = '1.3';
+       td.style.textAlign = 'center';
+       td.style.verticalAlign = 'middle';
      });
      
      // Style group rows
      const groupRows = tableClone.querySelectorAll('.group-row td');
      groupRows.forEach(td => {
        td.style.background = '#e8e8e8';
-       td.style.fontSize = '8px';
+       td.style.fontSize = '9.5px';
        td.style.fontWeight = 'bold';
-       td.style.padding = '6px';
+       td.style.padding = '3px 1px';
+       td.style.textAlign = 'center';
+       td.style.lineHeight = '1.3';
      });
      
      // Style images in PDF
      const images = tableClone.querySelectorAll('img');
      images.forEach(img => {
-       img.style.maxWidth = '25px';
-       img.style.maxHeight = '30px';
-       img.style.objectFit = 'cover';
+      img.style.maxWidth = '60px';
+      img.style.maxHeight = '75px';
+      img.style.objectFit = 'cover';
      });
      
-     // Add title and table to temp div
-     tempDiv.innerHTML = `
-       <div style="text-align:center;margin-bottom:15px;font-size:16px;font-weight:bold;color:black;">
-         Admission Book ${year}
-       </div>
-       ${tableClone.outerHTML}
-     `;
+     // Split table into pages (8-10 rows per page)
+     const tbody = tableClone.querySelector('tbody');
+     const allRows = Array.from(tbody.querySelectorAll('tr'));
+     const rowsPerPage = 10; // 8-10 rows per page
+     let currentPageHtml = '';
+     let currentPageRowCount = 0;
+     let pageHtmlArray = [];
      
-     document.body.appendChild(tempDiv);
-     
-     // Wait for images to load
-     const imgElements = tempDiv.querySelectorAll('img');
-     await Promise.all(Array.from(imgElements).map(img => {
-       return new Promise(resolve => {
-         if (img.complete) {
-           resolve();
-         } else {
-           img.onload = resolve;
-           img.onerror = resolve;
-           setTimeout(resolve, 2000); // Timeout after 2 seconds
+     allRows.forEach((row, index) => {
+       if (row.classList.contains('group-row')) {
+         // Always include section headers
+         currentPageHtml += row.outerHTML;
+         currentPageRowCount = 0; // Reset count after section header
+       } else {
+         // Data rows
+         if (currentPageRowCount >= rowsPerPage) {
+           // Save current page and start new one
+           pageHtmlArray.push(currentPageHtml);
+           currentPageHtml = '';
+           currentPageRowCount = 0;
          }
-       });
-     }));
+         currentPageHtml += row.outerHTML;
+         currentPageRowCount++;
+       }
+     });
      
-     // Create PDF with better page handling
+     // Add remaining rows
+     if (currentPageHtml) {
+       pageHtmlArray.push(currentPageHtml);
+     }
+     
+     // Create canvas for each page and add to PDF
      const { jsPDF } = window.jspdf;
      const pdf = new jsPDF({
        orientation: 'landscape',
@@ -531,72 +623,88 @@
        format: 'a4'
      });
      
-     const pageWidth = 297; // A4 landscape width in mm
-     const pageHeight = 210; // A4 landscape height in mm
-     const margin = 5; // Small margin
-     const contentWidth = pageWidth - (margin * 2);
-     const contentHeight = pageHeight - (margin * 2);
+     const pageWidth = 297;
+     const pageHeight = 210;
+     const margin = 5;
      
-     // Calculate scale to fit content width
-     const scale = contentWidth / (tempDiv.scrollWidth * 0.264583); // Convert px to mm
-     
-     // Generate canvas with better settings
-     const canvas = await html2canvas(tempDiv, {
-       scale: Math.max(1, scale * 2), // Higher scale for better quality
-       useCORS: true,
-       allowTaint: true,
-       backgroundColor: '#ffffff',
-       width: tempDiv.scrollWidth,
-       height: tempDiv.scrollHeight,
-       scrollX: 0,
-       scrollY: 0,
-       logging: false
-     });
-     
-     // Remove temporary div
-     document.body.removeChild(tempDiv);
-     
-     const imgData = canvas.toDataURL('image/png', 1.0);
-     const imgWidth = contentWidth;
-     const imgHeight = (canvas.height * imgWidth) / canvas.width;
-     
-     // Add pages as needed
-     let yPosition = 0;
      let pageNumber = 1;
      
-     while (yPosition < imgHeight) {
-       if (pageNumber > 1) {
+     for (let pageIdx = 0; pageIdx < pageHtmlArray.length; pageIdx++) {
+       if (pageIdx > 0) {
          pdf.addPage();
        }
        
-       // Calculate how much of the image fits on this page
-       const remainingHeight = imgHeight - yPosition;
-       const pageImageHeight = Math.min(contentHeight, remainingHeight);
+       // Create page-specific HTML
+       const pageDiv = document.createElement('div');
+       pageDiv.style.position = 'absolute';
+       pageDiv.style.left = '-9999px';
+       pageDiv.style.top = '0';
+       pageDiv.style.background = 'white';
+       pageDiv.style.width = '1400px';
+       pageDiv.style.maxHeight = '900px';
+       pageDiv.style.overflow = 'hidden';
+       pageDiv.style.fontFamily = 'Arial, sans-serif';
+       pageDiv.style.fontSize = '10px';
+       pageDiv.style.color = 'black';
+       pageDiv.style.lineHeight = '1.3';
        
-       // Add the image portion to this page
-       pdf.addImage(
-         imgData, 
-         'PNG', 
-         margin, 
-         margin, 
-         imgWidth, 
-         imgHeight,
-         undefined,
-         'FAST',
-         0,
-         -yPosition // Negative offset to show different part of image
-       );
+       // Create table for this page
+       const pageTableClone = tableClone.cloneNode(true);
+       const pageTbody = pageTableClone.querySelector('tbody');
+       pageTbody.innerHTML = pageHtmlArray[pageIdx];
+       
+       pageDiv.innerHTML = `
+         <div style="text-align:center;margin-bottom:5px;font-size:12px;font-weight:bold;color:black;">
+           Admission Book ${year} - Page ${pageIdx + 1}
+         </div>
+         ${pageTableClone.outerHTML}
+       `;
+       
+       document.body.appendChild(pageDiv);
+       
+       // Wait for images in this page to load
+       const pageImgElements = pageDiv.querySelectorAll('img');
+       await Promise.all(Array.from(pageImgElements).map(img => {
+         return new Promise(resolve => {
+           if (img.complete) {
+             resolve();
+           } else {
+             img.onload = resolve;
+             img.onerror = resolve;
+             setTimeout(resolve, 1000);
+           }
+         });
+       }));
+       
+       // Generate canvas for this page
+       const canvas = await html2canvas(pageDiv, {
+         scale: 2,
+         useCORS: true,
+         allowTaint: true,
+         backgroundColor: '#ffffff',
+         logging: false,
+         height: pageDiv.scrollHeight,
+         windowHeight: pageDiv.scrollHeight
+       });
+       
+       // Remove page div
+       document.body.removeChild(pageDiv);
+       
+       // Add to PDF
+       const imgData = canvas.toDataURL('image/png', 1.0);
+       const canvasWidth = canvas.width;
+       const canvasHeight = canvas.height;
+       const ratio = canvasWidth / canvasHeight;
+       
+       const pdfWidth = pageWidth - (margin * 2);
+       const pdfHeight = pdfWidth / ratio;
+       
+       pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth, pdfHeight);
        
        // Add page number
        pdf.setFontSize(8);
        pdf.setTextColor(100);
-       pdf.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 5);
-       
-       yPosition += contentHeight;
-       pageNumber++;
-       
-       // Safety break to prevent infinite loop
-       if (pageNumber > 50) break;
+       pdf.text(`Page ${pageIdx + 1}`, pageWidth - 15, pageHeight - 3);
      }
      
      // Save the PDF
@@ -853,7 +961,7 @@
            <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
            <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
            <td>${simplify(r.quote_freedomfighter)}</td>
-           <td style="text-align:center;padding:0.2rem;">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" style="width:40px;height:50px;object-fit:cover;border:1px solid #ddd;background:#f5f5f5;" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
+           <td class="photo-cell">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" class="student-photo" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
            <td></td>
            <td>${simplify(r.status)}</td>`;
          tbody.appendChild(tr);
@@ -921,7 +1029,7 @@
            <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
            <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
            <td>${simplify(r.quote_freedomfighter)}</td>
-           <td style="text-align:center;padding:0.2rem;">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" style="width:40px;height:50px;object-fit:cover;border:1px solid #ddd;background:#f5f5f5;" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
+           <td class="photo-cell">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" class="student-photo" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
            <td></td>
            <td>${simplify(r.status)}</td>`;
          tbody.appendChild(tr);
@@ -939,55 +1047,9 @@
  // Add null checks for optional elements
  const searchBox = document.getElementById('searchBox');
  if(searchBox) searchBox.addEventListener('input', ()=>{ applySearch(); });
- 
- const printBtn = document.getElementById('printBtn');
- if(printBtn) printBtn.addEventListener('click', ()=>{ 
-   preparePrintLayout();
-   setTimeout(() => window.print(), 100);
- });
-
- function preparePrintLayout() {
-   // Remove any existing page break classes
-   const allRows = document.querySelectorAll('#bookTable tbody tr');
-   allRows.forEach(row => row.classList.remove('page-break-before', 'page-break-after'));
-   
-   // Natural page breaking - no forced breaks every 8 rows
-   // Instead, let CSS handle natural breaks with minimum 8 rows preference
-   const dataRows = document.querySelectorAll('#bookTable tbody tr:not(.group-row)');
-   let currentPageRowCount = 0;
-   let lastGroupRow = null;
-   
-   dataRows.forEach((row, index) => {
-     currentPageRowCount++;
-     
-     // Find if there's a group row before this data row
-     const prevElement = row.previousElementSibling;
-     if (prevElement && prevElement.classList.contains('group-row')) {
-       lastGroupRow = prevElement;
-       currentPageRowCount = 1; // Reset count after group header
-     }
-     
-     // Suggest page break after 10-12 rows for better distribution
-     if (currentPageRowCount >= 10) {
-       // Check if next few rows would be orphaned
-       const remainingRows = dataRows.length - index - 1;
-       if (remainingRows > 3) { // Don't break if only 1-3 rows left
-         row.classList.add('page-break-after');
-         currentPageRowCount = 0;
-       }
-     }
-   });
-   
-   // Add print-specific styling
-   const table = document.getElementById('bookTable');
-   table.classList.add('print-optimized');
- }
 
  const pdfBtn = document.getElementById('pdfBtn');
  if(pdfBtn) pdfBtn.addEventListener('click', generatePDF);
-
- const pdfAdvancedBtn = document.getElementById('pdfAdvancedBtn');
- if(pdfAdvancedBtn) pdfAdvancedBtn.addEventListener('click', generateAdvancedPDF);
 
  window.addEventListener('DOMContentLoaded', async ()=>{ 
    const ok = !!window.supabase; 
