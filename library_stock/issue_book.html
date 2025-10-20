@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issue Book - Library Management</title>
+  <script src="../login/auth-check_copy.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(249, 115, 22, 0.15);
+    }
+    h1 {
+      color: #ea580c;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+      font-size: 14px;
+    }
+    input, select {
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #f97316;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .success {
+      background: #d1fae5;
+      color: #059669;
+      border-left: 4px solid #059669;
+    }
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      border-left: 4px solid #dc2626;
+    }
+    .info-card {
+      background: #fef7f0;
+      border: 2px solid #fed7aa;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .info-card h3 {
+      color: #ea580c;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #fed7aa;
+    }
+    .info-row:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .info-value {
+      color: #111827;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📤 Issue Book to Student</h1>
+    <p class="subtitle">Issue books to students with tracking and due date</p>
+
+    <div id="message" class="message"></div>
+
+    <form id="issueBookForm">
+      <!-- Student Selection -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="student_iid">Student IID *</label>
+        <input type="text" id="student_iid" name="student_iid" required placeholder="Enter student IID" autocomplete="off">
+        <div id="studentSuggestions" style="position: relative;"></div>
+      </div>
+
+      <!-- Student Info Card -->
+      <div id="studentInfoCard" class="info-card" style="display: none;">
+        <h3>👤 Student Information</h3>
+        <div class="info-row">
+          <span class="info-label">Name:</span>
+          <span class="info-value" id="studentName">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Class:</span>
+          <span class="info-value" id="studentClass">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Roll:</span>
+          <span class="info-value" id="studentRoll">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Father's Mobile:</span>
+          <span class="info-value" id="studentMobile">-</span>
+        </div>
+      </div>
+
+      <!-- Book Selection -->
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="book_tracking">Book Tracking Number *</label>
+        <input type="text" id="book_tracking" name="book_tracking" required placeholder="Enter book tracking number">
+      </div>
+
+      <!-- Book Info Card -->
+      <div id="bookInfoCard" class="info-card" style="display: none;">
+        <h3>📖 Book Information</h3>
+        <div class="info-row">
+          <span class="info-label">Title:</span>
+          <span class="info-value" id="bookTitle">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Author:</span>
+          <span class="info-value" id="bookAuthor">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Available:</span>
+          <span class="info-value" id="bookAvailable">-</span>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="issue_date">Issue Date *</label>
+          <input type="date" id="issue_date" name="issue_date" required>
+        </div>
+        <div class="form-group">
+          <label for="due_date">Due Date *</label>
+          <input type="date" id="due_date" name="due_date" required>
+        </div>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary">📤 Issue Book</button>
+        <button type="reset" class="btn btn-secondary">🔄 Reset</button>
+        <a href="library_dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module">
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+
+    let supabase;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    let selectedStudent = null;
+    let selectedBook = null;
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = message;
+      msgDiv.style.display = 'block';
+      setTimeout(() => msgDiv.style.display = 'none', 5000);
+    }
+
+    // Student IID Search
+    document.getElementById('student_iid').addEventListener('input', async (e) => {
+      const iid = e.target.value;
+      if (iid.length < 2) {
+        document.getElementById('studentInfoCard').style.display = 'none';
+        selectedStudent = null;
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('student_database')
+          .select('iid, student_name_en, father_mobile, active_class, active_section, active_roll')
+          .eq('iid', iid)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          selectedStudent = data;
+          document.getElementById('studentName').textContent = data.student_name_en || '-';
+          document.getElementById('studentClass').textContent = `${data.active_class || '-'} (${data.active_section || '-'})`;
+          document.getElementById('studentRoll').textContent = data.active_roll || '-';
+          document.getElementById('studentMobile').textContent = data.father_mobile || '-';
+          document.getElementById('studentInfoCard').style.display = 'block';
+        }
+      } catch (err) {
+        document.getElementById('studentInfoCard').style.display = 'none';
+        selectedStudent = null;
+      }
+    });
+
+    // Book Tracking Search
+    document.getElementById('book_tracking').addEventListener('input', async (e) => {
+      const tracking = e.target.value;
+      if (tracking.length < 2) {
+        document.getElementById('bookInfoCard').style.display = 'none';
+        selectedBook = null;
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('library_book')
+          .select('*')
+          .eq('tracking_number', tracking)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          // Check availability
+          const { count: issuedCount } = await supabase
+            .from('library_book_issue')
+            .select('*', { count: 'exact', head: true })
+            .eq('book_tracking_number', tracking)
+            .is('return_date', null);
+
+          const available = (data.quantity || 0) - (issuedCount || 0);
+
+          selectedBook = data;
+          document.getElementById('bookTitle').textContent = data.book_title || '-';
+          document.getElementById('bookAuthor').textContent = data.author || '-';
+          document.getElementById('bookAvailable').textContent = `${available} / ${data.quantity || 0}`;
+          document.getElementById('bookInfoCard').style.display = 'block';
+
+          if (available <= 0) {
+            showMessage('⚠️ No copies available for this book!', 'error');
+          }
+        }
+      } catch (err) {
+        document.getElementById('bookInfoCard').style.display = 'none';
+        selectedBook = null;
+      }
+    });
+
+    // Set default dates
+    const today = new Date();
+    document.getElementById('issue_date').valueAsDate = today;
+    const dueDate = new Date(today);
+    dueDate.setDate(dueDate.getDate() + 14); // 14 days from today
+    document.getElementById('due_date').valueAsDate = dueDate;
+
+    // Form Submit
+    document.getElementById('issueBookForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!selectedStudent) {
+        showMessage('❌ Please select a valid student!', 'error');
+        return;
+      }
+
+      if (!selectedBook) {
+        showMessage('❌ Please select a valid book!', 'error');
+        return;
+      }
+
+      const issueData = {
+        student_iid: selectedStudent.iid,
+        student_name: selectedStudent.student_name_en,
+        student_class: selectedStudent.active_class,
+        student_section: selectedStudent.active_section,
+        student_roll: selectedStudent.active_roll,
+        father_mobile: selectedStudent.father_mobile,
+        book_tracking_number: selectedBook.tracking_number,
+        book_title: selectedBook.book_title,
+        issue_date: document.getElementById('issue_date').value,
+        due_date: document.getElementById('due_date').value,
+        return_date: null,
+        status: 'issued'
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('library_book_issue')
+          .insert([issueData])
+          .select();
+
+        if (error) throw error;
+
+        showMessage('✅ Book issued successfully!', 'success');
+        document.getElementById('issueBookForm').reset();
+        document.getElementById('studentInfoCard').style.display = 'none';
+        document.getElementById('bookInfoCard').style.display = 'none';
+        selectedStudent = null;
+        selectedBook = null;
+
+        // Reset dates
+        document.getElementById('issue_date').valueAsDate = new Date();
+        const newDue = new Date();
+        newDue.setDate(newDue.getDate() + 14);
+        document.getElementById('due_date').valueAsDate = newDue;
+      } catch (err) {
+        console.error('Error issuing book:', err);
+        showMessage('❌ Error: ' + err.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>

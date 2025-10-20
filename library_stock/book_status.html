@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Status - Library Management</title>
+  <script src="../login/auth-check_copy.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(249, 115, 22, 0.15);
+    }
+    h1 {
+      color: #ea580c;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      padding: 12px 16px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .stat-box.usable {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .stat-box.damaged {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+    }
+    .stat-box.unusable {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+    }
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.95;
+      margin-bottom: 6px;
+    }
+    .stat-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .filter-section {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    select {
+      padding: 10px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      min-width: 150px;
+    }
+    select:focus {
+      outline: none;
+      border-color: #f97316;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    .table-container {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 14px;
+    }
+    th {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    tbody tr:hover {
+      background: #fef7f0;
+    }
+    tbody tr:nth-child(even) {
+      background: #f9fafb;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-usable {
+      background: #d1fae5;
+      color: #059669;
+    }
+    .status-damaged {
+      background: #fed7aa;
+      color: #c2410c;
+    }
+    .status-unusable {
+      background: #fecaca;
+      color: #dc2626;
+    }
+    .btn-change {
+      background: #3b82f6;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-change:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✅ Book Status Management</h1>
+    <p class="subtitle">Track and update book conditions</p>
+
+    <!-- Statistics -->
+    <div class="stats-row">
+      <div class="stat-box usable">
+        <div class="stat-label">Usable Books</div>
+        <div class="stat-value" id="usableCount">0</div>
+      </div>
+      <div class="stat-box damaged">
+        <div class="stat-label">Damaged Books</div>
+        <div class="stat-value" id="damagedCount">0</div>
+      </div>
+      <div class="stat-box unusable">
+        <div class="stat-label">Unusable Books</div>
+        <div class="stat-value" id="unusableCount">0</div>
+      </div>
+    </div>
+
+    <div class="top-bar">
+      <div class="filter-section">
+        <select id="statusFilter" onchange="loadBooks()">
+          <option value="">All Status</option>
+          <option value="usable">Usable</option>
+          <option value="damaged">Damaged</option>
+          <option value="unusable">Unusable</option>
+        </select>
+        <button class="btn btn-secondary" onclick="clearFilter()">✖️ Clear</button>
+      </div>
+      <a href="library_dashboard.html" class="btn btn-secondary">← Dashboard</a>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Tracking #</th>
+            <th>Book Title</th>
+            <th>Author</th>
+            <th>Category</th>
+            <th>Quantity</th>
+            <th>Current Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="booksTableBody">
+          <tr>
+            <td colspan="7" style="text-align: center; color: #9ca3af;">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module">
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+
+    let supabase;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    async function updateStats() {
+      try {
+        const { data, error } = await supabase
+          .from('library_book')
+          .select('book_status');
+
+        if (error) throw error;
+
+        const usable = data.filter(b => b.book_status === 'usable').length;
+        const damaged = data.filter(b => b.book_status === 'damaged').length;
+        const unusable = data.filter(b => b.book_status === 'unusable').length;
+
+        document.getElementById('usableCount').textContent = usable;
+        document.getElementById('damagedCount').textContent = damaged;
+        document.getElementById('unusableCount').textContent = unusable;
+      } catch (err) {
+        console.error('Error updating stats:', err);
+      }
+    }
+
+    window.loadBooks = async function() {
+      const status = document.getElementById('statusFilter').value;
+      const tbody = document.getElementById('booksTableBody');
+
+      try {
+        let query = supabase
+          .from('library_book')
+          .select('*')
+          .order('tracking_number', { ascending: false });
+
+        if (status) {
+          query = query.eq('book_status', status);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        tbody.innerHTML = '';
+        if (!data || data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #9ca3af;">No books found</td></tr>';
+          return;
+        }
+
+        data.forEach(book => {
+          let statusClass = 'status-usable';
+          if (book.book_status === 'damaged') statusClass = 'status-damaged';
+          if (book.book_status === 'unusable') statusClass = 'status-unusable';
+
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${book.tracking_number || '-'}</td>
+            <td><strong>${book.book_title || '-'}</strong></td>
+            <td>${book.author || '-'}</td>
+            <td>${book.category || '-'}</td>
+            <td>${book.quantity || 0}</td>
+            <td><span class="status-badge ${statusClass}">${book.book_status || 'usable'}</span></td>
+            <td>
+              <select onchange="changeStatus(${book.id}, this.value)" style="padding: 6px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <option value="">Change Status</option>
+                <option value="usable">Usable</option>
+                <option value="damaged">Damaged</option>
+                <option value="unusable">Unusable</option>
+              </select>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (err) {
+        console.error('Error loading books:', err);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #dc2626;">Error loading data</td></tr>';
+      }
+    };
+
+    window.changeStatus = async function(bookId, newStatus) {
+      if (!newStatus) return;
+
+      if (!confirm(`Change book status to "${newStatus}"?`)) {
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('library_book')
+          .update({ book_status: newStatus })
+          .eq('id', bookId);
+
+        if (error) throw error;
+
+        alert('✅ Status updated successfully!');
+        loadBooks();
+        updateStats();
+      } catch (err) {
+        console.error('Error updating status:', err);
+        alert('❌ Error: ' + err.message);
+      }
+    };
+
+    window.clearFilter = function() {
+      document.getElementById('statusFilter').value = '';
+      loadBooks();
+    };
+
+    updateStats();
+    loadBooks();
+  </script>
+</body>
+</html>

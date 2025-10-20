@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add New Book - Library Management</title>
+  <script src="../login/auth-check_copy.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 20px 60px rgba(249, 115, 22, 0.15);
+    }
+    h1 {
+      color: #ea580c;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    .subtitle {
+      color: #6b7280;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #374151;
+      font-size: 14px;
+    }
+    input, select, textarea {
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+      font-family: inherit;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #f97316;
+    }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);
+    }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+    }
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .success {
+      background: #d1fae5;
+      color: #059669;
+      border-left: 4px solid #059669;
+    }
+    .error {
+      background: #fef2f2;
+      color: #dc2626;
+      border-left: 4px solid #dc2626;
+    }
+    .tracking-info {
+      background: #fef7f0;
+      border: 2px solid #fed7aa;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .tracking-info strong {
+      color: #ea580c;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📖 Add New Book</h1>
+    <p class="subtitle">Add books to the library catalog with auto-generated or manual tracking number</p>
+
+    <div id="message" class="message"></div>
+
+    <div class="tracking-info">
+      <strong>Next Tracking Number:</strong> <span id="nextTracking">Loading...</span>
+    </div>
+
+    <form id="addBookForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="tracking_number">Tracking Number *</label>
+          <input type="text" id="tracking_number" name="tracking_number" required placeholder="Auto-generated or manual">
+        </div>
+        <div class="form-group">
+          <label for="book_title">Book Title *</label>
+          <input type="text" id="book_title" name="book_title" required placeholder="Enter book title">
+        </div>
+        <div class="form-group">
+          <label for="author">Author</label>
+          <input type="text" id="author" name="author" placeholder="Author name">
+        </div>
+        <div class="form-group">
+          <label for="category">Category</label>
+          <input type="text" id="category" name="category" placeholder="e.g., Fiction, Science">
+        </div>
+        <div class="form-group">
+          <label for="publisher">Publisher</label>
+          <input type="text" id="publisher" name="publisher" placeholder="Publisher name">
+        </div>
+        <div class="form-group">
+          <label for="publication_year">Publication Year</label>
+          <input type="number" id="publication_year" name="publication_year" min="1900" max="2100" placeholder="2025">
+        </div>
+        <div class="form-group">
+          <label for="quantity">Quantity *</label>
+          <input type="number" id="quantity" name="quantity" required min="1" value="1">
+        </div>
+        <div class="form-group">
+          <label for="book_status">Book Status</label>
+          <select id="book_status" name="book_status">
+            <option value="usable">Usable</option>
+            <option value="damaged">Damaged</option>
+            <option value="unusable">Unusable</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="notes">Notes</label>
+        <textarea id="notes" name="notes" placeholder="Additional information about the book"></textarea>
+      </div>
+
+      <div class="button-group">
+        <button type="submit" class="btn btn-primary">💾 Save Book</button>
+        <button type="reset" class="btn btn-secondary">🔄 Reset</button>
+        <a href="library_dashboard.html" class="btn btn-secondary">← Back to Dashboard</a>
+      </div>
+    </form>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module">
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+
+    let supabase;
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+      const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    function showMessage(message, type) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = message;
+      msgDiv.style.display = 'block';
+      setTimeout(() => msgDiv.style.display = 'none', 5000);
+    }
+
+    async function getNextTrackingNumber() {
+      try {
+        const { data, error } = await supabase
+          .from('library_book')
+          .select('tracking_number')
+          .order('tracking_number', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+
+        let nextNumber = 1;
+        if (data && data.length > 0) {
+          const lastNumber = parseInt(data[0].tracking_number) || 0;
+          nextNumber = lastNumber + 1;
+        }
+
+        const formattedNumber = String(nextNumber).padStart(6, '0');
+        document.getElementById('nextTracking').textContent = formattedNumber;
+        document.getElementById('tracking_number').value = formattedNumber;
+        return formattedNumber;
+      } catch (err) {
+        console.error('Error getting tracking number:', err);
+        document.getElementById('nextTracking').textContent = '000001';
+        document.getElementById('tracking_number').value = '000001';
+      }
+    }
+
+    document.getElementById('addBookForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const formData = new FormData(e.target);
+      const bookData = {
+        tracking_number: formData.get('tracking_number'),
+        book_title: formData.get('book_title'),
+        author: formData.get('author'),
+        category: formData.get('category'),
+        publisher: formData.get('publisher'),
+        publication_year: formData.get('publication_year') ? parseInt(formData.get('publication_year')) : null,
+        quantity: parseInt(formData.get('quantity')),
+        book_status: formData.get('book_status'),
+        notes: formData.get('notes')
+      };
+
+      try {
+        const { data, error } = await supabase
+          .from('library_book')
+          .insert([bookData])
+          .select();
+
+        if (error) throw error;
+
+        showMessage('✅ Book added successfully!', 'success');
+        e.target.reset();
+        await getNextTrackingNumber();
+      } catch (err) {
+        console.error('Error adding book:', err);
+        showMessage('❌ Error: ' + err.message, 'error');
+      }
+    });
+
+    // Initialize
+    getNextTrackingNumber();
+  </script>
+</body>
+</html>
