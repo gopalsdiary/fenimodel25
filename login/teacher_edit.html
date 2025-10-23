@@ -31,8 +31,29 @@
     .two-col{display:flex;flex-wrap:wrap;gap:26px;margin-top:20px;}
     .panel{flex:1 1 460px;min-width:360px;background:#fafbfc;padding:16px 18px 22px;border:1px solid #d8dee4;border-radius:6px;}
     .panel h2{margin:0 0 14px;font-size:16px;font-weight:600;}
-    .photo-preview{width:120px;height:120px;border:1px solid #d0d7de;border-radius:6px;object-fit:cover;background:#fff;margin-top:4px;}
+    .photo-preview{width:120px;height:120px;border:1px solid #d0d7de;border-radius:6px;object-fit:cover;background:#fff;margin-top:4px;cursor:pointer;}
+    .photo-preview:hover{opacity:0.9;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
     .muted{color:#57606a;font-size:12px;}
+    .photo-upload-wrapper{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .upload-btn{padding:6px 12px;font-size:12px;background:#10b981;border-color:#10b981;color:#fff;}
+    .upload-btn:hover{background:#0d9f74;}
+    .view-btn{padding:6px 12px;font-size:12px;background:#0366d6;border-color:#0366d6;color:#fff;}
+    .view-btn:hover{background:#024c9e;}
+    
+    /* Upload Modal */
+    .upload-modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;}
+    .upload-modal.active{display:flex;}
+    .modal-content{background:#fff;border-radius:8px;padding:24px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);}
+    .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #e5e7eb;}
+    .modal-header h3{margin:0;font-size:18px;}
+    .modal-close{background:transparent;border:none;font-size:28px;color:#6b7280;cursor:pointer;padding:0;width:32px;height:32px;line-height:1;}
+    .modal-close:hover{color:#000;}
+    .upload-area{border:2px dashed #d0d7de;border-radius:8px;padding:30px;text-align:center;background:#fafbfc;cursor:pointer;transition:all 0.2s;}
+    .upload-area:hover{border-color:#0366d6;background:#f0f6ff;}
+    .upload-area.dragover{border-color:#0366d6;background:#e7f3ff;}
+    .preview-container{margin-top:16px;display:none;}
+    .preview-image{max-width:100%;max-height:300px;border:1px solid #d0d7de;border-radius:6px;}
+    .loading{display:none;text-align:center;color:#0366d6;margin-top:12px;}
   </style>
 </head>
 <body>
@@ -50,11 +71,43 @@
     <div id="formStatus" class="status"></div>
   </div>
 
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="upload-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Upload Photo</h3>
+        <button class="modal-close" onclick="closeUploadModal()">&times;</button>
+      </div>
+      <div class="upload-area" id="uploadArea">
+        <div style="font-size:48px;margin-bottom:10px;">📷</div>
+        <p style="margin:0 0 8px;font-weight:500;">Click or drag photo here</p>
+        <p class="muted">Supported: JPG, PNG (Max 5MB)</p>
+        <input type="file" id="photoInput" accept="image/jpeg,image/jpg,image/png" style="display:none;">
+      </div>
+      <div class="preview-container" id="previewContainer">
+        <img id="previewImage" class="preview-image" alt="Preview">
+      </div>
+      <div class="loading" id="uploadLoading">
+        <div style="font-size:24px;margin-bottom:8px;">⏳</div>
+        <div>Uploading...</div>
+      </div>
+      <div class="status" id="uploadStatus"></div>
+      <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" class="outline" onclick="closeUploadModal()">Cancel</button>
+        <button type="button" class="upload-btn" id="confirmUploadBtn" style="display:none;" onclick="confirmUpload()">Upload</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 const TABLE='teacher_database';
+
+// ImgBB Configuration
+const IMGBB_API_KEY = 'c555ef879d5e6891f2ba5fcf6c9b2c6e';
+const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
 
 const FIELD_GROUPS = [
   { title:'Identity', fields:['iid','teacher_name_en','teacher_name_bn','pp_photo','nid_photo'] },
@@ -70,6 +123,8 @@ const LABELS = { iid:'IID', teacher_name_en:'Teacher Name (EN)', teacher_name_bn
 
 const READONLY = new Set(['iid','created_at']);
 let originalRow = null;
+let currentUploadField = null;
+let selectedFile = null;
 
 function qs(k){return new URLSearchParams(location.search).get(k);} 
 function setStatus(el,msg,type=''){ el.textContent=msg||''; el.className='status'+(type?' '+type:''); }
@@ -97,27 +152,128 @@ function buildForm(row){
       if(!(field in row)) return; // skip absent
       const wrap=document.createElement('div');
       const label=document.createElement('label'); label.htmlFor='f_'+field; label.textContent=LABELS[field]||field; wrap.appendChild(label);
-      let input;
-      if(field.includes('photo') || field==='pp_photo'){
-        input=document.createElement('input');
-      } else {
-        input=document.createElement('input');
-      }
+      
+      const input=document.createElement('input');
       input.id='f_'+field; input.name=field; input.value=row[field]??'';
       if(/date/i.test(field) && !READONLY.has(field)) input.placeholder='YYYY-MM-DD';
       if(READONLY.has(field)){ input.readOnly=true; input.classList.add('readonly'); }
       wrap.appendChild(input);
-      if(field==='pp_photo' && row.pp_photo){
-        const img=document.createElement('img'); img.src=row.pp_photo; img.alt='Profile Photo'; img.className='photo-preview'; wrap.appendChild(img);
+      
+      // Check if it's a URL/photo field
+      const isUrlField = field.includes('url') || field.includes('photo');
+      
+      // Photo preview and upload button
+      if(isUrlField && row[field]){
+        const img=document.createElement('img'); 
+        img.src=row[field]; 
+        img.alt=field==='pp_photo'?'Profile Photo':'NID Photo'; 
+        img.className='photo-preview';
+        img.onclick=()=>window.open(row[field],'_blank');
+        wrap.appendChild(img);
       }
-      if(field==='nid_photo' && row.nid_photo){
-        const img=document.createElement('img'); img.src=row.nid_photo; img.alt='NID Photo'; img.className='photo-preview'; wrap.appendChild(img);
+      
+      // Add upload and view buttons for URL/photo fields
+      if(isUrlField){
+        const uploadWrapper=document.createElement('div');
+        uploadWrapper.className='photo-upload-wrapper';
+        
+        // Upload button
+        const uploadBtn=document.createElement('button');
+        uploadBtn.type='button';
+        uploadBtn.className='upload-btn';
+        uploadBtn.textContent='📷 Upload';
+        uploadBtn.onclick=()=>openUploadModal(field);
+        uploadWrapper.appendChild(uploadBtn);
+        
+        // View button (only if URL exists)
+        if(row[field]){
+          const viewBtn=document.createElement('button');
+          viewBtn.type='button';
+          viewBtn.className='view-btn';
+          viewBtn.textContent='👁️ View';
+          viewBtn.onclick=()=>window.open(row[field],'_blank');
+          uploadWrapper.appendChild(viewBtn);
+        }
+        
+        wrap.appendChild(uploadWrapper);
       }
+      
       grid.appendChild(wrap);
     });
     panel.appendChild(grid);
     form.appendChild(panel);
   });
+  
+  // Check for URL columns after groups
+  addUrlFieldsAfterGroups(row, form);
+}
+
+// Add fields that are not in groups
+function addUrlFieldsAfterGroups(row, form){
+  const allGroupFields = FIELD_GROUPS.flatMap(g => g.fields);
+  const remainingFields = Object.keys(row).filter(key => !allGroupFields.includes(key));
+  
+  if(remainingFields.length > 0){
+    const panel = document.createElement('section');
+    panel.className='panel';
+    const h2=document.createElement('h2'); h2.textContent='Other Fields'; panel.appendChild(h2);
+    const grid=document.createElement('div'); grid.className='grid';
+    
+    remainingFields.forEach(field=>{
+      const wrap=document.createElement('div');
+      const label=document.createElement('label'); 
+      label.htmlFor='f_'+field; 
+      label.textContent=field.replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase()); 
+      wrap.appendChild(label);
+      
+      const input=document.createElement('input');
+      input.id='f_'+field; input.name=field; input.value=row[field]??'';
+      wrap.appendChild(input);
+      
+      // Check if it's a photo/URL field
+      const isPhotoField = field.includes('_url') || field.toLowerCase().includes('photo') || field.includes('url');
+      
+      // Photo preview for URL/photo fields
+      if(isPhotoField && row[field]){
+        const img=document.createElement('img'); 
+        img.src=row[field]; 
+        img.alt=field; 
+        img.className='photo-preview';
+        img.onclick=()=>window.open(row[field],'_blank');
+        wrap.appendChild(img);
+      }
+      
+      // Upload button for photo/URL fields
+      if(isPhotoField){
+        const uploadWrapper=document.createElement('div');
+        uploadWrapper.className='photo-upload-wrapper';
+        
+        // Upload button
+        const uploadBtn=document.createElement('button');
+        uploadBtn.type='button';
+        uploadBtn.className='upload-btn';
+        uploadBtn.textContent='📷 Upload';
+        uploadBtn.onclick=()=>openUploadModal(field);
+        uploadWrapper.appendChild(uploadBtn);
+        
+        // View button (only if URL exists)
+        if(row[field]){
+          const viewBtn=document.createElement('button');
+          viewBtn.type='button';
+          viewBtn.className='view-btn';
+          viewBtn.textContent='👁️ View';
+          viewBtn.onclick=()=>window.open(row[field],'_blank');
+          uploadWrapper.appendChild(viewBtn);
+        }
+        
+        wrap.appendChild(uploadWrapper);
+      }
+      
+      grid.appendChild(wrap);
+    });
+    panel.appendChild(grid);
+    form.appendChild(panel);
+  }
 }
 
 function formDataObj(){
@@ -137,6 +293,140 @@ function diff(orig, updated){
     if(o!==n) changes[k]=updated[k];
   });
   return changes;
+}
+
+// Photo Upload Functions
+function openUploadModal(fieldName){
+  currentUploadField = fieldName;
+  selectedFile = null;
+  const fieldLabel = LABELS[fieldName] || fieldName.replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase());
+  document.getElementById('modalTitle').textContent = 'Upload ' + fieldLabel;
+  document.getElementById('uploadModal').classList.add('active');
+  document.getElementById('previewContainer').style.display = 'none';
+  document.getElementById('confirmUploadBtn').style.display = 'none';
+  document.getElementById('photoInput').value = '';
+  setStatus(document.getElementById('uploadStatus'), '');
+}
+
+function closeUploadModal(){
+  document.getElementById('uploadModal').classList.remove('active');
+  currentUploadField = null;
+  selectedFile = null;
+}
+
+// Setup upload area
+document.addEventListener('DOMContentLoaded', ()=>{
+  const uploadArea = document.getElementById('uploadArea');
+  const photoInput = document.getElementById('photoInput');
+  
+  uploadArea.addEventListener('click', ()=> photoInput.click());
+  uploadArea.addEventListener('dragover', (e)=>{ e.preventDefault(); uploadArea.classList.add('dragover'); });
+  uploadArea.addEventListener('dragleave', ()=> uploadArea.classList.remove('dragover'));
+  uploadArea.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    if(e.dataTransfer.files.length > 0){
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  });
+  
+  photoInput.addEventListener('change', (e)=>{
+    if(e.target.files.length > 0){
+      handleFileSelect(e.target.files[0]);
+    }
+  });
+});
+
+function handleFileSelect(file){
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+  
+  if(!allowedTypes.includes(file.type)){
+    setStatus(document.getElementById('uploadStatus'), 'Please select JPG or PNG image', 'err');
+    return;
+  }
+  
+  if(file.size > 5 * 1024 * 1024){
+    setStatus(document.getElementById('uploadStatus'), 'File size must be under 5MB', 'err');
+    return;
+  }
+  
+  selectedFile = file;
+  
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = (e)=>{
+    document.getElementById('previewImage').src = e.target.result;
+    document.getElementById('previewContainer').style.display = 'block';
+    document.getElementById('confirmUploadBtn').style.display = 'inline-block';
+  };
+  reader.readAsDataURL(file);
+  
+  setStatus(document.getElementById('uploadStatus'), 'Photo ready to upload', 'ok');
+}
+
+async function confirmUpload(){
+  if(!selectedFile || !currentUploadField || !originalRow){
+    setStatus(document.getElementById('uploadStatus'), 'Missing file or field info', 'err');
+    return;
+  }
+  
+  try {
+    document.getElementById('uploadLoading').style.display = 'block';
+    setStatus(document.getElementById('uploadStatus'), 'Uploading...', 'ok');
+    
+    // Upload to ImgBB
+    const formData = new FormData();
+    formData.append('key', IMGBB_API_KEY);
+    formData.append('image', selectedFile, `teacher-${originalRow.iid}-${currentUploadField}.jpg`);
+    
+    const response = await fetch(IMGBB_UPLOAD_URL, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if(!response.ok){
+      throw new Error('Upload failed: ' + response.statusText);
+    }
+    
+    const data = await response.json();
+    
+    if(!data.success){
+      throw new Error(data.error?.message || 'Upload failed');
+    }
+    
+    const photoUrl = data.data.url;
+    
+    // Update database
+    setStatus(document.getElementById('uploadStatus'), 'Updating database...', 'ok');
+    const updateData = {};
+    updateData[currentUploadField] = photoUrl;
+    
+    const { error } = await supabase
+      .from(TABLE)
+      .update(updateData)
+      .eq('iid', originalRow.iid);
+    
+    if(error){
+      throw new Error('Database update failed: ' + error.message);
+    }
+    
+    // Update local data and UI
+    originalRow[currentUploadField] = photoUrl;
+    document.getElementById('f_'+currentUploadField).value = photoUrl;
+    
+    setStatus(document.getElementById('uploadStatus'), '✅ Photo uploaded successfully!', 'ok');
+    
+    setTimeout(()=>{
+      closeUploadModal();
+      buildForm(originalRow); // Refresh to show new photo
+    }, 1500);
+    
+  } catch(error){
+    console.error('Upload error:', error);
+    setStatus(document.getElementById('uploadStatus'), 'Error: ' + error.message, 'err');
+  } finally {
+    document.getElementById('uploadLoading').style.display = 'none';
+  }
 }
 
 async function save(){

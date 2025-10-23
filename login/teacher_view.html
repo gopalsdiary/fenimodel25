@@ -29,10 +29,13 @@
     .two-col{display:flex;flex-wrap:wrap;gap:26px;margin-top:20px;}
     .panel{flex:1 1 460px;min-width:360px;background:#fafbfc;padding:16px 18px 22px;border:1px solid #d8dee4;border-radius:6px;}
     .panel h2{margin:0 0 14px;font-size:16px;font-weight:600;}
-    .photo-preview{width:120px;height:120px;border:1px solid #d0d7de;border-radius:6px;object-fit:cover;background:#fff;margin-top:4px;}
+    .photo-preview{width:120px;height:120px;border:1px solid #d0d7de;border-radius:6px;object-fit:cover;background:#fff;margin-top:4px;cursor:pointer;}
+    .photo-preview:hover{opacity:0.9;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
     .muted{color:#57606a;font-size:12px;}
     .view-header{background:#e7f3ff;border:1px solid #b6e3ff;border-radius:6px;padding:12px 16px;margin-bottom:20px;color:#0969da;}
     .view-header h2{margin:0;font-size:16px;font-weight:600;}
+    .view-btn{padding:6px 12px;font-size:12px;background:#0366d6;border-color:#0366d6;color:#fff;margin-top:8px;display:inline-block;}
+    .view-btn:hover{background:#024c9e;}
   </style>
 </head>
 <body>
@@ -163,20 +166,25 @@ function buildDisplay(row){
       
       wrap.appendChild(displayDiv);
       
-      // Add photo previews
-      if(field==='pp_photo' && row.pp_photo){
+      // Check if it's a URL/photo field
+      const isUrlField = field.includes('url') || field.includes('photo');
+      
+      // Add photo previews for URL/photo fields
+      if(isUrlField && row[field]){
         const img=document.createElement('img'); 
-        img.src=row.pp_photo; 
-        img.alt='Profile Photo'; 
-        img.className='photo-preview'; 
+        img.src=row[field]; 
+        img.alt=field; 
+        img.className='photo-preview';
+        img.onclick=()=>window.open(row[field],'_blank');
         wrap.appendChild(img);
-      }
-      if(field==='nid_photo' && row.nid_photo){
-        const img=document.createElement('img'); 
-        img.src=row.nid_photo; 
-        img.alt='NID Photo'; 
-        img.className='photo-preview'; 
-        wrap.appendChild(img);
+        
+        // Add View button
+        const viewBtn=document.createElement('button');
+        viewBtn.type='button';
+        viewBtn.className='view-btn';
+        viewBtn.textContent='👁️ View';
+        viewBtn.onclick=()=>window.open(row[field],'_blank');
+        wrap.appendChild(viewBtn);
       }
       
       grid.appendChild(wrap);
@@ -184,6 +192,67 @@ function buildDisplay(row){
     panel.appendChild(grid);
     container.appendChild(panel);
   });
+  
+  // Add other fields that are not in groups
+  addOtherFields(row, container);
+}
+
+// Add fields that are not in groups
+function addOtherFields(row, container){
+  const allGroupFields = FIELD_GROUPS.flatMap(g => g.fields);
+  const remainingFields = Object.keys(row).filter(key => !allGroupFields.includes(key));
+  
+  if(remainingFields.length > 0){
+    const panel = document.createElement('section');
+    panel.className='panel';
+    const h2=document.createElement('h2'); h2.textContent='Other Fields'; panel.appendChild(h2);
+    const grid=document.createElement('div'); grid.className='grid';
+    
+    remainingFields.forEach(field=>{
+      const wrap=document.createElement('div');
+      const label=document.createElement('label'); 
+      label.textContent=field.replace(/_/g,' ').replace(/\b\w/g, l => l.toUpperCase()); 
+      wrap.appendChild(label);
+      
+      const fieldValue = row[field];
+      const displayDiv = document.createElement('div');
+      displayDiv.className = 'field-display';
+      
+      if(!fieldValue || fieldValue === '') {
+        displayDiv.textContent = '—';
+        displayDiv.classList.add('empty');
+      } else {
+        displayDiv.textContent = fieldValue;
+      }
+      
+      wrap.appendChild(displayDiv);
+      
+      // Check if it's a photo/URL field
+      const isPhotoField = field.includes('_url') || field.toLowerCase().includes('photo') || field.includes('url');
+      
+      // Photo preview for URL/photo fields
+      if(isPhotoField && row[field]){
+        const img=document.createElement('img'); 
+        img.src=row[field]; 
+        img.alt=field; 
+        img.className='photo-preview';
+        img.onclick=()=>window.open(row[field],'_blank');
+        wrap.appendChild(img);
+        
+        // Add View button
+        const viewBtn=document.createElement('button');
+        viewBtn.type='button';
+        viewBtn.className='view-btn';
+        viewBtn.textContent='👁️ View';
+        viewBtn.onclick=()=>window.open(row[field],'_blank');
+        wrap.appendChild(viewBtn);
+      }
+      
+      grid.appendChild(wrap);
+    });
+    panel.appendChild(grid);
+    container.appendChild(panel);
+  }
 }
 
 const loadStatus=document.getElementById('loadStatus');
