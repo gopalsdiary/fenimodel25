@@ -1050,6 +1050,25 @@
                     methodologies_en: { label: 'Methodologies (English)', type: 'textarea' },
                     action: { label: 'Active', type: 'checkbox', default: true }
                 }
+            },
+            theme_settings: {
+                title: 'Theme',
+                icon: 'fa-palette',
+                fields: {
+                    setting_name: { label: 'Setting Name', type: 'text', required: true },
+                    setting_value: { label: 'Setting Value', type: 'color', required: true },
+                    category: { label: 'Category', type: 'text', required: true },
+                    description: { label: 'Description', type: 'textarea' }
+                }
+            },
+            important_links: {
+                title: 'Important Links',
+                icon: 'fa-link',
+                fields: {
+                    link_name_bn: { label: 'Link Name (Bengali)', type: 'text', required: true },
+                    link_name_en: { label: 'Link Name (English)', type: 'text', required: true },
+                    link_url: { label: 'Link URL', type: 'url', required: true }
+                }
             }
         };
 
@@ -1194,9 +1213,11 @@
                             <h2 class="card-title">
                                 <i class="fas ${table.icon}"></i> ${table.title}
                             </h2>
-                            <button class="btn btn-primary" onclick="openAddModal()">
-                                <i class="fas fa-plus"></i> Add New
-                            </button>
+                            ${currentTable !== 'theme_settings' ? `
+                                <button class="btn btn-primary" onclick="openAddModal()">
+                                    <i class="fas fa-plus"></i> Add New
+                                </button>
+                            ` : ''}
                         </div>
                         
                         <div class="search-box">
@@ -1342,12 +1363,15 @@
                 // Convert value to string for text/url inputs, except for checkbox
                 const stringValue = (field.type === 'checkbox') ? value : String(value || '');
                 
+                // For theme_settings table, only setting_value is editable
+                const isReadOnly = currentTable === 'theme_settings' && key !== 'setting_value';
+                
                 if (field.type === 'checkbox') {
                     const isChecked = value === true || value === 'true' || value === 1;
                     return `
                         <div class="form-group">
                             <label class="form-label">
-                                <input type="checkbox" name="${key}" ${isChecked ? 'checked' : ''}>
+                                <input type="checkbox" name="${key}" ${isChecked ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}>
                                 ${field.label}
                             </label>
                         </div>
@@ -1358,7 +1382,30 @@
                             <label class="form-label">${field.label}${field.required ? '' : ' <small style="color: var(--text-light);">(Optional)</small>'}</label>
                             <textarea name="${key}" class="form-control" 
                                 ${field.required ? 'required' : ''} 
-                                placeholder="${field.required ? '' : 'Optional - Leave empty if not applicable'}">${stringValue}</textarea>
+                                ${isReadOnly ? 'readonly' : ''}
+                                placeholder="${field.required ? '' : 'Optional - Leave empty if not applicable'}"
+                                style="${isReadOnly ? 'background-color: #f0f0f0; cursor: not-allowed;' : ''}">${stringValue}</textarea>
+                        </div>
+                    `;
+                } else if (field.type === 'color') {
+                    // Handle color input with both color picker and hex text
+                    const hexValue = stringValue && stringValue.startsWith('#') ? stringValue : '#000000';
+                    return `
+                        <div class="form-group">
+                            <label class="form-label">${field.label}${field.required ? '' : ' <small style="color: var(--text-light);">(Optional)</small>'}</label>
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <input type="color" name="${key}" id="color_${key}" class="form-control" 
+                                       value="${hexValue}" ${field.required ? 'required' : ''} 
+                                       style="width: 80px; height: 45px; cursor: pointer; border-radius: 8px; border: 2px solid var(--shadow-dark);"
+                                       onchange="syncColorHex('${key}')">
+                                <input type="text" id="hex_${key}" class="form-control" 
+                                       value="${hexValue}" ${field.required ? 'required' : ''} 
+                                       placeholder="e.g., #ffffff"
+                                       pattern="^#[0-9A-Fa-f]{6}$"
+                                       style="flex: 1; font-family: 'Courier New', monospace; font-weight: 600;"
+                                       onchange="syncColorPicker('${key}')">
+                            </div>
+                            <small style="color: var(--text-light); display: block; margin-top: 5px;">Use color picker or enter hex code (#ffffff)</small>
                         </div>
                     `;
                 } else if (field.type === 'url') {
@@ -1368,9 +1415,11 @@
                             <div style="display: flex; gap: 10px; align-items: flex-start;">
                                 <input type="url" name="${key}" id="input_${key}" class="form-control" 
                                        value="${stringValue}" ${field.required ? 'required' : ''} 
+                                       ${isReadOnly ? 'readonly' : ''}
                                        placeholder="${field.required ? 'Enter URL or upload image' : 'Optional - Enter URL or upload image'}"
-                                       style="flex: 1;">
+                                       style="flex: 1; ${isReadOnly ? 'background-color: #f0f0f0; cursor: not-allowed;' : ''}">
                                 <button type="button" class="btn btn-secondary" onclick="openImageUpload('${key}')" 
+                                        ${isReadOnly ? 'disabled' : ''}
                                         style="white-space: nowrap; padding: 12px 16px;">
                                     <i class="fas fa-upload"></i> Upload
                                 </button>
@@ -1396,7 +1445,10 @@
                         <div class="form-group">
                             <label class="form-label">${field.label}${field.required ? '' : ' <small style="color: var(--text-light);">(Optional)</small>'}</label>
                             <input type="${field.type}" name="${key}" class="form-control" 
-                                   value="${stringValue}" ${field.required ? 'required' : ''} ${placeholder}>
+                                   value="${stringValue}" ${field.required ? 'required' : ''} 
+                                   ${isReadOnly ? 'readonly' : ''}
+                                   style="${isReadOnly ? 'background-color: #f0f0f0; cursor: not-allowed;' : ''}"
+                                   ${placeholder}>
                         </div>
                     `;
                 }
@@ -1428,6 +1480,11 @@
             for (let [key, value] of formData.entries()) {
                 const field = tables[currentTable].fields[key];
                 
+                // Skip read-only fields for theme_settings table
+                if (currentTable === 'theme_settings' && key !== 'setting_value') {
+                    continue;
+                }
+                
                 // Handle empty values
                 if (value === '' || value === null || value === undefined) {
                     // For optional fields, set to null
@@ -1440,6 +1497,10 @@
                 // Convert by type
                 if (field.type === 'number') {
                     data[key] = value ? parseInt(value) : null;
+                } else if (field.type === 'color') {
+                    // For color fields, use the hex text input if available, otherwise use color picker value
+                    const hexInput = document.getElementById(`hex_${key}`);
+                    data[key] = hexInput ? hexInput.value : value;
                 } else if (field.type === 'date' || field.type === 'datetime-local') {
                     data[key] = value ? value : null;
                 } else if (field.type === 'url') {
@@ -1692,6 +1753,29 @@
                 reader.onerror = error => reject(error);
                 reader.readAsDataURL(file);
             });
+        }
+
+        // Color Sync Functions - Sync between color picker and hex input
+        function syncColorHex(fieldKey) {
+            // When color picker changes, update hex input
+            const colorPicker = document.getElementById(`color_${fieldKey}`);
+            const hexInput = document.getElementById(`hex_${fieldKey}`);
+            if (colorPicker && hexInput) {
+                hexInput.value = colorPicker.value;
+            }
+        }
+
+        function syncColorPicker(fieldKey) {
+            // When hex input changes, update color picker
+            const hexInput = document.getElementById(`hex_${fieldKey}`);
+            const colorPicker = document.getElementById(`color_${fieldKey}`);
+            if (hexInput && colorPicker) {
+                // Validate hex color format
+                const hexValue = hexInput.value.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    colorPicker.value = hexValue;
+                }
+            }
         }
 
         // Initialize on page load
