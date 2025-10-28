@@ -1055,10 +1055,13 @@
                 title: 'Theme',
                 icon: 'fa-palette',
                 fields: {
-                    setting_name: { label: 'Setting Name', type: 'text', required: true },
-                    setting_value: { label: 'Setting Value', type: 'color', required: true },
-                    category: { label: 'Category', type: 'text', required: true },
-                    description: { label: 'Description', type: 'textarea' }
+                    theme_name: { label: 'Theme Name', type: 'text', required: true },
+                    theme_description: { label: 'Description', type: 'textarea', required: false },
+                    primary_color: { label: 'Primary Color', type: 'color', required: true },
+                    secondary_color: { label: 'Secondary Color', type: 'color', required: true },
+                    light_color: { label: 'Light Color', type: 'color', required: true },
+                    dark_color: { label: 'Dark Color', type: 'color', required: true },
+                    is_active: { label: 'Active', type: 'checkbox', default: true }
                 }
             },
             important_links: {
@@ -1213,11 +1216,9 @@
                             <h2 class="card-title">
                                 <i class="fas ${table.icon}"></i> ${table.title}
                             </h2>
-                            ${currentTable !== 'theme_settings' ? `
-                                <button class="btn btn-primary" onclick="openAddModal()">
-                                    <i class="fas fa-plus"></i> Add New
-                                </button>
-                            ` : ''}
+                            <button class="btn btn-primary" onclick="openAddModal()">
+                                <i class="fas fa-plus"></i> Add New
+                            </button>
                         </div>
                         
                         <div class="search-box">
@@ -1363,15 +1364,12 @@
                 // Convert value to string for text/url inputs, except for checkbox
                 const stringValue = (field.type === 'checkbox') ? value : String(value || '');
                 
-                // For theme_settings table, only setting_value is editable
-                const isReadOnly = currentTable === 'theme_settings' && key !== 'setting_value';
-                
                 if (field.type === 'checkbox') {
                     const isChecked = value === true || value === 'true' || value === 1;
                     return `
                         <div class="form-group">
                             <label class="form-label">
-                                <input type="checkbox" name="${key}" ${isChecked ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}>
+                                <input type="checkbox" name="${key}" ${isChecked ? 'checked' : ''}>
                                 ${field.label}
                             </label>
                         </div>
@@ -1382,9 +1380,7 @@
                             <label class="form-label">${field.label}${field.required ? '' : ' <small style="color: var(--text-light);">(Optional)</small>'}</label>
                             <textarea name="${key}" class="form-control" 
                                 ${field.required ? 'required' : ''} 
-                                ${isReadOnly ? 'readonly' : ''}
-                                placeholder="${field.required ? '' : 'Optional - Leave empty if not applicable'}"
-                                style="${isReadOnly ? 'background-color: #f0f0f0; cursor: not-allowed;' : ''}">${stringValue}</textarea>
+                                placeholder="${field.required ? '' : 'Optional - Leave empty if not applicable'}">${stringValue}</textarea>
                         </div>
                     `;
                 } else if (field.type === 'color') {
@@ -1415,11 +1411,9 @@
                             <div style="display: flex; gap: 10px; align-items: flex-start;">
                                 <input type="url" name="${key}" id="input_${key}" class="form-control" 
                                        value="${stringValue}" ${field.required ? 'required' : ''} 
-                                       ${isReadOnly ? 'readonly' : ''}
                                        placeholder="${field.required ? 'Enter URL or upload image' : 'Optional - Enter URL or upload image'}"
-                                       style="flex: 1; ${isReadOnly ? 'background-color: #f0f0f0; cursor: not-allowed;' : ''}">
+                                       style="flex: 1;">
                                 <button type="button" class="btn btn-secondary" onclick="openImageUpload('${key}')" 
-                                        ${isReadOnly ? 'disabled' : ''}
                                         style="white-space: nowrap; padding: 12px 16px;">
                                     <i class="fas fa-upload"></i> Upload
                                 </button>
@@ -1446,8 +1440,6 @@
                             <label class="form-label">${field.label}${field.required ? '' : ' <small style="color: var(--text-light);">(Optional)</small>'}</label>
                             <input type="${field.type}" name="${key}" class="form-control" 
                                    value="${stringValue}" ${field.required ? 'required' : ''} 
-                                   ${isReadOnly ? 'readonly' : ''}
-                                   style="${isReadOnly ? 'background-color: #f0f0f0; cursor: not-allowed;' : ''}"
                                    ${placeholder}>
                         </div>
                     `;
@@ -1479,11 +1471,6 @@
             // Process form data
             for (let [key, value] of formData.entries()) {
                 const field = tables[currentTable].fields[key];
-                
-                // Skip read-only fields for theme_settings table
-                if (currentTable === 'theme_settings' && key !== 'setting_value') {
-                    continue;
-                }
                 
                 // Handle empty values
                 if (value === '' || value === null || value === undefined) {
