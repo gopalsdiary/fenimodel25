@@ -98,14 +98,22 @@
 				return;
 			}
 			const exam = payload.exam||''; const year = payload.year||'';
-			info.textContent = `Rendering ${payload.students.length} admits — ${exam} ${year}`;
+			
+			// Sort students by active_roll (ascending order)
+			const sortedStudents = [...payload.students].sort((a, b) => {
+				const rollA = parseInt(a.roll) || 0;
+				const rollB = parseInt(b.roll) || 0;
+				return rollA - rollB;
+			});
+			
+			info.textContent = `Rendering ${sortedStudents.length} admits — ${exam} ${year}`;
 
 			const sheetsWrap = document.getElementById('sheets');
 			sheetsWrap.innerHTML = '';
 			// Fixed card size per single-card: 93mm x 90mm
 			const targetW = 93, targetH = 90; // mm
 
-			const pages = chunk(payload.students, 6);
+			const pages = chunk(sortedStudents, 6);
 			pages.forEach((page, pageIdx)=>{
 				const sheet = document.createElement('div'); sheet.className='sheet';
 				const grid = document.createElement('div'); grid.className='grid'; sheet.appendChild(grid);
