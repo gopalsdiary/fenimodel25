@@ -100,7 +100,15 @@
 				return;
 			}
 			const exam = payload.exam||''; const year = payload.year||'';
-			info.textContent = `Rendering ${payload.students.length} admits — ${exam} ${year}`;
+			
+			// Sort students by active_roll (ascending order)
+			const sortedStudents = [...payload.students].sort((a, b) => {
+				const rollA = parseInt(a.roll) || 0;
+				const rollB = parseInt(b.roll) || 0;
+				return rollA - rollB;
+			});
+			
+			info.textContent = `Rendering ${sortedStudents.length} admits — ${exam} ${year}`;
 
 			const sheetsWrap = document.getElementById('sheets');
 			sheetsWrap.innerHTML = '';
@@ -118,7 +126,7 @@
 				const boxW = 210 * SCALE; // mm
 				const boxH = 115 * SCALE; // mm
 
-			const pages = chunk(payload.students, 10);
+			const pages = chunk(sortedStudents, 10);
 					pages.forEach((page, pageIdx)=>{
 				const sheet = document.createElement('div'); sheet.className='sheet';
 				const grid = document.createElement('div'); grid.className='grid'; sheet.appendChild(grid);
