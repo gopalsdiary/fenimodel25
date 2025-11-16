@@ -527,6 +527,17 @@
 			}else{
 				latestFilteredRows = currentGroupRows.filter(r=>{ const {active_section} = getActiveFields(r); return String(active_section)===String(selectedSection); });
 			}
+			
+			// Sort rows by active_roll numerically
+			latestFilteredRows.sort((a, b) => {
+				const {active_roll: rollA} = getActiveFields(a);
+				const {active_roll: rollB} = getActiveFields(b);
+				const numA = Number(rollA) || 0;
+				const numB = Number(rollB) || 0;
+				if(isNaN(numA) || isNaN(numB)) return String(rollA).localeCompare(String(rollB));
+				return numA - numB;
+			});
+			
 			const availableColumns = computeAvailableColumns();
 			if((!selectedColumns || selectedColumns.length===0) && availableColumns.length){
 				selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length));

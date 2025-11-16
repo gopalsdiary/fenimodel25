@@ -525,6 +525,17 @@
 		    if(!selectedSession || !selectedClass){ latestFilteredRows=[]; container.innerHTML=''; statusEl.textContent='Select Session & Class'; return; }
 		    let rows = allRows.filter(r=>{ const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass); });
 		    if(selectedSection){ rows = rows.filter(r=>{ const {active_section} = getActiveFields(r); return String(active_section)===String(selectedSection); }); }
+		    
+		    // Sort rows by active_roll numerically
+		    rows.sort((a, b) => {
+		        const {active_roll: rollA} = getActiveFields(a);
+		        const {active_roll: rollB} = getActiveFields(b);
+		        const numA = Number(rollA) || 0;
+		        const numB = Number(rollB) || 0;
+		        if(isNaN(numA) || isNaN(numB)) return String(rollA).localeCompare(String(rollB));
+		        return numA - numB;
+		    });
+		    
 		    latestFilteredRows = rows;
 		    const availableColumns = computeAvailableColumns();
 		    if((!selectedColumns || !selectedColumns.length) && availableColumns.length){ selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length)); saveSelectedColumns(); }
