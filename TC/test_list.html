@@ -299,6 +299,8 @@
       };
       if(!payload.iid){ entryStatus.textContent='IID required'; entryStatus.style.color='#b91c1c'; return; }
       if(!payload.tc_date){ entryStatus.textContent='TC Date required'; entryStatus.style.color='#b91c1c'; return; }
+      if(!payload.issued_by){ alert('Issued By required'); entryStatus.textContent='Issued By required'; entryStatus.style.color='#b91c1c'; return; }
+      if(!payload.student_character){ alert('Character required'); entryStatus.textContent='Character required'; entryStatus.style.color='#b91c1c'; return; }
       try {
         // Check existing
         const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
