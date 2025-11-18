@@ -179,6 +179,9 @@
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Date of Birth
             <input name="student_dateofbirth" id="student_dateofbirth" readonly />
           </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Gender
+            <input name="student_gender" id="student_gender" readonly />
+          </label>
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Paid Upto
             <input name="paid_month" id="paid_month" placeholder="e.g. December 2025" />
           </label>
@@ -264,6 +267,7 @@
         document.getElementById('father_name_en').value = row.father_name_en || row.father || '';
         document.getElementById('mother_name_en').value = row.mother_name_en || row.mother || '';
         document.getElementById('student_dateofbirth').value = row.student_dateofbirth || row.dob || '';
+        document.getElementById('student_gender').value = row.student_gender || row.gender || '';
         document.getElementById('father_mobile').value = row.father_mobile || row.guardian_mobile || '';
         entryStatus.textContent='Loaded. Fill remaining fields & Save';
       } catch(e){ console.error(e); entryStatus.textContent='Load failed'; entryStatus.style.color='#b91c1c'; }
@@ -284,6 +288,7 @@
         father_name_en: form.father_name_en.value.trim(),
         mother_name_en: form.mother_name_en.value.trim(),
         student_dateofbirth: form.student_dateofbirth.value.trim(),
+        student_gender: form.student_gender.value.trim(),
         paid_month: form.paid_month.value.trim(),
         student_character: form.student_character.value.trim(),
         next_class: form.next_class.value.trim(),

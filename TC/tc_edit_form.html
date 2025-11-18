@@ -74,6 +74,7 @@
       tc_roll: val('tc_roll'),
       board_registration: val('board_registration'),
       student_dateofbirth: val('student_dateofbirth'),
+      student_gender: val('student_gender'),
       paid_month: val('paid_month'),
       student_character: val('student_character'),
       next_class: val('next_class'),
@@ -93,6 +94,7 @@
     setVal('tc_roll', row.tc_roll||'');
     setVal('board_registration', row.board_registration||'');
     setVal('student_dateofbirth', row.student_dateofbirth||'');
+    ensureSelectValue(field('student_gender'), row.student_gender||'');
     ensureSelectValue(field('paid_month'), row.paid_month||'');
     ensureSelectValue(field('student_character'), row.student_character||'');
     ensureSelectValue(field('next_class'), row.next_class||'');
@@ -133,12 +135,13 @@
   function buildStaticSelectOptions(){
     const cls=['','6','7','8','9','10'];
     const section=['','Shapla','Golap','Morning'];
+    const gender=['','Male','Female','Other'];
     const character=['','good','very good','bad','very bad'];
     const nextClass=['','6','7','8','9','10'];
     const sessions=['','2023','2024','2025','2026'];
     const issuedBy=['','RAZIB KUMAR PAUL','SHOWRAV DEB'];
     fillSelect(qs('tc_class'),cls); fillSelect(qs('tc_section'),section);
-    fillSelect(qs('student_character'),character); fillSelect(qs('next_class'),nextClass);
+    fillSelect(qs('student_gender'),gender); fillSelect(qs('student_character'),character); fillSelect(qs('next_class'),nextClass);
     fillSelect(qs('tc_session'),sessions); fillSelect(qs('issued_by'),issuedBy);
   }
   function buildPaidMonthOptions(){
@@ -186,6 +189,9 @@
       </label>
       <label>Date of Birth
         <input name="student_dateofbirth" placeholder="DD-MM-YYYY" />
+      </label>
+      <label>Gender
+        <select name="student_gender" id="student_gender"></select>
       </label>
       <label>Paid Upto
         <select name="paid_month" id="paid_month"></select>
