@@ -52,14 +52,15 @@
     .overlay { position: absolute; inset: var(--box-top) var(--box-right) var(--box-bottom) var(--box-left); display: block; }
     .overlay-left { position: absolute; inset: var(--leftpanel-top) var(--leftpanel-right) var(--leftpanel-bottom) var(--leftpanel-left); overflow: hidden; }
     .overlay-text { 
-      font-size: clamp(6.3px, 0.84vw, 11.2px); 
-      line-height: 1.55; 
+      font-size: clamp(6.3px, 0.84vw, 12px); 
+      line-height: 1.0; 
       color: #111; 
       white-space: pre-line; 
       text-align: justify;
       text-justify: inter-word;
-      word-break: break-word; 
-      hyphens: auto; 
+      word-break: normal; 
+      hyphens: none; 
+      overflow-wrap: break-word;
     }
     .overlay-text .emph { font-size: 110%; }
   .left-text { font-size: clamp(7.2px, 0.855vw, 10.8px); line-height: 1.35; white-space: pre-line; color: #111; }
@@ -127,12 +128,14 @@
         registrationnumber: getVal(row, 'board_registration'),
         dob: getVal(row, 'student_dateofbirth'),
         paidmonth: getVal(row, 'paid_month'),
+        father_mobile: getVal(row, 'father_mobile'),
         iid: getVal(row, 'iid'),
         sl: getVal(row, 'tc_sl'),
         date: defaultDate(getVal(row, 'tc_date')),
         character: getVal(row, 'student_character'),
         issueby: getVal(row, 'issued_by'),
         gender: getVal(row, 'student_gender'),
+        session: getVal(row, 'tc_session'),
       };
     }
 
@@ -143,12 +146,11 @@
   const heShe = isFemale ? 'She' : 'He';
   const hisHer = isFemale ? 'Her' : 'His';
   const regVal = (r.registrationnumber||'').trim() || '---';
+  const examSentence = (r.nextclass || '').trim() ? ` and had passed last the Annual Examination for promotion to class ${r.nextclass || ''}.` : '';
+  const registrationLine = regVal && regVal !== '---' ? `Board Registration number is ${regVal}. ` : '';
       return (
-`This is certify that ${r.name || ''} ${childWord} of ${r.father || ''} and ${r.mother || ''} student's of Feni Model High School. ${heShe} has left the school after finishing Class ${r.leftclass || ''}. ${heShe} was studying in class ${r.class || ''}, Roll: ${r.roll || ''}, Section: ${r.section || ''} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${r.nextclass || ''}.
-${hisHer} registration number is ${regVal} and date of birth is ${r.dob || ''}.
-${heShe} has paid the school dues till ${r.paidmonth || ''}.
-
-${hisHer} character is ¬${r.character || ''}.`
+`This is certify that ${r.name || ''} ${childWord} of ${r.father || ''} and ${r.mother || ''} student's of Feni Model High School. ${heShe} was studying in class ${r.class || ''}, Roll: ${r.roll || ''}, Section: ${r.section || ''} in Bangla version, Session- ${r.session || ''}${examSentence}
+${registrationLine}As per record ${hisHer} date of birth is ${r.dob || ''} and has paid the school dues till ${r.paidmonth || ''}. ${hisHer} character is ${r.character || ''}.`
       );
     }
 
@@ -181,14 +183,14 @@ ${hisHer} character is ¬${r.character || ''}.`
   const rollDecor = `<strong class="emph"><u>${roll}</u></strong>`;
   const sectionDecor = `<strong class="emph"><u>${section}</u></strong>`;
 
+      const regTrimmed = (r.registrationnumber || '').trim();
+      const registrationPart = regTrimmed && regTrimmed !== '---' ? `Board Registration number is ${registration}. ` : '';
       const lines = [
-  `This is certify that ${name} ${childWord} of ${father} and ${mother} student's of Feni Model High School. ${heShe} has left the school after finishing Class ${leftclass}. ${heShe} was studying in class ${klassDecor}, Roll: ${rollDecor}, Section: ${sectionDecor} in Bangla version and had/had not passed last the Annual Examination for promotion to class ${nextclass}.`,
+  `This is certify that ${name} ${childWord} of ${father} and ${mother} student's of Feni Model High School. ${heShe} was studying in class ${klassDecor}, Roll: ${rollDecor}, Section: ${sectionDecor} in Bangla version, Session- ${escHtml(r.session || '')}.${(r.nextclass || '').trim() ? ` and had passed the Annual Examination for promotion to class ${nextclass}.` : ''}`,
           '',
-        `${hisHer} registration number is ${registration} and date of birth is ${dob}.`,
-        
-        `${heShe} has paid the school dues till ${paidmonth}.`,
+        `${registrationPart}As per record ${hisHer} date of birth is ${dob} and has paid the school dues till ${paidmonth}.`,
         '',
-        `${hisHer} character is ¬${character}.`
+        `${hisHer} character is ${character}. I wish her every success in future.`
       ];
       return lines.map(escHtml => escHtml).join('<br/>');
     }
@@ -207,9 +209,9 @@ ${hisHer} character is ¬${r.character || ''}.`
   ['Registration', (r.registrationnumber||'').trim() || '---'],
         ['Date of Birth', r.dob],
         ['Paid Month', r.paidmonth],
-        ['Character', r.character],
+        ['Mobile', r.father_mobile],
         ['Next Class', r.nextclass],
-        ['Left School', r.leftschool],
+        ['Session', r.session],
         ['Issued by', r.issueby],
       ];
       return rows.map(([k,v]) => {
