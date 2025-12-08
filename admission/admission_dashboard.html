@@ -149,6 +149,12 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
         <input id="approveSession" placeholder="e.g. 2026" />
       </label>
     </div>
+    <div style="margin-top:0.8rem;display:grid;gap:0.35rem;font-size:0.72rem;color:var(--text-soft);">
+      <span style="font-weight:700;color:var(--text);">SMS to Father mobile?</span>
+      <label style="display:flex;align-items:center;gap:.35rem;font-weight:600;"><input type="radio" name="approveSms" value="yes"> Yes, send SMS</label>
+      <label style="display:flex;align-items:center;gap:.35rem;font-weight:600;"><input type="radio" name="approveSms" value="no" checked> No SMS</label>
+      <small style="color:var(--text-soft);">Message will be sent to father_mobile after saving.</small>
+    </div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;">
       <button class="btn" id="approveConfirmBtn">💾 Save & Approve</button>
       <button class="btn secondary" id="approveCancelBtn">Cancel</button>
@@ -164,6 +170,10 @@ const TABLE = 'admission_data';
 const PAGE_SIZE = 50;
 const CACHE_KEY = 'admission_data_cache_v1';
 const CACHE_TTL = 5 * 60 * 1000; // 5m
+// SMS config (reused from sms/sms_api.html)
+const SMS_API_KEY = 'OoeroUS4e09DpgizNxCS';
+const SMS_SENDER_ID = '8809617611082';
+const SMS_API_URL = 'https://bulksmsbd.net/api/smsapi';
 
 // Field metadata grouped (derived from read admission.md)
 const FIELD_GROUPS = [
@@ -540,11 +550,34 @@ async function approveAdmission(overrides){
     editingRow.admission_status = true;
     if(iid) editingRow.iid = iid;
 
+    // Send SMS if requested
+    let smsSent = false;
+    let smsResult = null;
+    if(overrides && overrides.sendSms){
+      const mobileRaw = editingRow.father_mobile || '';
+      const mobile = formatMobileForSms(String(mobileRaw));
+      if(mobile){
+        const msg = `Feni Model High School Admission Confirmed, Student name-${editingRow.student_name_en||''}, iid-${iid||''}`;
+        try{
+          smsResult = await sendAdmissionSMS(mobile, msg);
+          if(smsResult?.ok){ smsSent = true; }
+        }catch(smsErr){ console.error('SMS send failed', smsErr); }
+      }
+    }
+
     formAlert.style.display='block'; 
     formAlert.style.background='#dcfce7'; 
     formAlert.style.color='#166534'; 
     formAlert.style.borderColor='#86efac'; 
-    formAlert.textContent='Admission approved and saved to student database.';
+    if(smsSent){
+      formAlert.textContent = 'Admission approved, saved, and SMS sent.';
+    } else if(overrides && overrides.sendSms){
+      const code = smsResult?.code ? ` (${smsResult.code})` : '';
+      const message = smsResult?.message || 'SMS failed';
+      formAlert.textContent = `Admission approved and saved. SMS not sent${code}: ${message}`;
+    } else {
+      formAlert.textContent = 'Admission approved and saved to student database.';
+    }
     setTimeout(()=>{ formAlert.style.display='none'; }, 2000);
     fetchAndRender(true); 
     setTimeout(closeForm, 1000);
@@ -564,19 +597,72 @@ function status(msg){ document.getElementById('statusBar').textContent=msg; }
 function applyTheme(m){ document.documentElement.classList.toggle('dark', m==='dark'); }
 function toggleTheme(){ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); }
 
+function formatMobileForSms(number){
+  if(!number) return '';
+  let cleaned = String(number).replace(/\D/g,'');
+  if(cleaned.startsWith('0')) cleaned = '880'+cleaned.slice(1);
+  if(!cleaned.startsWith('88')) cleaned = '88'+cleaned;
+  return cleaned;
+}
+
+async function sendAdmissionSMS(mobile, message){
+  const params = new URLSearchParams({
+    api_key: SMS_API_KEY,
+    type: 'text',
+    number: mobile,
+    senderid: SMS_SENDER_ID,
+    message
+  });
+
+  // Prefer POST to avoid 404s on some gateways; fall back to GET if POST fails
+  const parseResponse = (statusCode, bodyText) => {
+    try{
+      const json = JSON.parse(bodyText);
+      const code = String(json.response_code ?? statusCode ?? '').trim();
+      const msg = json.success_message || json.error_message || bodyText;
+      return { ok: code==='202', code, message: msg };
+    }catch(_){
+      const code = String(statusCode ?? '').trim() || bodyText.trim();
+      return { ok: code==='202', code, message: bodyText.trim() || 'Unknown response' };
+    }
+  };
+
+  try{
+    const postRes = await fetch(SMS_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString(),
+      cache: 'no-store'
+    });
+    const postTxt = await postRes.text();
+    const parsedPost = parseResponse(postRes.status, postTxt);
+    if(parsedPost.ok || postRes.status !== 404){
+      return parsedPost;
+    }
+    // Retry with GET if the POST hit a 404
+    const getRes = await fetch(`${SMS_API_URL}?${params.toString()}`, { method:'GET', cache:'no-store' });
+    const getTxt = await getRes.text();
+    return parseResponse(getRes.status, getTxt);
+  }catch(err){
+    console.error('SMS fetch error', err);
+    return { ok:false, code:'NETWORK', message:String(err) };
+  }
+}
+
 function handleApproveConfirm(){
   const approveAlert=document.getElementById('approveAlert');
   approveAlert.style.display='none';
   const cls = document.getElementById('approveClass').value.trim();
   const sec = document.getElementById('approveSection').value.trim();
   const ses = document.getElementById('approveSession').value.trim();
+  const sendSms = (document.querySelector('input[name="approveSms"]:checked')?.value === 'yes');
   if(!cls || !sec || !ses){
     approveAlert.textContent='Class, Section, Session — তিনটিই প্রয়োজন';
     approveAlert.style.display='block';
     return;
   }
   closeApproveModal();
-  approveAdmission({ class_2026: cls, section_2026: sec, session: ses });
+  approveAdmission({ class_2026: cls, section_2026: sec, session: ses, sendSms });
 }
 
 // Approve modal helpers
