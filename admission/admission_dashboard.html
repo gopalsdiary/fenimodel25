@@ -126,6 +126,36 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 </div>
 
 <footer>© <span id="year"></span> Feni Model High School · Admission Data</footer>
+
+<!-- Approve modal for class/section/session override -->
+<div class="modal" id="approveModal" aria-hidden="true" role="dialog" aria-label="Approve admission overrides">
+  <div class="modal-card" style="max-width:520px;">
+    <button class="close-btn" id="closeApproveModal">✕</button>
+    <h3 style="margin:0 0 .6rem;font-size:1rem;display:flex;align-items:center;gap:.4rem;">Finalize Approval</h3>
+    <p style="margin:0 0 .9rem;font-size:.7rem;color:var(--text-soft);">Set class/section/session before approving. Section options are fixed.</p>
+    <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));">
+      <label>Admission Class → class_2026
+        <input id="approveClass" placeholder="e.g. 6" />
+      </label>
+      <label>Admission Section → section_2026
+        <select id="approveSection">
+          <option value="">Select section</option>
+          <option value="SHAPLA">SHAPLA</option>
+          <option value="GOLAP">GOLAP</option>
+          <option value="MORNING">MORNING</option>
+        </select>
+      </label>
+      <label>Session
+        <input id="approveSession" placeholder="e.g. 2026" />
+      </label>
+    </div>
+    <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1rem;">
+      <button class="btn" id="approveConfirmBtn">💾 Save & Approve</button>
+      <button class="btn secondary" id="approveCancelBtn">Cancel</button>
+    </div>
+    <div class="alert" id="approveAlert" style="display:none;margin-top:.8rem;"></div>
+  </div>
+</div>
 <script>
 // --- Config & Constants ---
 const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co'; // TODO: externalize
@@ -261,7 +291,7 @@ function renderTable(){
   const body = document.getElementById('tableBody');
   if(filtered.length===0){ headRow.innerHTML='<th>SL</th>'; body.innerHTML='<tr><td style="padding:.8rem;font-size:.7rem;">No data</td></tr>'; return; }
   // dynamic columns (small subset for dashboard view)
-  const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration','student_gender','admission_status'];
+  const cols=['admission_sl','session','admisson_class','admission_section','student_name_en','birth_registration','student_gender','admission_status','iid'];
   headRow.innerHTML = '<th>SL</th>'+cols.map(c=>`<th>${c}</th>`).join('');
   const start=(currentPage-1)*PAGE_SIZE;
   const rows=filtered.slice(start,start+PAGE_SIZE);
@@ -397,6 +427,26 @@ function copyParent(srcPrefix,dstPrefix){
   });
 }
 
+// Build payload for student_database using overlapping fields and required mappings
+function buildStudentPayload(row, overrides={}){
+  const payload={};
+  if(!row) return payload;
+  const directFields=[
+    'session','student_name_en','student_name_bn','birth_registration','student_dateofbirth','religion','student_gender','student_photo_url','birth_certificate_url','student_blood_group',
+    'father_name_en','father_name_bn','father_nid','father_mobile','father_occupation','father_dob','father_blood_group',
+    'mother_name_en','mother_name_bn','mother_nid','mother_mobile','mother_occupation','mother_dob','mother_blood_group',
+    'guardian_name_en','guardian_name_bn','guardian_nid','guardian_mobile','guardian_occupation',
+    'village_bn','village_en','postoffice_bn','postoffice_en','district_en','district_bn','upazilla_en','upazilla_bn',
+    'previous_school','previous_class_roll','quote_freedomfighter'
+  ];
+  directFields.forEach(f=>{ if(f in row) payload[f]=row[f]; });
+  // Map admission class/section/session to 2026 fields in student_database (with overrides)
+  payload.class_2026   = overrides.class_2026   ?? row.admisson_class   ?? null;
+  payload.section_2026 = overrides.section_2026 ?? row.admission_section ?? null;
+  payload.session      = overrides.session      ?? row.session           ?? null;
+  return payload;
+}
+
 function openForm(row){ 
   editingRow=row||null; 
   buildForm(row||{}); 
@@ -451,24 +501,57 @@ async function saveForm(stayOpen=false){
 async function deleteRow(){ if(!editingRow) return; if(!confirm('Delete this record?')) return; const sb=initSupabase(); const { error } = await sb.from(TABLE).delete().eq('admission_sl', editingRow.admission_sl); if(error){ alert('Delete failed'); return; } closeForm(); fetchAndRender(true); }
 
 // Approve Admission
-async function approveAdmission(){ 
+async function approveAdmission(overrides){ 
   if(!editingRow) return; 
-  if(!confirm('Approve this admission?')) return; 
   const sb=initSupabase(); 
-  const { error } = await sb.from(TABLE).update({ admission_status: true }).eq('admission_sl', editingRow.admission_sl); 
-  if(error){ 
-    alert('Approval failed: ' + error.message); 
-    return; 
-  } 
   const formAlert=document.getElementById('formAlert'); 
-  formAlert.style.display='block'; 
-  formAlert.style.background='#dcfce7'; 
-  formAlert.style.color='#166534'; 
-  formAlert.style.borderColor='#86efac'; 
-  formAlert.textContent='Admission approved successfully!';
-  setTimeout(()=>{ formAlert.style.display='none'; }, 2000);
-  fetchAndRender(true); 
-  setTimeout(closeForm, 1000);
+  try{
+    // Merge overrides into the in-memory row for consistency
+    if(overrides){
+      editingRow.admisson_class = overrides.class_2026 ?? editingRow.admisson_class;
+      editingRow.admission_section = overrides.section_2026 ?? editingRow.admission_section;
+      editingRow.session = overrides.session ?? editingRow.session;
+    }
+
+    const studentPayload = buildStudentPayload(editingRow, overrides||{});
+    let iid = editingRow.iid || null;
+
+    // Insert or update student_database
+    if(iid){
+      const { data, error: updStudentErr } = await sb.from('student_database').update(studentPayload).eq('iid', iid).select('iid').single();
+      if(updStudentErr) throw updStudentErr;
+      iid = data?.iid || iid;
+    } else {
+      const { data, error: insStudentErr } = await sb.from('student_database').insert(studentPayload).select('iid').single();
+      if(insStudentErr) throw insStudentErr;
+      iid = data?.iid || null;
+    }
+
+    // Update admission_data with approval + iid reference and aligned class/section/session
+    const updatePayload = { admission_status: true, iid };
+    if(overrides){
+      updatePayload.admisson_class = overrides.class_2026 ?? editingRow.admisson_class;
+      updatePayload.admission_section = overrides.section_2026 ?? editingRow.admission_section;
+      updatePayload.session = overrides.session ?? editingRow.session;
+    }
+    const { error: updAdmissionErr } = await sb.from(TABLE).update(updatePayload).eq('admission_sl', editingRow.admission_sl);
+    if(updAdmissionErr) throw updAdmissionErr;
+
+    editingRow.admission_status = true;
+    if(iid) editingRow.iid = iid;
+
+    formAlert.style.display='block'; 
+    formAlert.style.background='#dcfce7'; 
+    formAlert.style.color='#166534'; 
+    formAlert.style.borderColor='#86efac'; 
+    formAlert.textContent='Admission approved and saved to student database.';
+    setTimeout(()=>{ formAlert.style.display='none'; }, 2000);
+    fetchAndRender(true); 
+    setTimeout(closeForm, 1000);
+  }catch(err){
+    console.error('Approval failed', err);
+    alert('Approval failed: ' + (err.message || err));
+  }
 }
 
 // Export CSV
@@ -481,13 +564,47 @@ function status(msg){ document.getElementById('statusBar').textContent=msg; }
 function applyTheme(m){ document.documentElement.classList.toggle('dark', m==='dark'); }
 function toggleTheme(){ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); }
 
+function handleApproveConfirm(){
+  const approveAlert=document.getElementById('approveAlert');
+  approveAlert.style.display='none';
+  const cls = document.getElementById('approveClass').value.trim();
+  const sec = document.getElementById('approveSection').value.trim();
+  const ses = document.getElementById('approveSession').value.trim();
+  if(!cls || !sec || !ses){
+    approveAlert.textContent='Class, Section, Session — তিনটিই প্রয়োজন';
+    approveAlert.style.display='block';
+    return;
+  }
+  closeApproveModal();
+  approveAdmission({ class_2026: cls, section_2026: sec, session: ses });
+}
+
+// Approve modal helpers
+function openApproveModal(){
+  if(!editingRow) return;
+  const modal=document.getElementById('approveModal');
+  document.getElementById('approveClass').value = editingRow.admisson_class || '';
+  document.getElementById('approveSection').value = editingRow.admission_section || '';
+  document.getElementById('approveSession').value = editingRow.session || '';
+  document.getElementById('approveAlert').style.display='none';
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+}
+function closeApproveModal(){
+  const modal=document.getElementById('approveModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden','true');
+}
+
 // Event bindings
 addEventListener('click',e=>{
   if(e.target.id==='addNewBtn'){ openForm(null); }
   if(e.target.id==='closeModalBtn'){ closeForm(); }
   if(e.target.id==='saveFormBtn'){ saveForm(false); }
   if(e.target.id==='deleteBtn'){ deleteRow(); }
-  if(e.target.id==='approveBtn'){ if(editingRow && editingRow.admission_status !== true) approveAdmission(); }
+  if(e.target.id==='approveBtn'){ if(editingRow && editingRow.admission_status !== true) openApproveModal(); }
+  if(e.target.id==='approveConfirmBtn'){ handleApproveConfirm(); }
+  if(e.target.id==='approveCancelBtn' || e.target.id==='closeApproveModal'){ closeApproveModal(); }
   if(e.target.id==='exportCsvBtn'){ exportCsv(); }
   if(e.target.id==='themeToggle'){ toggleTheme(); }
   const tr=e.target.closest('#dataTable tbody tr'); if(tr){ const id=Number(tr.dataset.id); const row=allRows.find(r=>r.admission_sl===id); openForm(row); }
