@@ -319,7 +319,17 @@
  let currentSection = '';
 
  function setStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent=msg; }
- function initSupabase(){ if(supabaseClient) return supabaseClient; supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); return supabaseClient; }
+ function initSupabase(){ 
+   if(supabaseClient) return supabaseClient; 
+   // Reuse existing Supabase client or create new one
+   if(window.supabaseClient) {
+     supabaseClient = window.supabaseClient;
+   } else {
+     window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+     supabaseClient = window.supabaseClient;
+   }
+   return supabaseClient; 
+ }
 
  async function loadClassOptions(){
    if(!currentClassYear){ document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; return; }

@@ -85,7 +85,11 @@
     const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     // For security, set supabaseKey via window.SUPABASE_ANON_KEY or input
     const supabaseKey = window.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    // Reuse existing Supabase client or create new one
+    if (!window.supabaseClient) {
+      window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    }
+    const supabase = window.supabaseClient;
 
     const tableName = 'student_database';
   // Simple 10-minute TTL cache (localStorage) with SWR behavior
@@ -874,8 +878,8 @@
           return;
         }
         
-        // Create auth client using same config as page
-        const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        // Reuse existing Supabase client
+        const authClient = window.supabaseClient;
         const { data: { session }, error } = await authClient.auth.getSession();
         
         if (error || !session) {

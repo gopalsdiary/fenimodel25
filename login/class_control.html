@@ -442,7 +442,11 @@
         // Supabase Configuration
         const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Reuse existing Supabase client or create new one
+        if (!window.supabaseClient) {
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+        const sb = window.supabaseClient;
         
         let teachersData = [];
         let sectionsData = [];

@@ -162,7 +162,11 @@
 				attempts++;
 				if(typeof window.supabase !== 'undefined'){
 					try{
-						const temp = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+						// Reuse existing Supabase client or create new one
+						if (!window.supabaseClient) {
+							window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+						}
+						const temp = window.supabaseClient;
 						const { data: { session } } = await temp.auth.getSession();
 						if(session){
 							console.log('Session OK for', session.user && session.user.email);

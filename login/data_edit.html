@@ -128,13 +128,20 @@
 		const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 		let supabaseClient = null;
 		(function ensureSupabase(){
-			if(window.supabase){
-				supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+			if(window.supabaseClient){
+				// Reuse existing client
+				supabaseClient = window.supabaseClient;
+			} else if(window.supabase){
+				window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+				supabaseClient = window.supabaseClient;
 			} else {
 				// dynamically inject script if missing
 				const s = document.createElement('script');
 				s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-				s.onload = () => { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); };
+				s.onload = () => { 
+					window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
+					supabaseClient = window.supabaseClient;
+				};
 				document.head.appendChild(s);
 			}
 		})();
