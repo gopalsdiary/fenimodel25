@@ -182,12 +182,19 @@
     </div>
 
     <script>
-        // Supabase configuration
-        const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        const loginForm = document.getElementById('login-form');
+        // Prevent script from running multiple times
+        if (!window.authScriptInitialized) {
+            window.authScriptInitialized = true;
+            
+            // Supabase configuration
+            const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+            
+            // Initialize Supabase client
+            window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            
+            const supabase = window.supabaseClient;
+            const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
         const resetForm = document.getElementById('reset-form');
         const dashboard = document.getElementById('dashboard');
@@ -301,6 +308,8 @@
         supabase.auth.onAuthStateChange((event, session)=>{ if(event==='SIGNED_IN' && session){ console.log('User signed in'); } else if(event==='SIGNED_OUT'){ showForm(loginForm); } });
 
         document.getElementById('confirmPassword').addEventListener('input', function(){ const pass=document.getElementById('signupPassword').value; const v=this.value; if(v && pass!==v){ this.classList.add('error'); this.classList.remove('success'); } else if(v && pass===v){ this.classList.add('success'); this.classList.remove('error'); } else { this.classList.remove('error','success'); } });
+        
+        } // End of authScriptInitialized check
     </script>
 </body>
 </html>
