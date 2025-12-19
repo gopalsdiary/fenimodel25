@@ -1,133 +1,144 @@
 // Authentication Check Utility for Login Protected Pages
-// This script should be included in all pages within the login folder (except index.html)
+// Used across protected pages. Keep it self-contained to avoid global collisions.
 
-// Wait for Supabase to be loaded and then check authentication
-function waitForSupabaseAndCheck() {
-    let attempts = 0;
-    const maxAttempts = 50; // Maximum 5 seconds (50 * 100ms)
-    
-    function checkForSupabase() {
-        attempts++;
-        
-        // Check if Supabase is loaded
-        if (typeof window.supabase !== 'undefined') {
-            // Now Supabase is loaded, proceed with authentication check
-            checkAuthenticationAndRedirect();
+(function () {
+    'use strict';
+
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+
+    function getLoginIndexUrl() {
+        // Always resolve correctly regardless of current folder depth
+        return new URL('../login/index.html', window.location.href).toString();
+    }
+
+    function getReturnToParam() {
+        const path = window.location.pathname || '';
+        // If already in /login/, return only the filename.
+        if (path.includes('/login/')) {
+            return path.split('/').pop() || 'index.html';
+        }
+        // From /login/index.html, go back one level then to the current path
+        return '../' + path.replace(/^\/+/, '');
+    }
+
+    function redirectToLogin() {
+        const loginUrl = new URL(getLoginIndexUrl());
+        const returnTo = getReturnToParam();
+        // Avoid infinite loop on login page
+        if (!returnTo || returnTo.endsWith('/login/index.html') || returnTo === 'index.html') {
+            window.location.href = loginUrl.toString();
             return;
         }
-        
-        // If we haven't reached max attempts, try again
-        if (attempts < maxAttempts) {
-            setTimeout(checkForSupabase, 100);
-        } else {
-            // Fallback: Load Supabase manually if it's not loaded
-            console.warn('Supabase not loaded, loading manually for auth check...');
-            const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-            script.onload = () => {
-                checkAuthenticationAndRedirect();
-            };
-            script.onerror = () => {
-                console.error('Failed to load Supabase for authentication check');
-                // Redirect to login as a fallback with current page info
-                const currentPage = window.location.pathname.split('/').pop() || 'admin-dashboard.html';
-                if (currentPage !== 'index.html') {
-                    window.location.href = `./index.html?returnTo=${encodeURIComponent(currentPage)}`;
-                } else {
-                    window.location.href = './index.html';
-                }
-            };
-            document.head.appendChild(script);
-        }
+        loginUrl.searchParams.set('returnTo', returnTo);
+        window.location.href = loginUrl.toString();
     }
-    
-    checkForSupabase();
-}
 
-// Authentication check function
-async function checkAuthenticationAndRedirect() {
-    try {
-        // Initialize Supabase client with the same config as other pages
-        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-        
-        // Use a unique client instance for auth checking to avoid conflicts
-        const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-        const { data: { session }, error } = await authClient.auth.getSession();
-        
-        if (error || !session) {
-            // No valid session, redirect to login page with current page as return URL
-            console.log('No valid session found, redirecting to login...');
-            const currentPage = window.location.pathname.split('/').pop() || 'admin-dashboard.html';
-            // Only add returnTo if it's not index.html to avoid infinite loops
-            if (currentPage !== 'index.html') {
-                window.location.href = `./index.html?returnTo=${encodeURIComponent(currentPage)}`;
-            } else {
-                window.location.href = './index.html';
+    function getSharedSupabaseClient() {
+        window.__supabaseClients = window.__supabaseClients || {};
+        if (window.__supabaseClients[SUPABASE_URL]) {
+            return window.__supabaseClients[SUPABASE_URL];
+        }
+        if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') {
+            return null;
+        }
+        const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true
             }
+        });
+        window.__supabaseClients[SUPABASE_URL] = client;
+        return client;
+    }
+
+    // Wait for Supabase to be loaded and then check authentication
+    function waitForSupabaseAndCheck() {
+        let attempts = 0;
+        const maxAttempts = 50; // Maximum 5 seconds (50 * 100ms)
+        
+        function checkForSupabase() {
+            attempts++;
+            
+            // Check if Supabase is loaded
+            if (typeof window.supabase !== 'undefined') {
+                // Now Supabase is loaded, proceed with authentication check
+                checkAuthenticationAndRedirect();
+                return;
+            }
+            
+            // If we haven't reached max attempts, try again
+            if (attempts < maxAttempts) {
+                setTimeout(checkForSupabase, 100);
+            } else {
+                // Fallback: Load Supabase manually if it's not loaded
+                console.warn('Supabase not loaded, loading manually for auth check...');
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+                script.onload = () => {
+                    checkAuthenticationAndRedirect();
+                };
+                script.onerror = () => {
+                    console.error('Failed to load Supabase for authentication check');
+                    redirectToLogin();
+                };
+                document.head.appendChild(script);
+            }
+        }
+        
+        checkForSupabase();
+    }
+
+    // Authentication check function
+    async function checkAuthenticationAndRedirect() {
+        try {
+            const authClient = getSharedSupabaseClient();
+            if (!authClient) {
+                console.error('Supabase not available for authentication check');
+                redirectToLogin();
+                return false;
+            }
+            const { data: { session }, error } = await authClient.auth.getSession();
+            
+            if (error || !session) {
+                // No valid session, redirect to login page with current page as return URL
+                console.log('No valid session found, redirecting to login...');
+                redirectToLogin();
+                return false;
+            }
+            
+            // Valid session exists
+            console.log('Valid session found for user:', session.user.email);
+            return true;
+            
+        } catch (error) {
+            console.error('Authentication check failed:', error);
+            redirectToLogin();
             return false;
         }
-        
-        // Valid session exists
-        console.log('Valid session found for user:', session.user.email);
-        return true;
-        
-    } catch (error) {
-        console.error('Authentication check failed:', error);
-        // Redirect immediately on error with current page as return URL
-        const currentPage = window.location.pathname.split('/').pop() || 'admin-dashboard.html';
-        // Only add returnTo if it's not index.html to avoid infinite loops
-        if (currentPage !== 'index.html') {
-            window.location.href = `./index.html?returnTo=${encodeURIComponent(currentPage)}`;
-        } else {
-            window.location.href = './index.html';
-        }
-        return false;
     }
-}
 
-// Auto-run authentication check when script loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Add a small delay to ensure other scripts have time to initialize
-    setTimeout(waitForSupabaseAndCheck, 500);
-});
-
-// Also run immediately if DOM is already loaded
-if (document.readyState === 'loading') {
-    // Script loaded before DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(waitForSupabaseAndCheck, 500);
-    });
-} else {
-    // DOM is already ready
-    setTimeout(waitForSupabaseAndCheck, 500);
-}
-
-// Listen for auth state changes and redirect if user logs out
-function setupAuthStateListener() {
-    try {
-        if (typeof window.supabase !== 'undefined') {
-            const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-            
-            const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    // Listen for auth state changes and redirect if user logs out
+    function setupAuthStateListener() {
+        try {
+            const authClient = getSharedSupabaseClient();
+            if (!authClient) return;
             authClient.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
                     console.log('User signed out, redirecting to login...');
-                    window.location.href = './index.html';
+                    redirectToLogin();
                 }
             });
+        } catch (error) {
+            console.error('Error setting up auth state listener:', error);
         }
-    } catch (error) {
-        console.error('Error setting up auth state listener:', error);
     }
-}
 
-// Setup auth state listener when page is ready
-setTimeout(setupAuthStateListener, 2000);
+    // Setup auth state listener when page is ready
+    setTimeout(setupAuthStateListener, 2000);
 
-// === 15-Minute Inactivity Auto-Logout ===
-(function setupInactivityTimeout() {
+    // === 15-Minute Inactivity Auto-Logout ===
+    (function setupInactivityTimeout() {
     const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes in milliseconds
     let inactivityTimer = null;
     
@@ -143,30 +154,20 @@ setTimeout(setupAuthStateListener, 2000);
             console.log('Session expired due to 15 minutes of inactivity');
             
             // Perform logout
-            if (typeof window.supabase !== 'undefined') {
-                try {
-                    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-                    
-                    const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                    authClient.auth.signOut().then(() => {
-                        // Show timeout message briefly before redirect
-                        alert('Session expired after 15 minutes of inactivity. Please log in again.');
-                        window.location.href = './index.html';
-                    }).catch(() => {
-                        // Force redirect even if signOut fails
-                        window.location.href = './index.html';
-                    });
-                } catch (error) {
-                    console.error('Error during inactivity logout:', error);
-                    // Force redirect on error
-                    window.location.href = './index.html';
-                }
-            } else {
-                // No Supabase available, just redirect
+            const authClient = getSharedSupabaseClient();
+            if (!authClient) {
                 alert('Session expired after 15 minutes of inactivity. Please log in again.');
-                window.location.href = './index.html';
+                redirectToLogin();
+                return;
             }
+
+            authClient.auth.signOut().then(() => {
+                alert('Session expired after 15 minutes of inactivity. Please log in again.');
+                redirectToLogin();
+            }).catch((error) => {
+                console.error('Error during inactivity logout:', error);
+                redirectToLogin();
+            });
         }, INACTIVITY_TIMEOUT);
     }
     
@@ -189,4 +190,17 @@ setTimeout(setupAuthStateListener, 2000);
     });
     
     console.log('Inactivity timeout set to 15 minutes');
+})();
+
+    // Schedule auth check once
+    function scheduleAuthCheck() {
+        setTimeout(waitForSupabaseAndCheck, 500);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleAuthCheck);
+    } else {
+        scheduleAuthCheck();
+    }
+
 })();
