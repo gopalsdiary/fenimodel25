@@ -18,13 +18,17 @@ function getSharedSupabaseClient() {
         return null;
     }
 
-    window.__fenimodelSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    window.__supabaseClients = window.__supabaseClients || {};
+    if (window.__supabaseClients[SUPABASE_URL]) {
+        return window.__supabaseClients[SUPABASE_URL];
+    }
+    window.__supabaseClients[SUPABASE_URL] = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
         auth: {
             persistSession: true,
             autoRefreshToken: true
         }
     });
-    return window.__fenimodelSupabaseClient;
+    return window.__supabaseClients[SUPABASE_URL];
 }
 
 // Wait for Supabase to be loaded and then check authentication

@@ -211,7 +211,12 @@ let supabaseClient = null;
 function initSupabase(){
   if(supabaseClient) return supabaseClient;
   if(!window.supabase){ console.warn('Supabase lib missing'); status('Supabase library not loaded'); return null; }
-  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  // Use shared client to avoid multiple instances
+  window.__supabaseClients = window.__supabaseClients || {};
+  if (!window.__supabaseClients[SUPABASE_URL]) {
+    window.__supabaseClients[SUPABASE_URL] = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  supabaseClient = window.__supabaseClients[SUPABASE_URL];
   return supabaseClient;
 }
 

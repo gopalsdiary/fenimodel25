@@ -325,7 +325,9 @@
    if(window.supabaseClient) {
      supabaseClient = window.supabaseClient;
    } else {
-     window.supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+     window.__supabaseClients = window.__supabaseClients || {};
+     window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
+     window.__supabaseClients[supabaseUrl] = window.supabaseClient;
      supabaseClient = window.supabaseClient;
    }
    return supabaseClient; 

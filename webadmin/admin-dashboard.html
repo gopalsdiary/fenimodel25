@@ -787,14 +787,15 @@
         const SUPABASE_URL = 'https://iujlulmdjudhcbeqynit.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx1bG1kanVkaGNiZXF5bml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjE4MDgsImV4cCI6MjA3Mjk5NzgwOH0.d0s84VID4VD76TB0Qtpmx4pgoQ_7T96JVH0Rm03h3rU';
 
-        // Reuse a shared client if auth-check.js already created one.
-        const supabaseClient = window.__fenimodelSupabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        // Use shared client to avoid multiple instances
+        window.__supabaseClients = window.__supabaseClients || {};
+        const supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: {
                 persistSession: true,
                 autoRefreshToken: true
             }
         });
-        window.__fenimodelSupabaseClient = supabaseClient;
+        window.__supabaseClients[SUPABASE_URL] = supabaseClient;
 
         // ImageBB Configuration
         const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';

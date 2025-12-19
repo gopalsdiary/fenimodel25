@@ -164,7 +164,9 @@
 					try{
 						// Reuse existing Supabase client or create new one
 						if (!window.supabaseClient) {
-							window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+							window.__supabaseClients = window.__supabaseClients || {};
+							window.supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+							window.__supabaseClients[SUPABASE_URL] = window.supabaseClient;
 						}
 						const temp = window.supabaseClient;
 						const { data: { session } } = await temp.auth.getSession();

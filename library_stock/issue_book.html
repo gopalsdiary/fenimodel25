@@ -222,7 +222,9 @@
 
     let supabase;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.__supabaseClients = window.__supabaseClients || {};
+      supabase = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.__supabaseClients[SUPABASE_URL] = supabase;
     } else {
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
       supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

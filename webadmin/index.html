@@ -205,6 +205,8 @@
                 autoRefreshToken: true
             }
         });
+        window.__supabaseClients = window.__supabaseClients || {};
+        window.__supabaseClients[SUPABASE_URL] = supabaseClient;
 
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');

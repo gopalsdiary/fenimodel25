@@ -120,7 +120,6 @@
 	<div id="container" class="container">
 		<!-- groups will be rendered here -->
 	</div>
-  <script src="./auth-check.js"></script>
 	<script>
 		// --- Supabase client init for update operations ---
 		// Reuse existing project credentials (same as other pages)
@@ -132,14 +131,18 @@
 				// Reuse existing client
 				supabaseClient = window.supabaseClient;
 			} else if(window.supabase){
-				window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+				window.__supabaseClients = window.__supabaseClients || {};
+				window.supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+				window.__supabaseClients[SUPABASE_URL] = window.supabaseClient;
 				supabaseClient = window.supabaseClient;
 			} else {
 				// dynamically inject script if missing
 				const s = document.createElement('script');
 				s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 				s.onload = () => { 
+					window.__supabaseClients = window.__supabaseClients || {};
 					window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
+					window.__supabaseClients[SUPABASE_URL] = window.supabaseClient;
 					supabaseClient = window.supabaseClient;
 				};
 				document.head.appendChild(s);

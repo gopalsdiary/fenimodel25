@@ -46,8 +46,19 @@ async function checkAuthenticationAndRedirect() {
         const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
         
-        // Use a unique client instance for auth checking to avoid conflicts
-        const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        // Use shared client to avoid multiple instances
+        window.__supabaseClients = window.__supabaseClients || {};
+        let authClient = window.__supabaseClients[supabaseUrl];
+        if (!authClient) {
+            authClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+                auth: {
+                    persistSession: true,
+                    autoRefreshToken: true
+                }
+            });
+            window.__supabaseClients[supabaseUrl] = authClient;
+        }
+        
         const { data: { session }, error } = await authClient.auth.getSession();
         
         if (error || !session) {
@@ -93,7 +104,19 @@ function setupAuthStateListener() {
             const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
             const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
             
-            const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+            // Use shared client
+            window.__supabaseClients = window.__supabaseClients || {};
+            let authClient = window.__supabaseClients[supabaseUrl];
+            if (!authClient) {
+                authClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+                    auth: {
+                        persistSession: true,
+                        autoRefreshToken: true
+                    }
+                });
+                window.__supabaseClients[supabaseUrl] = authClient;
+            }
+            
             authClient.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
                     console.log('User signed out, redirecting to login...');
