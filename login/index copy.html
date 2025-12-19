@@ -371,7 +371,7 @@
             window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
             window.__supabaseClients[supabaseUrl] = window.supabaseClient;
         }
-        const supabase = window.supabaseClient;
+        const supabaseClient = window.supabaseClient;
 
         // Check for error parameters in URL on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -441,7 +441,7 @@
                 console.log("Attempting admin login with username:", username);
                 
                 // Query the admin table
-                const { data: admins, error: adminsError } = await supabase
+                const { data: admins, error: adminsError } = await supabaseClient
                     .from('admin')
                     .select('*');
                 
@@ -453,7 +453,7 @@
                 if (!admins || admins.length === 0) {
                     console.log("No admin accounts found in database");
                     // If there are no admins, create a default admin account
-                    const { data: newAdmin, error: createError } = await supabase
+                    const { data: newAdmin, error: createError } = await supabaseClient
                         .from('admin')
                         .insert([
                             { 

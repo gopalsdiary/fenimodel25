@@ -128,7 +128,7 @@
       window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
       window.__supabaseClients[supabaseUrl] = window.supabaseClient;
     }
-    const supabase = window.supabaseClient;
+    const supabaseClient = window.supabaseClient;
 
     const tableName = 'student_database';
 
@@ -173,7 +173,7 @@
 
     async function logout() {
       try {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
       } catch (e) {
         console.error('Logout error:', e);
       }
@@ -187,7 +187,7 @@
 
         console.log('Loading data from table:', tableName);
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*');
 
@@ -506,7 +506,7 @@
           mother_mobile: updatedMotherMobile || null
         };
 
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from(tableName)
           .update(updates)
           .eq('iid', iid);

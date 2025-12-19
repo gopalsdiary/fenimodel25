@@ -111,14 +111,14 @@
     const SUPABASE_ANON_KEY = '#';
     // --------------------------------------------------
 
-    let supabase;
+    let supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
       window.__supabaseClients = window.__supabaseClients || {};
-      supabase = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      window.__supabaseClients[SUPABASE_URL] = supabase;
+      supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.__supabaseClients[SUPABASE_URL] = supabaseClient;
     } else {
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
     // Get form elements
@@ -164,7 +164,7 @@
 
     async function getNextSL(selectedDate) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('attendence_entry')
           .select('attendence_sl')
           .eq('attendence_date', selectedDate)
@@ -193,7 +193,7 @@
         const nextSL = await getNextSL(date);
 
         // Insert attendance record
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('attendence_entry')
           .insert([{
             attendence_sl: nextSL,

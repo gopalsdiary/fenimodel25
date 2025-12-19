@@ -776,12 +776,12 @@
           window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
           window.__supabaseClients[supabaseUrl] = window.supabaseClient;
         }
-        const supabase = window.supabaseClient;
+        const supabaseClient = window.supabaseClient;
 
         // Authentication Protection - Check if user is logged in
         async function checkAuthentication() {
             try {
-                const { data: { session }, error } = await supabase.auth.getSession();
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
                 
                 if (error || !session) {
                     // No valid session, redirect to login page
@@ -801,7 +801,7 @@
         }
 
         // Listen for auth state changes
-        supabase.auth.onAuthStateChange((event, session) => {
+        supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || !session) {
                 console.log('User signed out or session expired, redirecting...');
                 window.location.href = './index.html';
@@ -836,7 +836,7 @@
                 logoutBtn.textContent = 'Logging out...';
                 logoutBtn.disabled = true;
                 
-                const { error } = await supabase.auth.signOut();
+                const { error } = await supabaseClient.auth.signOut();
                 
                 if (error) {
                     throw error;
@@ -868,7 +868,7 @@
 
             let hasUser = false;
             try{
-                const { data: { user } } = await supabase.auth.getUser();
+                const { data: { user } } = await supabaseClient.auth.getUser();
                 if(user){
                     const name = user.user_metadata?.full_name || user.email || fallbackName || 'Admin';
                     headerCenter.textContent = `Welcome, ${name}`;
@@ -876,7 +876,7 @@
                     
                     // Setup session monitoring - check every 5 minutes
                     setInterval(async () => {
-                        const { data: { session } } = await supabase.auth.getSession();
+                        const { data: { session } } = await supabaseClient.auth.getSession();
                         if (!session) {
                             console.log('Session expired, redirecting to login...');
                             window.location.href = './index.html';
@@ -1076,11 +1076,11 @@
 
                 try {
                     // First, verify current password by attempting to sign in
-                    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+                    const { data: { user }, error: getUserError } = await supabaseClient.auth.getUser();
                     if (getUserError) throw getUserError;
 
                     // Update password
-                    const { error } = await supabase.auth.updateUser({
+                    const { error } = await supabaseClient.auth.updateUser({
                         password: newPassword
                     });
 

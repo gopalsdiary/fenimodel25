@@ -145,7 +145,7 @@
 		const supabaseUrl='https://rtfefxghfbtirfnlbucb.supabase.co';
 		const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 		let supabaseClient;
-		function initSupabaseClient(){ if(supabaseClient) return supabaseClient; if(!window.supabase) return null; try{ supabaseClient=window.supabase.createClient(supabaseUrl,supabaseKey); return supabaseClient; }catch(e){ console.warn('Supabase init failed',e); return null; } }
+		function initSupabaseClient(){ if(supabaseClient) return supabaseClient; if(!window.supabase) return null; try{ window.__supabaseClients = window.__supabaseClients || {}; supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl,supabaseKey); window.__supabaseClients[supabaseUrl] = supabaseClient; return supabaseClient; }catch(e){ console.warn('Supabase init failed',e); return null; } }
 		function waitForSupabase(maxAttempts=40){ return new Promise(resolve=>{ let attempts=0;(function poll(){ attempts++; if(window.supabase){ resolve(true); return;} if(attempts>=maxAttempts){ resolve(false); return;} setTimeout(poll,100); })(); }); }
 
 		async function loadFiltersFromDB(){ if(!supabaseClient) supabaseClient=initSupabaseClient(); if(!supabaseClient){ updateStatus('Supabase not available, using cache'); initCacheFallback(); return; }

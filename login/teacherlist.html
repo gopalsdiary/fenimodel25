@@ -124,7 +124,7 @@
         window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
         window.__supabaseClients[supabaseUrl] = window.supabaseClient;
       }
-      const supabase = window.supabaseClient;
+      const supabaseClient = window.supabaseClient;
       const TABLE = 'teacher_database';
 
     // ---------- State ----------
@@ -153,7 +153,7 @@
     // ---------- Fetch & Render ----------
     async function loadTeachers() {
       setStatus(globalStatus, 'Loading teachers...');
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from(TABLE)
         .select('iid, teacher_name_en, sector, designation_en, mobile_number_en, teacher_email_id, nid_number_en, join_date, pp_photo')
         .order('iid', { ascending: true });
@@ -213,7 +213,7 @@
   async function openModal(rowMeta){
       // Fetch full row fresh to ensure latest data (including columns not listed in table)
       setStatus(globalStatus, 'Loading full record for IID '+rowMeta.iid+' ...');
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from(TABLE)
         .select('*')
         .eq('iid', rowMeta.iid)
@@ -383,7 +383,7 @@
         const newData = formDataObject();
         // Remove empty string -> null for cleaner DB
         Object.keys(newData).forEach(k=>{ if(newData[k]==='') newData[k]=null; });
-        const { data, error } = await supabase.from(TABLE).insert(newData).select('*').single();
+        const { data, error } = await supabaseClient.from(TABLE).insert(newData).select('*').single();
         if(error){ setStatus(modalStatus,'Create failed: '+error.message,'err'); saveBtn.disabled=false; cancelBtn.disabled=false; return; }
         // push new row to datasets
         allRows.push(data);
@@ -400,7 +400,7 @@
   updated.iid = currentEdit.iid;
   const changes = diffChanges(currentEdit, updated);
       if(Object.keys(changes).length===0){ setStatus(modalStatus,'No changes','ok'); saveBtn.disabled=false; cancelBtn.disabled=false; return; }
-      const { error } = await supabase.from(TABLE).update(changes).eq('iid', currentEdit.iid);
+      const { error } = await supabaseClient.from(TABLE).update(changes).eq('iid', currentEdit.iid);
       if(error){ setStatus(modalStatus,'Update failed: '+error.message,'err'); saveBtn.disabled=false; cancelBtn.disabled=false; return; }
       // merge changes into currentEdit & allRows
       Object.assign(currentEdit, changes);

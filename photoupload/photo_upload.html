@@ -723,8 +723,8 @@
     </div>
 
     <!-- Supabase JavaScript Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	  <script src="../login/auth-check_copy.js"></script>
+    <script src="../login/auth-check_copy.js"></script>
+	  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Configuration
         const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
@@ -736,7 +736,12 @@
         const tableName = 'student_database';
 
         // Initialize Supabase client
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        window.__supabaseClients = window.__supabaseClients || {};
+                let supabaseClient = window.__supabaseClients[supabaseUrl];
+                if (!supabaseClient) {
+                    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+                    window.__supabaseClients[supabaseUrl] = supabaseClient;
+        }
 
         // Global variables
         let currentStudent = null;
@@ -800,7 +805,7 @@
         async function initializeFilters() {
             try {
                 // Load basic data to populate session and class filters without showing students
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from(tableName)
                     .select('active_class, active_section')
                     .order('active_class', { ascending: true })
@@ -921,7 +926,7 @@
                 showStatus('Loading students...', 'success');
                 tbody.innerHTML = '<tr><td colspan="15">Loading...</td></tr>';
 
-                let query = supabase
+                let query = supabaseClient
                     .from(tableName)
                     .select('iid, active_class, active_section, active_roll, student_name_en, father_name_en, father_mobile, student_photo_url, birth_certificate_url, registration_card_url')
                     .order('active_class', { ascending: true })
@@ -1543,7 +1548,7 @@
         }
 
         async function updateStudentPhoto(iid, photoUrl) {
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from(tableName)
                 .update({ student_photo_url: photoUrl })
                 .eq('iid', iid);
@@ -1898,7 +1903,7 @@
             const updateData = {};
             updateData[column] = documentUrl;
             
-            const { error } = await supabase
+            const { error } = await supabaseClient
                 .from(tableName)
                 .update(updateData)
                 .eq('iid', iid);

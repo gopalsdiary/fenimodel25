@@ -111,7 +111,12 @@
 	// Supabase config (reads/writes to student_database.student_photo_url)
 	const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 	const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-	const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+	window.__supabaseClients = window.__supabaseClients || {};
+	let supabaseClient = window.__supabaseClients[supabaseUrl];
+	if (!supabaseClient && typeof window !== 'undefined' && window.supabase) {
+		supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+		window.__supabaseClients[supabaseUrl] = supabaseClient;
+	}
 	const tableName = 'student_database';
 
 	// Utility
@@ -380,12 +385,12 @@
 
 		// after rendering rows, populate Database Url (student_photo_url) from Supabase
 		async function populateDbUrlsForRendered(){
-			if(!supabase) return;
+			if(!supabaseClient) return;
 			const rows = Array.from(tbody.querySelectorAll('tr'));
 			const iids = rows.map(r=>r.dataset.iid).filter(Boolean);
 			if(iids.length===0) return;
 			try{
-				const { data, error } = await supabase.from(tableName).select('iid, student_photo_url').in('iid', iids);
+				const { data, error } = await supabaseClient.from(tableName).select('iid, student_photo_url').in('iid', iids);
 				if(error){ console.error('Supabase fetch error', error); return; }
 				const map = new Map();
 				for(const r of data || []) map.set(String(r.iid), r.student_photo_url || '');
@@ -426,7 +431,7 @@
 					const tr = btn.closest('tr');
 					const status = tr.querySelector('.status');
 					status.textContent = '';
-					if(!supabase){ status.textContent = 'Supabase not available'; return; }
+					if(!supabaseClient){ status.textContent = 'Supabase not available'; return; }
 					// read Photo Url CSV from column 7 (link or input)
 					const csvCell = tr.querySelector('td:nth-child(7)');
 					let csvUrl = '';
@@ -442,7 +447,7 @@
 					btn.disabled = true;
 					status.textContent = 'Saving…';
 					try{
-						const { data, error } = await supabase.from(tableName).update({ student_photo_url: csvUrl }).eq('iid', iid).select();
+						const { data, error } = await supabaseClient.from(tableName).update({ student_photo_url: csvUrl }).eq('iid', iid).select();
 						if(error){ throw error; }
 						// update DB cell and UI
 						const dbCell = tr.querySelector('td:nth-child(9)');
@@ -466,7 +471,7 @@
 
 		// Bulk upload: Upload all rows where CSV match badge (left badge) is 'yes' and DB not set
 		async function bulkUploadMatched(){
-			if(!supabase){ setStatus('Supabase not available'); return; }
+			if(!supabaseClient){ setStatus('Supabase not available'); return; }
 			const rows = Array.from(tbody.querySelectorAll('tr'));
 			// select rows where CSV badge (first .match-badge in .match-cell) has 'yes' class OR where CSV cell contains a direct link that matches iid
 			const candidates = [];
@@ -496,7 +501,7 @@
 				if(status) status.textContent = 'Saving…';
 				if(uploadBtn) uploadBtn.disabled = true;
 				try{
-					const { data, error } = await supabase.from(tableName).update({ student_photo_url: csvUrl }).eq('iid', iid).select();
+					const { data, error } = await supabaseClient.from(tableName).update({ student_photo_url: csvUrl }).eq('iid', iid).select();
 					if(error) throw error;
 					// update UI
 					const dbCell = tr.querySelector('td:nth-child(9)');

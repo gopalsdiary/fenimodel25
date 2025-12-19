@@ -193,14 +193,14 @@
     const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 
-    let supabase;
+    let supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
       window.__supabaseClients = window.__supabaseClients || {};
-      supabase = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      window.__supabaseClients[SUPABASE_URL] = supabase;
+      supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.__supabaseClients[SUPABASE_URL] = supabaseClient;
     } else {
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
     function showMessage(message, type) {
@@ -216,7 +216,7 @@
       const tbody = document.getElementById('issuedBooksBody');
 
       try {
-        let query = supabase
+        let query = supabaseClient
           .from('library_book_issue')
           .select('*')
           .is('return_date', null)
@@ -262,7 +262,7 @@
           }
 
           // Get book title from library_book table
-          const { data: bookData } = await supabase
+          const { data: bookData } = await supabaseClient
             .from('library_book')
             .select('title')
             .eq('tracking_number', issue.tracking_number)
@@ -295,7 +295,7 @@
       const returnDate = new Date().toISOString().split('T')[0];
 
       try {
-        const { error } = await supabase
+        const { error } = await supabaseClient
           .from('library_book_issue')
           .update({ 
             return_date: returnDate,

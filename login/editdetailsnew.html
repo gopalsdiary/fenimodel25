@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <!-- Authentication Protection -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./auth-check_copy.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <title>Edit Details</title>
   <style>
   /* Clean monochromatic design with white and shadows only */
@@ -399,7 +399,7 @@
       window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
       window.__supabaseClients[supabaseUrl] = window.supabaseClient;
     }
-    const supabase = window.supabaseClient;
+    const supabaseClient = window.supabaseClient;
     const tableName = 'student_database';
 
     // ImgBB configuration for photo uploads
@@ -433,7 +433,7 @@
     // Check if IID already exists in idcard_data table
     async function checkIdCardStatus(iid) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('idcard_data')
           .select('iid')
           .eq('iid', Number(iid))
@@ -478,7 +478,7 @@
         idCardBtn.disabled = true;
         idCardBtn.textContent = 'Submitting...';
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('idcard_data')
           .insert([{ iid: Number(iid) }]);
 
@@ -582,7 +582,7 @@
         // First load field order
         await loadFieldOrder();
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
           .eq('iid', Number(iid))
@@ -1041,7 +1041,7 @@
       updateBtn.disabled = true;
       updateBtn.textContent = 'Updating...';
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .update(payload)
           .eq('iid', Number(iid));
@@ -1586,7 +1586,7 @@
       const updateData = {};
       updateData[fieldName] = value;
       
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from(tableName)
         .update(updateData)
         .eq('iid', Number(iid));

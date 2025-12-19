@@ -106,7 +106,7 @@
     // This block preserves existing behavior for local/dev use. Consider moving keys to a server endpoint.
     const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseClient = createClient(supabaseUrl, supabaseKey)
 
     const loginBtn = document.getElementById('loginBtn')
     const msg = document.getElementById('msg')
@@ -135,7 +135,7 @@
       }
       loginBtn.disabled = true
       loginBtn.textContent = 'Signing in...'
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password })
       loginBtn.disabled = false
       loginBtn.textContent = 'Sign In'
       if(error){ 

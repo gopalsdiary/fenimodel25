@@ -182,7 +182,7 @@
       window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
       window.__supabaseClients[supabaseUrl] = window.supabaseClient;
     }
-    const supabase = window.supabaseClient;
+    const supabaseClient = window.supabaseClient;
 
     const tableName = 'student_database';
 
@@ -261,7 +261,7 @@
   // Discover which session columns actually exist (run once)
   async function discoverSessionColumns(){
     try {
-      const { data, error } = await supabase.from(tableName).select('*').limit(1);
+      const { data, error } = await supabaseClient.from(tableName).select('*').limit(1);
       if(error) { console.warn('discoverSessionColumns error', error); return; }
       const sample = data && data[0] ? Object.keys(data[0]) : [];
       sample.forEach(k=>{
@@ -420,7 +420,7 @@
         }
         // Select all possible session-specific columns to support display across sessions
         const selectCols = buildSelectCols();
-        let q = supabase.from(tableName).select(selectCols).eq(classKey, classValue);
+        let q = supabaseClient.from(tableName).select(selectCols).eq(classKey, classValue);
         if(sessionFilter && sessionFilter.value){
           // Filter by session column if present
           q = q.eq('session', sessionFilter.value);
@@ -480,7 +480,7 @@
       }
       try {
         statusEl.textContent = 'Loading classes...';
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select(`${classKey}`)
           .not(classKey, 'is', null);
@@ -507,7 +507,7 @@
       }
       try {
         statusEl.textContent = 'Loading sections...';
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select(`${sectionKey}, ${classKey}`)
           .eq(classKey, cls)
@@ -555,7 +555,7 @@
           round++;
           statusEl.textContent = `Loading... fetched ${allData.length} rows (batch ${round})`;
           // build paginated query and optionally apply session filter
-          let q = supabase.from(tableName)
+          let q = supabaseClient.from(tableName)
             .select(buildSelectCols())
             .gt('iid', lastId);
           if(sessionFilter && sessionFilter.value){
@@ -771,7 +771,7 @@
       modalNotice.textContent = '';
       currentIID = iid;
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
       .eq('iid', Number(iid))
@@ -796,7 +796,7 @@
     // Open a read-only view modal for a given IID
     async function openViewByIID(iid){
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
           .eq('iid', Number(iid))
@@ -910,7 +910,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .update(payload)
           .eq('iid', Number(currentIID));

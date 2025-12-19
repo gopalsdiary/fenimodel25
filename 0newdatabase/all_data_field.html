@@ -65,14 +65,19 @@
     </div>
   </div>
 
-  <!-- Supabase client -->
+  <!-- Auth check must load before Supabase to avoid redeclaration -->
+  <script src="../login/auth-check_copy.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../login/auth-check_copy.js"></script>
   <script>
     // Use the same project URL/key used elsewhere in this repo
     const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    window.__supabaseClients = window.__supabaseClients || {};
+    let supabaseClient = window.__supabaseClients[supabaseUrl];
+    if (!supabaseClient) {
+      supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+      window.__supabaseClients[supabaseUrl] = supabaseClient;
+    }
 
     const tableName = 'student_database';
   // Simple 10-minute TTL cache (localStorage) with SWR behavior
@@ -175,7 +180,7 @@
       try{
         // Test Supabase connection first
         console.log('Testing Supabase connection...');
-        const testQuery = await supabase
+        const testQuery = await supabaseClient
           .from(tableName)
           .select('iid')
           .limit(1);
@@ -219,7 +224,7 @@
           // Primary attempt with specific columns
           let data, error;
           try{
-            ({ data, error } = await supabase
+            ({ data, error } = await supabaseClient
               .from(tableName)
               .select(selectArg)
               .gt('iid', lastId)
@@ -233,7 +238,7 @@
           // Fallback: if error due to column list, retry with '*'
           if(error || !Array.isArray(data)){
             console.warn('Retrying batch with select("*") due to error or invalid data. original error:', error);
-            ({ data, error } = await supabase
+            ({ data, error } = await supabaseClient
               .from(tableName)
               .select('*')
               .gt('iid', lastId)
@@ -349,7 +354,7 @@
       modalNotice.textContent = '';
       currentIID = iid;
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
       .eq('iid', Number(iid))
@@ -414,7 +419,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .update(payload)
           .eq('iid', Number(currentIID));

@@ -428,14 +428,14 @@
     // Supabase client is now configured
 
     // Prefer the UMD client created on window (admin-dashboard does this). Fall back to ESM createClient import.
-    let supabase;
+    let supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
       window.__supabaseClients = window.__supabaseClients || {};
-      supabase = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      window.__supabaseClients[SUPABASE_URL] = supabase;
+      supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.__supabaseClients[SUPABASE_URL] = supabaseClient;
     } else {
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
     const tableBody = document.querySelector('#reportTable tbody');
@@ -473,7 +473,7 @@
     // Load class filter
     async function loadClassFilter() {
       try {
-        const { data: classes, error: classError } = await supabase
+        const { data: classes, error: classError } = await supabaseClient
           .from('student_database')
           .select('active_class')
           .not('active_class', 'is', null)
@@ -510,7 +510,7 @@
       }
 
       try {
-        const { data: sections, error: sectionError } = await supabase
+        const { data: sections, error: sectionError } = await supabaseClient
           .from('student_database')
           .select('active_section')
           .eq('active_class', selectedClass)
@@ -563,7 +563,7 @@
 
       try {
         // Get students (include those without RFID)
-        const { data: students, error: studentError } = await supabase
+        const { data: students, error: studentError } = await supabaseClient
           .from('student_database')
           .select('iid, rfid_card_no, student_name_en, active_roll, active_class, active_section')
           .eq('active_class', selectedClass)
@@ -576,7 +576,7 @@
         const selectedDate = dateFilter.value;
 
         // Get attendance entries for selected date
-        const { data: attendanceData, error: attendanceError } = await supabase
+        const { data: attendanceData, error: attendanceError } = await supabaseClient
           .from('attendence_entry')
           .select('*')
           .eq('attendence_date', selectedDate)

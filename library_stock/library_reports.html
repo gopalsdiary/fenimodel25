@@ -313,14 +313,14 @@
     const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 
-    let supabase;
+    let supabaseClient;
     if (window.supabase && typeof window.supabase.createClient === 'function') {
       window.__supabaseClients = window.__supabaseClients || {};
-      supabase = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-      window.__supabaseClients[SUPABASE_URL] = supabase;
+      supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      window.__supabaseClients[SUPABASE_URL] = supabaseClient;
     } else {
       const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
-      supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
 
     window.switchTab = function(tab) {
@@ -338,13 +338,13 @@
     async function loadOverview() {
       try {
         // Total Books
-        const { count: bookCount } = await supabase
+        const { count: bookCount } = await supabaseClient
           .from('library_book')
           .select('*', { count: 'exact', head: true });
         document.getElementById('totalBooks').textContent = bookCount || 0;
 
         // Currently Issued
-        const { count: issuedCount } = await supabase
+        const { count: issuedCount } = await supabaseClient
           .from('library_book_issue')
           .select('*', { count: 'exact', head: true })
           .is('return_date', null);
@@ -355,7 +355,7 @@
 
         // Overdue
         const today = new Date().toISOString().split('T')[0];
-        const { count: overdueCount } = await supabase
+        const { count: overdueCount } = await supabaseClient
           .from('library_book_issue')
           .select('*', { count: 'exact', head: true })
           .is('return_date', null)
@@ -363,13 +363,13 @@
         document.getElementById('overdueBooks').textContent = overdueCount || 0;
 
         // Total Students
-        const { count: studentCount } = await supabase
+        const { count: studentCount } = await supabaseClient
           .from('student_database')
           .select('*', { count: 'exact', head: true });
         document.getElementById('totalStudents').textContent = studentCount || 0;
 
         // Total Returned
-        const { count: returnedCount } = await supabase
+        const { count: returnedCount } = await supabaseClient
           .from('library_book_issue')
           .select('*', { count: 'exact', head: true })
           .not('return_date', 'is', null);
@@ -382,7 +382,7 @@
     window.loadIssuedBooks = async function() {
       const tbody = document.getElementById('issuedBooksBody');
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('library_book_issue')
           .select('*')
           .is('return_date', null)
@@ -427,7 +427,7 @@
       const tbody = document.getElementById('overdueBooksBody');
       try {
         const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('library_book_issue')
           .select('*')
           .is('return_date', null)
@@ -471,7 +471,7 @@
     window.loadPopularBooks = async function() {
       const tbody = document.getElementById('popularBooksBody');
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('library_book_issue')
           .select('tracking_number');
 
@@ -497,7 +497,7 @@
 
         for (let i = 0; i < popularBooks.length; i++) {
           const [tracking, count] = popularBooks[i];
-          const { data: bookData } = await supabase
+          const { data: bookData } = await supabaseClient
             .from('library_book')
             .select('title, author, category')
             .eq('tracking_number', parseInt(tracking))

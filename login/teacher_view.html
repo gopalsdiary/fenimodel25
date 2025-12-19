@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>View Teacher Details</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./auth-check_copy.js"></script>
+  <script src="./auth-check_copy.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f6f8fa;color:#24292f;}
@@ -63,7 +63,7 @@ if (!window.supabaseClient) {
   window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
   window.__supabaseClients[supabaseUrl] = window.supabaseClient;
 }
-const supabase = window.supabaseClient;
+const supabaseClient = window.supabaseClient;
 const TABLE='teacher_database';
 
 const FIELD_GROUPS = [
@@ -134,7 +134,7 @@ async function load(){
   const iid = qs('iid');
   if(!iid){ setStatus(loadStatus,'Missing iid parameter','err'); return; }
   setStatus(loadStatus,'Loading teacher #'+iid+' ...');
-  const { data, error } = await supabase.from(TABLE).select('*').eq('iid', iid).single();
+  const { data, error } = await supabaseClient.from(TABLE).select('*').eq('iid', iid).single();
   if(error){ setStatus(loadStatus,'Load failed: '+error.message,'err'); return; }
   currentTeacher = data;
   buildDisplay(data);

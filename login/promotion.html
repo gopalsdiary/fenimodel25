@@ -193,8 +193,8 @@
         }
     </style>
     <!-- Authentication Protection -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="./auth-check_copy.js"></script>
+    <script src="./auth-check_copy.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="container">
@@ -250,7 +250,7 @@
           window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
           window.__supabaseClients[supabaseUrl] = window.supabaseClient;
         }
-        const supabase = window.supabaseClient;
+        const supabaseClient = window.supabaseClient;
 
         let selectedStudent = null;
         let studentsData = [];
@@ -270,7 +270,7 @@
             try {
                 container.innerHTML = '<div class="loading">Loading students...</div>';
 
-                let baseQuery = supabase
+                let baseQuery = supabaseClient
                     .from('student_database')
                     .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
 
@@ -299,7 +299,7 @@
                 // Fallback: if zero results and section filter present, attempt case-insensitive match
                 if ((data?.length === 0) && filterSection) {
                     console.log('Primary query empty; attempting case-insensitive section match with ilike');
-                    let fallbackQuery = supabase
+                    let fallbackQuery = supabaseClient
                         .from('student_database')
                         .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
                     if (filterClass) {
@@ -459,7 +459,7 @@
             try {
                 // Check for duplicate roll in target class/section
                 console.log('Checking for duplicate roll...');
-                const { data: existing, error: checkError } = await supabase
+                const { data: existing, error: checkError } = await supabaseClient
                     .from('student_database')
                     .select('iid')
                     .eq('class_2026', class2026)
@@ -488,7 +488,7 @@
                     session: 2026 // Force session to 2026 as number
                 });
                 
-                const { data: updateData, error } = await supabase
+                const { data: updateData, error } = await supabaseClient
                     .from('student_database')
                     .update({
                         class_2026: class2026,
@@ -534,7 +534,7 @@
             try {
                 container.innerHTML = '<div class="loading">Loading all students for testing...</div>';
                 
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('student_database')
                     .select('iid, student_name_en, class_2025, section_2025, roll_2025, session')
                     .limit(10);

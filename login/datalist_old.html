@@ -100,7 +100,7 @@
       window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
       window.__supabaseClients[supabaseUrl] = window.supabaseClient;
     }
-    const supabase = window.supabaseClient;
+    const supabaseClient = window.supabaseClient;
 
     const tableName = 'previous_data2025';
 
@@ -140,7 +140,7 @@
     let accumulated = [];
     while(true){
       statusEl.textContent = `Loading rows ${start + 1} ...`;
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from(tableName)
         .select('*')
         .order('IID', { ascending: true })
@@ -175,7 +175,7 @@
     async function updateOverallCount(){
       try{
         // use select count via head:true or exact count; Supabase JS v2 supports .select('*', { count: 'exact' })
-        const res = await supabase
+        const res = await supabaseClient
           .from(tableName)
           .select('IID', { count: 'exact', head: false })
           .limit(1);
@@ -325,7 +325,7 @@
       modalNotice.textContent = '';
       currentIID = iid;
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
           .eq('IID', Number(iid))
@@ -390,7 +390,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .update(payload)
           .eq('IID', Number(currentIID));

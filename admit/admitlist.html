@@ -8,8 +8,8 @@
 	<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
 	<!-- Supabase JS (needed for dynamic filters) -->
 	 
-	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	  <script src="../login/auth-check_copy.js"></script>
+	<script src="../login/auth-check_copy.js"></script>
+	  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 	<style>
 		:root{ --bg:#f6f7f9; --card:#fff; --muted:#6b7280; --border:#e5e7eb; --primary:#0ea5e9; }
@@ -214,7 +214,7 @@
 		function initSupabaseClient(){
 			if(supabaseClient) return supabaseClient;
 			if(!window.supabase) return null;
-			try { supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); return supabaseClient; } catch(e){ console.warn('Supabase init failed', e); return null; }
+			try { window.__supabaseClients = window.__supabaseClients || {}; supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey); window.__supabaseClients[supabaseUrl] = supabaseClient; return supabaseClient; } catch(e){ console.warn('Supabase init failed', e); return null; }
 		}
 
 		function waitForSupabase(maxAttempts=40){

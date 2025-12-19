@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
   <!-- Authentication Protection -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./auth-check_copy.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <title>Entry - Show & Edit</title>
   <style>
     /* reduce base font size by 20% and use Kalpurush font */
@@ -84,7 +84,7 @@
       window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
       window.__supabaseClients[supabaseUrl] = window.supabaseClient;
     }
-    const supabase = window.supabaseClient;
+    const supabaseClient = window.supabaseClient;
 
     const tableName = 'student_database';
 
@@ -157,7 +157,7 @@
         while(hasMore) {
           statusEl.textContent = `Loading... (${allData.length} records loaded)`;
           
-          const { data, error } = await supabase
+          const { data, error } = await supabaseClient
             .from(tableName)
             .select('*')
             .gt('iid', lastId)
@@ -282,7 +282,7 @@
       modalNotice.textContent = '';
       currentIID = iid;
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
       .eq('iid', Number(iid))
@@ -347,7 +347,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .update(payload)
           .eq('iid', Number(currentIID));

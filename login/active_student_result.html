@@ -91,7 +91,7 @@
       window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
       window.__supabaseClients[supabaseUrl] = window.supabaseClient;
     }
-    const supabase = window.supabaseClient;
+    const supabaseClient = window.supabaseClient;
 
     const tableName = 'student_database';
   // Simple 10-minute TTL cache (localStorage) with SWR behavior
@@ -171,7 +171,7 @@
       try{
         // Test Supabase connection first
         console.log('Testing Supabase connection...');
-        const testQuery = await supabase
+        const testQuery = await supabaseClient
           .from(tableName)
           .select('iid')
           .limit(1);
@@ -202,7 +202,7 @@
           const selectArg = 'iid, session, student_name_en, father_mobile, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
           let data, error;
           try{
-            ({ data, error } = await supabase
+            ({ data, error } = await supabaseClient
               .from(tableName)
               .select(selectArg)
               .order('iid', { ascending: true })
@@ -213,7 +213,7 @@
           }
           if(error || !Array.isArray(data)){
             console.warn('Retrying initial page with select("*") due to error or invalid data. original error:', error);
-            ({ data, error } = await supabase
+            ({ data, error } = await supabaseClient
               .from(tableName)
               .select('*')
               .order('iid', { ascending: true })
@@ -258,7 +258,7 @@
           const selectArg = 'iid, session, student_name_en, father_mobile, class_2025, section_2025, roll_2025, roll_2024, roll_2023';
           let data, error;
           try{
-            ({ data, error } = await supabase
+            ({ data, error } = await supabaseClient
               .from(tableName)
               .select(selectArg)
               .gt('iid', lastId)
@@ -270,7 +270,7 @@
           }
           if(error || !Array.isArray(data)){
             console.warn('Retrying bg batch with select("*") due to error or invalid data. original error:', error);
-            ({ data, error } = await supabase
+            ({ data, error } = await supabaseClient
               .from(tableName)
               .select('*')
               .gt('iid', lastId)
@@ -339,7 +339,7 @@
     // Function to check existing active_section data
     async function getExistingActiveSectionData(iids) {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('active_section')
           .select('iid, active_class, active_section, active_roll, session, student_name_en, student_key')
           .in('iid', iids);
@@ -389,7 +389,7 @@
         console.log('Saving to active_section table:', dataToSave);
 
         // Insert or update in active_section table
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('active_section')
           .upsert(dataToSave, { onConflict: 'iid' });
 
@@ -592,7 +592,7 @@
       modalNotice.textContent = '';
       currentIID = iid;
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .select('*')
       .eq('iid', Number(iid))
@@ -657,7 +657,7 @@
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
       try{
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from(tableName)
           .update(payload)
           .eq('iid', Number(currentIID));
@@ -798,7 +798,7 @@
                 student_key: (function(){ const fm = String(row['father_mobile']||'').replace(/\D/g,''); return fm.length>6?fm.slice(-6):(fm||null); })()
               };
 
-              const { error } = await supabase
+              const { error } = await supabaseClient
                 .from('active_section')
                 .upsert(dataToSave, { onConflict: 'iid' });
 

@@ -74,7 +74,12 @@
 	// Supabase config (reads student_database.student_photo_url per iid)
 	const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 	const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-	const supabase = (typeof window !== 'undefined' && window.supabase) ? window.supabase.createClient(supabaseUrl, supabaseKey) : null;
+	window.__supabaseClients = window.__supabaseClients || {};
+	let supabaseClient = window.__supabaseClients[supabaseUrl];
+	if (!supabaseClient && typeof window !== 'undefined' && window.supabase) {
+		supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+		window.__supabaseClients[supabaseUrl] = supabaseClient;
+	}
 	const tableName = 'student_database';
 
 	// Utility
@@ -150,14 +155,14 @@
 	// Load DB photo urls from Supabase for a list of iids and store in a map
 	let dbPhotoMap = new Map(); // iid -> student_photo_url
 	async function loadDbPhotoUrlsForCache(){
-		if(!supabase) { dbPhotoMap = new Map(); return; }
+		if(!supabaseClient) { dbPhotoMap = new Map(); return; }
 		const iids = (allStudents||[]).map(s=>s.iid).filter(Boolean);
 		const map = new Map();
 		const batchSize = 1000;
 		for(let i=0;i<iids.length;i+=batchSize){
 			const batch = iids.slice(i, i+batchSize);
 			try{
-				const { data, error } = await supabase.from(tableName).select('iid, student_photo_url').in('iid', batch);
+				const { data, error } = await supabaseClient.from(tableName).select('iid, student_photo_url').in('iid', batch);
 				if(error){ console.error('Supabase fetch error', error); continue; }
 				for(const r of data||[]){ if(r && r.iid) map.set(String(r.iid), r.student_photo_url || ''); }
 			}catch(err){ console.error('loadDbPhotoUrlsForCache error', err); }
@@ -343,8 +348,8 @@
 						if(imgEl && newUrl){ imgEl.src = newUrl; }
 						// Persist to Supabase and update local map + links
 						try{
-							if(newUrl && supabase){
-								await supabase.from(tableName).update({ student_photo_url: newUrl }).eq('iid', iid);
+							if(newUrl && supabaseClient){
+								await supabaseClient.from(tableName).update({ student_photo_url: newUrl }).eq('iid', iid);
 								dbPhotoMap.set(String(iid), newUrl);
 								// Update download links in the row
 								const aAvatar = tr.querySelector('a.dl-avatar'); if(aAvatar) aAvatar.href = newUrl;

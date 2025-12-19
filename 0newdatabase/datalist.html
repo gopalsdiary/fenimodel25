@@ -99,8 +99,8 @@
 		</div>
 	</div>
 
+	<script src="../login/auth-check_copy.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-	  <script src="../login/auth-check_copy.js"></script>
 
 	<script>
 		//Datalist (datalist.html) → localStorage key: datalist_rows_v2
@@ -108,7 +108,12 @@
 		// Supabase config (same project as other pages)
 		const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
 		const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-		const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+		window.__supabaseClients = window.__supabaseClients || {};
+		let supabaseClient = window.__supabaseClients[supabaseUrl];
+		if (!supabaseClient) {
+			supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+			window.__supabaseClients[supabaseUrl] = supabaseClient;
+		}
 		const tableName = 'student_database';
 
 		// Cache (1000000 minutes for faster perceived load, reduced from 30m for freshness)
@@ -182,7 +187,7 @@
 				// Primary attempt
 				let data, error;
 				try{
-					({ data, error } = await supabase
+					({ data, error } = await supabaseClient
 						.from(tableName)
 						.select(selectArg)
 						.gt('iid', lastId)
@@ -192,7 +197,7 @@
 				
 				// Fallback to '*' if needed
 				if(error || !Array.isArray(data)){
-					({ data, error } = await supabase
+					({ data, error } = await supabaseClient
 						.from(tableName)
 						.select('*')
 						.gt('iid', lastId)
@@ -592,7 +597,7 @@
 			}
 			
 			try {
-				const { error } = await supabase
+				const { error } = await supabaseClient
 					.from(tableName)
 					.update(updateData)
 					.eq('iid', iid);

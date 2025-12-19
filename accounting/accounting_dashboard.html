@@ -594,7 +594,7 @@
     // Supabase Configuration
     const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // User Authorization
     const allowedEditors = [
@@ -790,11 +790,11 @@
     async function loadDashboard() {
       try {
         // Try to load real data from database
-        const user = (await supabase.auth.getUser()).data.user;
+        const user = (await supabaseClient.auth.getUser()).data.user;
         userAreaEl.textContent = user?.email || 'Guest User';
         
         // Check if accounting tables exist
-        const { data, error } = await supabase.from('acc_transactions').select('*').limit(1);
+        const { data, error } = await supabaseClient.from('acc_transactions').select('*').limit(1);
         
         if (error) {
           // Show demo data if tables don't exist
@@ -865,7 +865,7 @@
 
     async function loadKPIData(fromDate, toDate, campus, bengali) {
       // Today's income
-      const { data: todayIncome } = await supabase
+      const { data: todayIncome } = await supabaseClient
         .from('acc_transactions')
         .select('total_amount')
         .eq('transaction_type', 'INCOME')
@@ -879,7 +879,7 @@
       // Monthly income
       const monthStart = new Date();
       monthStart.setDate(1);
-      const { data: monthlyIncome } = await supabase
+      const { data: monthlyIncome } = await supabaseClient
         .from('acc_transactions')
         .select('total_amount')
         .eq('transaction_type', 'INCOME')
@@ -891,7 +891,7 @@
       document.getElementById('monthlyIncome').textContent = formatBDT(monthlyTotal, bengali);
 
       // Outstanding fees
-      const { data: outstanding } = await supabase
+      const { data: outstanding } = await supabaseClient
         .from('acc_student_bills')
         .select('outstanding_amount')
         .in('status', ['PENDING', 'PARTIAL', 'OVERDUE']);
@@ -900,7 +900,7 @@
       document.getElementById('outstanding').textContent = formatBDT(outstandingTotal, bengali);
 
       // Bank balance (sum from all bank accounts)
-      const { data: bankAccounts } = await supabase
+      const { data: bankAccounts } = await supabaseClient
         .from('acc_bank_accounts')
         .select('current_balance')
         .eq('is_active', true);
@@ -910,7 +910,7 @@
     }
 
     async function loadRecentTransactions(fromDate, toDate, campus, bengali) {
-      const { data: transactions } = await supabase
+      const { data: transactions } = await supabaseClient
         .from('acc_transactions')
         .select('transaction_date, description, transaction_type, payment_method, total_amount, approval_status')
         .order('transaction_date', { ascending: false })
@@ -937,7 +937,7 @@
     }
 
     async function loadOutstandingFees(campus, bengali) {
-      const { data: outstanding } = await supabase
+      const { data: outstanding } = await supabaseClient
         .from('acc_student_bills')
         .select('student_id, student_name, class_section, outstanding_amount, due_date, bill_id')
         .in('status', ['PENDING', 'PARTIAL', 'OVERDUE'])
@@ -1028,7 +1028,7 @@
       }
 
       try {
-        const { data: students } = await supabase
+        const { data: students } = await supabaseClient
           .from('student_database')
           .select('iid, student_name_en, class_section')
           .or(`iid.ilike.%${query}%,student_name_en.ilike.%${query}%`)
@@ -1063,7 +1063,7 @@
 
     async function loadStudentOutstanding(studentId) {
       try {
-        const { data: bills } = await supabase
+        const { data: bills } = await supabaseClient
           .from('acc_student_bills')
           .select('bill_id, outstanding_amount, due_date, bill_month, total_amount')
           .eq('student_id', studentId)
@@ -1127,7 +1127,7 @@
         const receiptNumber = await generateReceiptNumber();
         
         // Create payment record
-        const { data: collection, error: collectionError } = await supabase
+        const { data: collection, error: collectionError } = await supabaseClient
           .from('acc_fee_collections')
           .insert({
             receipt_number: receiptNumber,
@@ -1180,7 +1180,7 @@
       const prefix = 'REC' + today.getFullYear().toString().slice(-2) + (today.getMonth() + 1).toString().padStart(2, '0');
       
       // Get last receipt number for this month
-      const { data: lastReceipt } = await supabase
+      const { data: lastReceipt } = await supabaseClient
         .from('acc_fee_collections')
         .select('receipt_number')
         .like('receipt_number', `${prefix}%`)
@@ -1213,7 +1213,7 @@
       const today = new Date();
       const prefix = 'EXP' + today.getFullYear().toString().slice(-2) + (today.getMonth() + 1).toString().padStart(2, '0');
       
-      const { data: lastExpense } = await supabase
+      const { data: lastExpense } = await supabaseClient
         .from('acc_expenses')
         .select('voucher_number')
         .like('voucher_number', `${prefix}%`)
@@ -1251,7 +1251,7 @@
         }
 
         // Insert expense record
-        const { error: expenseError } = await supabase
+        const { error: expenseError } = await supabaseClient
           .from('acc_expenses')
           .insert(formData);
 

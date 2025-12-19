@@ -228,7 +228,9 @@ ${registrationLine}As per record ${hisHer} date of birth is ${r.dob || ''} and h
       status.textContent = 'Loading…';
       try {
         if(!window.supabase){ status.textContent='Supabase lib missing'; status.classList.add('error'); return; }
-        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        window.__supabaseClients = window.__supabaseClients || {};
+        supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
+        window.__supabaseClients[supabaseUrl] = supabaseClient;
         const params = new URLSearchParams(location.search);
         const iidParam = (params.get('iid')||'').trim();
         const slParam = (params.get('sl')||'').trim();
