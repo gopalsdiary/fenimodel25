@@ -102,7 +102,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 </div>
 
 <!-- Modal for Add/Edit -->
-<div class="modal" id="formModal" aria-hidden="true" role="dialog" aria-label="Admission form dialog">
+<div class="modal" id="formModal" role="dialog" aria-label="Admission form dialog">
   <div class="modal-card">
     <button class="close-btn" id="closeModalBtn">✕</button>
     
@@ -128,7 +128,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 <footer>© <span id="year"></span> Feni Model High School · Admission Data</footer>
 
 <!-- Approve modal for class/section/session override -->
-<div class="modal" id="approveModal" aria-hidden="true" role="dialog" aria-label="Approve admission overrides">
+<div class="modal" id="approveModal" role="dialog" aria-label="Approve admission overrides">
   <div class="modal-card" style="max-width:520px;">
     <button class="close-btn" id="closeApproveModal">✕</button>
     <h3 style="margin:0 0 .6rem;font-size:1rem;display:flex;align-items:center;gap:.4rem;">Finalize Approval</h3>
@@ -347,7 +347,8 @@ function buildForm(row){
   const formStudentName = document.getElementById('formStudentName');
   const formStudentDetails = document.getElementById('formStudentDetails');
   
-  if(row && row.student_photo_url && row.student_photo_url.trim() !== ''){
+  // Validate photo URL (must be a valid URL, not empty, not just '-' or whitespace)
+  if(row && row.student_photo_url && row.student_photo_url.trim() !== '' && row.student_photo_url.trim() !== '-' && (row.student_photo_url.startsWith('http://') || row.student_photo_url.startsWith('https://') || row.student_photo_url.startsWith('data:'))){
     formStudentPhoto.src = row.student_photo_url;
     formStudentPhoto.onerror = function(){
       formPhotoContainer.style.display = 'none';
@@ -461,7 +462,6 @@ function openForm(row){
   editingRow=row||null; 
   buildForm(row||{}); 
   document.getElementById('formModal').classList.add('open'); 
-  document.getElementById('formModal').setAttribute('aria-hidden','false'); 
   document.getElementById('deleteBtn').style.display = row? 'inline-flex':'none'; 
   const approveBtn = document.getElementById('approveBtn');
   if(row){
@@ -480,7 +480,7 @@ function openForm(row){
     approveBtn.style.display = 'none';
   }
 }
-function closeForm(){ document.getElementById('formModal').classList.remove('open'); document.getElementById('formModal').setAttribute('aria-hidden','true'); }
+function closeForm(){ document.getElementById('formModal').classList.remove('open'); }
 
 // Save form
 async function saveForm(stayOpen=false){
@@ -674,12 +674,10 @@ function openApproveModal(){
   document.getElementById('approveSession').value = editingRow.session || '';
   document.getElementById('approveAlert').style.display='none';
   modal.classList.add('open');
-  modal.setAttribute('aria-hidden','false');
 }
 function closeApproveModal(){
   const modal=document.getElementById('approveModal');
   modal.classList.remove('open');
-  modal.setAttribute('aria-hidden','true');
 }
 
 // Event bindings

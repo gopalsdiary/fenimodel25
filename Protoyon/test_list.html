@@ -236,7 +236,7 @@
   </main>
   
   <!-- Modal for Protoyon Entry Form -->
-  <div id="protoyonModal" aria-hidden="true" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:200;">
+  <div id="protoyonModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:200;">
     <div role="dialog" aria-modal="true" aria-labelledby="protoyonModalTitle" style="background:#fff;border-radius:14px;max-width:560px;width:100%;padding:1rem 1.15rem;box-shadow:0 10px 38px -8px rgba(0,0,0,.35);font-family:'Kalpurush','Noto Sans Bengali','Hind Siliguri','SolaimanLipi','Vrinda','Siyam Rupali',system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;position:relative;">
       <button type="button" id="closeProtoyonModal" aria-label="Close" style="position:absolute;top:8px;right:8px;background:#e2e8f0;border:1px solid #cbd5e1;border-radius:6px;padding:.25rem .5rem;font-size:.65rem;font-weight:600;cursor:pointer;">✕</button>
       <h2 id="protoyonModalTitle" style="margin:.25rem 0 1rem;font-size:1rem;">নতুন প্রত্যয়ন এন্ট্রি</h2>
@@ -316,7 +316,6 @@
 
     function showModal(){ 
       modal.style.display='flex';
-      modal.removeAttribute('aria-hidden'); // Remove aria-hidden when showing
       
       // Only reset status if not editing
       if (!window.editingRecord) {
@@ -336,7 +335,6 @@
     
     function hideModal(){ 
       modal.style.display='none';
-      modal.setAttribute('aria-hidden', 'true'); // Set aria-hidden when hiding
       form.reset(); 
       // Clear editing state
       window.editingRecord = null;
