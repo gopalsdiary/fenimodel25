@@ -1,6 +1,32 @@
 // Authentication Check Utility for Login Protected Pages
 // This script should be included in all pages within the login folder (except index.html)
 
+// IMPORTANT: Wrap in a function scope so constants don't collide with page scripts.
+(function () {
+    'use strict';
+
+    // Supabase config (keep consistent across webadmin pages)
+    const SUPABASE_URL = 'https://iujlulmdjudhcbeqynit.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx1bG1kanVkaGNiZXF5bml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjE4MDgsImV4cCI6MjA3Mjk5NzgwOH0.d0s84VID4VD76TB0Qtpmx4pgoQ_7T96JVH0Rm03h3rU';
+
+function getSharedSupabaseClient() {
+    if (window.__fenimodelSupabaseClient) {
+        return window.__fenimodelSupabaseClient;
+    }
+
+    if (typeof window.supabase === 'undefined' || typeof window.supabase.createClient !== 'function') {
+        return null;
+    }
+
+    window.__fenimodelSupabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true
+        }
+    });
+    return window.__fenimodelSupabaseClient;
+}
+
 // Wait for Supabase to be loaded and then check authentication
 function waitForSupabaseAndCheck() {
     let attempts = 0;
@@ -42,12 +68,13 @@ function waitForSupabaseAndCheck() {
 // Authentication check function
 async function checkAuthenticationAndRedirect() {
     try {
-        // Initialize Supabase client with the same config as other pages
-        const supabaseUrl = 'https://iujlulmdjudhcbeqynit.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx1bG1kanVkaGNiZXF5bml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjE4MDgsImV4cCI6MjA3Mjk5NzgwOH0.d0s84VID4VD76TB0Qtpmx4pgoQ_7T96JVH0Rm03h3rU';
-        
-        // Use a unique client instance for auth checking to avoid conflicts
-        const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+        const authClient = getSharedSupabaseClient();
+        if (!authClient) {
+            console.error('Supabase not available for auth check');
+            window.location.href = './index.html';
+            return false;
+        }
+
         const { data: { session }, error } = await authClient.auth.getSession();
         
         if (error || !session) {
@@ -69,38 +96,18 @@ async function checkAuthenticationAndRedirect() {
     }
 }
 
-// Auto-run authentication check when script loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Add a small delay to ensure other scripts have time to initialize
-    setTimeout(waitForSupabaseAndCheck, 500);
-});
-
-// Also run immediately if DOM is already loaded
-if (document.readyState === 'loading') {
-    // Script loaded before DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(waitForSupabaseAndCheck, 500);
-    });
-} else {
-    // DOM is already ready
-    setTimeout(waitForSupabaseAndCheck, 500);
-}
-
 // Listen for auth state changes and redirect if user logs out
 function setupAuthStateListener() {
     try {
-        if (typeof window.supabase !== 'undefined') {
-            const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-            
-            const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-            authClient.auth.onAuthStateChange((event, session) => {
-                if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
-                    console.log('User signed out, redirecting to login...');
-                    window.location.href = './index.html';
-                }
-            });
-        }
+        const authClient = getSharedSupabaseClient();
+        if (!authClient) return;
+
+        authClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+                console.log('User signed out, redirecting to login...');
+                window.location.href = './index.html';
+            }
+        });
     } catch (error) {
         console.error('Error setting up auth state listener:', error);
     }
@@ -126,30 +133,20 @@ setTimeout(setupAuthStateListener, 2000);
             console.log('Session expired due to 15 minutes of inactivity');
             
             // Perform logout
-            if (typeof window.supabase !== 'undefined') {
-                try {
-                    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
-                    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-                    
-                    const authClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-                    authClient.auth.signOut().then(() => {
-                        // Show timeout message briefly before redirect
-                        alert('Session expired after 15 minutes of inactivity. Please log in again.');
-                        window.location.href = './index.html';
-                    }).catch(() => {
-                        // Force redirect even if signOut fails
-                        window.location.href = './index.html';
-                    });
-                } catch (error) {
-                    console.error('Error during inactivity logout:', error);
-                    // Force redirect on error
-                    window.location.href = './index.html';
-                }
-            } else {
-                // No Supabase available, just redirect
+            const authClient = getSharedSupabaseClient();
+            if (!authClient) {
                 alert('Session expired after 15 minutes of inactivity. Please log in again.');
                 window.location.href = './index.html';
+                return;
             }
+
+            authClient.auth.signOut().then(() => {
+                alert('Session expired after 15 minutes of inactivity. Please log in again.');
+                window.location.href = './index.html';
+            }).catch((error) => {
+                console.error('Error during inactivity logout:', error);
+                window.location.href = './index.html';
+            });
         }, INACTIVITY_TIMEOUT);
     }
     
@@ -172,4 +169,16 @@ setTimeout(setupAuthStateListener, 2000);
     });
     
     console.log('Inactivity timeout set to 15 minutes');
+})();
+
+// Schedule auth check once
+function scheduleAuthCheck() {
+    setTimeout(waitForSupabaseAndCheck, 500);
+}
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleAuthCheck);
+    } else {
+        scheduleAuthCheck();
+    }
 })();

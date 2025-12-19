@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Authentication Super Admin Dashboard</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
@@ -185,7 +185,26 @@
         // Supabase configuration
         const SUPABASE_URL = 'https://iujlulmdjudhcbeqynit.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx1bG1kanVkaGNiZXF5bml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjE4MDgsImV4cCI6MjA3Mjk5NzgwOH0.d0s84VID4VD76TB0Qtpmx4pgoQ_7T96JVH0Rm03h3rU';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // NOTE: If opened via file://, the browser origin can be opaque (Origin: null)
+        // which may break session persistence across pages.
+        if (window.location.protocol === 'file:') {
+            const alertContainer = document.getElementById('alert-container');
+            if (alertContainer) {
+                alertContainer.innerHTML = `<div class="alert alert-error">এই পেজটি <b>file://</b> দিয়ে খুললে লগইন/সেশন কাজ নাও করতে পারে। দয়া করে Live Server/localhost দিয়ে চালান।</div>`;
+            }
+        }
+
+        if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+            throw new Error('Supabase library not loaded. Check internet/CDN access.');
+        }
+
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true
+            }
+        });
 
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
@@ -222,7 +241,7 @@
             const loginBtn = document.getElementById('loginBtn');
             setLoading(loginBtn,true);
             try{
-                const { error } = await supabase.auth.signInWithPassword({ email, password });
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
                 if(error) throw error;
                 
                 // Check if there's a returnTo parameter
@@ -250,7 +269,7 @@
             if(password !== confirmPassword){ showAlert(signupAlertContainer,'Passwords do not match!'); return; }
             setLoading(signupBtn,true);
             try{
-                const { error } = await supabase.auth.signUp({ email, password, options:{ data:{ full_name:name } } });
+                const { error } = await supabaseClient.auth.signUp({ email, password, options:{ data:{ full_name:name } } });
                 if(error) throw error;
                 showAlert(signupAlertContainer,'Account created! Check your email.','success');
                 setTimeout(()=>{ showForm(loginForm); },1800);
@@ -264,7 +283,7 @@
             const resetBtn = document.getElementById('resetBtn');
             setLoading(resetBtn,true);
             try{
-                const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
                 if(error) throw error;
                 showAlert(resetAlertContainer,'Password reset link sent!','success');
                 setTimeout(()=>{ showForm(loginForm); },2000);
@@ -272,7 +291,7 @@
             finally{ setLoading(resetBtn,false); }
         }
 
-        async function handleLogout(){ try{ const { error } = await supabase.auth.signOut(); if(error) throw error; showForm(loginForm); loginFormEl.reset(); signupFormEl.reset(); resetFormEl.reset(); }catch(err){ console.error('Logout error',err); } }
+        async function handleLogout(){ try{ const { error } = await supabaseClient.auth.signOut(); if(error) throw error; showForm(loginForm); loginFormEl.reset(); signupFormEl.reset(); resetFormEl.reset(); }catch(err){ console.error('Logout error',err); } }
 
         function showDashboard(user){ const name = user.user_metadata?.full_name || user.email.split('@')[0]; userName.textContent = `Welcome, ${name}!`; userEmail.textContent = user.email; userAvatar.innerHTML = getInitials(name); showForm(dashboard); }
 
@@ -285,7 +304,7 @@
         forgotPasswordBtn.addEventListener('click', ()=>{ showForm(resetForm); });
         backToLoginBtn.addEventListener('click', ()=>{ showForm(loginForm); });
 
-        supabase.auth.getSession().then(({ data:{ session } })=>{ 
+        supabaseClient.auth.getSession().then(({ data:{ session } })=>{ 
             if(session){ 
                 // Check if there's a returnTo parameter
                 const urlParams = new URLSearchParams(window.location.search);
@@ -298,7 +317,7 @@
                 }
             } 
         });
-        supabase.auth.onAuthStateChange((event, session)=>{ if(event==='SIGNED_IN' && session){ console.log('User signed in'); } else if(event==='SIGNED_OUT'){ showForm(loginForm); } });
+        supabaseClient.auth.onAuthStateChange((event, session)=>{ if(event==='SIGNED_IN' && session){ console.log('User signed in'); } else if(event==='SIGNED_OUT'){ showForm(loginForm); } });
 
         document.getElementById('confirmPassword').addEventListener('input', function(){ const pass=document.getElementById('signupPassword').value; const v=this.value; if(v && pass!==v){ this.classList.add('error'); this.classList.remove('success'); } else if(v && pass===v){ this.classList.add('success'); this.classList.remove('error'); } else { this.classList.remove('error','success'); } });
     </script>

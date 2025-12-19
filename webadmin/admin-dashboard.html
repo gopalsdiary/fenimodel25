@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Admin Dashboard - Feni Model School</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-      <script src="./auth-check_copy.js"></script>
+    <script src="./auth-check.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -786,12 +786,15 @@
         // Supabase Configuration
         const SUPABASE_URL = 'https://iujlulmdjudhcbeqynit.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1amx1bG1kanVkaGNiZXF5bml0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc0MjE4MDgsImV4cCI6MjA3Mjk5NzgwOH0.d0s84VID4VD76TB0Qtpmx4pgoQ_7T96JVH0Rm03h3rU';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+
+        // Reuse a shared client if auth-check.js already created one.
+        const supabaseClient = window.__fenimodelSupabaseClient || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: {
                 persistSession: true,
                 autoRefreshToken: true
             }
         });
+        window.__fenimodelSupabaseClient = supabaseClient;
 
         // ImageBB Configuration
         const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
@@ -1083,7 +1086,7 @@
         // Initialize Application
         async function init() {
             // Check authentication
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
                 console.log('No session found, redirecting to login...');
                 window.location.href = '../webadmin/index.html';
@@ -1100,7 +1103,7 @@
         
         // Helper function to log RLS troubleshooting info
         async function logRLSInfo() {
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (session) {
                 console.log('=== RLS Troubleshooting Info ===');
                 console.log('User ID:', session.user.id);
@@ -1120,7 +1123,7 @@
             }
             
             try {
-                const { error } = await supabase.auth.signOut();
+                const { error } = await supabaseClient.auth.signOut();
                 if (error) throw error;
                 
                 showAlert('Logged out successfully!', 'success');
@@ -1178,14 +1181,14 @@
                 showLoading(true);
                 
                 // Try with created_at first
-                let { data, error } = await supabase
+                let { data, error } = await supabaseClient
                     .from(tableName)
                     .select('*')
                     .order('created_at', { ascending: false });
                 
                 // If created_at doesn't exist, try without ordering
                 if (error && error.message.includes('created_at')) {
-                    const result = await supabase
+                    const result = await supabaseClient
                         .from(tableName)
                         .select('*');
                     data = result.data;
@@ -1458,7 +1461,7 @@
             e.preventDefault();
             
             // Check if user is authenticated
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
                 showAlert('You must be logged in to perform this action', 'error');
                 window.location.href = '../webadmin/index.html';
@@ -1507,7 +1510,7 @@
             try {
                 if (currentEditId) {
                     // Update
-                    const { error } = await supabase
+                    const { error } = await supabaseClient
                         .from(currentTable)
                         .update(data)
                         .eq('id', currentEditId);
@@ -1516,7 +1519,7 @@
                     showAlert('Successfully updated!', 'success');
                 } else {
                     // Insert
-                    const { error } = await supabase
+                    const { error } = await supabaseClient
                         .from(currentTable)
                         .insert([data]);
                     
@@ -1547,7 +1550,7 @@
             }
             
             // Check if user is authenticated
-            const { data: { session } } = await supabase.auth.getSession();
+            const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) {
                 showAlert('You must be logged in to perform this action', 'error');
                 window.location.href = '../webadmin/index.html';
@@ -1555,7 +1558,7 @@
             }
             
             try {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from(currentTable)
                     .delete()
                     .eq('id', id);
