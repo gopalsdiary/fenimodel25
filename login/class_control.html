@@ -371,6 +371,7 @@
                             <th>SL</th>
                             <th>Teacher Name</th>
                             <th>Teacher Email</th>
+                            <th>Mobile Number</th>
                             <th>Access Class</th>
                             <th>Access Section</th>
                             <th>IID</th>
@@ -378,7 +379,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="7" class="loading">Loading data...</td></tr>
+                        <tr><td colspan="8" class="loading">Loading data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -543,7 +544,7 @@
                 const tbody = document.getElementById('tableBody');
                 
                 if (!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1rem;color:var(--text-soft);">No data found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:1rem;color:var(--text-soft);">No data found</td></tr>';
                     document.getElementById('dataStatus').textContent = 'No access records found';
                     return;
                 }
@@ -552,18 +553,22 @@
                 const teacherMap = {};
                 teachersData.forEach(teacher => {
                     if (teacher.iid) {
-                        teacherMap[teacher.iid] = teacher.teacher_name_en || teacher.teacher_name_bn || 'Unknown';
+                        teacherMap[teacher.iid] = {
+                            name: teacher.teacher_name_en || teacher.teacher_name_bn || 'Unknown',
+                            mobile: teacher.mobile_number_en || '-'
+                        };
                     }
                 });
                 
                 tbody.innerHTML = '';
                 data.forEach((row, index) => {
-                    const teacherName = teacherMap[row.iid] || '-';
+                    const teacherInfo = teacherMap[row.iid] || { name: '-', mobile: '-' };
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${index + 1}</td>
-                        <td>${teacherName}</td>
+                        <td>${teacherInfo.name}</td>
                         <td>${row.teacher_email || '-'}</td>
+                        <td>${teacherInfo.mobile}</td>
                         <td>${row.access_class || '-'}</td>
                         <td>${row.access_section || '-'}</td>
                         <td>${row.iid || '-'}</td>
