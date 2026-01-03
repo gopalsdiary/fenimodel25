@@ -217,7 +217,7 @@
                 <select id="filter_section">
                     <option value="">All Sections</option>
                     <option value="golap">GOLAP</option>
-                    <option value="mor">MORNING</option>
+                    <option value="MORNING">MORNING</option>
                     <option value="shapla">SHAPLA</option>
                 </select>
             </div>
@@ -226,10 +226,13 @@
                 <select id="filter_session">
                     <option value="">All Sessions</option>
                     <option value="2025">2025</option>
-                    <option value="2026">2026</option>
                 </select>
             </div>
             <button class="btn-primary" onclick="loadStudents()">Load Students</button>
+        </div>
+        
+        <div style="margin-top: 16px; text-align: center;">
+            <button class="btn-success" onclick="updateAllStudents()" style="font-size: 16px; padding: 14px 28px;">Update All</button>
         </div>
 
         <div class="promotion-container">
@@ -286,11 +289,9 @@
                     console.log('Attempt section filter eq(section_2025, value):', filterSection);
                     baseQuery = baseQuery.eq('section_2025', filterSection);
                 }
-                if (filterSession) {
-                    const numericSession = isNaN(Number(filterSession)) ? filterSession : Number(filterSession);
-                    console.log('Attempt session filter eq(session, value):', numericSession);
-                    baseQuery = baseQuery.eq('session', numericSession);
-                }
+                // Session filter removed to show both promoted and non-promoted students
+                // We filter by class_2025 and section_2025 only
+                console.log('Session filter skipped to show all students (promoted and non-promoted)');
 
                 console.log('Executing primary query...');
                 let { data, error } = await baseQuery.order('class_2025').order('section_2025').order('roll_2025');
@@ -298,29 +299,92 @@
 
                 // Fallback: if zero results and section filter present, attempt case-insensitive match
                 if ((data?.length === 0) && filterSection) {
-                    console.log('Primary query empty; attempting case-insensitive section match with ilike');
-                    let fallbackQuery = supabaseClient
-                        .from('student_database')
-                        .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
-                    if (filterClass) {
-                        const numericClass = isNaN(Number(filterClass)) ? filterClass : Number(filterClass);
-                        fallbackQuery = fallbackQuery.eq('class_2025', numericClass);
+                    console.log('Primary query empty; attempting multiple section patterns');
+                    
+                    // Try different section patterns (MORNING, mor, morning, etc.)
+                    const sectionPatterns = [
+                        filterSection.toLowerCase(),
+                        filterSection.toUpperCase(),
+                        filterSection,
+                        filterSection === 'MORNING' ? 'mor' : filterSection,
+                        filterSection === 'mor' ? 'MORNING' : filterSection
+                    ];
+                    
+                    for (const pattern of sectionPatterns) {
+                        console.log('Trying section pattern:', pattern);
+                        let fallbackQuery = supabaseClient
+                            .from('student_database')
+                            .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
+                        
+                        if (filterClass) {
+                            const numericClass = isNaN(Number(filterClass)) ? filterClass : Number(filterClass);
+                            fallbackQuery = fallbackQuery.eq('class_2025', numericClass);
+                        }
+                        
+                        // Try both eq and ilike
+                        fallbackQuery = fallbackQuery.or(`section_2025.eq.${pattern},section_2025.ilike.%${pattern}%`);
+                        
+                        const fallback = await fallbackQuery.order('class_2025').order('section_2025').order('roll_2025');
+                        
+                        if (!fallback.error && fallback.data && fallback.data.length > 0) {
+                            data = fallback.data;
+                            console.log('Fallback query SUCCESS with pattern:', pattern, 'count:', data.length);
+                            break;
+                        }
                     }
-                    if (filterSession) {
-                        const numericSession = isNaN(Number(filterSession)) ? filterSession : Number(filterSession);
-                        fallbackQuery = fallbackQuery.eq('session', numericSession);
-                    }
-                    // ilike pattern for section
-                    fallbackQuery = fallbackQuery.ilike('section_2025', filterSection.toLowerCase());
-                    const fallback = await fallbackQuery.order('class_2025').order('section_2025').order('roll_2025');
-                    if (!fallback.error) {
-                        data = fallback.data;
-                        console.log('Fallback query result count:', data?.length || 0);
-                    }
+                    
+                    console.log('Final fallback result count:', data?.length || 0);
                 }
 
                 console.log('Final result count:', data ? data.length : 0);
                 studentsData = data || [];
+                
+                // Fetch class_rank from exam_ann25 and exam_test_2025 tables
+                if (studentsData.length > 0) {
+                    const iids = studentsData.map(s => s.iid);
+                    
+                    // Fetch from exam_ann25
+                    const { data: examAnn25Data, error: examAnn25Error } = await supabaseClient
+                        .from('exam_ann25')
+                        .select('iid, class_rank')
+                        .in('iid', iids);
+                    
+                    // Fetch from exam_test_2025
+                    const { data: examTest2025Data, error: examTest2025Error } = await supabaseClient
+                        .from('exam_test_2025')
+                        .select('iid, class_rank')
+                        .in('iid', iids);
+                    
+                    // Merge class_rank data with student data
+                    const examDataMap = {};
+                    
+                    // First add from exam_ann25
+                    if (!examAnn25Error && examAnn25Data) {
+                        examAnn25Data.forEach(exam => {
+                            if (exam.class_rank) {
+                                examDataMap[exam.iid] = exam.class_rank;
+                            }
+                        });
+                    }
+                    
+                    // Then add from exam_test_2025 (will override if both exist)
+                    if (!examTest2025Error && examTest2025Data) {
+                        examTest2025Data.forEach(exam => {
+                            if (exam.class_rank) {
+                                examDataMap[exam.iid] = exam.class_rank;
+                            }
+                        });
+                    }
+                    
+                    // Add class_rank to students data
+                    studentsData = studentsData.map(student => ({
+                        ...student,
+                        class_rank: examDataMap[student.iid] || null
+                    }));
+                    
+                    console.log('Class rank data loaded:', examDataMap);
+                }
+                
                 displayStudents(studentsData);
             } catch (error) {
                 console.error('Error loading students:', error);
@@ -389,7 +453,7 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="number" class="promotion-input" id="roll_2026_${student.iid}" placeholder="Roll">
+                                    <input type="number" class="promotion-input" id="roll_2026_${student.iid}" placeholder="Roll" value="${student.class_rank || ''}">
                                     <div class="warning-text" id="warning_${student.iid}">Roll 2026 is required</div>
                                 </td>
                                 <td>
@@ -405,6 +469,129 @@
             `;
         }
 
+        // Update all students at once
+        async function updateAllStudents() {
+            if (studentsData.length === 0) {
+                alert('No students loaded. Please load students first.');
+                return;
+            }
+            
+            if (!confirm(`This will update all students who have Roll 2026 filled. Continue?`)) {
+                return;
+            }
+            
+            document.getElementById('message').innerHTML = '<div class="loading">Updating all students...</div>';
+            
+            let successCount = 0;
+            let skippedCount = 0;
+            let errorCount = 0;
+            const errors = [];
+            
+            for (const student of studentsData) {
+                const iid = student.iid;
+                const roll2026Input = document.getElementById(`roll_2026_${iid}`);
+                const class2026 = document.getElementById(`class_2026_${iid}`).value;
+                const section2026 = document.getElementById(`section_2026_${iid}`).value;
+                const roll2026 = roll2026Input ? roll2026Input.value : '';
+                
+                // Skip if no roll_2026
+                if (!roll2026) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                // Skip if missing class or section
+                if (!class2026 || !section2026) {
+                    skippedCount++;
+                    continue;
+                }
+                
+                try {
+                    // Check if student has class_rank
+                    const numericIid = parseInt(iid);
+                    const studentData = studentsData.find(s => s.iid == iid || s.iid === numericIid);
+                    
+                    if (!studentData) {
+                        errors.push(`IID ${iid}: Student data not found`);
+                        errorCount++;
+                        continue;
+                    }
+                    
+                    // If no class_rank, set fields to null
+                    if (!studentData.class_rank) {
+                        const { error } = await supabaseClient
+                            .from('student_database')
+                            .update({
+                                class_2026: null,
+                                section_2026: null,
+                                roll_2026: null,
+                                session: null
+                            })
+                            .eq('iid', iid);
+                        
+                        if (error) {
+                            errors.push(`IID ${iid}: ${error.message}`);
+                            errorCount++;
+                        } else {
+                            successCount++;
+                            // Update button to show completed
+                            const btn = document.querySelector(`button[onclick="promoteStudent('${iid}')"`);
+                            if (btn) {
+                                btn.textContent = 'Updated (NULL) ✓';
+                                btn.disabled = true;
+                            }
+                        }
+                        continue;
+                    }
+                    
+                    // If class_rank exists, update with promotion data
+                    const { error } = await supabaseClient
+                        .from('student_database')
+                        .update({
+                            class_2026: class2026,
+                            section_2026: section2026.toUpperCase(),
+                            roll_2026: parseInt(roll2026),
+                            session: 2026
+                        })
+                        .eq('iid', iid);
+                    
+                    if (error) {
+                        errors.push(`IID ${iid}: ${error.message}`);
+                        errorCount++;
+                    } else {
+                        successCount++;
+                        // Update button to show completed
+                        const btn = document.querySelector(`button[onclick="promoteStudent('${iid}')"`);
+                        if (btn) {
+                            btn.textContent = 'Promoted ✓';
+                            btn.disabled = true;
+                        }
+                    }
+                    
+                } catch (error) {
+                    errors.push(`IID ${iid}: ${error.message}`);
+                    errorCount++;
+                }
+            }
+            
+            // Show summary
+            let summaryMsg = `<div class="message success">`;
+            summaryMsg += `Update completed!<br>`;
+            summaryMsg += `✓ Successfully updated: ${successCount}<br>`;
+            if (skippedCount > 0) {
+                summaryMsg += `⊘ Skipped (no roll_2026): ${skippedCount}<br>`;
+            }
+            if (errorCount > 0) {
+                summaryMsg += `✗ Errors: ${errorCount}<br>`;
+                summaryMsg += `<small>${errors.slice(0, 5).join('<br>')}</small>`;
+            }
+            summaryMsg += `</div>`;
+            
+            document.getElementById('message').innerHTML = summaryMsg;
+            
+            alert(`Update completed!\nSuccess: ${successCount}\nSkipped: ${skippedCount}\nErrors: ${errorCount}`);
+        }
+        
         // Promote specific student
         async function promoteStudent(iid) {
             console.log('=== PROMOTE STUDENT START ===', iid);
@@ -426,6 +613,55 @@
             let roll2026 = document.getElementById(`roll_2026_${iid}`).value;
             
             console.log('Form values:', { class2026, section2026, roll2026 });
+            
+            // Check if student has class_rank (from exam tables)
+            // Convert iid to number for comparison (onclick passes string, DB has number)
+            const numericIid = parseInt(iid);
+            const studentData = studentsData.find(s => s.iid == iid || s.iid === numericIid);
+            console.log('Looking for student with iid:', iid, 'numeric:', numericIid, 'found:', studentData);
+            if (!studentData) {
+                console.error('Student data not found for iid:', iid);
+                alert('Student data not found!');
+                return;
+            }
+            
+            // If no class_rank, set Class 2026, Section 2026, Roll 2026 and Session to null
+            if (!studentData.class_rank) {
+                console.log('No class_rank found - setting Class 2026, Section 2026, Roll 2026, and Session to null');
+                
+                try {
+                    const { data: updateData, error } = await supabaseClient
+                        .from('student_database')
+                        .update({
+                            class_2026: null,
+                            section_2026: null,
+                            roll_2026: null,
+                            session: null
+                        })
+                        .eq('iid', iid)
+                        .select();
+                    
+                    if (error) {
+                        console.error('Update error:', error);
+                        throw error;
+                    }
+                    
+                    console.log('Database updated - fields set to null:', updateData);
+                    document.getElementById('message').innerHTML = `<div class="message success">Student ${studentName}: Class 2026, Section 2026, Roll 2026 and Session set to null (no class_rank found)</div>`;
+                    
+                    const btn = document.querySelector(`button[onclick="promoteStudent('${iid}')"]`);
+                    btn.textContent = 'Updated (NULL) ✓';
+                    btn.disabled = true;
+                    
+                } catch (error) {
+                    console.error('Error updating student:', error);
+                    alert('Database error: ' + error.message);
+                    document.getElementById('message').innerHTML = `<div class="message error">Error updating student: ${error.message}</div>`;
+                }
+                return;
+            }
+            
+            console.log('Class rank found:', studentData.class_rank);
             
             // Force session to 2026 regardless of input
             const sessionInput = document.getElementById(`session_${iid}`);
