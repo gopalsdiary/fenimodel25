@@ -102,6 +102,9 @@
 		<label for="sessionFilter">Session:</label>
 		<select id="sessionFilter">
 			<option value="">Select Session</option>
+			<option value="2024">2024</option>
+			<option value="2025">2025</option>
+			<option value="2026">2026</option>
 		</select>
 		<label for="classFilter">Class:</label>
 		<select id="classFilter" disabled>
@@ -164,8 +167,8 @@
 		const container = document.getElementById('container');
 		const statusEl = document.getElementById('status');
 
-		// Fixed columns always shown
-		const FIXED_COLS = ['iid','class_section_year','active_roll','student_name_en']; // SL is added separately
+		// Fixed columns always shown (hide class_section_year and active_roll)
+		const FIXED_COLS = ['iid','student_name_en']; // SL is added separately
 
 	// Master dataset removed; full data loaded on-demand for selected group
 	let columnSpec = [];
@@ -257,6 +260,9 @@
 			const set = new Set();
 			for(const r of currentGroupRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
 			FIXED_COLS.forEach(c=> set.delete(c));
+			// Do not offer these auto columns for selection
+			set.delete('class_section_year');
+			set.delete('active_roll');
 			set.delete('SL');
 			let cols = Array.from(set);
 			// If we loaded a preferred column order from dataorder.csv, sort by that order.
@@ -373,7 +379,7 @@
 			const table = document.createElement('table');
 			const thead = document.createElement('thead');
 			const htr = document.createElement('tr');
-			const headerCols = ['SL', 'iid', 'class_section_year', 'active_roll', 'student_name_en'];
+			const headerCols = ['SL', 'iid', 'student_name_en'];
 			selectedColumns.forEach(c => { headerCols.push(c + (selectedEditable === c ? ' (editable)' : '')); });
 			headerCols.push('Update');
 			headerCols.forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
@@ -393,13 +399,9 @@
 				let active_roll = '', active_class = '', active_section = '';
 				if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
 				else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
-				let csY = [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-');
-				if(!active_class) csY=''; // require class at minimum
-				const tdCSY = document.createElement('td'); tdCSY.textContent = escapeHtml(csY); tr.appendChild(tdCSY);
-				const tdAR = document.createElement('td'); tdAR.textContent = escapeHtml(active_roll==null?'':String(active_roll)); tr.appendChild(tdAR);
-				// Fixed: student_name_en
-				const nameEn = row.student_name_en ?? '';
-				const tdName = document.createElement('td'); tdName.textContent = escapeHtml(nameEn); tr.appendChild(tdName);
+			// Fixed: student_name_en (class_section_year and active_roll hidden as requested)
+			const nameEn = row.student_name_en ?? '';
+			const tdName = document.createElement('td'); tdName.textContent = escapeHtml(nameEn); tr.appendChild(tdName);
 
 				// Render selected columns: only selectedEditable is editable; others shown as text
 				selectedColumns.forEach(col=>{
@@ -481,7 +483,7 @@
 
 		selectedColumns = loadSelectedColumns();
 
-		/* ===================== NEW FILTER RENDER FLOW (Session -> Class -> Section) ===================== */
+		/* ===================== NEW FILTER RENDER FLOW (Class -> Section, Session=2025) ===================== */
 		let selectedSession = '';
 		let selectedClass = '';
 		let selectedSection = '';
@@ -502,26 +504,40 @@
 		}
 
 		function buildSessionOptions(){
-			const sessions = Array.from(new Set(liteRows.map(r => r.session).filter(v => v!=null))).sort((a,b)=> Number(a)-Number(b));
-			sessionFilterEl.innerHTML = '<option value="">Select Session</option>' + sessions.map(s=>`<option value="${s}">${s}</option>`).join('');
+			// Provide fixed session options for selection
+			sessionFilterEl.innerHTML = '<option value="">Select Session</option>\n\t\t\t<option value="2024">2024</option>\n\t\t\t<option value="2025">2025</option>\n\t\t\t<option value="2026">2026</option>';
 			classFilterEl.innerHTML = '<option value="">Select Class</option>';
 			sectionFilterEl.innerHTML = '<option value="">All Sections</option>';
 			classFilterEl.disabled = true; sectionFilterEl.disabled = true;
 		}
 
-		function buildClassOptions(){
-			if(!selectedSession){ return; }
+		async function buildClassOptions(){
+			if(!selectedSession) return; // need session selected
+			console.debug('buildClassOptions (edit): selectedSession=', selectedSession, 'liteRows=', liteRows ? liteRows.length : 0);
+			statusEl.textContent = 'Loading classes...';
 			const field = `class_${selectedSession}`; // e.g., class_2025
 			const classes = new Set();
-			liteRows.forEach(r=>{ if(String(r.session)===String(selectedSession)){ const v=r[field]; if(v!==undefined && v!==null && String(v).trim()!==''){ classes.add(String(v)); } } });
+			// derive classes from class_<session> field across liteRows (don't require row.session)
+			liteRows.forEach(r=>{ try{ const v = r && (r[field] !== undefined ? r[field] : (r[field.toUpperCase()]!==undefined ? r[field.toUpperCase()] : undefined)); if(v!==undefined && v!==null && String(v).trim()!==''){ classes.add(String(v)); } }catch(e){} });
+			// DB fallback if none found in liteRows
+			if(classes.size === 0 && typeof supabaseClient !== 'undefined' && supabaseClient){
+				try{
+					console.debug('buildClassOptions (edit): DB fallback for', field);
+					const { data: dbData, error: dbErr } = await supabaseClient.from('student_database').select(field).not(field, 'is', null).limit(20000);
+					if(!dbErr && dbData){ dbData.forEach(r=>{ const v = r && (r[field] !== undefined ? r[field] : (r[field.toUpperCase()]!==undefined ? r[field.toUpperCase()] : undefined)); if(v!==undefined && v!==null && String(v).trim()!=='') classes.add(String(v)); }); }
+					else if(dbErr) console.warn('DB fallback error', dbErr);
+				}catch(e){ console.warn('DB fallback exception', e); }
+			}
 			const sorted = Array.from(classes).sort((a,b)=>{ const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+			console.debug('buildClassOptions (edit): found classes=', sorted);
 			classFilterEl.innerHTML = '<option value="">Select Class</option>' + sorted.map(c=>`<option value="${c}">${c}</option>`).join('');
-			classFilterEl.disabled = false; sectionFilterEl.disabled = true; sectionFilterEl.innerHTML = '<option value="">All Sections</option>';
+			classFilterEl.disabled = sorted.length === 0; sectionFilterEl.disabled = true; sectionFilterEl.innerHTML = '<option value="">All Sections</option>';
+			statusEl.textContent = sorted.length ? 'Pick class' : 'No classes found for selected session';
 		}
 
 		function buildSectionOptions(){
-			if(!selectedSession || !selectedClass){ return; }
-			const rows = currentGroupRows; // already filtered by session+class
+			if(!selectedClass){ return; }
+			const rows = currentGroupRows; // already filtered by class
 			const sections = new Set();
 			rows.forEach(r=>{ const {active_section} = getActiveFields(r); if(active_section){ sections.add(String(active_section)); } });
 			const sorted = Array.from(sections).sort((a,b)=> String(a).localeCompare(String(b)));
@@ -530,7 +546,7 @@
 		}
 
 		function applySectionFilter(){
-			if(!selectedSession || !selectedClass){ latestFilteredRows = []; container.innerHTML=''; statusEl.textContent='Select Session & Class'; return; }
+			if(!selectedClass){ latestFilteredRows = []; container.innerHTML=''; statusEl.textContent='Select Class'; return; }
 			if(!currentGroupRows.length){ container.innerHTML=''; statusEl.textContent='No data for selection'; return; }
 			if(!selectedSection){
 				latestFilteredRows = currentGroupRows.slice();
@@ -559,17 +575,14 @@
 		}
 
 		async function loadGroupData(){
-			if(!selectedSession || !selectedClass){ return; }
+			if(!selectedClass){ return; }
 			statusEl.textContent='Loading data...';
 			try {
-				const { data, error } = await supabaseClient.from('student_database').select('*').eq('session', selectedSession).limit(20000);
+				const field = `class_${selectedSession}`; // e.g., class_2025
+				const { data, error } = await supabaseClient.from('student_database').select('*').eq(field, selectedClass).limit(20000);
 				if(error) throw error;
-				// filter by selected class
-				const filtered = (data||[]).filter(r=>{
-					const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass);
-				});
 				// exclude TC rows
-				currentGroupRows = filtered.filter(r=> !String(r.status||'').toUpperCase().includes('TC'));
+				currentGroupRows = (data||[]).filter(r=> !String(r.status||'').toUpperCase().includes('TC'));
 				allColumns = []; // reset for recompute
 				buildSectionOptions();
 				applySectionFilter();
@@ -578,10 +591,13 @@
 			}
 		}
 
-		// Event listeners
-		sessionFilterEl.addEventListener('change', ()=>{
-			selectedSession = sessionFilterEl.value; selectedClass=''; selectedSection='';
-			container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[]; buildClassOptions(); statusEl.textContent = selectedSession? 'Select Class' : 'Select Session';
+		// Allow selecting session; update classes on change
+		sessionFilterEl.addEventListener('change', async ()=>{
+			selectedSession = sessionFilterEl.value; console.debug('session changed (edit) ->', selectedSession, 'liteRows:', liteRows ? liteRows.length : 0);
+			selectedClass=''; selectedSection='';
+			container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[];
+			await buildClassOptions();
+			statusEl.textContent = selectedSession? 'Select Class' : 'Select Session';
 		});
 		classFilterEl.addEventListener('change', async ()=>{
 			selectedClass = classFilterEl.value; selectedSection=''; container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;

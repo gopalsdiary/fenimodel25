@@ -123,6 +123,9 @@
 		<label for="sessionFilter">Session:</label>
 		<select id="sessionFilter">
 			<option value="">Select Session</option>
+			<option value="2024">2024</option>
+			<option value="2025">2025</option>
+			<option value="2026">2026</option>
 		</select>
 		<label for="classFilter">Class:</label>
 		<select id="classFilter" disabled>
@@ -133,6 +136,8 @@
 			<option value="">All Sections</option>
 		</select>
 		<span id="status" class="status"></span>
+		<!-- Debug: shows computed classes and fallback status -->
+		<div id="debugClasses" style="font-size:12px;color:#334155;margin-left:8px;white-space:pre-wrap;"></div>
 		<div id="columnControls" class="column-controls"></div>
 	</div>
 
@@ -218,7 +223,7 @@
 	    try {
 	        const { data, error } = await supabaseClient
 	            .from('student_database')
-	            .select('session,class_2025,section_2025,class_2026,section_2026')
+	            .select('session,roll_2024,class_2024,section_2024,roll_2025,class_2025,section_2025,roll_2026,class_2026,section_2026')
 	            .limit(20000);
 	        if(error) throw error;
 	        statusEl.textContent='Select Session';
@@ -303,10 +308,17 @@
 		}
 		function buildColumnControls(columns){
 			if(!columnControlsEl) return;
+			console.debug('buildColumnControls: columns=', columns.length, 'selectedColumns before=', selectedColumns ? selectedColumns.length : 0);
 			// keep only selections that still exist
 			selectedColumns = (selectedColumns||[]).filter(c => columns.includes(c));
-			// if first load (no stored selection), select base cols
-			if(!selectedColumns.length){ selectedColumns = BASE_COLS.filter(c=>columns.includes(c)); saveSelectedColumns(); }
+			// if first load (no stored selection), select base cols (or first 4 columns if BASE_COLS not all in list)
+			if(!selectedColumns.length){ 
+				const baseCols = BASE_COLS.filter(c=>columns.includes(c));
+				selectedColumns = baseCols.length > 0 ? baseCols : columns.slice(0, Math.min(4, columns.length));
+				console.debug('buildColumnControls: auto-selected columns=', selectedColumns);
+				saveSelectedColumns(); 
+			}
+			console.debug('buildColumnControls: selectedColumns after=', selectedColumns.length);
 			columnControlsEl.style.display = columns.length? 'block':'none';
 			columnControlsEl.innerHTML = '';
 			const actions = document.createElement('div'); actions.className = 'actions';
@@ -360,13 +372,14 @@
 				const lines = [];
 				lines.push(headers.map(escapeCSV).join(','));
 				latestFilteredRows.forEach((row, idx)=>{
-					// derive active class/section/year & roll same as render
-					const sNum = Number(row.session);
-					let active_roll = '', active_class = '', active_section = '';
-					if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
-					else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
+			const classField = `class_${selectedSession}`;
+			const sectionField = `section_${selectedSession}`;
+			const rollField = `roll_${selectedSession}`;
+			const active_class = row[classField] ?? '';
+			const active_section = row[sectionField] ?? '';
+			const active_roll = row[rollField] ?? '';
 					const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-					let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
+					let csY = hasActiveRoll ? [active_class, active_section, String(row.session ?? '')].join('-') : '';
 					const rowOut = [idx+1];
 					for(const col of selectedColumns){
 						if(col === 'iid') rowOut.push(row.iid ?? row.IID ?? '');
@@ -384,12 +397,14 @@
 					// Build minimal HTML table which Excel can open
 					let html = '<table><thead><tr>' + headers.map(h=>'<th>'+String(h).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</th>').join('') + '</tr></thead><tbody>';
 					latestFilteredRows.forEach((row, idx)=>{
-						const sNum = Number(row.session);
-						let active_roll = '', active_class = '', active_section = '';
-						if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
-						else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
+				const classField = `class_${selectedSession}`;
+				const sectionField = `section_${selectedSession}`;
+				const rollField = `roll_${selectedSession}`;
+				const active_class = row[classField] ?? '';
+				const active_section = row[sectionField] ?? '';
+				const active_roll = row[rollField] ?? '';
 						const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-						let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
+						let csY = hasActiveRoll ? [active_class, active_section, String(row.session ?? '')].join('-') : '';
 						const rowVals = [];
 						for(const col of selectedColumns){
 							if(col === 'iid') rowVals.push(row.iid ?? row.IID ?? '');
@@ -410,48 +425,63 @@
 		}
 
 		function reRenderTable(){
-			// rebuild only the table area inside container using latestFilteredRows and selectedColumns
+			console.debug('reRenderTable called: latestFilteredRows=', latestFilteredRows ? latestFilteredRows.length : 0, 'selectedColumns=', selectedColumns ? selectedColumns.length : 0);
 			container.innerHTML = '';
-			if(!latestFilteredRows || latestFilteredRows.length===0){ return; }
-			// No columns selected -> show hint and stop
+			if(!latestFilteredRows || latestFilteredRows.length===0){ 
+				console.warn('reRenderTable: no rows to display');
+				return; 
+			}
 			if(!selectedColumns || selectedColumns.length===0){
+				console.warn('reRenderTable: no columns selected');
 				statusEl.textContent = 'Tick columns to display';
 				return;
 			}
-			const tableWrapper = document.createElement('div'); tableWrapper.className='table-wrapper';
+			const tableWrapper = document.createElement('div'); 
+			tableWrapper.className='table-wrapper';
 			const table = document.createElement('table');
 			const thead = document.createElement('thead');
 			const htr = document.createElement('tr');
 			['SL', ...selectedColumns].forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
-			thead.appendChild(htr); table.appendChild(thead);
+			thead.appendChild(htr); 
+			table.appendChild(thead);
 			const tbody = document.createElement('tbody');
 			latestFilteredRows.forEach((row, idx)=>{
 				const tr = document.createElement('tr');
 				if(String(row.status||'').toUpperCase().includes('TC')) tr.className = 'status-tc';
-				const sltd = document.createElement('td'); sltd.className='col-sl'; sltd.textContent=(idx+1); tr.appendChild(sltd);
-				// Precompute dynamic values
-				const sNum = Number(row.session);
-				let active_roll = '', active_class = '', active_section = '';
-				if(Number.isFinite(sNum) && sNum === 2026){ active_roll = row.roll_2026 ?? ''; active_class = row.class_2026 ?? ''; active_section = row.section_2026 ?? ''; }
-				else if(Number.isFinite(sNum) && sNum === 2025){ active_roll = row.roll_2025 ?? ''; active_class = row.class_2025 ?? ''; active_section = row.section_2025 ?? ''; }
+				const sltd = document.createElement('td'); 
+				sltd.className='col-sl'; 
+				sltd.textContent=(idx+1); 
+				tr.appendChild(sltd);
+				
+				const classField = `class_${selectedSession}`;
+				const sectionField = `section_${selectedSession}`;
+				const rollField = `roll_${selectedSession}`;
+				const active_class = row[classField] ?? '';
+				const active_section = row[sectionField] ?? '';
+				const active_roll = row[rollField] ?? '';
 				const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
-				let csY = hasActiveRoll ? [active_class ?? '', active_section ?? '', String(row.session ?? '')].join('-') : '';
+				let csY = hasActiveRoll ? [active_class, active_section, String(row.session ?? '')].join('-') : '';
+				
 				for(const col of selectedColumns){
 					const td = document.createElement('td');
 					if(col === 'iid'){
 						const iidRaw = row.iid ?? row.IID ?? '';
-						const a = document.createElement('a'); a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; a.textContent=escapeHtml(String(iidRaw)); a.style.color='#0b74de'; a.style.textDecoration='underline';
-						td.appendChild(a); tr.appendChild(td); continue;
+						const a = document.createElement('a'); 
+						a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; 
+						a.textContent=escapeHtml(String(iidRaw)); 
+						a.style.color='#0b74de'; 
+						a.style.textDecoration='underline';
+						td.appendChild(a); 
+						tr.appendChild(td); 
+						continue;
 					} else if(col === 'class_section_year'){
 						td.textContent = escapeHtml(csY);
 					} else if(col === 'active_roll'){
 						td.textContent = escapeHtml(active_roll==null?'':String(active_roll));
 					} else {
 						const v = row[col];
-						// If this column looks like a photo URL, render a thumbnail instead of raw text
 						const colLower = String(col||'').toLowerCase();
 						if(colLower === 'student_photo_url' || colLower.includes('photo')){
-							// clear cell
 							td.innerHTML = '';
 							if(v && String(v).trim()){
 								const img = document.createElement('img');
@@ -459,17 +489,19 @@
 								img.alt = 'student photo';
 								img.loading = 'lazy';
 								img.src = String(v).trim();
-								// on error, replace with placeholder text
 								img.onerror = function(){
-									const ph = document.createElement('span'); ph.className='thumb-placeholder'; ph.textContent='No Photo';
+									const ph = document.createElement('span'); 
+									ph.className='thumb-placeholder'; 
+									ph.textContent='No Photo';
 									if(img.parentNode) img.parentNode.replaceChild(ph, img);
 								};
-								// click to open full image in new tab
 								img.style.cursor = 'pointer';
 								img.onclick = function(e){ e.stopPropagation(); if(img.src) window.open(img.src, '_blank'); };
 								td.appendChild(img);
 							} else {
-								const ph = document.createElement('span'); ph.className='thumb-placeholder'; ph.textContent='No Photo';
+								const ph = document.createElement('span'); 
+								ph.className='thumb-placeholder'; 
+								ph.textContent='No Photo';
 								td.appendChild(ph);
 							}
 						} else {
@@ -485,7 +517,7 @@
 			container.appendChild(tableWrapper);
 			const sampleRow = latestFilteredRows[0];
 			const sessionValue = sampleRow ? String(sampleRow.session || '').trim() : '';
-			statusEl.textContent = `Total Students: ${latestFilteredRows.length} | Session sample: ${sessionValue || 'N/A'}`;
+			statusEl.textContent = `Total Students: ${latestFilteredRows.length} | Session: ${sessionValue}`;
 		}
 
 		selectedColumns = loadSelectedColumns();
@@ -497,69 +529,116 @@
 		const classFilterEl = document.getElementById('classFilter');
 		const sectionFilterEl = document.getElementById('sectionFilter');
 
-		function getActiveFields(row){
-		    const sNum = Number(row.session);
-		    if(sNum === 2026){ return {active_class: row.class_2026 ?? '', active_section: row.section_2026 ?? '', active_roll: row.roll_2026 ?? ''}; }
-		    if(sNum === 2025){ return {active_class: row.class_2025 ?? '', active_section: row.section_2025 ?? '', active_roll: row.roll_2025 ?? ''}; }
-		    return {active_class:'', active_section:'', active_roll:''};
+		function buildSessionOptions(){
+			// Provide fixed session options for selection
+			sessionFilterEl.innerHTML = '<option value="">Select Session</option>\n\t\t\t<option value="2024">2024</option>\n\t\t\t<option value="2025">2025</option>\n\t\t\t<option value="2026">2026</option>';
+			classFilterEl.innerHTML = '<option value="">Select Class</option>'; classFilterEl.disabled=true;
+			sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
 		}
 
-		function buildSessionOptions(){
-		    const sessions = Array.from(new Set(liteRows.map(r=>r.session).filter(v=>v!=null))).sort((a,b)=>Number(a)-Number(b));
-		    sessionFilterEl.innerHTML = '<option value="">Select Session</option>' + sessions.map(s=>`<option value="${s}">${s}</option>`).join('');
-		    classFilterEl.innerHTML = '<option value="">Select Class</option>'; classFilterEl.disabled=true;
-		    sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
-		}
-		function buildClassOptions(){
-		    if(!selectedSession){ return; }
+		async function buildClassOptions(){
+		    if(!selectedSession) return; // require session selected
+		    console.debug('buildClassOptions: selectedSession=', selectedSession, 'liteRows=', liteRows ? liteRows.length : 0);
+		    statusEl.textContent = 'Loading classes...';
 		    const field = `class_${selectedSession}`;
+		    console.debug('buildClassOptions: looking for field=', field);
 		    const classes = new Set();
-		    liteRows.forEach(r=>{ if(String(r.session)===String(selectedSession)){ const v=r[field]; if(v!=null && String(v).trim()!==''){ classes.add(String(v)); } } });
+		    
+		    // Derive classes from the specific class_<session> field across liteRows
+		    liteRows.forEach(r=>{ 
+		    	try{ 
+		    		const v = r && r[field];
+		    		console.debug('buildClassOptions: row field value=', field, '=', v);
+		    		if(v!==undefined && v!==null && String(v).trim()!==''){ 
+		    			classes.add(String(v)); 
+		    		} 
+		    	}catch(e){
+		    		console.warn('buildClassOptions: error processing row:', e);
+		    	} 
+		    });
+		    console.debug('buildClassOptions: classes from liteRows=', Array.from(classes));
+		    
+		    // If none found in liteRows, try DB fallback to fetch distinct values directly
+		    if(classes.size === 0 && typeof supabaseClient !== 'undefined' && supabaseClient){
+		        try{
+		            console.debug('buildClassOptions: no classes found in liteRows, querying DB for', field);
+		            const { data: dbData, error: dbErr } = await supabaseClient.from('student_database').select(field).not(field, 'is', null).limit(20000);
+		            if(!dbErr && dbData){
+		            	console.debug('buildClassOptions: DB returned', dbData.length, 'rows');
+		                dbData.forEach(r=>{
+		                    const v = r && r[field];
+		                    console.debug('buildClassOptions: DB field value=', field, '=', v);
+		                    if(v!==undefined && v!==null && String(v).trim()!=='') classes.add(String(v));
+		                });
+		            } else if(dbErr){ console.warn('buildClassOptions DB fallback error', dbErr); }
+		        }catch(e){ console.warn('buildClassOptions DB fallback exception', e); }
+		    }
 		    const sorted = Array.from(classes).sort((a,b)=>{ const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+		    console.debug('buildClassOptions: final sorted classes=', sorted);
 		    classFilterEl.innerHTML = '<option value="">Select Class</option>' + sorted.map(c=>`<option value="${c}">${c}</option>`).join('');
-		    classFilterEl.disabled=false; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
+		    classFilterEl.disabled = sorted.length === 0; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled = true;
+		    statusEl.textContent = sorted.length ? 'Pick class' : 'No classes found for selected session';
+		    // Show debug info to user
+		    try{
+		        const dbg = document.getElementById('debugClasses');
+		        if(dbg){ dbg.textContent = 'Session: ' + selectedSession + ' | Computed classes: ' + (sorted.length ? sorted.join(', ') : '(none)'); }
+		    }catch(e){ console.debug('Could not set debugClasses element', e); }
 		}
 		function buildSectionOptions(){
-		    if(!selectedSession || !selectedClass){ return; }
+		    if(!selectedClass){ return; }
+		    const field = `section_${selectedSession}`;
 		    const sections = new Set();
-		    allRows.forEach(r=>{ const {active_class, active_section} = getActiveFields(r); if(String(active_class)===String(selectedClass) && active_section){ sections.add(String(active_section)); } });
+		    allRows.forEach(r=>{ 
+		    	const v = r && r[field];
+		    	if(v!==undefined && v!==null && String(v).trim()!==''){ 
+		    		sections.add(String(v)); 
+		    	}
+		    });
 		    const sorted = Array.from(sections).sort((a,b)=> String(a).localeCompare(String(b)));
 		    sectionFilterEl.innerHTML = '<option value="">All Sections</option>' + sorted.map(s=>`<option value="${s}">${s}</option>`).join('');
 		    sectionFilterEl.disabled=false;
 		}
 		function applySectionFilter(){
-		    if(!selectedSession || !selectedClass){ latestFilteredRows=[]; container.innerHTML=''; statusEl.textContent='Select Session & Class'; return; }
-		    let rows = allRows.filter(r=>{ const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass); });
-		    if(selectedSection){ rows = rows.filter(r=>{ const {active_section} = getActiveFields(r); return String(active_section)===String(selectedSection); }); }
+		    const classField = `class_${selectedSession}`;
+		    const sectionField = `section_${selectedSession}`;
+		    const rollField = `roll_${selectedSession}`;
+		    console.debug('applySectionFilter: selectedClass=', selectedClass, 'selectedSection=', selectedSection, 'allRows=', allRows ? allRows.length : 0);
+		    if(!selectedClass){ latestFilteredRows=[]; container.innerHTML=''; statusEl.textContent='Select Class'; return; }
+		    let rows = allRows.filter(r=> String(r[classField]||'')===String(selectedClass));
+		    console.debug('applySectionFilter: after class filter, rows=', rows.length);
+		    if(selectedSection){ rows = rows.filter(r=> String(r[sectionField]||'')===String(selectedSection)); }
+		    console.debug('applySectionFilter: after section filter, rows=', rows.length);
 		    
-		    // Sort rows by active_roll numerically
 		    rows.sort((a, b) => {
-		        const {active_roll: rollA} = getActiveFields(a);
-		        const {active_roll: rollB} = getActiveFields(b);
-		        const numA = Number(rollA) || 0;
-		        const numB = Number(rollB) || 0;
-		        if(isNaN(numA) || isNaN(numB)) return String(rollA).localeCompare(String(rollB));
-		        return numA - numB;
+		        const rollA = Number(a[rollField]) || 0;
+		        const rollB = Number(b[rollField]) || 0;
+		        if(isNaN(rollA) || isNaN(rollB)) return String(a[rollField]||'').localeCompare(String(b[rollField]||''));
+		        return rollA - rollB;
 		    });
 		    
 		    latestFilteredRows = rows;
+		    console.debug('applySectionFilter: latestFilteredRows=', latestFilteredRows.length);
 		    const availableColumns = computeAvailableColumns();
 		    if((!selectedColumns || !selectedColumns.length) && availableColumns.length){ selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length)); saveSelectedColumns(); }
+		    console.debug('applySectionFilter: selectedColumns=', selectedColumns);
 		    buildColumnControls(availableColumns);
 		    reRenderTable();
 		    statusEl.textContent = `Loaded ${latestFilteredRows.length} rows (Session: ${selectedSession}, Class: ${selectedClass}${selectedSection? ', Section: '+selectedSection:''})`;
 		}
 		async function loadGroupData(){
-		    if(!selectedSession || !selectedClass){ return; }
-		    const sessionData = await fetchSessionData(selectedSession);
-		    allRows = sessionData.filter(r=>{
-		        if(String(r.status||'').toUpperCase().includes('TC')) return false;
-		        const {active_class} = getActiveFields(r); return String(active_class)===String(selectedClass);
-		    });
+		    if(!selectedClass){ return; }
+		    const field = `class_${selectedSession}`; // e.g., class_2025
+		    console.debug('loadGroupData: selectedSession=', selectedSession, 'field=', field, 'selectedClass=', selectedClass);
+		    const { data, error } = await supabaseClient.from('student_database').select('*').eq(field, selectedClass).limit(20000);
+		    if(error){ console.error('loadGroupData error:', error); statusEl.textContent='Load error'; return; }
+		    console.debug('loadGroupData: returned data rows=', data ? data.length : 0);
+		    allRows = (data||[]).filter(r=> !String(r.status||'').toUpperCase().includes('TC'));
+		    console.debug('loadGroupData: after TC filter, allRows=', allRows.length);
 		    buildSectionOptions();
 		    applySectionFilter();
 		}
-		sessionFilterEl.addEventListener('change', ()=>{ selectedSession=sessionFilterEl.value; selectedClass=''; selectedSection=''; allRows=[]; latestFilteredRows=[]; buildClassOptions(); container.innerHTML=''; statusEl.textContent= selectedSession? 'Select Class':'Select Session'; });
+		// Allow selecting session; update class list on change
+		sessionFilterEl.addEventListener('change', async ()=>{ selectedSession=sessionFilterEl.value; console.debug('session changed ->', selectedSession, 'liteRows:', liteRows ? liteRows.length : 0); selectedClass=''; selectedSection=''; allRows=[]; latestFilteredRows=[]; await buildClassOptions(); container.innerHTML=''; statusEl.textContent= selectedSession? 'Select Class':'Select Session'; });
 		classFilterEl.addEventListener('change', async ()=>{ selectedClass=classFilterEl.value; selectedSection=''; allRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled=true; container.innerHTML=''; if(selectedClass){ await loadGroupData(); } else statusEl.textContent='Select Class'; });
 		sectionFilterEl.addEventListener('change', ()=>{ selectedSection=sectionFilterEl.value; applySectionFilter(); });
 
