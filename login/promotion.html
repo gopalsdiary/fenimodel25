@@ -425,7 +425,11 @@
                             // If promoting to next class automatically (optional), you could parseInt + 1. For now keep same.
                                 const promotionMap = { '6':'7', '7':'8', '8':'9', '9':'10', '10':'old 10' };
                                 const prefillClass = promotionMap[String(currentClass)] || '';
-                            const sections = ['golap','mor','shapla'];
+                            const sections = ['golap','mor','shapla','MORNING'];
+                            
+                            // Determine pre-selected section for section_2026
+                            // Keep same section as section_2025
+                            const prefillSection = currentSection || 'golap';
                             
                             // Check if already promoted (session = 2026)
                             const isPromoted = student.session == 2026 || student.session === '2026';
@@ -453,9 +457,9 @@
                                 <td>
                                     <select class="promotion-input" id="section_2026_${student.iid}" ${buttonDisabled}>
                                         <option value="">Select</option>
-                                        <option value="golap" ${currentSection==='golap'?'selected':''}>GOLAP</option>
-                                        <option value="mor" ${currentSection==='mor'?'selected':''}>MORNING</option>
-                                        <option value="shapla" ${currentSection==='shapla'?'selected':''}>SHAPLA</option>
+                                        <option value="golap" ${prefillSection==='golap'?'selected':''}>GOLAP</option>
+                                        <option value="MORNING" ${prefillSection==='morning'?'selected':''}>MORNING</option>
+                                        <option value="shapla" ${prefillSection==='shapla'?'selected':''}>SHAPLA</option>
                                     </select>
                                 </td>
                                 <td>
@@ -496,9 +500,42 @@
             for (const student of studentsData) {
                 const iid = student.iid;
                 const roll2026Input = document.getElementById(`roll_2026_${iid}`);
-                const class2026 = document.getElementById(`class_2026_${iid}`).value;
-                const section2026 = document.getElementById(`section_2026_${iid}`).value;
-                const roll2026 = roll2026Input ? roll2026Input.value : '';
+                const class2026Select = document.getElementById(`class_2026_${iid}`);
+                const section2026Select = document.getElementById(`section_2026_${iid}`);
+                
+                let class2026 = class2026Select ? class2026Select.value : '';
+                let section2026 = section2026Select ? section2026Select.value : '';
+                
+                // Auto-fill section if empty - use current section_2025
+                if (!section2026 && student.section_2025) {
+                    const currentSection = String(student.section_2025).toLowerCase();
+                    // Map section values
+                    if (currentSection === 'morning' || currentSection === 'mor') {
+                        section2026 = 'MORNING';
+                    } else if (currentSection === 'golap') {
+                        section2026 = 'golap';
+                    } else if (currentSection === 'shapla') {
+                        section2026 = 'shapla';
+                    } else {
+                        section2026 = student.section_2025;
+                    }
+                    // Update the select dropdown
+                    if (section2026Select) {
+                        section2026Select.value = section2026;
+                    }
+                }
+                
+                // Get roll_2026 from input field, or use class_rank from student data if input is empty
+                let roll2026 = roll2026Input ? roll2026Input.value : '';
+                if (!roll2026 && student.class_rank) {
+                    roll2026 = student.class_rank;
+                    // Update the input field too
+                    if (roll2026Input) {
+                        roll2026Input.value = roll2026;
+                    }
+                }
+                
+                console.log(`IID ${iid}: roll_2026=${roll2026}, class_rank=${student.class_rank}, class=${class2026}, section=${section2026}`);
                 
                 // Skip if no roll_2026
                 if (!roll2026) {
