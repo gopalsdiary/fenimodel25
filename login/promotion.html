@@ -426,6 +426,12 @@
                                 const promotionMap = { '6':'7', '7':'8', '8':'9', '9':'10', '10':'old 10' };
                                 const prefillClass = promotionMap[String(currentClass)] || '';
                             const sections = ['golap','mor','shapla'];
+                            
+                            // Check if already promoted (session = 2026)
+                            const isPromoted = student.session == 2026 || student.session === '2026';
+                            const buttonText = isPromoted ? 'Promoted ✓' : 'Promote';
+                            const buttonDisabled = isPromoted ? 'disabled' : '';
+                            
                             return `
                             <tr data-iid="${student.iid}">
                                 <td>${student.iid}</td>
@@ -434,7 +440,7 @@
                                 <td>${student.section_2025 || 'N/A'}</td>
                                 <td>${student.roll_2025 || 'N/A'}</td>
                                 <td>
-                                    <select class="promotion-input" id="class_2026_${student.iid}">
+                                    <select class="promotion-input" id="class_2026_${student.iid}" ${buttonDisabled}>
                                         <option value="">Select</option>
                                             <option value="6" ${prefillClass==='6'?'selected':''}>6</option>
                                             <option value="7" ${prefillClass==='7'?'selected':''}>7</option>
@@ -445,7 +451,7 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <select class="promotion-input" id="section_2026_${student.iid}">
+                                    <select class="promotion-input" id="section_2026_${student.iid}" ${buttonDisabled}>
                                         <option value="">Select</option>
                                         <option value="golap" ${currentSection==='golap'?'selected':''}>GOLAP</option>
                                         <option value="mor" ${currentSection==='mor'?'selected':''}>MORNING</option>
@@ -453,14 +459,14 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <input type="number" class="promotion-input" id="roll_2026_${student.iid}" placeholder="Roll" value="${student.class_rank || ''}">
+                                    <input type="number" class="promotion-input" id="roll_2026_${student.iid}" placeholder="Roll" value="${student.class_rank || ''}" ${buttonDisabled}>
                                     <div class="warning-text" id="warning_${student.iid}">Roll 2026 is required</div>
                                 </td>
                                 <td>
-                                    <input type="text" class="promotion-input" id="session_${student.iid}" value="2026">
+                                    <input type="text" class="promotion-input" id="session_${student.iid}" value="2026" ${buttonDisabled}>
                                 </td>
                                 <td>
-                                    <button class="promote-btn" onclick="promoteStudent('${student.iid}')">Promote</button>
+                                    <button class="promote-btn" onclick="promoteStudent('${student.iid}')" ${buttonDisabled}>${buttonText}</button>
                                 </td>
                             </tr>
                         `}).join('')}
