@@ -231,10 +231,6 @@
             <button class="btn-primary" onclick="loadStudents()">Load Students</button>
         </div>
         
-        <div style="margin-top: 16px; text-align: center;">
-            <button class="btn-success" onclick="updateAllStudents()" style="font-size: 16px; padding: 14px 28px;">Update All</button>
-        </div>
-
         <div class="promotion-container">
             <div id="studentContainer">
                 <div class="loading">Select filters and click "Load Students" to view data</div>
@@ -275,7 +271,7 @@
 
                 let baseQuery = supabaseClient
                     .from('student_database')
-                    .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
+                    .select('iid, student_name_en, class_2025, section_2025, roll_2025, session, group');
 
                 // Apply filters one by one with logging
                 if (filterClass) {
@@ -314,7 +310,7 @@
                         console.log('Trying section pattern:', pattern);
                         let fallbackQuery = supabaseClient
                             .from('student_database')
-                            .select('iid, student_name_en, class_2025, section_2025, roll_2025, session');
+                            .select('iid, student_name_en, class_2025, section_2025, roll_2025, session, group');
                         
                         if (filterClass) {
                             const numericClass = isNaN(Number(filterClass)) ? filterClass : Number(filterClass);
@@ -338,6 +334,26 @@
 
                 console.log('Final result count:', data ? data.length : 0);
                 studentsData = data || [];
+
+                // DEBUG: analyze presence of 'group' by section to help troubleshooting
+                try {
+                    const groupStats = (studentsData || []).reduce((acc, s) => {
+                        const sec = (s.section_2025 || 'UNKNOWN').toUpperCase();
+                        acc[sec] = acc[sec] || { total: 0, withGroup: 0, examples: [] };
+                        acc[sec].total++;
+                        if (s.group && String(s.group).trim()) {
+                            acc[sec].withGroup++;
+                            if (acc[sec].examples.length < 5) acc[sec].examples.push({ iid: s.iid, group: s.group });
+                        }
+                        return acc;
+                    }, {});
+                    console.log('DEBUG: group stats by section:', groupStats);
+
+                    const missingInClass9 = (studentsData || []).filter(s => String(s.class_2025) === '9' && !(s.group && String(s.group).trim()));
+                    console.log('DEBUG: class 9 students missing group count:', missingInClass9.length, 'sample:', missingInClass9.slice(0, 10).map(s => ({ iid: s.iid, section: s.section_2025 })));
+                } catch (e) {
+                    console.warn('DEBUG: group stats error', e);
+                }
                 
                 // Fetch class_rank from exam_ann25 and exam_test_2025 tables
                 if (studentsData.length > 0) {
@@ -410,6 +426,7 @@
                             <th>Class 2025</th>
                             <th>Section 2025</th>
                             <th>Roll 2025</th>
+                            <th>Group</th>
 
                             <th>Class 2026</th>
                             <th>Section 2026</th>
@@ -428,8 +445,20 @@
                             const sections = ['golap','mor','shapla','MORNING'];
                             
                             // Determine pre-selected section for section_2026
-                            // Keep same section as section_2025
-                            const prefillSection = currentSection || 'golap';
+                            // For class 9 -> 10 promotion, use Section 2025 - Group format
+                            let prefillSection = currentSection || 'golap';
+                            let section2026Display = '';
+                            if (String(currentClass) === '9' && student.group) {
+                                // Format: SECTION - GROUP (all uppercase)
+                                const sectionUpper = (student.section_2025 || '').toUpperCase();
+                                const groupUpper = (student.group || '').toUpperCase();
+                                section2026Display = `${sectionUpper} - ${groupUpper}`;
+                                prefillSection = section2026Display;
+                                console.log(`IID ${student.iid}: section=${student.section_2025}, group=${student.group}, display=${section2026Display}`);
+                            }
+                            
+                            // Get student's group for filtering section options
+                            const studentGroupUpper = (student.group || '').toUpperCase();
                             
                             // Check if already promoted (session = 2026)
                             const isPromoted = student.session == 2026 || student.session === '2026';
@@ -443,6 +472,7 @@
                                 <td>${student.class_2025 || 'N/A'}</td>
                                 <td>${student.section_2025 || 'N/A'}</td>
                                 <td>${student.roll_2025 || 'N/A'}</td>
+                                <td style="color: #666; font-size: 12px;">${student.group || 'N/A'}</td>
                                 <td>
                                     <select class="promotion-input" id="class_2026_${student.iid}" ${buttonDisabled}>
                                         <option value="">Select</option>
@@ -456,10 +486,16 @@
                                 </td>
                                 <td>
                                     <select class="promotion-input" id="section_2026_${student.iid}" ${buttonDisabled}>
-                                        <option value="">Select</option>
-                                        <option value="golap" ${prefillSection==='golap'?'selected':''}>GOLAP</option>
-                                        <option value="MORNING" ${prefillSection==='morning'?'selected':''}>MORNING</option>
-                                        <option value="shapla" ${prefillSection==='shapla'?'selected':''}>SHAPLA</option>
+                                        ${String(currentClass) === '9' && studentGroupUpper && student.section_2025 ? `
+                                            <option value="${(student.section_2025 || '').toUpperCase()} - ${studentGroupUpper}" selected>${(student.section_2025 || '').toUpperCase()} - ${studentGroupUpper}</option>
+                                        ` : String(currentClass) === '9' ? `
+                                            <option value="">No Group Found</option>
+                                        ` : `
+                                            <option value="">Select</option>
+                                            <option value="golap" ${prefillSection==='golap'?'selected':''}>GOLAP</option>
+                                            <option value="MORNING" ${prefillSection==='morning'?'selected':''}>MORNING</option>
+                                            <option value="shapla" ${prefillSection==='shapla'?'selected':''}>SHAPLA</option>
+                                        `}
                                     </select>
                                 </td>
                                 <td>
@@ -476,6 +512,9 @@
                         `}).join('')}
                     </tbody>
                 </table>
+                <div style="margin-top: 16px; text-align: center;">
+                    <button class="btn-success" onclick="updateAllStudents()" style="font-size: 16px; padding: 14px 28px;">Update All</button>
+                </div>
             `;
         }
 
@@ -592,7 +631,7 @@
                         .from('student_database')
                         .update({
                             class_2026: class2026,
-                            section_2026: section2026.toUpperCase(),
+                            section_2026: section2026.toUpperCase(), // Already in uppercase format (e.g., "GOLAP - SCIENCE")
                             roll_2026: parseInt(roll2026),
                             session: 2026
                         })
@@ -771,7 +810,7 @@
                     .from('student_database')
                     .update({
                         class_2026: class2026,
-                        section_2026: section2026.toUpperCase(), // Convert section to uppercase
+                        section_2026: section2026.toUpperCase(), // Already in uppercase format (e.g., "GOLAP - SCIENCE")
                         roll_2026: parseInt(roll2026),
                         session: 2026
                     })
@@ -815,7 +854,7 @@
                 
                 const { data, error } = await supabaseClient
                     .from('student_database')
-                    .select('iid, student_name_en, class_2025, section_2025, roll_2025, session')
+                    .select('iid, student_name_en, class_2025, section_2025, roll_2025, session, group')
                     .limit(10);
                 
                 if (error) {
