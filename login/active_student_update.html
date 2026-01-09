@@ -672,42 +672,56 @@
 
     async function updateAllNeeded() {
       const updateButtons = Array.from(tbody.querySelectorAll('.btn.update-needed:not(:disabled)'));
-      
+      const updateAllBtn = document.getElementById('updateAllBtn');
+
       if (updateButtons.length === 0) {
         showStatus('No updates needed.', 'ok');
         return;
       }
 
+      // Disable button & show progress
+      if (updateAllBtn) {
+        updateAllBtn.disabled = true;
+        updateAllBtn.textContent = `Updating (${updateButtons.length})...`;
+      }
+
       showStatus(`Updating ${updateButtons.length} students...`, 'loading');
       
-      let successCount = 0;
-      for (const button of updateButtons) {
+      // Prepare all update promises and run them in parallel
+      const promises = updateButtons.map(button => {
         const iid = button.closest('tr')?.getAttribute('data-iid');
-        if (!iid) continue;
-        // Extract target values from preview arrows already rendered
-        const cells = button.closest('tr').children;
-        // We already encoded targets in onclick parameters; simpler: reuse original onclick attribute parsing? Instead, compute again from current row cache.
+        if (!iid) return Promise.resolve({ iid, ok: false });
         const rowData = allRowsCache.find(r => String(r.iid) === String(iid));
-        if (!rowData) continue;
+        if (!rowData) return Promise.resolve({ iid, ok: false });
+
         const targetSession = currentSession;
         const targetClass = rowData[`class_${targetSession}`];
         const targetSection = rowData[`section_${targetSession}`];
         const targetRoll = rowData[`roll_${targetSession}`];
         const fatherMobile = String(rowData.father_mobile_en || rowData.father_mobile || '').replace(/\D/g,'');
         let genKey = '';
-        if (rowData.status === 'TC') {
-          // null targets
-        } else {
+        if (rowData.status !== 'TC') {
           if (fatherMobile.length >= 6) genKey = fatherMobile.slice(-6); else if (fatherMobile.length>0) genKey = fatherMobile;
         }
-        try {
-          await updateStudent(button, iid, rowData.status === 'TC' ? null : targetClass || null, rowData.status === 'TC' ? null : targetSection || null, rowData.status === 'TC' ? null : targetRoll || null, rowData.status === 'TC' ? null : (genKey || null), { skipConfirm:true, deferRerender:true });
-          successCount++;
-        } catch(e){ console.error('Bulk update error for', iid, e); }
-      }
+
+        return updateStudent(button, iid, rowData.status === 'TC' ? null : targetClass || null, rowData.status === 'TC' ? null : targetSection || null, rowData.status === 'TC' ? null : targetRoll || null, rowData.status === 'TC' ? null : (genKey || null), { skipConfirm:true, deferRerender:true })
+          .then(ok => ({ iid, ok: !!ok }))
+          .catch(err => { console.error('Bulk update error for', iid, err); return { iid, ok: false }; });
+      });
+
+      const results = await Promise.all(promises);
+      const successCount = results.filter(r => r && r.ok).length;
+      const failCount = results.length - successCount;
+
       // Single rerender after all done
       filterAndRenderData();
-      showStatus(`Bulk update completed. ${successCount} students updated.`, 'ok');
+
+      showStatus(`Bulk update completed. ${successCount} updated, ${failCount} failed.`, 'ok');
+
+      if (updateAllBtn) {
+        updateAllBtn.disabled = false;
+        updateAllBtn.textContent = 'Update All Needed';
+      }
     }
 
     async function downloadCSV() {

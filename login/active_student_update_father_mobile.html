@@ -488,14 +488,17 @@
       rowCountEl.textContent = `Total: ${totalStudents} students (${needsUpdateCount} need update)`;
     }
 
-    async function updateStudent(iid, sessionClass, sessionSection, sessionRoll, studentKey, updatedFatherMobile, updatedMotherMobile) {
+    async function updateStudent(iid, sessionClass, sessionSection, sessionRoll, studentKey, updatedFatherMobile, updatedMotherMobile, button = null) {
       const statusEl = document.getElementById(`status-${iid}`);
-      const button = event.target;
+      // Backwards-compatible: if button not passed, try to get it from the current event
+      if (!button) button = (window.event && window.event.target) || null;
       
       try {
-        statusEl.textContent = 'Updating...';
-        statusEl.className = 'update-status loading';
-        button.disabled = true;
+        if (statusEl) {
+          statusEl.textContent = 'Updating...';
+          statusEl.className = 'update-status loading';
+        }
+        if (button) button.disabled = true;
 
         const updates = {
           active_class: sessionClass || null,
@@ -516,10 +519,14 @@
         }
 
         // Update success
-        statusEl.textContent = 'Updated ✓';
-        statusEl.className = 'update-status success';
-        button.className = 'btn up-to-date';
-        button.textContent = 'Up-to-date';
+        if (statusEl) {
+          statusEl.textContent = 'Updated ✓';
+          statusEl.className = 'update-status success';
+        }
+        if (button) {
+          button.className = 'btn up-to-date';
+          button.textContent = 'Up-to-date';
+        }
         
         // Update local cache
         const rowData = allRowsCache.find(row => row.iid === iid);
@@ -536,41 +543,81 @@
 
         // Clear status message after 3 seconds
         setTimeout(() => {
-          statusEl.textContent = '';
+          if (statusEl) statusEl.textContent = '';
         }, 3000);
+
+        return true;
 
       } catch (error) {
         console.error('Update error:', error);
-        statusEl.textContent = 'Failed ✗';
-        statusEl.className = 'update-status error';
-        button.disabled = false;
+        if (statusEl) {
+          statusEl.textContent = 'Failed ✗';
+          statusEl.className = 'update-status error';
+        }
+        if (button) button.disabled = false;
+        return false;
       }
     }
 
     async function updateAllNeeded() {
-      const updateButtons = tbody.querySelectorAll('.btn.update-needed:not(:disabled)');
-      
+      const updateButtons = Array.from(tbody.querySelectorAll('.btn.update-needed:not(:disabled)'));
+      const updateAllBtn = document.getElementById('updateAllBtn');
+
       if (updateButtons.length === 0) {
         showStatus('No updates needed.', 'ok');
         return;
       }
 
-      showStatus(`Updating ${updateButtons.length} students...`, 'loading');
-      
-      let successCount = 0;
-      for (const button of updateButtons) {
-        try {
-          button.click();
-          await new Promise(resolve => setTimeout(resolve, 200)); // Small delay
-          successCount++;
-        } catch (error) {
-          console.error('Bulk update error:', error);
-        }
+      // Disable bulk button
+      if (updateAllBtn) {
+        updateAllBtn.disabled = true;
+        updateAllBtn.textContent = `Updating (${updateButtons.length})...`;
       }
 
-      setTimeout(() => {
-        showStatus(`Bulk update completed. ${successCount} students updated.`, 'ok');
-      }, 2000);
+      showStatus(`Updating ${updateButtons.length} students...`, 'loading');
+
+      const promises = updateButtons.map(button => {
+        const iid = button.closest('tr')?.getAttribute('data-iid');
+        if (!iid) return Promise.resolve({ iid, ok: false });
+        const rowData = allRowsCache.find(r => String(r.iid) === String(iid));
+        if (!rowData) return Promise.resolve({ iid, ok: false });
+
+        const targetSession = currentSession;
+        const targetClass = rowData[`class_${targetSession}`];
+        const targetSection = rowData[`section_${targetSession}`];
+        const targetRoll = rowData[`roll_${targetSession}`];
+        const fatherMobile = String(rowData.father_mobile_en || rowData.father_mobile || '').replace(/\D/g,'');
+        let genKey = fatherMobile.length >= 6 ? fatherMobile.slice(-6) : '';
+
+        // Prepare updated mobiles (add 880 prefix when needed)
+        const originalFatherMobile = String(rowData.father_mobile_en || rowData.father_mobile || '');
+        const cleanFatherMobile = originalFatherMobile.replace(/\D/g, '');
+        let updatedFatherMobile = cleanFatherMobile;
+        if (cleanFatherMobile && !cleanFatherMobile.startsWith('880')) updatedFatherMobile = '880' + cleanFatherMobile;
+
+        const originalMotherMobile = String(rowData.mother_mobile_en || rowData.mother_mobile || '');
+        const cleanMotherMobile = originalMotherMobile.replace(/\D/g, '');
+        let updatedMotherMobile = cleanMotherMobile;
+        if (cleanMotherMobile && !cleanMotherMobile.startsWith('880')) updatedMotherMobile = '880' + cleanMotherMobile;
+
+        return updateStudent(iid, targetClass || null, targetSection || null, targetRoll || null, genKey || null, updatedFatherMobile || null, updatedMotherMobile || null, button)
+          .then(ok => ({ iid, ok: !!ok }))
+          .catch(err => { console.error('Bulk update error for', iid, err); return { iid, ok: false }; });
+      });
+
+      const results = await Promise.all(promises);
+      const successCount = results.filter(r => r && r.ok).length;
+      const failCount = results.length - successCount;
+
+      // Single rerender after all done
+      filterAndRenderData();
+
+      showStatus(`Bulk update completed. ${successCount} updated, ${failCount} failed.`, 'ok');
+
+      if (updateAllBtn) {
+        updateAllBtn.disabled = false;
+        updateAllBtn.textContent = 'Update All Needed';
+      }
     }
 
     async function downloadCSV() {
