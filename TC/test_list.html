@@ -239,8 +239,25 @@
     const loadIIDBtn = document.getElementById('loadIIDBtn');
     const entryStatus = document.getElementById('tcModalStatus');
     const form = document.getElementById('tcEntryForm');
-    function showModal(){ modal.style.display='flex'; entryStatus.textContent='Enter IID & Load student info'; document.getElementById('iidInput').focus(); setTodayIfEmpty(); }
-    function hideModal(){ modal.style.display='none'; form.reset(); }
+
+    // Fields that are auto-filled and should become editable after loading
+    const editableIds = ['tc_session','tc_class','tc_section','tc_roll','student_name_en','father_name_en','mother_name_en','student_dateofbirth','student_gender'];
+
+    function setFieldsReadonly(readonly){
+      for(const id of editableIds){
+        const el = document.getElementById(id);
+        if(el) el.readOnly = readonly;
+      }
+    }
+    function clearAutoFields(){
+      for(const id of editableIds){
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+      }
+    }
+
+    function showModal(){ modal.style.display='flex'; entryStatus.textContent='Enter IID & Load student info'; setFieldsReadonly(true); clearAutoFields(); document.getElementById('iidInput').focus(); setTodayIfEmpty(); }
+    function hideModal(){ modal.style.display='none'; form.reset(); setFieldsReadonly(true); }
     function setTodayIfEmpty(){ const td=document.getElementById('tc_date'); if(td && !td.value){ const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); td.value=`${dd}-${mm}-${yyyy}`; } }
     openBtn?.addEventListener('click', showModal);
     closeBtn?.addEventListener('click', hideModal);
@@ -249,6 +266,9 @@
     async function loadStudent(){
       const iid = document.getElementById('iidInput').value.trim();
       if(!iid){ entryStatus.textContent='Provide IID'; entryStatus.style.color='#b91c1c'; return; }
+      // Prepare UI for loading
+      setFieldsReadonly(true);
+      clearAutoFields();
       entryStatus.textContent='Loading…'; entryStatus.style.color='';
       try {
         const { data, error } = await client.from(studentTable).select('*').eq('iid', iid).limit(1);
@@ -271,12 +291,16 @@
         document.getElementById('student_dateofbirth').value = row.student_dateofbirth || row.dob || '';
         document.getElementById('student_gender').value = row.student_gender || row.gender || '';
         document.getElementById('father_mobile').value = row.father_mobile || row.guardian_mobile || '';
-        entryStatus.textContent='Loaded. Fill remaining fields & Save';
+        // Make fields editable now that we've loaded values
+        setFieldsReadonly(false);
+        entryStatus.textContent='Loaded — you can edit fields & Save';
       } catch(e){ console.error(e); entryStatus.textContent='Load failed'; entryStatus.style.color='#b91c1c'; }
     }
     loadIIDBtn?.addEventListener('click', loadStudent);
     document.getElementById('iidInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); loadStudent(); }});
-    document.getElementById('resetTcForm')?.addEventListener('click', ()=>{ const keepIID=document.getElementById('iidInput').value; form.reset(); document.getElementById('iidInput').value=keepIID; entryStatus.textContent='Form reset'; setTodayIfEmpty(); });
+
+    document.getElementById('resetTcForm')?.addEventListener('click', ()=>{ const keepIID=document.getElementById('iidInput').value; form.reset(); document.getElementById('iidInput').value=keepIID; entryStatus.textContent='Form reset'; setFieldsReadonly(true); setTodayIfEmpty(); });
+
     form?.addEventListener('submit', async e=>{
       e.preventDefault();
       entryStatus.textContent='Saving…'; entryStatus.style.color='';
