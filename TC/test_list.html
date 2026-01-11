@@ -67,10 +67,20 @@
         const klass = obj.tc_class ?? '';
         const roll = obj.tc_roll ?? '';
         const iid = obj.iid ?? '';
+        // Make IID clickable — opens details page
+        const iidEl = (iid ? (() => {
+          const a = document.createElement('a');
+          a.className = 'link';
+          a.textContent = iid;
+          a.href = `/login/detailsinfo.html?iid=${encodeURIComponent(iid)}`;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          return a;
+        })() : iid);
   const pdfLink=document.createElement('a'); pdfLink.className='link'; pdfLink.textContent='Edit'; pdfLink.href=`./tc_edit_form.html?iid=${encodeURIComponent(iid)}`;
         const wordLink=document.createElement('a'); wordLink.className='link'; wordLink.textContent='Word'; wordLink.href=`./certificate_word.html?iid=${encodeURIComponent(iid)}`;
         const cell=document.createElement('div'); cell.appendChild(pdfLink); const sep=document.createElement('span'); sep.className='sep'; sep.textContent='|'; cell.appendChild(sep); cell.appendChild(wordLink);
-        const tr=document.createElement('tr'); createRow(tr,[sl,name,father,klass,roll,iid,{element:cell}]); rows.push(tr);
+        const tr=document.createElement('tr'); createRow(tr,[sl,name,father,klass,roll,{element:iidEl},{element:cell}]); rows.push(tr);
       }
       return rows;
     }
