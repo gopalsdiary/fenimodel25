@@ -256,7 +256,24 @@
       }
     }
 
-    function showModal(){ modal.style.display='flex'; entryStatus.textContent='Enter IID & Load student info'; setFieldsReadonly(true); clearAutoFields(); document.getElementById('iidInput').focus(); setTodayIfEmpty(); }
+    function setDefaults(){
+      const issued = document.getElementById('issued_by');
+      if(issued) issued.value = 'RAZIB KUMAR PAUL';
+      const chr = document.getElementById('student_character');
+      if(chr) chr.value = 'very good';
+      const paid = document.getElementById('paid_month');
+      if(paid && !paid.value) paid.value = 'December 2025';
+    }
+
+    function showModal(){
+      modal.style.display='flex';
+      entryStatus.textContent='Enter IID & Load student info';
+      setFieldsReadonly(true);
+      clearAutoFields();
+      setDefaults();
+      document.getElementById('iidInput').focus();
+      setTodayIfEmpty();
+    }
     function hideModal(){ modal.style.display='none'; form.reset(); setFieldsReadonly(true); }
     function setTodayIfEmpty(){ const td=document.getElementById('tc_date'); if(td && !td.value){ const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); td.value=`${dd}-${mm}-${yyyy}`; } }
     openBtn?.addEventListener('click', showModal);
@@ -299,7 +316,7 @@
     loadIIDBtn?.addEventListener('click', loadStudent);
     document.getElementById('iidInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); loadStudent(); }});
 
-    document.getElementById('resetTcForm')?.addEventListener('click', ()=>{ const keepIID=document.getElementById('iidInput').value; form.reset(); document.getElementById('iidInput').value=keepIID; entryStatus.textContent='Form reset'; setFieldsReadonly(true); setTodayIfEmpty(); });
+    document.getElementById('resetTcForm')?.addEventListener('click', ()=>{ const keepIID=document.getElementById('iidInput').value; form.reset(); document.getElementById('iidInput').value=keepIID; entryStatus.textContent='Form reset'; setFieldsReadonly(true); setTodayIfEmpty(); setDefaults(); });
 
     form?.addEventListener('submit', async e=>{
       e.preventDefault();
