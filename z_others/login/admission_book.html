@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Admission Book 2025</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/login/auth-check_copy.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+ body{ margin:0; font-family:Inter, system-ui, Arial, sans-serif; background:#f5f7fa; color:#111; }
+ header{ background:#fff; border-bottom:1px solid #e2e8f0; padding:1rem 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+ .header-row{ display:flex; flex-wrap:wrap; gap:.75rem; align-items:center; margin-bottom:.75rem; }
+ .header-row:last-child{ margin-bottom:0; }
+ h1{ font-size:1.25rem; margin:0; min-width:180px; font-weight:700; color:#1e293b; }
+ select, button, input[type=search]{ padding:.55rem .8rem; font-size:.9rem; border:1px solid #cbd5e1; border-radius:8px; background:#fff; font-family:inherit; min-width:120px; transition:all .2s ease; }
+ select:hover, input[type=search]:focus { border-color:#94a3b8; }
+ select:focus, input[type=search]:focus { outline:none; border-color:#0ea5e9; box-shadow:0 0 0 3px rgba(14,165,233,.1); }
+ 
+ .print-options{ display:flex; gap:.5rem; align-items:center; }
+ .btn-primary, .btn-secondary, .btn-tertiary{ 
+   display:inline-flex; 
+   align-items:center; 
+   gap:.4rem; 
+   padding:.55rem 1rem; 
+   font-size:.9rem; 
+   border:none; 
+   border-radius:8px; 
+   font-family:inherit; 
+   font-weight:600; 
+   cursor:pointer; 
+   transition:all .2s ease;
+   min-width:auto;
+ }
+ .btn-icon{ font-size:1.1rem; }
+ 
+ .btn-primary{ 
+   background:linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); 
+   color:#fff; 
+   box-shadow:0 2px 8px rgba(14,165,233,.3); 
+ }
+ .btn-primary:hover{ 
+   transform:translateY(-2px); 
+   box-shadow:0 4px 12px rgba(14,165,233,.4); 
+   background:linear-gradient(135deg, #0284c7 0%, #0262a8 100%); 
+ }
+ .btn-primary:active{ transform:translateY(0); }
+ 
+ .btn-secondary{ 
+   background:linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); 
+   color:#fff; 
+   box-shadow:0 2px 8px rgba(139,92,246,.3); 
+ }
+ .btn-secondary:hover{ 
+   transform:translateY(-2px); 
+   box-shadow:0 4px 12px rgba(139,92,246,.4); 
+   background:linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); 
+ }
+ .btn-secondary:active{ transform:translateY(0); }
+ 
+ .btn-tertiary{ 
+   background:linear-gradient(135deg, #059669 0%, #047857 100%); 
+   color:#fff; 
+   box-shadow:0 2px 8px rgba(5,150,105,.3); 
+ }
+ .btn-tertiary:hover{ 
+   transform:translateY(-2px); 
+   box-shadow:0 4px 12px rgba(5,150,105,.4); 
+   background:linear-gradient(135deg, #047857 0%, #065f46 100%); 
+ }
+ .btn-tertiary:active{ transform:translateY(0); }
+ 
+ button:disabled{ 
+   opacity:.5; 
+   cursor:not-allowed; 
+   transform:none !important; 
+   box-shadow:none !important; 
+ }
+ 
+ /* Responsive button design */
+ @media (max-width: 768px) {
+   .print-options{ flex-wrap:wrap; gap:.4rem; }
+   .btn-primary, .btn-secondary, .btn-tertiary{ padding:.5rem .8rem; font-size:.85rem; }
+   .btn-icon{ font-size:1rem; }
+ }
+ 
+ .status{ font-size:.85rem; color:#64748b; min-width:160px; font-weight:500; }
+ input[type=search]{ min-width:200px; background:#f8fafc; }
+ input[type=search]::placeholder{ color:#cbd5e1; }
+ main{ max-width: 1400px; margin:1rem auto 2rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.04); }
+ table{ border-collapse:collapse; width:100%; font-size:.72rem; }
+ thead th{ background:#dfeff5; padding:.5rem .4rem; text-align:center; border:1px solid #e2e8f0; font-weight:600; }
+ tbody td{ padding:.45rem .4rem; border:1px solid #eef2f5; vertical-align:top; background:#f9fbfc; text-align:center; }
+ tbody td:nth-child(3){ text-align:left; }
+ tbody td:nth-child(6){ text-align:left; }
+ tbody tr:nth-child(even) td{ background:#f3f8fa; }
+ tbody td:nth-child(8){ display:none; }
+ thead th:nth-child(8){ display:none; }
+ .group-row td{ background:#f0f6f8; font-weight:600; font-size:.78rem; letter-spacing:.4px; }
+
+  /* Photo column and image styling */
+  tbody td.photo-cell{ text-align:center; padding:0.25rem; }
+  tbody td.photo-cell img.student-photo{ width:60px; height:75px; object-fit:cover; border:1px solid #ddd; background:#f5f5f5; display:block; margin:0 auto; }
+ .sticky-head thead th{ position:sticky; top:0; z-index:5; }
+ .small{ font-size:.65rem; color:#555; }
+ .toolbar-spacer{ flex:1 1 auto; }
+ .print-note{ font-size:.65rem; color:#64748b; margin-left:.75rem; }
+ 
+ /* Style for auto-generated admission dates */
+ .auto-date{ color:#e11d48; font-weight:600; }
+ .auto-date::after{ content:" *"; font-size:.6em; color:#9ca3af; }
+ 
+ /* Print styles for exact Ctrl+P appearance */
+ @media print{ 
+   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+   
+   body{ background:#fff; font-size:14px; margin:0; padding:0; }
+   header{ position:static; padding:0.8rem; border:none; page-break-inside:avoid; }
+   .header-row{ justify-content:center; margin-bottom:0.5rem; }
+   h1{ font-size:20px; text-align:center; font-weight:bold; margin-bottom:10px; }
+   button, #searchBox, select, .status, .print-options{ display:none !important; }
+   main{ box-shadow:none; border:none; margin:0; border-radius:0; max-width:none; height:auto; }
+   table{ 
+     font-size:12px; 
+     width:100%; 
+     border-collapse:collapse;
+     page-break-inside:auto;
+     table-layout: fixed;
+   }
+   thead{ 
+     display:table-header-group; 
+     break-inside:avoid;
+   }
+   thead th{ 
+     background:#f0f0f0 !important; 
+     padding:8px 4px; 
+     font-size:11px; 
+     border:2px solid #000;
+     page-break-inside:avoid;
+     font-weight:bold;
+     text-align:center;
+     height:40px;
+     vertical-align:middle;
+   }
+   tbody{ 
+     display:table-row-group;
+   }
+   tbody tr{ 
+     page-break-inside:avoid; 
+     break-inside:avoid;
+     height:auto;
+     min-height:40px;
+   }
+   tbody tr:not(.group-row) {
+     height:auto !important;
+     min-height:40px !important;
+   }
+   tbody td{ 
+     padding:6px 4px; 
+     font-size:10px; 
+     border:1.5px solid #000;
+     line-height:1.3;
+     vertical-align:top;
+     height:auto;
+     min-height:40px;
+     overflow:hidden;
+   }
+   .group-row{ 
+     page-break-before:auto; 
+     page-break-after:avoid;
+     break-after:avoid;
+     height:30px !important;
+   }
+   .group-row td{ 
+     background:#e0e0e0 !important; 
+     font-size:12px; 
+     padding:8px;
+     font-weight:bold;
+     text-align:center;
+     border:2px solid #000;
+     height:30px;
+   }
+   .small{ font-size:9px; }
+   img{ 
+     max-width:60px !important; 
+     max-height:75px !important; 
+     object-fit:cover;
+   }
+   @page{ 
+     size:A4 landscape; 
+     margin:0.3cm; 
+   }
+   
+   /* Ensure table headers repeat on each page */
+   thead{ 
+     display:table-header-group;
+   }
+   
+   /* Natural page breaks - allow minimum 8 rows per page */
+   tbody tr:not(.group-row):nth-child(8n) { 
+     page-break-after: auto;
+   }
+   
+   /* Avoid breaking rows */
+   tr{ 
+     page-break-inside:avoid;
+   }
+   
+   /* Keep group headers with their content */
+   .group-row{ 
+     page-break-after:avoid;
+     page-break-before:auto;
+   }
+   
+   /* Prevent section headers from being orphaned */
+   .group-row + tr:not(.group-row) {
+     page-break-before: avoid;
+   }
+   
+   /* Better widow/orphan control */
+   tbody {
+     orphans: 3;
+     widows: 3;
+   }
+   
+   /* Custom page break classes */
+   .page-break-after {
+     page-break-after: always !important;
+   }
+   
+   .page-break-before {
+     page-break-before: always !important;
+   }
+   
+   /* Prevent orphan rows - ensure at least 3 rows stay together */
+   tbody tr:not(.group-row):nth-last-child(-n+3) {
+     page-break-before: avoid;
+   }
+   
+   /* Natural flow with good spacing */
+   .print-optimized tbody tr:not(.group-row) {
+     height: auto !important;
+     min-height: 40px !important;
+   }
+   
+   .print-optimized thead th {
+     height: 40px;
+   }
+   
+   /* Better page utilization */
+   .print-optimized {
+     height: auto;
+     orphans: 3;
+     widows: 3;
+   }
+   
+   /* Auto-generated dates in print */
+   .auto-date {
+     color: #000 !important;
+     font-weight: bold !important;
+   }
+ }
+</style>
+</head>
+<body>
+ <header>
+  <div class="header-row">
+   <h1>Admission Book</h1>
+   <select id="classYearSelect" aria-label="Class Year">
+    <option value="">Select Class Year</option>
+    <option value="class_2024">Class 2024</option>
+    <option value="class_2025">Class 2025</option>
+    <option value="class_2026">Class 2026</option>
+   </select>
+   <select id="classSelect" aria-label="Class"><option value="">Select Class</option></select>
+   <select id="sectionSelect" aria-label="Section"><option value="">Select Section</option></select>
+   <span id="status" class="status">Select class year</span>
+  </div>
+  <div class="header-row">
+   <input id="searchBox" type="search" placeholder="Search name / IID / roll" />
+   <div style="flex:1;"></div>
+   <div class="print-options">
+    <button id="pdfBtn" class="btn-secondary" title="Download as PDF">
+     <span class="btn-icon">�</span> PDF
+    </button>
+   </div>
+  </div>
+ </header>
+ <main>
+	<table id="bookTable" class="sticky-head">
+	 <thead>
+		<tr>
+		 <th>S.L</th>
+		 <th>ADMISSION<br>DATE<br>UID</th>
+		 <th>NAME<br>FATHER'S NAME<br>MOTHER'S NAME<br>MOBILE NO</th>
+		 <th>CLASS<br>SECTION<br>ROLL<br>SESSION</th>
+		 <th>DATE OF BIRTH<br>GENDER<br>RELIGION<br>BIRTH REG NUMBER</th>
+		 <th>VILLAGE<br>POST OFFICE<br>UPAZILLA<br>DISTRICT</th>
+		 <th>OCCUPATION<br>STUDENT AGE<br>PREVIOUS SCHOOL</th>
+		 <th>FREEDOM FIGHTER CHILD</th>
+		 <th>PHOTO</th>
+		 <th>HEAD MASTER<br>SINE</th>
+		 <th>COMMENT</th>
+		</tr>
+	 </thead>
+	 <tbody></tbody>
+	</table>
+ </main>
+ <script>
+ const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+ const tableName = 'student_database_others';
+ let supabaseClient;
+ let allRows = [];
+ let currentClassYear = ''; // e.g., 'class_2025'
+ let currentClass = '';
+ let currentSection = '';
+
+ function setStatus(msg){ const el=document.getElementById('status'); if(el) el.textContent=msg; }
+ function initSupabase(){ 
+   if(supabaseClient) return supabaseClient; 
+   // Reuse existing Supabase client or create new one
+   if(window.supabaseClient) {
+     supabaseClient = window.supabaseClient;
+   } else {
+     window.__supabaseClients = window.__supabaseClients || {};
+     window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
+     window.__supabaseClients[supabaseUrl] = window.supabaseClient;
+     supabaseClient = window.supabaseClient;
+   }
+   return supabaseClient; 
+ }
+
+ async function loadClassOptions(){
+   if(!currentClassYear){ document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; return; }
+   setStatus('Loading classes…'); initSupabase();
+   const { data, error } = await supabaseClient.from(tableName).select(currentClassYear).not(currentClassYear,'is',null);
+   if(error){ setStatus('Class load failed'); console.error(error); return; }
+   const set = new Set(); data.forEach(r=>{ const c=String(r[currentClassYear]||'').trim(); if(c) set.add(c); });
+   const list = [...set].sort((a,b)=>Number(a)-Number(b));
+   const sel = document.getElementById('classSelect'); sel.innerHTML='<option value="">Select Class</option>' + list.map(c=>`<option value="${c}">${c}</option>`).join('');
+   setStatus('Select class');
+ }
+
+ async function loadSectionOptions(){
+   if(!currentClassYear || !currentClass){ document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; return; }
+   setStatus('Loading sections…');
+   const sectionCol = currentClassYear.replace('class_', 'section_'); // class_2025 -> section_2025
+   const { data, error } = await supabaseClient.from(tableName).select(sectionCol).eq(currentClassYear, currentClass).not(sectionCol,'is',null);
+   if(error){ setStatus('Section load failed'); console.error(error); return; }
+   const set = new Set(); data.forEach(r=>{ const s=String(r[sectionCol]||'').trim(); if(s) set.add(s); });
+   const list=[...set].sort();
+   const sel=document.getElementById('sectionSelect'); sel.innerHTML='<option value="">Select Section</option>' + list.map(s=>`<option value="${s}">${s}</option>`).join('');
+   setStatus('Select section');
+ }
+
+ async function loadRows(){
+   if(!currentClassYear){ setStatus('Select class year'); return; }
+   setStatus('Loading students…');
+   const sectionCol = currentClassYear.replace('class_', 'section_'); // class_2025 -> section_2025
+   const rollCol = currentClassYear.replace('class_', 'roll_'); // class_2025 -> roll_2025
+   
+   try {
+     let query = supabaseClient
+       .from('student_database_others')
+       .select(`
+         iid,admission_date,student_name_en,father_name_en,mother_name_en,father_mobile,
+         ${currentClassYear},session,student_dateofbirth,religion,birth_registration,student_gender,
+         village_en,postoffice_en,upazilla_en,district_en,father_occupation,previous_school,
+         quote_freedomfighter,student_photo_url,status,${sectionCol},${rollCol}
+       `)
+       .not('iid','is',null)
+       .not(currentClassYear,'is',null)
+       .order(currentClassYear)
+       .order(sectionCol)
+       .order(rollCol,{ ascending:true });
+       
+     // If class is selected, filter by class
+     if(currentClass){
+       query = query.eq(currentClassYear, currentClass);
+     }
+       
+     // If section is selected, filter by section too
+     if(currentSection){
+       query = query.eq(sectionCol, currentSection);
+     }
+       
+     const { data, error } = await query;
+       
+     if(error){ 
+       setStatus('Student load failed: ' + error.message); 
+       console.error('Supabase error:', error); 
+       return; 
+     }
+     
+     allRows = data || [];
+     setStatus(`Loaded ${allRows.length} students`);
+     renderTable();
+     
+   } catch(err) {
+     setStatus('Network error: ' + err.message);
+     console.error('Network error:', err);
+   }
+ } function simplify(val){ return (val==null||val==='null'||val==='undefined')? '' : String(val); }
+
+ function calculateAge(birthDate, admissionDate, classYear = null) {
+   if (!birthDate) return '';
+   
+   // Handle null admission date based on class year
+   if (!admissionDate || admissionDate === 'null' || admissionDate === null) {
+     if (classYear) {
+       const year = classYear.replace('class_', '');
+       admissionDate = `01-01-${year}`;
+     } else {
+       return ''; // Can't calculate without admission date or class year
+     }
+   }
+   
+   // Parse dates in dd-mm-yyyy format
+   function parseDate(dateStr) {
+     if (!dateStr) return null;
+     
+     // Handle different date formats
+     const dateString = String(dateStr).trim().replace('*', ''); // Remove * mark for parsing
+     
+     // Check if it's in dd-mm-yyyy format (22-12-2024)
+     if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+       const [day, month, year] = dateString.split('-');
+       return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+     }
+     
+     // Check if it's in yyyy-mm-dd format
+     if (dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+       return new Date(dateString);
+     }
+     
+     // Try other common formats
+     return new Date(dateString);
+   }
+   
+   const birth = parseDate(birthDate);
+   const admission = parseDate(admissionDate);
+   
+   if (!birth || !admission || isNaN(birth.getTime()) || isNaN(admission.getTime())) {
+     return '';
+   }
+   
+   // Calculate age in years and months
+   let years = admission.getFullYear() - birth.getFullYear();
+   let months = admission.getMonth() - birth.getMonth();
+   let days = admission.getDate() - birth.getDate();
+   
+   // Adjust if day difference is negative
+   if (days < 0) {
+     months--;
+     const daysInPrevMonth = new Date(admission.getFullYear(), admission.getMonth(), 0).getDate();
+     days += daysInPrevMonth;
+   }
+   
+   // Adjust if month difference is negative
+   if (months < 0) {
+     years--;
+     months += 12;
+   }
+   
+   // Format the result
+   if (years > 0) {
+     if (months > 0) {
+       return `${years} years ${months} months`;
+     } else {
+       return `${years} years`;
+     }
+   } else if (months > 0) {
+     return `${months} months`;
+   } else {
+     return `${days} days`;
+   }
+ }
+
+ // Helper function to get admission date (handle null values)
+ function getAdmissionDate(admissionDate, classYear) {
+   if (admissionDate && admissionDate !== 'null' && admissionDate !== null && admissionDate.trim() !== '') {
+     return admissionDate;
+   }
+   
+   // Return default date based on class year with * mark
+   if (classYear) {
+     const year = classYear.replace('class_', '');
+     return `01-01-${year}*`;
+   }
+   
+   return '01-01-2025*'; // fallback with * mark
+ }
+
+ // Test function for age calculation - you can test in browser console
+ function testAgeCalculation() {
+   console.log('Testing age calculation:');
+   console.log('Birth: 25-02-2014, Admission: 22-12-2024');
+   console.log('Calculated Age:', calculateAge('25-02-2014', '22-12-2024'));
+   
+   console.log('Birth: 15-03-2015, Admission: 01-01-2025');
+   console.log('Calculated Age:', calculateAge('15-03-2015', '01-01-2025'));
+   
+   console.log('Birth: 10-05-2016, Admission: null, Class: class_2026');
+   console.log('Calculated Age:', calculateAge('10-05-2016', null, 'class_2026'));
+   
+   console.log('Testing getAdmissionDate:');
+   console.log('Null admission, class_2025:', getAdmissionDate(null, 'class_2025'));
+   console.log('Null admission, class_2024:', getAdmissionDate(null, 'class_2024'));
+   console.log('Null admission, class_2026:', getAdmissionDate(null, 'class_2026'));
+   console.log('Empty string admission, class_2025:', getAdmissionDate('', 'class_2025'));
+   console.log('Valid admission date:', getAdmissionDate('15-06-2024', 'class_2025'));
+   
+   return 'Test completed. Check console for results.';
+ }
+
+ async function generatePDF() {
+   if (!allRows.length) {
+     alert('No data to export');
+     return;
+   }
+
+   const year = currentClassYear.replace('class_', '');
+   const filename = `admission_book_${year}_${new Date().toISOString().split('T')[0]}.pdf`;
+   
+   try {
+     // Show loading message
+     const pdfBtn = document.getElementById('pdfBtn');
+     const originalText = pdfBtn.textContent;
+     pdfBtn.textContent = 'Generating PDF...';
+     pdfBtn.disabled = true;
+     
+     // Get the table element
+     const table = document.getElementById('bookTable');
+     
+     // Create temporary container with print styles
+     const tempDiv = document.createElement('div');
+     tempDiv.style.position = 'absolute';
+     tempDiv.style.left = '-9999px';
+     tempDiv.style.top = '0';
+     tempDiv.style.background = 'white';
+     tempDiv.style.width = '1400px';
+     tempDiv.style.fontFamily = 'Arial, sans-serif';
+     tempDiv.style.fontSize = '10px'; // Larger font size
+     tempDiv.style.color = 'black';
+     
+     // Clone and modify table for PDF
+     const tableClone = table.cloneNode(true);
+     
+     // Apply PDF-specific styles to the cloned table
+     tableClone.style.width = '100%';
+     tableClone.style.fontSize = '10px';
+     tableClone.style.borderCollapse = 'collapse';
+     
+     // Style header
+     const headers = tableClone.querySelectorAll('thead th');
+     headers.forEach(th => {
+       th.style.background = '#f0f0f0';
+       th.style.padding = '3px 1px';
+       th.style.border = '1px solid #ccc';
+       th.style.fontSize = '9.5px';
+       th.style.fontWeight = 'bold';
+       th.style.textAlign = 'center';
+       th.style.lineHeight = '1.3';
+     });
+     
+     // Style body cells
+     const cells = tableClone.querySelectorAll('tbody td');
+     cells.forEach(td => {
+       td.style.padding = '2.5px 1px';
+       td.style.border = '1px solid #ddd';
+       td.style.fontSize = '9.5px';
+       td.style.lineHeight = '1.3';
+       td.style.textAlign = 'center';
+       td.style.verticalAlign = 'middle';
+     });
+     
+     // Style group rows
+     const groupRows = tableClone.querySelectorAll('.group-row td');
+     groupRows.forEach(td => {
+       td.style.background = '#e8e8e8';
+       td.style.fontSize = '10px';
+       td.style.fontWeight = 'bold';
+       td.style.padding = '3px 1px';
+       td.style.textAlign = 'center';
+       td.style.lineHeight = '1.3';
+     });
+     
+     // Style images in PDF
+     const images = tableClone.querySelectorAll('img');
+     images.forEach(img => {
+      img.style.maxWidth = '60px';
+      img.style.maxHeight = '75px';
+      img.style.objectFit = 'cover';
+     });
+     
+     // Split table into pages (8-10 rows per page)
+     const tbody = tableClone.querySelector('tbody');
+     const allRows = Array.from(tbody.querySelectorAll('tr'));
+     const rowsPerPage = 10; // 8-10 rows per page
+     let currentPageHtml = '';
+     let currentPageRowCount = 0;
+     let pageHtmlArray = [];
+     
+     allRows.forEach((row, index) => {
+       if (row.classList.contains('group-row')) {
+         // Always include section headers
+         currentPageHtml += row.outerHTML;
+         currentPageRowCount = 0; // Reset count after section header
+       } else {
+         // Data rows
+         if (currentPageRowCount >= rowsPerPage) {
+           // Save current page and start new one
+           pageHtmlArray.push(currentPageHtml);
+           currentPageHtml = '';
+           currentPageRowCount = 0;
+         }
+         currentPageHtml += row.outerHTML;
+         currentPageRowCount++;
+       }
+     });
+     
+     // Add remaining rows
+     if (currentPageHtml) {
+       pageHtmlArray.push(currentPageHtml);
+     }
+     
+     // Create canvas for each page and add to PDF
+     const { jsPDF } = window.jspdf;
+     const pdf = new jsPDF({
+       orientation: 'landscape',
+       unit: 'mm',
+       format: 'a4'
+     });
+     
+     const pageWidth = 297;
+     const pageHeight = 210;
+     const margin = 5;
+     
+     let pageNumber = 1;
+     
+     for (let pageIdx = 0; pageIdx < pageHtmlArray.length; pageIdx++) {
+       if (pageIdx > 0) {
+         pdf.addPage();
+       }
+       
+       // Create page-specific HTML
+       const pageDiv = document.createElement('div');
+       pageDiv.style.position = 'absolute';
+       pageDiv.style.left = '-9999px';
+       pageDiv.style.top = '0';
+       pageDiv.style.background = 'white';
+       pageDiv.style.width = '1400px';
+       pageDiv.style.maxHeight = '900px';
+       pageDiv.style.overflow = 'hidden';
+       pageDiv.style.fontFamily = 'Arial, sans-serif';
+       pageDiv.style.fontSize = '10px';
+       pageDiv.style.color = 'black';
+       pageDiv.style.lineHeight = '1.3';
+       
+       // Create table for this page
+       const pageTableClone = tableClone.cloneNode(true);
+       const pageTbody = pageTableClone.querySelector('tbody');
+       pageTbody.innerHTML = pageHtmlArray[pageIdx];
+       
+       pageDiv.innerHTML = `
+         <div style="text-align:center;margin-bottom:5px;font-size:12px;font-weight:bold;color:black;">
+           Admission Book ${year} - Page ${pageIdx + 1}
+         </div>
+         ${pageTableClone.outerHTML}
+       `;
+       
+       document.body.appendChild(pageDiv);
+       
+       // Wait for images in this page to load
+       const pageImgElements = pageDiv.querySelectorAll('img');
+       await Promise.all(Array.from(pageImgElements).map(img => {
+         return new Promise(resolve => {
+           if (img.complete) {
+             resolve();
+           } else {
+             img.onload = resolve;
+             img.onerror = resolve;
+             setTimeout(resolve, 1000);
+           }
+         });
+       }));
+       
+       // Generate canvas for this page
+       const canvas = await html2canvas(pageDiv, {
+         scale: 2,
+         useCORS: true,
+         allowTaint: true,
+         backgroundColor: '#ffffff',
+         logging: false,
+         height: pageDiv.scrollHeight,
+         windowHeight: pageDiv.scrollHeight
+       });
+       
+       // Remove page div
+       document.body.removeChild(pageDiv);
+       
+       // Add to PDF
+       const imgData = canvas.toDataURL('image/png', 1.0);
+       const canvasWidth = canvas.width;
+       const canvasHeight = canvas.height;
+       const ratio = canvasWidth / canvasHeight;
+       
+       const pdfWidth = pageWidth - (margin * 2);
+       const pdfHeight = pdfWidth / ratio;
+       
+       pdf.addImage(imgData, 'PNG', margin, margin, pdfWidth, pdfHeight);
+       
+       // Add page number
+       pdf.setFontSize(8);
+       pdf.setTextColor(100);
+       pdf.text(`Page ${pageIdx + 1}`, pageWidth - 15, pageHeight - 3);
+     }
+     
+     // Save the PDF
+     pdf.save(filename);
+     
+     // Restore button
+     pdfBtn.textContent = originalText;
+     pdfBtn.disabled = false;
+     
+   } catch (error) {
+     console.error('PDF generation failed:', error);
+     alert('PDF generation failed. Please try using Ctrl+P to print manually.');
+     
+     // Restore button on error
+     const pdfBtn = document.getElementById('pdfBtn');
+     pdfBtn.textContent = 'Download as PDF';
+     pdfBtn.disabled = false;
+   }
+ }
+
+ async function generateAdvancedPDF() {
+   if (!allRows.length) {
+     alert('No data to export');
+     return;
+   }
+
+   const year = currentClassYear.replace('class_', '');
+   const filename = `admission_book_advanced_${year}_${new Date().toISOString().split('T')[0]}.pdf`;
+   
+   try {
+     // Show loading message
+     const pdfBtn = document.getElementById('pdfAdvancedBtn');
+     const originalText = pdfBtn.textContent;
+     pdfBtn.textContent = 'Generating...';
+     pdfBtn.disabled = true;
+     
+     const { jsPDF } = window.jspdf;
+     const pdf = new jsPDF({
+       orientation: 'landscape',
+       unit: 'mm',
+       format: 'a4'
+     });
+     
+     const pageWidth = 297;
+     const pageHeight = 210;
+     const margin = 10;
+     const contentWidth = pageWidth - (margin * 2);
+     const contentHeight = pageHeight - (margin * 2);
+     
+     // Title
+     pdf.setFontSize(16);
+     pdf.setFont(undefined, 'bold');
+     pdf.text(`Admission Book ${year}`, pageWidth / 2, 20, { align: 'center' });
+     
+     // Table setup
+     const sectionCol = currentClassYear.replace('class_', 'section_');
+     const rollCol = currentClassYear.replace('class_', 'roll_');
+     
+     // Group data by class and section
+     const classes = {};
+     allRows.forEach(r => {
+       const classValue = r[currentClassYear] || 'Unknown';
+       const section = r[sectionCol] || 'Unknown';
+       if(!classes[classValue]) classes[classValue] = {};
+       if(!classes[classValue][section]) classes[classValue][section] = [];
+       classes[classValue][section].push(r);
+     });
+     
+     let yPosition = 35;
+     let pageNumber = 1;
+     let overallIndex = 0;
+     
+     // Table headers
+     const headers = ['S.L', 'Date\nUID', 'Name\nFather\nMother\nMobile', 'Class\nSection\nRoll\nSession', 
+                     'DOB\nGender\nReligion\nBirth Reg', 'Address', 'Occupation\nAge\nPrevious School', 
+                     'Freedom Fighter', 'Photo', 'Head Master', 'Comment'];
+     
+     const colWidths = [15, 25, 45, 30, 35, 40, 35, 25, 20, 20, 25];
+     
+     function drawTableHeader() {
+       pdf.setFontSize(7);
+       pdf.setFont(undefined, 'bold');
+       
+       let xPos = margin;
+       headers.forEach((header, i) => {
+         pdf.rect(xPos, yPosition, colWidths[i], 15);
+         const lines = header.split('\n');
+         lines.forEach((line, lineIndex) => {
+           pdf.text(line, xPos + colWidths[i]/2, yPosition + 4 + (lineIndex * 3), { align: 'center' });
+         });
+         xPos += colWidths[i];
+       });
+       
+       yPosition += 15;
+     }
+     
+     function checkPageBreak(neededHeight = 20) {
+       if (yPosition + neededHeight > contentHeight + margin) {
+         pdf.addPage();
+         yPosition = margin + 10;
+         
+         // Add page number
+         pdf.setFontSize(8);
+         pdf.setFont(undefined, 'normal');
+         pdf.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 5);
+         pageNumber++;
+         
+         drawTableHeader();
+       }
+     }
+     
+     // Draw initial headers
+     drawTableHeader();
+     
+     // Process each class and section
+     Object.keys(classes).sort((a,b)=>Number(a)-Number(b)).forEach(classValue => {
+       const classSections = classes[classValue];
+       
+       Object.keys(classSections).sort().forEach(section => {
+         const sectionRows = classSections[section];
+         
+         // Section header
+         checkPageBreak(10);
+         pdf.setFontSize(9);
+         pdf.setFont(undefined, 'bold');
+         pdf.rect(margin, yPosition, contentWidth, 8);
+         pdf.text(`Class: ${classValue} || Section: ${section} || ${year}`, pageWidth/2, yPosition + 5, { align: 'center' });
+         yPosition += 8;
+         
+         // Process each student in this section
+         sectionRows.forEach(row => {
+           overallIndex++;
+           checkPageBreak(12);
+           
+           pdf.setFontSize(6);
+           pdf.setFont(undefined, 'normal');
+           
+           let xPos = margin;
+           const admissionDateToShow = getAdmissionDate(row.admission_date, currentClassYear);
+           const rowData = [
+             overallIndex.toString(),
+             `${simplify(admissionDateToShow)}\n${simplify(row.iid)}`,
+             `${simplify(row.student_name_en)}\n${simplify(row.father_name_en)}\n${simplify(row.mother_name_en)}\n${simplify(row.father_mobile)}`,
+             `${simplify(row[currentClassYear])}\n${simplify(row[sectionCol])}\n${simplify(row[rollCol])}\n${simplify(row.session)}`,
+             `${simplify(row.student_dateofbirth)}\n${simplify(row.student_gender)}\n${simplify(row.religion)}\n${simplify(row.birth_registration)}`,
+             `${simplify(row.village_en)}\n${simplify(row.postoffice_en)}\n${simplify(row.upazilla_en)}\n${simplify(row.district_en)}`,
+             `${simplify(row.father_occupation)}\n${calculateAge(row.student_dateofbirth, admissionDateToShow, currentClassYear)}\n${simplify(row.previous_school)}`,
+             simplify(row.quote_freedomfighter),
+             row.student_photo_url && row.student_photo_url.trim() && row.student_photo_url !== 'null' ? 'Photo' : 'No Photo',
+             '',
+             simplify(row.status)
+           ];
+           
+           const cellHeight = 12;
+           
+           rowData.forEach((cellData, i) => {
+             pdf.rect(xPos, yPosition, colWidths[i], cellHeight);
+             
+             if (cellData) {
+               const lines = cellData.toString().split('\n');
+               lines.forEach((line, lineIndex) => {
+                 if (lineIndex < 4) { // Limit to 4 lines per cell
+                   pdf.text(line.substring(0, 25), xPos + 1, yPosition + 3 + (lineIndex * 2.5), { maxWidth: colWidths[i] - 2 });
+                 }
+               });
+             }
+             
+             xPos += colWidths[i];
+           });
+           
+           yPosition += cellHeight;
+         });
+       });
+     });
+     
+     // Add final page number
+     pdf.setFontSize(8);
+     pdf.text(`Page ${pageNumber}`, pageWidth - 20, pageHeight - 5);
+     
+     // Save the PDF
+     pdf.save(filename);
+     
+     // Restore button
+     pdfBtn.textContent = originalText;
+     pdfBtn.disabled = false;
+     
+   } catch (error) {
+     console.error('Advanced PDF generation failed:', error);
+     alert('Advanced PDF generation failed: ' + error.message);
+     
+     // Restore button on error
+     const pdfBtn = document.getElementById('pdfAdvancedBtn');
+     pdfBtn.textContent = 'Advanced PDF';
+     pdfBtn.disabled = false;
+   }
+ }
+
+ function renderTable(){
+   const tbody=document.querySelector('#bookTable tbody'); tbody.innerHTML='';
+   if(!allRows.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:1rem;">No records</td></tr>'; setStatus('0 rows'); return; }
+   
+   const year = currentClassYear.replace('class_', ''); // class_2025 -> 2025
+   const sectionCol = currentClassYear.replace('class_', 'section_');
+   
+   // Debug: Check photo URLs
+   console.log('Photo URLs check:', allRows.slice(0,3).map(r => ({
+     name: r.student_name_en,
+     photo_url: r.student_photo_url,
+     type: typeof r.student_photo_url,
+     length: r.student_photo_url ? r.student_photo_url.length : 0
+   })));
+   
+   // Group by class first, then by section
+   const classes = {};
+   allRows.forEach(r => {
+     const classValue = r[currentClassYear] || 'Unknown';
+     const section = r[sectionCol] || 'Unknown';
+     if(!classes[classValue]) classes[classValue] = {};
+     if(!classes[classValue][section]) classes[classValue][section] = [];
+     classes[classValue][section].push(r);
+   });
+   
+   let overallIndex = 0; // Continuous serial number
+   
+   // Render each class and its sections
+   Object.keys(classes).sort((a,b)=>Number(a)-Number(b)).forEach(classValue => {
+     const classSections = classes[classValue];
+     
+     Object.keys(classSections).sort().forEach(section => {
+       const sectionRows = classSections[section];
+       
+       // Section header row
+       const groupTr = document.createElement('tr');
+       groupTr.className = 'group-row';
+       groupTr.innerHTML = `<td colspan="11" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${classValue} || Section: ${section} || ${year}</td>`;
+       tbody.appendChild(groupTr);
+       
+       // Section data rows with continuous serial
+       sectionRows.forEach((r)=>{
+         overallIndex++; // Increment for each row
+         const tr=document.createElement('tr');
+         const rollCol = currentClassYear.replace('class_', 'roll_');
+         const admissionDateToShow = getAdmissionDate(r.admission_date, currentClassYear);
+         const calculatedAge = calculateAge(r.student_dateofbirth, admissionDateToShow, currentClassYear);
+         const isAutoDate = admissionDateToShow.includes('*');
+         const dateClass = isAutoDate ? 'auto-date' : '';
+         
+         tr.innerHTML = `
+           <td>${overallIndex}</td>
+           <td><span class="${dateClass}">${simplify(admissionDateToShow)}</span><br><span class="small">${simplify(r.iid)}</span></td>
+           <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
+           <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
+           <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
+           <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
+           <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
+           <td>${simplify(r.quote_freedomfighter)}</td>
+           <td class="photo-cell">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" class="student-photo" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
+           <td></td>
+           <td>${simplify(r.status)}</td>`;
+         tbody.appendChild(tr);
+       });
+     });
+   });
+   
+   setStatus(`${allRows.length} rows`);
+ }
+
+ function applySearch(){
+   const q = document.getElementById('searchBox').value.trim().toLowerCase();
+   if(!q){ renderTable(); return; }
+   const sectionCol = currentClassYear.replace('class_', 'section_');
+   const rollCol = currentClassYear.replace('class_', 'roll_');
+   const filtered = allRows.filter(r=>{
+     return [r.iid,r.student_name_en,r.father_name_en,r.mother_name_en,r[rollCol],r[sectionCol],r[currentClassYear]]
+       .map(v=>String(v||'').toLowerCase()).some(txt=>txt.includes(q));
+   });
+   const tbody=document.querySelector('#bookTable tbody'); tbody.innerHTML='';
+   
+   if(!filtered.length){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:1rem;">No search results</td></tr>'; setStatus('No results'); return; }
+   
+   const year = currentClassYear.replace('class_', '');
+   
+   // Group filtered results by class first, then by section
+   const classes = {};
+   filtered.forEach(r => {
+     const classValue = r[currentClassYear] || 'Unknown';
+     const section = r[sectionCol] || 'Unknown';
+     if(!classes[classValue]) classes[classValue] = {};
+     if(!classes[classValue][section]) classes[classValue][section] = [];
+     classes[classValue][section].push(r);
+   });
+   
+   let overallIndex = 0; // Continuous serial number for filtered results
+   
+   // Render each class and its sections
+   Object.keys(classes).sort((a,b)=>Number(a)-Number(b)).forEach(classValue => {
+     const classSections = classes[classValue];
+     
+     Object.keys(classSections).sort().forEach(section => {
+       const sectionRows = classSections[section];
+       
+       // Section header row for filtered results
+       const groupTr = document.createElement('tr');
+       groupTr.className = 'group-row';
+       groupTr.innerHTML = `<td colspan="11" style="text-align:center;padding:0.8rem;font-weight:bold;">Class: ${classValue} || Section: ${section} || ${year} (Filtered)</td>`;
+       tbody.appendChild(groupTr);
+       
+       // Section data rows with continuous serial
+       sectionRows.forEach((r)=>{
+         overallIndex++; // Increment for each filtered row
+         const tr=document.createElement('tr');
+         const admissionDateToShow = getAdmissionDate(r.admission_date, currentClassYear);
+         const calculatedAge = calculateAge(r.student_dateofbirth, admissionDateToShow, currentClassYear);
+         const isAutoDate = admissionDateToShow.includes('*');
+         const dateClass = isAutoDate ? 'auto-date' : '';
+         tr.innerHTML = `
+           <td>${overallIndex}</td>
+           <td><span class="${dateClass}">${simplify(admissionDateToShow)}</span><br><span class="small">${simplify(r.iid)}</span></td>
+           <td><strong>${simplify(r.student_name_en)}</strong><br><span class="small">${simplify(r.father_name_en)}<br>${simplify(r.mother_name_en)}<br>${simplify(r.father_mobile)}</span></td>
+           <td>${simplify(r[currentClassYear])}<br><span class="small">${simplify(r[sectionCol])}<br>${simplify(r[rollCol])}<br>${simplify(r.session)}</span></td>
+           <td>${simplify(r.student_dateofbirth)}<br><span class="small">${simplify(r.student_gender)}<br>${simplify(r.religion)}<br>${simplify(r.birth_registration)}</span></td>
+           <td>${[r.village_en,r.postoffice_en,r.upazilla_en,r.district_en].map(simplify).filter(Boolean).join('<br>')}</td>
+           <td>${simplify(r.father_occupation)}<br><span class="small">${calculatedAge}<br>${simplify(r.previous_school)}</span></td>
+           <td>${simplify(r.quote_freedomfighter)}</td>
+           <td class="photo-cell">${r.student_photo_url && r.student_photo_url.trim() && r.student_photo_url !== 'null' ? `<img src="${r.student_photo_url.trim()}" class="student-photo" alt="Photo" onerror="this.style.display='none'; this.nextSibling.style.display='block';" onload="this.nextSibling.style.display='none';"><span style="display:none;font-size:10px;color:#666;padding:2px;">No Photo</span>` : '<span style="font-size:10px;color:#666;">No Photo</span>'}</td>
+           <td></td>
+           <td>${simplify(r.status)}</td>`;
+         tbody.appendChild(tr);
+       });
+     });
+   });
+   
+   setStatus(`${filtered.length} (filtered)`);
+ }
+
+ document.getElementById('classYearSelect').addEventListener('change', async e=>{ currentClassYear=e.target.value; currentClass=''; currentSection=''; document.getElementById('classSelect').innerHTML='<option value="">Select Class</option>'; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear){ await loadClassOptions(); await loadRows(); } else { allRows=[]; renderTable(); } });
+ document.getElementById('classSelect').addEventListener('change', async e=>{ currentClass=e.target.value; currentSection=''; document.getElementById('sectionSelect').innerHTML='<option value="">Select Section</option>'; if(currentClassYear && currentClass){ await loadSectionOptions(); await loadRows(); } else if(currentClassYear) { await loadRows(); } else { allRows=[]; renderTable(); } });
+ document.getElementById('sectionSelect').addEventListener('change', async e=>{ currentSection=e.target.value; if(currentClassYear){ await loadRows(); } });
+ 
+ // Add null checks for optional elements
+ const searchBox = document.getElementById('searchBox');
+ if(searchBox) searchBox.addEventListener('input', ()=>{ applySearch(); });
+
+ const pdfBtn = document.getElementById('pdfBtn');
+ if(pdfBtn) pdfBtn.addEventListener('click', generatePDF);
+
+ window.addEventListener('DOMContentLoaded', async ()=>{ 
+   const ok = !!window.supabase; 
+   if(!ok){ console.error('Supabase lib missing'); return; } 
+   initSupabase();
+   
+   // Make test function available globally
+   window.testAgeCalculation = testAgeCalculation;
+   window.calculateAge = calculateAge;
+   window.getAdmissionDate = getAdmissionDate;
+   
+   console.log('Age calculation test functions loaded. Use testAgeCalculation() in console to test.');
+ });
+ </script>
+</body>
+</html>

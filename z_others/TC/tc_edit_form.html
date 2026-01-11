@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Edit Transfer Certificate Record (Other School)</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:0;background:#f6f7f9;color:#111;}
+  header{background:#fff;border-bottom:1px solid #e5e7eb;padding:.9rem 1rem;position:sticky;top:0;z-index:10;}
+  h1{margin:0;font-size:1.1rem;text-align:center;}
+  main{max-width:900px;margin:1rem auto 3rem;padding:0 1rem;}
+  form{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:1.1rem 1.25rem;box-shadow:0 6px 22px -8px rgba(0,0,0,.12);} 
+  fieldset{border:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.85rem .95rem;}
+  label{display:flex;flex-direction:column;font-size:.68rem;font-weight:600;letter-spacing:.4px;text-transform:uppercase;color:#374151;gap:.3rem;}
+  input,select,textarea{font:inherit;padding:.55rem .65rem;border:1px solid #d1d5db;border-radius:8px;background:#fff;}
+  textarea{min-height:70px;resize:vertical;}
+  input:focus,select:focus,textarea:focus{outline:2px solid #2563eb33;border-color:#2563eb;}
+  .row-span-2{grid-row:span 2;}
+  .actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:1.1rem;}
+  .btn{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:.6rem 1rem;font-size:.75rem;font-weight:600;cursor:pointer;letter-spacing:.3px;}
+  .btn.secondary{background:#6b7280;}
+  .btn.danger{background:#b91c1c;}
+  .btn:disabled{opacity:.55;cursor:not-allowed;}
+  .status{font-size:.75rem;margin-left:.35rem;}
+  .error{color:#b91c1c;font-weight:600;}
+  .muted{color:#6b7280;}
+  .bar{display:flex;justify-content:center;flex-wrap:wrap;gap:.6rem;margin:.75rem 0 0;font-size:.7rem;}
+  .nav-link{background:#2563eb;color:#fff;text-decoration:none;padding:.5rem .85rem;border-radius:7px;font-weight:600;letter-spacing:.3px;font-size:.68rem;}
+  .nav-link.alt{background:#475569;}
+  .nav-link.warn{background:#d97706;}
+  @media (prefers-color-scheme:dark){body{background:#0b1020;color:#e5e7eb;}header,form{background:#111729;border-color:#263148;}label{color:#9ca3af;}input,select,textarea{background:#0f162a;border-color:#263148;color:#e5e7eb;} .nav-link.alt{background:#334155;} }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../login/auth-check.js"></script>
+
+<script>
+  const supabaseUrl='https://rtfefxghfbtirfnlbucb.supabase.co';
+  const supabaseKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+  const tableName='termination_table_others';
+  window.__supabaseClients = window.__supabaseClients || {};
+  const client = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl,supabaseKey);
+  window.__supabaseClients[supabaseUrl] = client;
+
+  function qs(id){return document.getElementById(id);}  
+  function setStatus(msg, isErr=false){
+    let el=qs('status');
+    if(!el){
+      const host=qs('recordTitle') || document.querySelector('header h1');
+      if(host){
+        el=document.createElement('span');
+        el.id='status';
+        el.className='status muted';
+        host.appendChild(document.createTextNode(' '));
+        host.appendChild(el);
+      } else {
+        console.warn('Status container not found to display:', msg);
+        return;
+      }
+    }
+    el.textContent=msg;
+    el.classList.toggle('error', !!isErr);
+  }  
+  function field(name){ return document.forms.tcForm.elements[name]; }
+  function val(name){ const el=field(name); return el ? el.value.trim() : ''; }
+  function setVal(name, value){ const el=field(name); if(!el) return; el.value = value==null?'' : value; }
+  function formDataToUpdate(){
+    return {
+      student_name_en: val('name'),
+      father_name_en: val('father'),
+      mother_name_en: val('mother'),
+      tc_class: val('tc_class'),
+      tc_section: val('tc_section'),
+      tc_roll: val('tc_roll'),
+      board_registration: val('board_registration'),
+      student_dateofbirth: val('student_dateofbirth'),
+      student_gender: val('student_gender'),
+      paid_month: val('paid_month'),
+      student_character: val('student_character'),
+      next_class: val('next_class'),
+      tc_session: val('tc_session'),
+      issued_by: val('issued_by'),
+      note: val('note'),
+      father_mobile: val('father_mobile'),
+      tc_date: val('tc_date')
+    };
+  }
+  function fillForm(row){
+    setVal('name', row.student_name_en||'');
+    setVal('father', row.father_name_en||'');
+    setVal('mother', row.mother_name_en||'');
+    ensureSelectValue(field('tc_class'), row.tc_class||'');
+    ensureSelectValue(field('tc_section'), row.tc_section||'');
+    setVal('tc_roll', row.tc_roll||'');
+    setVal('board_registration', row.board_registration||'');
+    setVal('student_dateofbirth', row.student_dateofbirth||'');
+    ensureSelectValue(field('student_gender'), row.student_gender||'');
+    ensureSelectValue(field('paid_month'), row.paid_month||'');
+    ensureSelectValue(field('student_character'), row.student_character||'');
+    ensureSelectValue(field('next_class'), row.next_class||'');
+    ensureSelectValue(field('tc_session'), row.tc_session||'');
+    ensureSelectValue(field('issued_by'), row.issued_by||'');
+    setVal('note', row.note||'');
+    setVal('father_mobile', row.father_mobile||'');
+    setVal('tc_date', row.tc_date||'');
+  }
+  async function loadRecord(){
+    const params=new URLSearchParams(location.search);
+    const iid=params.get('iid');
+    if(!iid){setStatus('iid param missing',true);return;}
+    setStatus('Loading record…');
+    const { data, error } = await client.from(tableName).select('*').eq('iid', iid).limit(1);
+    if(error){console.error(error); setStatus('Load failed',true); return;}
+    if(!data||!data.length){setStatus('Not found',true);return;}
+    const row=data[0];
+    window.__ROW=row; // keep copy for debugging
+    qs('recordTitle').textContent='Edit TC: IID '+(row.iid||'')+' (SL '+(row.tc_sl||'-')+')';
+    fillForm(row);
+    setStatus('Ready');
+    const certLink=qs('certLink'); if(certLink) certLink.href='./certificate_word.html?iid='+encodeURIComponent(row.iid)+'&sl='+encodeURIComponent(row.tc_sl||'');
+  }
+  async function handleSubmit(e){
+    e.preventDefault();
+    try {
+      const params=new URLSearchParams(location.search); const iid=params.get('iid'); if(!iid){setStatus('iid missing',true);return;}
+      setStatus('Updating…');
+      const payload=formDataToUpdate();
+      const { error } = await client.from(tableName).update(payload).eq('iid', iid);
+      if(error) throw error;
+      setStatus('Saved');
+    } catch(err){ console.error('Update error', err); setStatus('Update failed', true); }
+  }
+  function today(){const d=new Date(); return d.toISOString().slice(0,10);}  
+  function ensureSelectValue(sel, val){ if(!sel) return; const exists=[...sel.options].some(o=>o.value===val); if(val && !exists){ const opt=document.createElement('option'); opt.value=val; opt.textContent=val; opt.dataset.added='1'; sel.appendChild(opt); } sel.value=val; }
+  function buildStaticSelectOptions(){
+    const cls=['','6','7','8','9','10'];
+    const section=['','Shapla','Golap','Morning'];
+    const gender=['','Male','Female','Other'];
+    const character=['','good','very good','bad','very bad'];
+    const nextClass=['','6','7','8','9','10'];
+    const sessions=['','2023','2024','2025','2026'];
+    const issuedBy=['','RAZIB KUMAR PAUL','SHOWRAV DEB'];
+    fillSelect(qs('tc_class'),cls); fillSelect(qs('tc_section'),section);
+    fillSelect(qs('student_gender'),gender); fillSelect(qs('student_character'),character); fillSelect(qs('next_class'),nextClass);
+    fillSelect(qs('tc_session'),sessions); fillSelect(qs('issued_by'),issuedBy);
+  }
+  function buildPaidMonthOptions(){
+    const years=[2025,2026];
+    const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const sel=qs('paid_month'); if(!sel) return; sel.innerHTML='';
+    const empty=document.createElement('option'); empty.value=''; empty.textContent=''; sel.appendChild(empty);
+    for(const y of years){ for(const m of months){ const opt=document.createElement('option'); opt.value=`${m} ${y}`; opt.textContent=`${m} ${y}`; sel.appendChild(opt);} }
+  }
+  function fillSelect(sel, arr){ if(!sel) return; sel.innerHTML=''; arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); }
+  window.addEventListener('DOMContentLoaded',()=>{buildStaticSelectOptions(); buildPaidMonthOptions(); loadRecord(); document.forms.tcForm.addEventListener('submit',handleSubmit); if(!qs('tc_date').value) qs('tc_date').value=today();});
+</script>
+</head>
+<body>
+<header>
+  <h1 id="recordTitle">Edit Transfer Certificate <span id="status" class="status muted"></span></h1>
+  <div class="bar">
+    <a class="nav-link" href="./test_list.html">← Back to List</a>
+    <a class="nav-link alt" id="certLink" href="#" target="_blank" rel="noopener">View Certificate ↗</a>
+  </div>
+</header>
+<main>
+  <form id="tcForm" autocomplete="off">
+    <fieldset>
+      <label>Student Name
+        <input name="name" required />
+      </label>
+      <label>Father Name
+        <input name="father" />
+      </label>
+      <label>Mother Name
+        <input name="mother" />
+      </label>
+      <label>Class
+        <select name="tc_class" id="tc_class"></select>
+      </label>
+      <label>Section
+        <select name="tc_section" id="tc_section"></select>
+      </label>
+      <label>Roll
+        <input name="tc_roll" />
+      </label>
+      <label>Registration No
+        <input name="board_registration" />
+      </label>
+      <label>Date of Birth
+        <input name="student_dateofbirth" placeholder="DD-MM-YYYY" />
+      </label>
+      <label>Gender
+        <select name="student_gender" id="student_gender"></select>
+      </label>
+      <label>Paid Upto
+        <select name="paid_month" id="paid_month"></select>
+      </label>
+      <label>Character
+        <select name="student_character" id="student_character"></select>
+      </label>
+      <label>Next Class
+        <select name="next_class" id="next_class"></select>
+      </label>
+      <label>Session
+        <select name="tc_session" id="tc_session"></select>
+      </label>
+      <label>Issued By
+        <select name="issued_by" id="issued_by"></select>
+      </label>
+      <label>Father Mobile
+        <input name="father_mobile" />
+      </label>
+      <label class="row-span-2">Note
+        <textarea name="note"></textarea>
+      </label>
+      <label>TC Date
+        <input name="tc_date" id="tc_date" />
+      </label>
+    </fieldset>
+    <div class="actions">
+      <button class="btn" type="submit">Save</button>
+      <a class="btn secondary" href="./test_list.html">Cancel</a>
+    </div>
+  </form>
+</main>
+</body>
+</html>

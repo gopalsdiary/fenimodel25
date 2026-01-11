@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transfer Certificate List </title>
+	  <script src="../login/auth-check_copy.js"></script>
+
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #f6f7f9; color: #111; }
+    .container { max-width: 1100px; margin: 0 auto; width: 100%; padding: 0 1rem; box-sizing: border-box; }
+    header { position: sticky; top: 0; background: white; padding: 0.85rem 0; border-bottom: 1px solid #e5e7eb; z-index: 10; }
+    h1 { margin: 0; font-size: 1.2rem; text-align:center; }
+    main { padding: 1rem 0 2rem; }
+    .toolbar { display: flex; gap: .75rem; align-items: center; margin: 0.75rem 0 1.1rem; flex-wrap:wrap; justify-content:center; }
+    .nav-btn { background:#2563eb; color:#fff; text-decoration:none; padding:.55rem .9rem; font-size:.7rem; font-weight:600; border-radius:6px; letter-spacing:.4px; display:inline-block; }
+    .nav-btn:hover { background:#1d4ed8; }
+    .nav-btn.secondary { background:#e65e28; }
+    .nav-btn.secondary:hover { background:#475569; }
+    input[type="search"]{ padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: 8px; min-width: 240px; }
+    .table-wrap { overflow: auto; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    thead th { position: sticky; top: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: left; padding: .75rem; font-size: .9rem; }
+    tbody td { border-top: 1px solid #f1f5f9; padding: .65rem .75rem; font-size: .92rem; }
+    tbody tr:hover { background: #f9fafb; }
+    .muted { color: #6b7280; }
+    .link { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .link:hover { text-decoration: underline; }
+    .status { margin-left: .5rem; font-size: .9rem; }
+    .error { color: #b91c1c; }
+    .sep { color: #9ca3af; margin: 0 .25rem; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0b1020; color: #e5e7eb; }
+      header, .table-wrap { background: #111729; border-color: #263148; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+      thead th { background: #0f162a; border-bottom-color: #263148; }
+      tbody td { border-top-color: #1d2845; }
+      input[type="search"]{ background: #0f162a; color: #e5e7eb; border-color: #263148; }
+      .muted { color: #9aa5b1; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase configuration
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const tableName = 'termination_table_others';
+    window.__supabaseClients = window.__supabaseClients || {};
+    const client = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
+    window.__supabaseClients[supabaseUrl] = client;
+
+    const DEBUG = new URLSearchParams(location.search).has('debug');
+    function logDbg(...a){ if(DEBUG) console.log('[TC-LIST]', ...a); }
+
+    function createRow(tr, cells){
+      cells.forEach(c => { const td=document.createElement('td'); if(c && c.element) td.appendChild(c.element); else td.textContent = c ?? ''; tr.appendChild(td); });
+      return tr;
+    }
+    function renderTable(rows){ const tbody=document.querySelector('#tbody'); tbody.innerHTML=''; rows.forEach(r=>tbody.appendChild(r)); document.querySelector('#count').textContent = rows.length; }
+    function buildRows(data){
+      const rows=[];
+      for(const obj of data){
+        const sl = obj.tc_sl ?? '';
+        const name = obj.student_name_en ?? '';
+        const father = obj.father_name_en ?? '';
+        const klass = obj.tc_class ?? '';
+        const roll = obj.tc_roll ?? '';
+        const iid = obj.iid ?? '';
+        // Make IID clickable — opens details page
+        const iidEl = (iid ? (() => {
+          const a = document.createElement('a');
+          a.className = 'link';
+          a.textContent = iid;
+          a.href = `/login/detailsinfo.html?iid=${encodeURIComponent(iid)}`;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          return a;
+        })() : iid);
+  const pdfLink=document.createElement('a'); pdfLink.className='link'; pdfLink.textContent='Edit'; pdfLink.href=`./tc_edit_form.html?iid=${encodeURIComponent(iid)}`;
+        const wordLink=document.createElement('a'); wordLink.className='link'; wordLink.textContent='Word'; wordLink.href=`./certificate_word.html?iid=${encodeURIComponent(iid)}`;
+        const cell=document.createElement('div'); cell.appendChild(pdfLink); const sep=document.createElement('span'); sep.className='sep'; sep.textContent='|'; cell.appendChild(sep); cell.appendChild(wordLink);
+        const tr=document.createElement('tr'); createRow(tr,[sl,name,father,klass,roll,{element:iidEl},{element:cell}]); rows.push(tr);
+      }
+      return rows;
+    }
+    function setupFilter(allRows){ const input=document.querySelector('#search'); const apply=()=>{ const q=input.value.toLowerCase().trim(); if(!q) return renderTable(allRows); const filtered=allRows.filter(tr=>tr.textContent.toLowerCase().includes(q)); renderTable(filtered); }; input.addEventListener('input',apply); apply(); }
+
+    async function loadData(){
+      const statusEl=document.querySelector('#status');
+      statusEl.classList.remove('error');
+      statusEl.textContent='Loading…';
+      try{
+        const { data, error } = await client.from(tableName)
+          .select('tc_sl, student_name_en, father_name_en, tc_class, tc_roll, iid')
+          .order('tc_sl', { ascending:false })
+          .limit(1000);
+        if(error) throw error;
+        logDbg('Fetched rows', data?.length||0);
+        const rows=buildRows(data||[]);
+        setupFilter(rows);
+        statusEl.textContent='Loaded';
+      }catch(e){
+        console.error('Load failed', e);
+        statusEl.textContent='Failed to load';
+        statusEl.classList.add('error');
+        if(!document.getElementById('retryBtn')){
+          const btn=document.createElement('button');
+          btn.id='retryBtn'; btn.textContent='Retry'; btn.style.marginLeft='.75rem'; btn.style.padding='.35rem .7rem'; btn.style.fontSize='.65rem'; btn.style.cursor='pointer'; btn.onclick=()=>{ btn.remove(); loadData(); }; statusEl.parentElement.appendChild(btn);
+        }
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Transfer Certificate List (Other School) <span class="muted status" id="status"></span></h1>
+      <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted">TC এন্ট্রিকরার সাথে সাথে এন্টি হয়ে যাবে। তাই সাবধাণতা অবলম্বণ করুণ  word button > download</p>
+            <p style="text-align:center; margin:.35rem 0 0; font-size:.8rem;" class="muted">ইস্যু করা Transfer Certificate এর তালিকা</p>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
+        <span class="muted">Rows: <span id="count">0</span></span>
+  <a class="nav-btn" href="../index.html">Home</a>
+  <button type="button" id="openEntryBtn" class="nav-btn secondary" style="border:0;cursor:pointer;">TC Entry Form</button>
+<div style="width:100%;max-width:760px;margin:0 0 .85rem;padding:.75rem 1rem;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;font-size:.8rem;line-height:1.3;border-radius:10px;font-weight:600;box-shadow:0 2px 6px -2px rgba(0,0,0,.08);">
+		</div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      <div class="table-wrap">
+        <table role="table" aria-label="Testimonials">
+          <thead>
+            <tr>
+              <th>TC Serial</th>
+              <th>Name</th>
+              <th>Father</th>
+              <th>Class</th>
+              <th>Roll</th>
+              <th>IID</th>
+              <th>Certificate</th>
+            </tr>
+          </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  <!-- Modal for TC Entry Form -->
+  <div id="tcModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(3px);z-index:200;">
+    <div role="dialog" aria-modal="true" aria-labelledby="tcModalTitle" style="background:#fff;border-radius:14px;max-width:560px;width:100%;padding:1rem 1.15rem;box-shadow:0 10px 38px -8px rgba(0,0,0,.35);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;position:relative;">
+      <button type="button" id="closeTcModal" aria-label="Close" style="position:absolute;top:8px;right:8px;background:#e2e8f0;border:1px solid #cbd5e1;border-radius:6px;padding:.25rem .5rem;font-size:.65rem;font-weight:600;cursor:pointer;">✕</button>
+      <h2 id="tcModalTitle" style="margin:.25rem 0 1rem;font-size:1rem;">New Transfer Certificate Entry</h2>
+      <div id="tcModalStatus" style="font-size:.7rem;margin:-.5rem 0 .75rem;color:#6b7280;">Enter IID & Load student info</div>
+      <form id="tcEntryForm" autocomplete="off">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem .85rem;align-items:start;">
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">
+            IID
+            <div style="display:flex;gap:.4rem;">
+              <input name="iid" id="iidInput" required style="flex:1;padding:.55rem .6rem;border:1px solid #d1d5db;border-radius:8px;" />
+              <button type="button" id="loadIIDBtn" style="background:#2563eb;color:#fff;border:0;border-radius:8px;padding:.55rem .75rem;font-size:.65rem;font-weight:600;cursor:pointer;">Load</button>
+            </div>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Session
+            <input name="tc_session" id="tc_session" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Class
+            <input name="tc_class" id="tc_class" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Section
+            <input name="tc_section" id="tc_section" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Roll
+            <input name="tc_roll" id="tc_roll" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Student Name
+            <input name="student_name_en" id="student_name_en" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Father Name
+            <input name="father_name_en" id="father_name_en" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Mother Name
+            <input name="mother_name_en" id="mother_name_en" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Date of Birth
+            <input name="student_dateofbirth" id="student_dateofbirth" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Gender
+            <input name="student_gender" id="student_gender" readonly />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Paid Upto
+            <input name="paid_month" id="paid_month" placeholder="e.g. December 2025" />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Character
+            <select name="student_character" id="student_character">
+              <option value=""></option>
+              <option>good</option>
+              <option>very good</option>
+              <option>bad</option>
+              <option>very bad</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Next Class
+            <select name="next_class" id="next_class">
+              <option value=""></option>
+              <option>6</option><option>7</option><option>8</option><option>9</option><option>10</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">TC Date
+            <input name="tc_date" id="tc_date" />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Issued By
+            <select name="issued_by" id="issued_by">
+              <option value=""></option>
+              <option>RAZIB KUMAR PAUL</option>
+              <option>SHOWRAV DEB</option>
+            </select>
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Father Mobile
+            <input name="father_mobile" id="father_mobile" />
+          </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">Note
+            <textarea name="note" id="note" style="min-height:60px;resize:vertical;"></textarea>
+          </label>
+        </div>
+        <div style="display:flex;gap:.7rem;margin-top:1rem;flex-wrap:wrap;">
+          <button type="submit" class="nav-btn" style="background:#16a34a;">Save</button>
+          <button type="button" id="resetTcForm" class="nav-btn" style="background:#6b7280;">Reset</button>
+        </div>
+      </form>
+      <div style="margin-top:.9rem;font-size:.6rem;line-height:1.3;color:#6b7280;">
+        After saving, close window and refresh list if needed.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Modal / TC Entry logic
+    const studentTable = 'student_database_others'; // assumed table name
+    const modal = document.getElementById('tcModal');
+    const openBtn = document.getElementById('openEntryBtn');
+    const closeBtn = document.getElementById('closeTcModal');
+    const loadIIDBtn = document.getElementById('loadIIDBtn');
+    const entryStatus = document.getElementById('tcModalStatus');
+    const form = document.getElementById('tcEntryForm');
+
+    // Fields that are auto-filled and should become editable after loading
+    const editableIds = ['tc_session','tc_class','tc_section','tc_roll','student_name_en','father_name_en','mother_name_en','student_dateofbirth','student_gender'];
+
+    function setFieldsReadonly(readonly){
+      for(const id of editableIds){
+        const el = document.getElementById(id);
+        if(el) el.readOnly = readonly;
+      }
+    }
+    function clearAutoFields(){
+      for(const id of editableIds){
+        const el = document.getElementById(id);
+        if(el) el.value = '';
+      }
+    }
+
+    function setDefaults(){
+      const issued = document.getElementById('issued_by');
+      if(issued) issued.value = 'RAZIB KUMAR PAUL';
+      const chr = document.getElementById('student_character');
+      if(chr) chr.value = 'very good';
+      const paid = document.getElementById('paid_month');
+      if(paid && !paid.value) paid.value = 'December 2025';
+    }
+
+    function showModal(){
+      modal.style.display='flex';
+      entryStatus.textContent='Enter IID & Load student info';
+      setFieldsReadonly(true);
+      clearAutoFields();
+      setDefaults();
+      document.getElementById('iidInput').focus();
+      setTodayIfEmpty();
+    }
+    function hideModal(){ modal.style.display='none'; form.reset(); setFieldsReadonly(true); }
+    function setTodayIfEmpty(){ const td=document.getElementById('tc_date'); if(td && !td.value){ const d=new Date(); const dd=String(d.getDate()).padStart(2,'0'); const mm=String(d.getMonth()+1).padStart(2,'0'); const yyyy=d.getFullYear(); td.value=`${dd}-${mm}-${yyyy}`; } }
+    openBtn?.addEventListener('click', showModal);
+    closeBtn?.addEventListener('click', hideModal);
+    modal?.addEventListener('click', e=>{ if(e.target===modal) hideModal(); });
+    window.addEventListener('keydown', e=>{ if(e.key==='Escape' && modal.style.display==='flex') hideModal(); });
+    async function loadStudent(){
+      const iid = document.getElementById('iidInput').value.trim();
+      if(!iid){ entryStatus.textContent='Provide IID'; entryStatus.style.color='#b91c1c'; return; }
+      // Prepare UI for loading
+      setFieldsReadonly(true);
+      clearAutoFields();
+      entryStatus.textContent='Loading…'; entryStatus.style.color='';
+      try {
+        const { data, error } = await client.from(studentTable).select('*').eq('iid', iid).limit(1);
+        if(error) throw error;
+        if(!data || !data.length){ entryStatus.textContent='Not found'; entryStatus.style.color='#b91c1c'; return; }
+        const row = data[0];
+        // Map fields
+        const session = row.session || row.tc_session || '';
+        document.getElementById('tc_session').value = session;
+        // Attempt dynamic class/section/roll detection by session-specific columns
+        const cls = row[`class_${session}`] || row.class || row.tc_class || '';
+        const sec = row[`section_${session}`] || row.section || row.tc_section || '';
+        const roll = row[`roll_${session}`] || row.roll || row.tc_roll || '';
+        document.getElementById('tc_class').value = cls;
+        document.getElementById('tc_section').value = sec;
+        document.getElementById('tc_roll').value = roll;
+        document.getElementById('student_name_en').value = row.student_name_en || row.name_en || row.name || '';
+        document.getElementById('father_name_en').value = row.father_name_en || row.father || '';
+        document.getElementById('mother_name_en').value = row.mother_name_en || row.mother || '';
+        document.getElementById('student_dateofbirth').value = row.student_dateofbirth || row.dob || '';
+        document.getElementById('student_gender').value = row.student_gender || row.gender || '';
+        document.getElementById('father_mobile').value = row.father_mobile || row.guardian_mobile || '';
+        // Make fields editable now that we've loaded values
+        setFieldsReadonly(false);
+        entryStatus.textContent='Loaded — you can edit fields & Save';
+      } catch(e){ console.error(e); entryStatus.textContent='Load failed'; entryStatus.style.color='#b91c1c'; }
+    }
+    loadIIDBtn?.addEventListener('click', loadStudent);
+    document.getElementById('iidInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); loadStudent(); }});
+
+    document.getElementById('resetTcForm')?.addEventListener('click', ()=>{ const keepIID=document.getElementById('iidInput').value; form.reset(); document.getElementById('iidInput').value=keepIID; entryStatus.textContent='Form reset'; setFieldsReadonly(true); setTodayIfEmpty(); setDefaults(); });
+
+    form?.addEventListener('submit', async e=>{
+      e.preventDefault();
+      entryStatus.textContent='Saving…'; entryStatus.style.color='';
+      const payload = {
+        iid: form.iid.value.trim(),
+        tc_session: form.tc_session.value.trim(),
+        tc_class: form.tc_class.value.trim(),
+        tc_section: form.tc_section.value.trim(),
+        tc_roll: form.tc_roll.value.trim(),
+        student_name_en: form.student_name_en.value.trim(),
+        father_name_en: form.father_name_en.value.trim(),
+        mother_name_en: form.mother_name_en.value.trim(),
+        student_dateofbirth: form.student_dateofbirth.value.trim(),
+        student_gender: form.student_gender.value.trim(),
+        paid_month: form.paid_month.value.trim(),
+        student_character: form.student_character.value.trim(),
+        next_class: form.next_class.value.trim(),
+        tc_date: form.tc_date.value.trim(),
+        issued_by: form.issued_by.value.trim(),
+        father_mobile: form.father_mobile.value.trim(),
+        note: form.note.value.trim()
+      };
+      if(!payload.iid){ entryStatus.textContent='IID required'; entryStatus.style.color='#b91c1c'; return; }
+      if(!payload.tc_date){ entryStatus.textContent='TC Date required'; entryStatus.style.color='#b91c1c'; return; }
+      if(!payload.issued_by){ alert('Issued By required'); entryStatus.textContent='Issued By required'; entryStatus.style.color='#b91c1c'; return; }
+      if(!payload.student_character){ alert('Character required'); entryStatus.textContent='Character required'; entryStatus.style.color='#b91c1c'; return; }
+      try {
+        // Check existing
+        const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
+        if(existErr) throw existErr;
+        if(existing && existing.length){ entryStatus.textContent='Already exists (iid)'; entryStatus.style.color='#b91c1c'; return; }
+        const { data: inserted, error } = await client.from(tableName).insert(payload).select('tc_sl, tc_date, iid').single();
+        if(error) throw error;
+        // After successful insert update student_database: status='TC', tc_date, and tc_sl -> tc_date field per request mapping
+        if(inserted){
+          const updatePayload = {
+            status: 'TC',               // mark student as having TC
+            tc_date: inserted.tc_date || payload.tc_date || null, // copy date
+            tc_no: inserted.tc_sl || null // store termination serial as tc_no (tc_sl == tc_no)
+          };
+          try {
+            const { error: stuErr } = await client.from(studentTable).update(updatePayload).eq('iid', payload.iid);
+            if(stuErr) throw stuErr;
+            entryStatus.textContent='Saved ✔ (Student updated)'; entryStatus.style.color='#15803d';
+            // Auto-close modal shortly after success
+            setTimeout(()=>{ try{ hideModal(); }catch(_e){} }, 800);
+          } catch(uErr){
+            console.warn('Student table update warn', uErr);
+            entryStatus.textContent='Saved (student update failed)'; entryStatus.style.color='#d97706';
+          }
+        } else {
+          entryStatus.textContent='Saved ✔'; entryStatus.style.color='#15803d';
+        }
+      } catch(err){ console.error(err); entryStatus.textContent='Save failed'; entryStatus.style.color='#b91c1c'; }
+    });
+  </script>
+</body>
+</html>

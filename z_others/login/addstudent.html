@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add New Student</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Authentication Protection -->
+  <script src="/login/auth-check_copy.js"></script>
+    <!-- jsPDF for client-side PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root{
+            --bg:#f3f6f9;
+            --card:#ffffff;
+            --muted:#6b7280;
+            --accent:#FF9800; /* orange */
+            --accent-dark:#f57c00;
+            --input-border:#e6e9ee;
+        }
+        body {
+            font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+            margin: 24px;
+            background-color: var(--bg);
+            color: #111827;
+        }
+        .form-container {
+            max-width: 680px;
+            margin: 14px auto;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), var(--card));
+            padding: 28px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(16,24,40,0.06);
+            border: 1px solid rgba(15,23,42,0.04);
+        }
+        h2{margin:0 0 12px 0;font-size:20px;color:#0f172a}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .form-group{margin-bottom:12px}
+        label{display:block;margin-bottom:6px;font-size:13px;color:var(--muted)}
+        input, select{width:100%;padding:10px;border:1px solid var(--input-border);border-radius:8px;background:#fff;box-sizing:border-box;font-size:14px}
+        input:focus, select:focus{outline:none;box-shadow:0 6px 18px rgba(16,24,40,0.06);border-color:rgba(0,0,0,0.08)}
+        .btn-primary{background:var(--accent);color:#fff;padding:12px;border-radius:10px;border:none;cursor:pointer;font-weight:600;width:100%;box-shadow:0 6px 18px rgba(255,152,0,0.12)}
+        .btn-primary:hover{background:var(--accent-dark)}
+        .full-width{grid-column: 1 / -1}
+    .message{margin-top:14px;padding:12px;border-radius:8px;font-size:14px}
+    /* success messages should be 50% larger for visibility */
+    .message.success{background:linear-gradient(90deg, rgba(220,252,231,1), rgba(220,252,231,0.6));color:#065f46;font-size:21px}
+    .success{background:linear-gradient(90deg, rgba(220,252,231,1), rgba(220,252,231,0.6));color:#065f46}
+        .error{background:linear-gradient(90deg, rgba(254,226,226,1), rgba(254,226,226,0.6));color:#7f1d1d}
+        @media(max-width:700px){.form-grid{grid-template-columns:1fr}.form-container{padding:18px}}
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Add New Student</h2>
+        <form id="studentForm">
+            <div class="form-group">
+                <label for="student_name_en">Student Name (English)</label>
+                <input type="text" id="student_name_en" name="student_name_en" required>
+            </div>
+            <div class="form-group">
+                <label for="father_name_en">Father Name (English)</label>
+                <input type="text" id="father_name_en" name="father_name_en" required>
+            </div>
+            <div class="form-group">
+                <label for="father_mobile">Father Mobile</label>
+                <input type="tel" id="father_mobile" name="father_mobile" placeholder="01XXXXXXXXX" pattern="\d{11}" title="11 digit mobile number" required>
+            </div>
+            <div class="form-group">
+                <label for="class_2025">Class 2025</label>
+                <select id="class_2025" name="class_2025" required>
+                    <option value="">Select Class</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="roll_2025">Roll 2025</label>
+                <input type="number" id="roll_2025" name="roll_2025" required>
+            </div>
+            <div class="form-group">
+                <label for="section_2025">Section 2025</label>
+                <select id="section_2025" name="section_2025" required>
+                    <option value="">Select Section</option>
+                    <option value="golap">GOLAP</option>
+                    <option value="mor">MORNING</option>
+                    <option value="shapla">SHAPLA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="session">Session</label>
+                <input type="text" id="session" name="session" required>
+            </div>
+            <button type="submit" class="btn-primary">Add Student</button>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        // Reuse existing Supabase client or create new one
+        if (!window.supabaseClient) {
+          window.__supabaseClients = window.__supabaseClients || {};
+          window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
+          window.__supabaseClients[supabaseUrl] = window.supabaseClient;
+        }
+        const supabaseClient = window.supabaseClient;
+
+        const form = document.getElementById('studentForm');
+        const messageDiv = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+
+            // Check for duplicate roll in same class and section
+            try {
+                const { data: existing, error: checkError } = await supabaseClient
+                    .from('student_database_others')
+                    .select('iid')
+                    .eq('class_2025', data.class_2025)
+                    .eq('section_2025', data.section_2025)
+                    .eq('roll_2025', data.roll_2025);
+
+                if (checkError) throw checkError;
+
+                if (existing && existing.length > 0) {
+                    messageDiv.innerHTML = '<div class="message error">Error: Roll ' + data.roll_2025 + ' already exists in Class ' + data.class_2025 + ', Section ' + data.section_2025 + '.</div>';
+                    return;
+                }
+
+                // Insert new student
+                const { data: insertedData, error } = await supabaseClient
+                    .from('student_database_others')
+                    .insert([data])
+                    .select('iid');
+
+                if (error) throw error;
+
+                const iid = insertedData[0].iid;
+                        messageDiv.innerHTML = '<div class="message success">Student added successfully! IID: ' + iid + '</div>';
+                        // build a small PDF for the new student and trigger download
+                        try{
+                            const studentForPdf = Object.assign({}, data, { iid });
+                            await generateStudentPdf(studentForPdf);
+                        }catch(e){ console.warn('PDF generation failed', e); }
+                        form.reset();
+            } catch (error) {
+                console.error('Error:', error);
+                messageDiv.innerHTML = '<div class="message error">Error: ' + error.message + '</div>';
+            }
+        });
+
+        // PDF generation helper
+        async function generateStudentPdf(student){
+            try{
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+                const pageW = doc.internal.pageSize.getWidth();
+                const pageH = doc.internal.pageSize.getHeight();
+                const margin = 72; // 1 inch margin
+                let y = margin;
+
+                // helper: load image as data URL
+                async function loadImageDataUrl(url){
+                    try{
+                        const res = await fetch(url);
+                        if(!res.ok) throw new Error('Image not found');
+                        const blob = await res.blob();
+                        return await new Promise((resolve,reject)=>{
+                            const fr = new FileReader();
+                            fr.onload = ()=> resolve(fr.result);
+                            fr.onerror = reject;
+                            fr.readAsDataURL(blob);
+                        });
+                    }catch(e){ return null; }
+                }
+
+                // Try common pad.png locations (top-most preferred)
+                const padPaths = ['../pad.png','./pad.png','../h25/pad.png','../ann24/pad.png','pad.png'];
+                let padData = null;
+                for(const p of padPaths){
+                    padData = await loadImageDataUrl(p);
+                    if(padData) break;
+                }
+
+                // draw pad image at the very top if available
+                if(padData){
+                    // fit width inside 1" margins
+                    const imgX = margin;
+                    const imgWidth = pageW - 2 * margin;
+                    const imgY = y;
+                    const imgH = 72; // 1" high for clear header
+                    // try PNG first, fallback handled by jsPDF from data URL
+                    doc.addImage(padData, 'PNG', imgX, imgY, imgWidth, imgH);
+                    y = imgY + imgH + 12;
+                }
+
+                // colorful header bar (80% orange)
+                const headerH = 46;
+                doc.setFillColor(204,122,0); // 80% orange tone
+                doc.roundedRect(margin, y, pageW - 2 * margin, headerH, 6, 6, 'F');
+                doc.setTextColor(255,255,255);
+                doc.setFontSize(18);
+                doc.text('Student Admission Slip', pageW/2, y + headerH/2 + 6, { align: 'center' });
+                y += headerH + 16;
+
+                // details box
+                doc.setDrawColor(230,230,240);
+                doc.setFillColor(250,250,255);
+                const detailsBoxH = 200;
+                doc.rect(margin, y, pageW - 2 * margin, detailsBoxH, 'F');
+                let left = margin + 14;
+                let rowY = y + 24;
+                const labelColor = [204,122,0]; // 80% orange tone
+                doc.setFontSize(12);
+
+                function drawField(label, value){
+                    doc.setTextColor(...labelColor);
+                    try{ doc.setFont(undefined, 'bold'); }catch(e){}
+                    doc.text(label + ':', left, rowY);
+                    doc.setTextColor(34,34,34);
+                    try{ doc.setFont(undefined, 'normal'); }catch(e){}
+                    doc.text(String(value || ''), left + 120, rowY);
+                    rowY += 20;
+                }
+
+                drawField('IID', student.iid);
+                drawField('Name', student.student_name_en);
+                drawField('Father', student.father_name_en);
+                drawField('Mobile', student.father_mobile);
+                drawField('Class', student.class_2025);
+                drawField('Section', student.section_2025);
+                drawField('Roll', student.roll_2025);
+                drawField('Session', student.session);
+
+                y = y + detailsBoxH + 18;
+
+                // footer note (above bottom QR)
+                doc.setFontSize(10);
+                doc.setTextColor(100,100,100);
+                doc.text('Generated by FeniModel — keep this slip for your records.', margin, y + 6);
+
+                // bottom-centered local QR (qr.png) with caption below
+                try{
+                    const qrPathsLocal = ['../qr.png','./qr.png','qr.png','../admit/qr.png','../ann24/qr.png'];
+                    let qrData = null;
+                    for(const p of qrPathsLocal){
+                        qrData = await loadImageDataUrl(p);
+                        if(qrData) break;
+                    }
+                    if(qrData){
+                        const qrSize = 110;
+                        const qrX = (pageW - qrSize) / 2;
+                        // place QR near bottom but above 1" margin
+                        const qrY = pageH - margin - qrSize - 18;
+                        doc.addImage(qrData, 'PNG', qrX, qrY, qrSize, qrSize);
+                        // caption below QR
+                        doc.setFontSize(11);
+                        doc.setTextColor(80,80,80);
+                        const caption = 'scan for view information and result';
+                        doc.text(caption, pageW/2, qrY + qrSize + 14, { align: 'center' });
+                    }
+                }catch(e){ console.warn('QR embed failed', e); }
+
+                const filename = `student-${student.iid || 'new'}.pdf`;
+                doc.save(filename);
+            }catch(e){ console.error('generateStudentPdf error', e); throw e; }
+        }
+    </script>
+</body>
+</html>

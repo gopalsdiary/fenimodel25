@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+  <!-- Authentication Protection -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="/login/auth-check_copy.js"></script>
+  <title>Entry - Show & Edit</title>
+  <style>
+  /* reduce base font size by 20% (was 120%) and use Kalpurush font */
+  html{font-size:96%;}
+    body{font-family: 'Kalpurush', Arial, Helvetica, sans-serif; padding:16px}
+  .table-wrapper{width:100%;overflow:auto;border:1px solid #e6e6e6;border-radius:6px;padding:6px;background:#fff}
+  table{width:100%;border-collapse:collapse;margin-top:12px;table-layout:auto}
+  th,td{border:1px solid #ddd;padding:6px;text-align:left;vertical-align:top}
+  th{background:#f4f4f4}
+  /* allow text to wrap inside cell boxes */
+  .cell-content{overflow-wrap:break-word;word-break:break-word;white-space:normal;display:block}
+  td .cell-content.multi{white-space:normal;display:block}
+  tr:nth-child(even){background:#fbfbfb}
+  tr:hover{background:#f1f9ff}
+  /* SL (serial) column small */
+  .col-sl{width:56px;max-width:20px;padding:4px}
+  /* address fields in edit modal — smaller font for large address blocks */
+  #editFields [data-field]{font-size:1rem}
+  #editFields [data-field][data-field*="address" i],
+  #editFields textarea[data-field*="address" i] {
+    font-size:50%;
+  }
+    .btn{padding:6px 10px;border:none;background:#0b74de;color:#fff;border-radius:4px;cursor:pointer}
+    .btn.secondary{background:#6c757d}
+    /* modal */
+    .modal{position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center}
+    .modal .panel{background:#fff;padding:16px;border-radius:6px;max-width:720px;width:100%;max-height:80vh;overflow:auto}
+    .field-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+    .field-row label{min-width:140px}
+    .field-row input, .field-row textarea{flex:1;padding:8px}
+    .notice{margin-top:8px;color:#a00}
+    .error-details{font-family:monospace;font-size:12px;color:#900;margin-top:6px}
+  /* stacked name display: primary name above, bengali name below */
+  .stacked-name{display:flex;flex-direction:column;gap:3px}
+  .stacked-name .primary{font-weight:700;color:#111}
+  .stacked-name .secondary{font-size:0.92rem;color:#555;opacity:0.9}
+  </style>
+</head>
+<body>
+  <h2>previous_data2025 : Data Overview (Udayan)</h2>
+  <div>
+    <button id="refreshBtn" class="btn">Refresh</button>
+    <span id="status" style="margin-left:12px;color:#444"></span>
+    <div style="display:inline-block;margin-left:18px;vertical-align:middle">
+      <label for="classFilter" style="margin-right:6px;color:#333">Class:</label>
+      <select id="classFilter" style="padding:6px;border-radius:4px;border:1px solid #ccc"></select>
+      <label for="sectionFilter" style="margin:0 6px 0 12px;color:#333">Section:</label>
+      <select id="sectionFilter" style="padding:6px;border-radius:4px;border:1px solid #ccc"></select>
+      <button id="clearFilters" class="btn secondary" style="margin-left:8px;padding:6px 8px">Clear</button>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+  <table id="dataTable">
+    <thead id="tableHead">
+      <tr>
+        <th>Loading columns...</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="100">Loading...</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- Edit modal -->
+  <div id="editModal" class="modal">
+    <div class="panel">
+      <h3>Edit Record</h3>
+
+      <!-- Dynamic fields will be rendered here -->
+      <div id="editFields"></div>
+
+      <div style="text-align:right;margin-top:12px">
+        <button id="cancelBtn" class="btn secondary">Cancel</button>
+        <button id="saveBtn" class="btn">Save</button>
+      </div>
+      <div id="modalNotice" class="notice"></div>
+    </div>
+  </div>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Use the same project URL/key used elsewhere in this repo
+    const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    // Reuse existing Supabase client or create new one
+    if (!window.supabaseClient) {
+      window.__supabaseClients = window.__supabaseClients || {};
+      window.supabaseClient = window.__supabaseClients[supabaseUrl] || window.supabase.createClient(supabaseUrl, supabaseKey);
+      window.__supabaseClients[supabaseUrl] = window.supabaseClient;
+    }
+    const supabaseClient = window.supabaseClient;
+
+    const tableName = 'previous_data2025';
+
+  const tbody = document.querySelector('#dataTable tbody');
+    const statusEl = document.getElementById('status');
+    const refreshBtn = document.getElementById('refreshBtn');
+  const classFilter = document.getElementById('classFilter');
+  const sectionFilter = document.getElementById('sectionFilter');
+  const clearFilters = document.getElementById('clearFilters');
+
+  // keep full dataset in memory for client-side filtering
+  let allRowsCache = [];
+
+    // modal elems
+    const editModal = document.getElementById('editModal');
+    const editFields = document.getElementById('editFields');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const modalNotice = document.getElementById('modalNotice');
+
+    refreshBtn.addEventListener('click', loadData);
+  classFilter.addEventListener('change', applyFilters);
+  sectionFilter.addEventListener('change', applyFilters);
+  clearFilters.addEventListener('click', ()=>{ classFilter.value=''; sectionFilter.value=''; applyFilters(); });
+    cancelBtn.addEventListener('click', closeModal);
+    saveBtn.addEventListener('click', saveEdit);
+
+    // store the currently editing IID
+    let currentIID = null;
+
+    async function loadData(){
+      statusEl.textContent = 'Loading...';
+      try{
+    // Fetch in pages to bypass server default page-size limits (fetch all rows in batches)
+    const pageSize = 1000;
+    let start = 0;
+    let accumulated = [];
+    while(true){
+      statusEl.textContent = `Loading rows ${start + 1} ...`;
+      const { data, error } = await supabaseClient
+        .from(tableName)
+        .select('*')
+        .order('IID', { ascending: true })
+        .range(start, start + pageSize - 1);
+      if(error){
+        const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+        throw new Error(`${error.message} | details: ${details}`);
+      }
+      if(!data || data.length === 0) break;
+      accumulated = accumulated.concat(data);
+      // if returned less than a full page, we've reached the end
+      if(data.length < pageSize) break;
+      start += pageSize;
+      // continue loop to fetch next page
+    }
+
+    allRowsCache = accumulated || [];
+    populateFilterOptions(allRowsCache);
+    renderTable(allRowsCache);
+    // update counts: show overall total from DB and current shown count
+    await updateOverallCount();
+    statusEl.textContent = `Total: calculating...`;
+      }catch(err){
+        console.error('loadData error:', err);
+        statusEl.textContent = 'Data loading error';
+        const msg = err && err.message ? err.message : String(err);
+        tbody.innerHTML = `<tr><td colspan="100">Data loading error: <div class="error-details">${escapeHtml(msg)}</div></td></tr>`;
+      }
+    }
+
+    // Fetch overall total count from Supabase efficiently (no payload) and update status
+    async function updateOverallCount(){
+      try{
+        // use select count via head:true or exact count; Supabase JS v2 supports .select('*', { count: 'exact' })
+        const res = await supabaseClient
+          .from(tableName)
+          .select('IID', { count: 'exact', head: false })
+          .limit(1);
+        // res.count contains total rows when count: 'exact' is used
+        const total = (res && res.count) ? Number(res.count) : (allRowsCache ? allRowsCache.length : 0);
+        const shown = computeShownCount();
+        statusEl.textContent = `Total: ${total} · Showing: ${shown}`;
+      }catch(e){
+        // fallback to local length
+        const total = allRowsCache ? allRowsCache.length : 0;
+        const shown = computeShownCount();
+        statusEl.textContent = `Total: ${total} · Showing: ${shown}`;
+      }
+    }
+
+    function computeShownCount(){
+      // current table rows excluding header and any 'No records' placeholder
+      const rows = tbody.querySelectorAll('tr');
+      if(!rows || rows.length === 0) return 0;
+      // If the single cell 'No records found' or 'Loading...' exists, return 0 or cache length
+      if(rows.length === 1){
+        const td = rows[0].querySelector('td');
+        if(td && (td.textContent.includes('No records') || td.textContent.includes('Loading') || td.textContent.includes('error'))) return 0;
+      }
+      return rows.length;
+    }
+
+    function populateFilterOptions(rows){
+      // collect unique classes and sections
+      const classes = new Set();
+      const sections = new Set();
+      rows.forEach(r=>{ if(r && r.Class) classes.add(String(r.Class)); if(r && r.Section) sections.add(String(r.Section)); });
+      // clear current options
+      classFilter.innerHTML = '';
+      sectionFilter.innerHTML = '';
+      // default empty option
+      const optAnyC = document.createElement('option'); optAnyC.value=''; optAnyC.textContent='All'; classFilter.appendChild(optAnyC);
+      const sortedClasses = Array.from(classes).sort((a,b)=> a.localeCompare(b, undefined, {numeric:true}));
+      sortedClasses.forEach(c=>{ const o = document.createElement('option'); o.value=c; o.textContent=c; classFilter.appendChild(o); });
+
+      const optAnyS = document.createElement('option'); optAnyS.value=''; optAnyS.textContent='All'; sectionFilter.appendChild(optAnyS);
+      const sortedSections = Array.from(sections).sort();
+      sortedSections.forEach(s=>{ const o = document.createElement('option'); o.value=s; o.textContent=s; sectionFilter.appendChild(o); });
+    }
+
+    function getBengaliNameFromRow(r){
+      // try common field keys that might contain Bengali name
+      const candidates = ['Name_bn','NameBangla','Name_BN','NameBanglaX','Name_bengali','Bname','NameBanglaTrim','Name (bn)'];
+      for(const k of candidates){
+        if(Object.prototype.hasOwnProperty.call(r,k) && r[k]) return String(r[k]);
+      }
+      // try heuristics: fields that include 'bn' or 'bang' in the key
+      for(const key of Object.keys(r)){
+        const lk = key.toLowerCase();
+        if((lk.includes('bn') || lk.includes('bangla') || lk.includes('beng')) && r[key]) return String(r[key]);
+      }
+      // no bengali name found - return empty string
+      return '';
+    }
+
+    function applyFilters(){
+      const c = classFilter.value;
+      const s = sectionFilter.value;
+      let filtered = allRowsCache;
+      if(c) filtered = filtered.filter(r => String(r.Class) === c);
+      if(s) filtered = filtered.filter(r => String(r.Section) === s);
+      renderTable(filtered);
+  // update status to show overall total and currently shown count
+  const shown = filtered ? filtered.length : 0;
+  // ensure overall count is refreshed as well (async)
+  updateOverallCount();
+  statusEl.textContent = `Total: ... · Showing: ${shown}`;
+    }
+
+    function renderTable(rows){
+      if(!rows || rows.length === 0){
+        tbody.innerHTML = '<tr><td colspan="100">No records found</td></tr>';
+        return;
+      }
+      
+      // Define specific column order as requested
+      const desiredColumns = [
+        'IID',
+        'Name_en', 
+        'Name_bn',
+        'Class',
+        'Section', 
+        'Roll',
+        'Father Name en',
+        'Father Name in Bengali',
+        'Mother Name',
+        'Mother_bn'
+      ];
+      
+      // Get all available columns from the data
+      const allColumns = Object.keys(rows[0]).sort();
+      
+      // Filter to only show columns that exist in the data
+      const specifiedColumns = desiredColumns.filter(col => allColumns.includes(col));
+      
+      // Get remaining columns that aren't in the specified list
+      const remainingColumns = allColumns.filter(col => !desiredColumns.includes(col));
+      
+      // Combine specified columns first, then remaining columns
+      const availableColumns = [...specifiedColumns, ...remainingColumns];
+      
+      // Update table header with Serial Number as first column
+      const thead = document.getElementById('tableHead');
+      thead.innerHTML = '<tr><th class="col-sl">SL</th>' + availableColumns.map(col => `<th>${escapeHtml(col)}</th>`).join('') + '<th>Action</th></tr>';
+      
+      tbody.innerHTML = '';
+      rows.forEach((r, index) => {
+        const tr = document.createElement('tr');
+        const iid = (r['IID'] ?? r.IID) || '';
+        
+        // Add serial number as first cell (small column)
+        let cells = `<td class="col-sl">${index + 1}</td>`;
+        
+        // Create cells for only the desired columns
+        cells += availableColumns.map(col => {
+          let value = r[col] || '';
+          if (col === 'Name_en') {
+            // Show only English name
+            return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
+          } else if (col === 'Name_bn') {
+            // Show only Bengali name
+            return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
+          } else {
+            // wrap other cells in .cell-content for consistent ellipsizing
+            return `<td><span class="cell-content">${escapeHtml(String(value))}</span></td>`;
+          }
+        }).join('');
+        
+        tr.innerHTML = cells + `<td><button class="btn" data-iid="${iid}">Edit</button></td>`;
+        
+        const btn = tr.querySelector('button');
+        btn.addEventListener('click', () => {
+          // Open editdetails.html in a new tab with iid as query param
+          const url = `editdetails.html?iid=${encodeURIComponent(iid)}`;
+          const w = window.open(url, '_blank');
+          try{ if(w) w.opener = null; }catch(e){}
+        });
+        tbody.appendChild(tr);
+      });
+    }    async function openEditByIID(iid){
+      // fetch full row from DB to ensure we have all columns
+      modalNotice.textContent = '';
+      currentIID = iid;
+      try{
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .select('*')
+          .eq('IID', Number(iid))
+          .limit(1)
+          .single();
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        renderEditFields(data || {});
+        editModal.style.display = 'flex';
+      }catch(err){
+        console.error('openEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Failed to load record: ' + (err.message || err);
+        // fallback: if we had a row in the table view, user can still edit minimal fields (not implemented here)
+      }
+    }
+
+    function renderEditFields(record){
+      editFields.innerHTML = '';
+      // iterate keys in sorted order for predictability
+      const keys = Object.keys(record).sort();
+      keys.forEach(key => {
+        const val = record[key] === null || record[key] === undefined ? '' : record[key];
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        const label = document.createElement('label');
+        label.textContent = key + ':';
+        // decide input type: use textarea for long text fields (heuristic)
+        let input;
+        if(String(val).length > 120 || key.toLowerCase().includes('address') || key.toLowerCase().includes('note')){
+          input = document.createElement('textarea');
+          input.rows = 4;
+        } else {
+          input = document.createElement('input');
+          input.type = 'text';
+        }
+        input.value = val;
+        input.setAttribute('data-field', key);
+        if(key === 'IID'){
+          input.readOnly = true;
+        }
+        row.appendChild(label);
+        row.appendChild(input);
+        editFields.appendChild(row);
+      });
+    }
+
+    async function saveEdit(){
+      modalNotice.textContent = '';
+      if(!currentIID){ modalNotice.textContent = 'No record selected'; return; }
+      // build payload from inputs
+      const inputs = editFields.querySelectorAll('[data-field]');
+      const payload = {};
+      inputs.forEach(inp =>{
+        const field = inp.getAttribute('data-field');
+        if(field === 'IID') return; // don't try to update primary key
+        const v = inp.value === '' ? null : inp.value;
+        payload[field] = v;
+      });
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+      try{
+        const { data, error } = await supabaseClient
+          .from(tableName)
+          .update(payload)
+          .eq('IID', Number(currentIID));
+        if(error){
+          const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          throw new Error(`${error.message} | details: ${details}`);
+        }
+        modalNotice.style.color = 'green';
+        modalNotice.textContent = 'Updated successfully';
+        // refresh list and close
+        await loadData();
+        setTimeout(()=>{ closeModal(); modalNotice.textContent = ''; }, 700);
+      }catch(err){
+        console.error('saveEdit error:', err);
+        modalNotice.style.color = '#a00';
+        modalNotice.textContent = 'Update error: ' + (err.message || err);
+      }finally{
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+      }
+    }
+
+    function closeModal(){
+      editModal.style.display = 'none';
+      editFields.innerHTML = '';
+      currentIID = null;
+    }
+
+    function escapeHtml(s){
+      if(s === null || s === undefined) return '';
+      return String(s).replace(/[&<>\\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // close modal when clicking outside panel
+    editModal.addEventListener('click', (e)=>{ if(e.target===editModal) closeModal(); });
+
+    // initial load
+    loadData();
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,880 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	    <script src="/login/auth-check_copy.js"></script>
+
+	<link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+	<title>All Students List - Dynamic Columns</title>
+	<style>
+		html{font-size:85%}
+		body{font-family: Kalpurush, sans-serif; padding:20px 10px 20px 20px; color:#1f2937; background:#f3f4f6}
+		h2{margin:0 0 12px}
+		.status{margin:4px 0 16px;color:#4b5563}
+
+		/* landscape cards stacked vertically, aligned to left */
+		/* full-page container: table should span page width */
+		.container{display:block;width:100%;box-sizing:border-box}
+
+		/* simplified header styles */
+		.page-header{display:flex;justify-content:space-between;align-items:center;padding:8px 0;margin-bottom:6px}
+		.page-title{font-size:18px;color:#0f172a;margin:0}
+		.badge{display:inline-block;font-size:12px;padding:2px 8px;border-radius:999px;background:#e2e8f0;color:#334155}
+
+		table{width:100%;border-collapse:collapse;margin-top:0;table-layout:auto}
+		.table-wrapper{overflow:auto;width:100%}
+		th,td{border:1px solid #ddd;padding:8px;text-align:left;vertical-align:middle;white-space:nowrap}
+		th{background:#f4f4f4;position:sticky;top:0}
+		tbody tr:nth-child(odd){ background:#ffffff }
+		tbody tr:nth-child(even){ background:#f5f5f5 }
+		tbody tr.status-tc{background-color:rgba(250,187,187,.5) !important}
+		.col-sl{width:56px;max-width:56px;padding:4px;text-align:center}
+
+		/* top layout */
+		.school-title{ text-align:center; font-size:22px; margin:0 0 6px; color:#0f172a }
+		.toolbar{ display:flex; justify-content:center; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px }
+		.selected-csy-print{ display:none; text-align:center; margin:4px 0 8px; font-weight:600 }
+
+		/* column chooser */
+		.column-controls{display:none;margin:8px 0 10px;padding:8px;background:#fff;border:1px solid #e5e7eb;border-radius:8px}
+		.column-controls .actions{display:flex;gap:8px;margin-bottom:8px}
+		.column-controls .actions button{padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;color:#334155;cursor:pointer}
+		.column-controls .actions button:hover{background:#eef2f7}
+		.column-controls .list{display:flex;flex-wrap:wrap;gap:8px;max-height:180px;overflow:auto}
+		.column-controls .col-item{display:flex;align-items:center;gap:6px;padding:2px 6px;border:1px solid #e5e7eb;border-radius:6px;background:#fafafa}
+
+		@media print {
+			/* general */
+			html, body{ background:#fff; height:100%; margin:0; padding:0 }
+			.column-controls, .toolbar .badge, .status{ display:none !important }
+			.selected-csy-print{ display:block !important }
+			.school-title{ font-size:18px; margin:0 0 2px; padding:0 }
+			/* hide on-screen controls; keep title and selected text visible */
+			.toolbar, .print-controls, .print-button, div[style*="position:fixed"][style*="top"] select{ display:none !important }
+			/* table layout for print: normal flow with repeating thead */
+			thead{ display:table-header-group }
+			tfoot{ display:table-footer-group }
+			/* prevent rows from being broken across pages and allow headers to repeat */
+			table{ page-break-inside:auto; table-layout:fixed !important; width:100% !important; max-width:100% !important; border-collapse:collapse !important }
+			tr{ page-break-inside:auto; page-break-after:auto }
+			/* hide fixed header in print; rely on thead repeating automatically */
+			#printHeader{ display:none !important }
+			th, td{ white-space:normal !important; padding:var(--print-pad-v, 4px) var(--print-pad-h, 6px); font-size:var(--print-font, 15.5px); text-align:center; vertical-align:middle; word-break:break-word; overflow-wrap:anywhere; overflow:visible; border:0.5px solid #666 !important }
+			th{ background:#e8e8e8 !important; font-weight:bold; font-size:var(--print-font, 15.5px); padding:calc(var(--print-pad-v, 4px) + 1px) var(--print-pad-h, 6px) }
+			/* remove reserved space for fixed header */
+			#container{ padding-top:0 }
+			#container .table-wrapper{ display:block; width:100%; max-width:100%; overflow:visible !important; text-align:center }
+			#container .table-wrapper > table{ display:table; margin:0 auto; width:100% !important; text-align:left }
+			th{ position:static }
+			/* fixed header placed in the page margin; ensure adequate top page margin so content won't overlap */
+			#printHeader{ display:block; position:fixed; left:0; right:0; top:0; z-index:9999; background:#fff; padding:4px 0; border-bottom:1px solid #999; font-size:11px; text-align:center; font-weight:bold }
+			/* per-page page-number: removed as per user request */
+			/* caption.page-caption{ caption-side:top; display:table-caption; text-align:right; font-size:11px; font-weight:700; text-transform:lowercase; padding-bottom:4px } */
+			/* print footer */
+			/* hide bottom footer in print — page numbering is handled by the top-right labels */
+			.print-footer{ display:none !important }
+			/* ensure content doesn't overlap footer area (kept minimal for printers) */
+			body{ padding-bottom:3mm }
+			/* standard page margins */
+			@page{ margin:0.3cm }
+			/* allow natural column widths with wrapping; no forced widths */
+		}
+
+		/* floating print button (visible on-screen only) */
+		.print-button{
+			position:fixed;
+			right:16px;
+			bottom:16px;
+			z-index:10000;
+			background:#f97316;color:#fff;border:0;padding:10px 14px;border-radius:8px;cursor:pointer;box-shadow:0 4px 10px rgba(249,115,22,0.22);font-weight:600;
+		}
+		.print-button:active{ transform:translateY(1px) }
+		/* thumbnail images for student photos */
+		.thumb-img{
+			display:inline-block;
+			width:56px;
+			height:56px;
+			object-fit:cover;
+			border-radius:4px;
+			border:1px solid #ddd;
+			background:#fff;
+		}
+		.thumb-placeholder{
+			display:inline-block;
+			width:56px;
+			height:56px;
+			border-radius:4px;
+			background:#f3f4f6;
+			color:#8b8b8b;
+			text-align:center;
+			line-height:56px;
+			font-size:12px;
+			border:1px solid #eee;
+		}
+	</style>
+	<!-- Authentication Protection -->
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+	<h1 class="school-title">FENI MODEL HIGH SCHOOL</h1>
+	<!-- print header that repeats on every page -->
+	<div id="printHeader" style="display:none; text-align:center; font-weight:700; font-size:14px; margin-bottom:6px"></div>
+	<!-- print footer placeholder will be inserted at end of body for reliable positioning -->
+	<div class="toolbar">
+		<label for="sessionFilter">Session:</label>
+		<select id="sessionFilter">
+			<option value="">Select Session</option>
+			<option value="2024">2024</option>
+			<option value="2025">2025</option>
+			<option value="2026">2026</option>
+		</select>
+		<label for="classFilter">Class:</label>
+		<select id="classFilter" disabled>
+			<option value="">Select Class</option>
+		</select>
+		<label for="sectionFilter">Section:</label>
+		<select id="sectionFilter" disabled>
+			<option value="">All Sections</option>
+		</select>
+		<span id="status" class="status"></span>
+		<!-- Debug: shows computed classes and fallback status -->
+		<div id="debugClasses" style="font-size:12px;color:#334155;margin-left:8px;white-space:pre-wrap;"></div>
+		<div id="columnControls" class="column-controls"></div>
+	</div>
+
+	<div id="selectedCsyPrint" class="selected-csy-print" style="text-align:center; font-weight:600; margin-bottom:6px"></div>
+
+	<div id="container" class="container">
+		<!-- groups will be rendered here -->
+	</div>
+  <script src="./auth-check_copy.js"></script>
+	<script>
+		// Direct Supabase data source (localStorage cache removed)
+		const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+		const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+		let supabaseClient = null;
+
+		/*
+		 * AUTH INITIALIZATION (single source)
+		 * We already include auth-check.js which performs a redirect if NOT logged in.
+		 * The previous inline auth logic duplicated that check and called an old loadAll() (now removed),
+		 * leading to race conditions and repeated redirects. We replace that with a unified bootstrap
+		 * that waits for a VALID session once, then proceeds with data init.
+		 */
+		async function waitForSessionAndInit(){
+			statusEl.textContent = 'Checking login...';
+			let attempts = 0;
+			while(attempts < 40){ // ~8s max (40 * 200ms)
+				attempts++;
+				if(typeof window.supabase !== 'undefined'){
+					try{
+						// Reuse existing Supabase client or create new one
+						if (!window.supabaseClient) {
+							window.__supabaseClients = window.__supabaseClients || {};
+							window.supabaseClient = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+							window.__supabaseClients[SUPABASE_URL] = window.supabaseClient;
+						}
+						const temp = window.supabaseClient;
+						const { data: { session } } = await temp.auth.getSession();
+						if(session){
+							console.log('Session OK for', session.user && session.user.email);
+							supabaseClient = temp; // reuse this client for queries
+							// Set up single auth listener (avoid duplicates)
+							supabaseClient.auth.onAuthStateChange((event, s) => {
+								if (event === 'SIGNED_OUT' || (!s && event !== 'INITIAL_SESSION')) {
+									console.log('Signed out detected -> redirect login');
+									window.location.href='./index.html';
+								}
+							});
+							// Proceed to column order + lite data
+							await loadColumnOrder();
+							liteRows = await fetchLite();
+							buildSessionOptions();
+							statusEl.textContent='Select Session';
+							return;
+						}
+					}catch(err){ console.warn('Session poll error', err); }
+				}
+				await new Promise(r=>setTimeout(r,200));
+			}
+			// If we reach here, auth-check.js likely redirected already; show fallback message
+			if(!supabaseClient){ statusEl.textContent='Login required'; }
+		}
+
+		// Kick off unified auth/data init AFTER DOM ready
+		document.addEventListener('DOMContentLoaded', ()=>{ waitForSessionAndInit(); });
+		const CACHE_KEY = null; // disabled
+		const CACHE_TTL_MS = 0; // disabled
+
+		const container = document.getElementById('container');
+		const statusEl = document.getElementById('status');
+
+		// Base columns (previously always shown). Now they will appear first in the checkbox list and be pre-selected on first load.
+		const BASE_COLS = ['iid','class_section_year','active_roll','student_name_en']; // SL is implicit
+
+	// All columns fetched directly; master dataset removed.
+	let columnSpec = [];
+	let allRows = [];
+	let columnOrder = []; // preferred order from dataorder.csv
+
+	// --- New lite & session/class/section filtering flow ---
+	async function fetchLite(){
+	    if(!supabaseClient){ statusEl.textContent='Supabase not ready'; return []; }
+	    statusEl.textContent='Loading sessions/classes...';
+	    try {
+	        const { data, error } = await supabaseClient
+	            .from('student_database_others')
+	            .select('session,roll_2024,class_2024,section_2024,roll_2025,class_2025,section_2025,roll_2026,class_2026,section_2026')
+	            .limit(20000);
+	        if(error) throw error;
+	        statusEl.textContent='Select Session';
+	        return data||[];
+	    } catch(err){ console.error('fetchLite error', err); statusEl.textContent='Lite load error'; return []; }
+	}
+
+	async function fetchSessionData(session){
+	    if(!supabaseClient || !session){ return []; }
+	    statusEl.textContent='Loading data...';
+	    try {
+	        const { data, error } = await supabaseClient
+	            .from('student_database_others')
+	            .select('*')
+	            .eq('session', session)
+	            .limit(20000);
+	        if(error) throw error;
+	        return data||[];
+	    } catch(err){ console.error('fetchSessionData error', err); statusEl.textContent='Load error'; return []; }
+	}
+
+		function escapeHtml(s){
+			if(s===null||s===undefined) return '';
+			return String(s).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+		}
+
+		const SELECTED_COLS_KEY = 'print_data_selected_columns_v1';
+		let selectedColumns = [];
+		let latestFilteredRows = [];
+		const columnControlsEl = document.getElementById('columnControls');
+
+		function loadSelectedColumns(){
+			try{ const raw = localStorage.getItem(SELECTED_COLS_KEY); return raw? JSON.parse(raw): []; }catch(e){ return []; }
+		}
+		function saveSelectedColumns(){
+			try{ localStorage.setItem(SELECTED_COLS_KEY, JSON.stringify(selectedColumns)); }catch(e){}
+		}
+		function computeAvailableColumns(){
+			const set = new Set();
+			for(const r of allRows||[]){ for(const k of Object.keys(r||{})){ set.add(k); } }
+			set.delete('SL'); // pseudo column
+			// Ensure BASE_COLS appear first (even if some not present in data yet)
+			const others = Array.from(set).filter(c => !BASE_COLS.includes(c));
+			if(Array.isArray(columnOrder) && columnOrder.length){
+				others.sort((a,b)=>{
+					const ia = columnOrder.indexOf(a);
+					const ib = columnOrder.indexOf(b);
+					if(ia === -1 && ib === -1) return a.localeCompare(b);
+					if(ia === -1) return 1;
+					if(ib === -1) return -1;
+					return ia - ib;
+				});
+			} else {
+				others.sort((a,b)=> a.localeCompare(b));
+			}
+			return [...BASE_COLS, ...others];
+		}
+
+		// Load and parse dataorder.csv (left side keys before '>')
+		async function loadColumnOrder(){
+			try{
+				const res = await fetch('dataorder.csv');
+				if(!res.ok) throw new Error('Failed to fetch dataorder.csv');
+				const text = await res.text();
+				const lines = text.split(/\r?\n/);
+				const order = [];
+				for(const line of lines){
+					const t = line.trim();
+					if(!t) continue;
+					if(t.startsWith('#')) continue;
+					if(t.includes('>')){
+						const parts = t.split('>');
+						const key = parts[0].trim();
+						if(key) order.push(key);
+					}
+				}
+				columnOrder = Array.from(new Set(order));
+			}catch(err){
+				console.warn('Could not load dataorder.csv, falling back to alphabetical order', err);
+				columnOrder = [];
+			}
+		}
+		function buildColumnControls(columns){
+			if(!columnControlsEl) return;
+			console.debug('buildColumnControls: columns=', columns.length, 'selectedColumns before=', selectedColumns ? selectedColumns.length : 0);
+			// keep only selections that still exist
+			selectedColumns = (selectedColumns||[]).filter(c => columns.includes(c));
+			// if first load (no stored selection), select base cols (or first 4 columns if BASE_COLS not all in list)
+			if(!selectedColumns.length){ 
+				const baseCols = BASE_COLS.filter(c=>columns.includes(c));
+				selectedColumns = baseCols.length > 0 ? baseCols : columns.slice(0, Math.min(4, columns.length));
+				console.debug('buildColumnControls: auto-selected columns=', selectedColumns);
+				saveSelectedColumns(); 
+			}
+			console.debug('buildColumnControls: selectedColumns after=', selectedColumns.length);
+			columnControlsEl.style.display = columns.length? 'block':'none';
+			columnControlsEl.innerHTML = '';
+			const actions = document.createElement('div'); actions.className = 'actions';
+			const btnAll = document.createElement('button'); btnAll.type='button'; btnAll.textContent='Select all';
+			const btnClear = document.createElement('button'); btnClear.type='button'; btnClear.textContent='Clear';
+			// New: Download CSV button
+			const btnCsv = document.createElement('button'); btnCsv.type='button'; btnCsv.textContent='Download CSV';
+			// New: Download Excel button
+			const btnXls = document.createElement('button'); btnXls.type='button'; btnXls.textContent='Download EXCEL';
+			actions.appendChild(btnAll); actions.appendChild(btnClear);
+			actions.appendChild(btnCsv);
+			actions.appendChild(btnXls);
+			columnControlsEl.appendChild(actions);
+			const list = document.createElement('div'); list.className='list';
+			columns.forEach(col=>{
+				const label = document.createElement('label'); label.className='col-item';
+				const cb = document.createElement('input'); cb.type='checkbox'; cb.value=col; cb.checked = selectedColumns.includes(col);
+				const txt = document.createElement('span'); txt.textContent = col;
+				label.appendChild(cb); label.appendChild(txt);
+				list.appendChild(label);
+			});
+			columnControlsEl.appendChild(list);
+			btnAll.onclick = ()=>{ selectedColumns = [...columns]; saveSelectedColumns(); reRenderTable(); buildColumnControls(columns); };
+			btnClear.onclick = ()=>{ selectedColumns = []; saveSelectedColumns(); reRenderTable(); buildColumnControls(columns); };
+			btnCsv.onclick = ()=>{ exportVisibleData('csv'); };
+			btnXls.onclick = ()=>{ exportVisibleData('excel'); };
+			list.addEventListener('change', (e)=>{
+				const t = e.target;
+				if(t && t.tagName==='INPUT' && t.type==='checkbox'){
+					if(t.checked){ if(!selectedColumns.includes(t.value)) selectedColumns.push(t.value); }
+					else { selectedColumns = selectedColumns.filter(x=>x!==t.value); }
+					saveSelectedColumns();
+					reRenderTable();
+				}
+			});
+		}
+
+		// Generic exporter (currently CSV only; Excel support can be added later)
+		function exportVisibleData(format){
+			if(!latestFilteredRows || latestFilteredRows.length === 0){ alert('No data to export'); return; }
+			if(!selectedColumns || selectedColumns.length === 0){ alert('Select columns first'); return; }
+			// Headers: SL + selected columns
+			const headers = ['SL', ...selectedColumns];
+			if(format === 'csv'){
+				const escapeCSV = (val)=>{
+					if(val == null) return '';
+					let s = String(val).replace(/\r?\n|\r/g, ' ');
+					if(/[",\n]/.test(s)){ s = '"' + s.replace(/"/g,'""') + '"'; }
+					return s;
+				};
+				const lines = [];
+				lines.push(headers.map(escapeCSV).join(','));
+				latestFilteredRows.forEach((row, idx)=>{
+			const classField = `class_${selectedSession}`;
+			const sectionField = `section_${selectedSession}`;
+			const rollField = `roll_${selectedSession}`;
+			const active_class = row[classField] ?? '';
+			const active_section = row[sectionField] ?? '';
+			const active_roll = row[rollField] ?? '';
+					const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
+					let csY = hasActiveRoll ? [active_class, active_section, String(row.session ?? '')].join('-') : '';
+					const rowOut = [idx+1];
+					for(const col of selectedColumns){
+						if(col === 'iid') rowOut.push(row.iid ?? row.IID ?? '');
+						else if(col === 'class_section_year') rowOut.push(csY);
+						else if(col === 'active_roll') rowOut.push(active_roll ?? '');
+						else rowOut.push(row[col] == null ? '' : row[col]);
+					}
+					lines.push(rowOut.map(escapeCSV).join(','));
+				});
+				const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a'); a.href=url; a.download='students_visible.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+			}else{
+				if(format === 'excel'){
+					// Build minimal HTML table which Excel can open
+					let html = '<table><thead><tr>' + headers.map(h=>'<th>'+String(h).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</th>').join('') + '</tr></thead><tbody>';
+					latestFilteredRows.forEach((row, idx)=>{
+				const classField = `class_${selectedSession}`;
+				const sectionField = `section_${selectedSession}`;
+				const rollField = `roll_${selectedSession}`;
+				const active_class = row[classField] ?? '';
+				const active_section = row[sectionField] ?? '';
+				const active_roll = row[rollField] ?? '';
+						const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
+						let csY = hasActiveRoll ? [active_class, active_section, String(row.session ?? '')].join('-') : '';
+						const rowVals = [];
+						for(const col of selectedColumns){
+							if(col === 'iid') rowVals.push(row.iid ?? row.IID ?? '');
+							else if(col === 'class_section_year') rowVals.push(csY);
+							else if(col === 'active_roll') rowVals.push(active_roll ?? '');
+							else rowVals.push(row[col] == null ? '' : row[col]);
+						}
+						html += '<tr><td>'+(idx+1)+'</td>' + rowVals.map(v => '<td>'+String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</td>').join('') + '</tr>';
+					});
+					html += '</tbody></table>';
+					const blob = new Blob(['\ufeff'+html], {type:'application/vnd.ms-excel'}); // BOM helps Excel interpret UTF-8
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a'); a.href=url; a.download='students_visible.xls'; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 100);
+				}else{
+					alert('Format not implemented: '+format);
+				}
+			}
+		}
+
+		function reRenderTable(){
+			console.debug('reRenderTable called: latestFilteredRows=', latestFilteredRows ? latestFilteredRows.length : 0, 'selectedColumns=', selectedColumns ? selectedColumns.length : 0);
+			container.innerHTML = '';
+			if(!latestFilteredRows || latestFilteredRows.length===0){ 
+				console.warn('reRenderTable: no rows to display');
+				return; 
+			}
+			if(!selectedColumns || selectedColumns.length===0){
+				console.warn('reRenderTable: no columns selected');
+				statusEl.textContent = 'Tick columns to display';
+				return;
+			}
+			const tableWrapper = document.createElement('div'); 
+			tableWrapper.className='table-wrapper';
+			const table = document.createElement('table');
+			const thead = document.createElement('thead');
+			const htr = document.createElement('tr');
+			['SL', ...selectedColumns].forEach(h=>{ const th = document.createElement('th'); th.textContent = h; htr.appendChild(th); });
+			thead.appendChild(htr); 
+			table.appendChild(thead);
+			const tbody = document.createElement('tbody');
+			latestFilteredRows.forEach((row, idx)=>{
+				const tr = document.createElement('tr');
+				if(String(row.status||'').toUpperCase().includes('TC')) tr.className = 'status-tc';
+				const sltd = document.createElement('td'); 
+				sltd.className='col-sl'; 
+				sltd.textContent=(idx+1); 
+				tr.appendChild(sltd);
+				
+				const classField = `class_${selectedSession}`;
+				const sectionField = `section_${selectedSession}`;
+				const rollField = `roll_${selectedSession}`;
+				const active_class = row[classField] ?? '';
+				const active_section = row[sectionField] ?? '';
+				const active_roll = row[rollField] ?? '';
+				const hasActiveRoll = !(active_roll === null || active_roll === undefined || (typeof active_roll === 'string' && active_roll.trim() === ''));
+				let csY = hasActiveRoll ? [active_class, active_section, String(row.session ?? '')].join('-') : '';
+				
+				for(const col of selectedColumns){
+					const td = document.createElement('td');
+					if(col === 'iid'){
+						const iidRaw = row.iid ?? row.IID ?? '';
+						const a = document.createElement('a'); 
+						a.href=`detailsinfo.html?iid=${encodeURIComponent(iidRaw)}`; 
+						a.textContent=escapeHtml(String(iidRaw)); 
+						a.style.color='#0b74de'; 
+						a.style.textDecoration='underline';
+						td.appendChild(a); 
+						tr.appendChild(td); 
+						continue;
+					} else if(col === 'class_section_year'){
+						td.textContent = escapeHtml(csY);
+					} else if(col === 'active_roll'){
+						td.textContent = escapeHtml(active_roll==null?'':String(active_roll));
+					} else {
+						const v = row[col];
+						const colLower = String(col||'').toLowerCase();
+						if(colLower === 'student_photo_url' || colLower.includes('photo')){
+							td.innerHTML = '';
+							if(v && String(v).trim()){
+								const img = document.createElement('img');
+								img.className = 'thumb-img';
+								img.alt = 'student photo';
+								img.loading = 'lazy';
+								img.src = String(v).trim();
+								img.onerror = function(){
+									const ph = document.createElement('span'); 
+									ph.className='thumb-placeholder'; 
+									ph.textContent='No Photo';
+									if(img.parentNode) img.parentNode.replaceChild(ph, img);
+								};
+								img.style.cursor = 'pointer';
+								img.onclick = function(e){ e.stopPropagation(); if(img.src) window.open(img.src, '_blank'); };
+								td.appendChild(img);
+							} else {
+								const ph = document.createElement('span'); 
+								ph.className='thumb-placeholder'; 
+								ph.textContent='No Photo';
+								td.appendChild(ph);
+							}
+						} else {
+							td.textContent = escapeHtml(v==null?'':String(v));
+						}
+					}
+					tr.appendChild(td);
+				}
+				tbody.appendChild(tr);
+			});
+			table.appendChild(tbody);
+			tableWrapper.appendChild(table);
+			container.appendChild(tableWrapper);
+			const sampleRow = latestFilteredRows[0];
+			const sessionValue = sampleRow ? String(sampleRow.session || '').trim() : '';
+			statusEl.textContent = `Total Students: ${latestFilteredRows.length} | Session: ${sessionValue}`;
+		}
+
+		selectedColumns = loadSelectedColumns();
+		let liteRows = [];
+		let selectedSession = '';
+		let selectedClass = '';
+		let selectedSection = '';
+		const sessionFilterEl = document.getElementById('sessionFilter');
+		const classFilterEl = document.getElementById('classFilter');
+		const sectionFilterEl = document.getElementById('sectionFilter');
+
+		function buildSessionOptions(){
+			// Provide fixed session options for selection
+			sessionFilterEl.innerHTML = '<option value="">Select Session</option>\n\t\t\t<option value="2024">2024</option>\n\t\t\t<option value="2025">2025</option>\n\t\t\t<option value="2026">2026</option>';
+			classFilterEl.innerHTML = '<option value="">Select Class</option>'; classFilterEl.disabled=true;
+			sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
+		}
+
+		async function buildClassOptions(){
+		    if(!selectedSession) return; // require session selected
+		    console.debug('buildClassOptions: selectedSession=', selectedSession, 'liteRows=', liteRows ? liteRows.length : 0);
+		    statusEl.textContent = 'Loading classes...';
+		    const field = `class_${selectedSession}`;
+		    console.debug('buildClassOptions: looking for field=', field);
+		    const classes = new Set();
+		    
+		    // Derive classes from the specific class_<session> field across liteRows
+		    liteRows.forEach(r=>{ 
+		    	try{ 
+		    		const v = r && r[field];
+		    		console.debug('buildClassOptions: row field value=', field, '=', v);
+		    		if(v!==undefined && v!==null && String(v).trim()!==''){ 
+		    			classes.add(String(v)); 
+		    		} 
+		    	}catch(e){
+		    		console.warn('buildClassOptions: error processing row:', e);
+		    	} 
+		    });
+		    console.debug('buildClassOptions: classes from liteRows=', Array.from(classes));
+		    
+		    // If none found in liteRows, try DB fallback to fetch distinct values directly
+		    if(classes.size === 0 && typeof supabaseClient !== 'undefined' && supabaseClient){
+		        try{
+		            console.debug('buildClassOptions: no classes found in liteRows, querying DB for', field);
+		            const { data: dbData, error: dbErr } = await supabaseClient.from('student_database_others').select(field).not(field, 'is', null).limit(20000);
+		            if(!dbErr && dbData){
+		            	console.debug('buildClassOptions: DB returned', dbData.length, 'rows');
+		                dbData.forEach(r=>{
+		                    const v = r && r[field];
+		                    console.debug('buildClassOptions: DB field value=', field, '=', v);
+		                    if(v!==undefined && v!==null && String(v).trim()!=='') classes.add(String(v));
+		                });
+		            } else if(dbErr){ console.warn('buildClassOptions DB fallback error', dbErr); }
+		        }catch(e){ console.warn('buildClassOptions DB fallback exception', e); }
+		    }
+		    const sorted = Array.from(classes).sort((a,b)=>{ const na=Number(a), nb=Number(b); if(!isNaN(na)&&!isNaN(nb)) return na-nb; return String(a).localeCompare(String(b)); });
+		    console.debug('buildClassOptions: final sorted classes=', sorted);
+		    classFilterEl.innerHTML = '<option value="">Select Class</option>' + sorted.map(c=>`<option value="${c}">${c}</option>`).join('');
+		    classFilterEl.disabled = sorted.length === 0; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled = true;
+		    statusEl.textContent = sorted.length ? 'Pick class' : 'No classes found for selected session';
+		    // Show debug info to user
+		    try{
+		        const dbg = document.getElementById('debugClasses');
+		        if(dbg){ dbg.textContent = 'Session: ' + selectedSession + ' | Computed classes: ' + (sorted.length ? sorted.join(', ') : '(none)'); }
+		    }catch(e){ console.debug('Could not set debugClasses element', e); }
+		}
+		function buildSectionOptions(){
+		    if(!selectedClass){ return; }
+		    const field = `section_${selectedSession}`;
+		    const sections = new Set();
+		    allRows.forEach(r=>{ 
+		    	const v = r && r[field];
+		    	if(v!==undefined && v!==null && String(v).trim()!==''){ 
+		    		sections.add(String(v)); 
+		    	}
+		    });
+		    const sorted = Array.from(sections).sort((a,b)=> String(a).localeCompare(String(b)));
+		    sectionFilterEl.innerHTML = '<option value="">All Sections</option>' + sorted.map(s=>`<option value="${s}">${s}</option>`).join('');
+		    sectionFilterEl.disabled=false;
+		}
+		function applySectionFilter(){
+		    const classField = `class_${selectedSession}`;
+		    const sectionField = `section_${selectedSession}`;
+		    const rollField = `roll_${selectedSession}`;
+		    console.debug('applySectionFilter: selectedClass=', selectedClass, 'selectedSection=', selectedSection, 'allRows=', allRows ? allRows.length : 0);
+		    if(!selectedClass){ latestFilteredRows=[]; container.innerHTML=''; statusEl.textContent='Select Class'; return; }
+		    let rows = allRows.filter(r=> String(r[classField]||'')===String(selectedClass));
+		    console.debug('applySectionFilter: after class filter, rows=', rows.length);
+		    if(selectedSection){ rows = rows.filter(r=> String(r[sectionField]||'')===String(selectedSection)); }
+		    console.debug('applySectionFilter: after section filter, rows=', rows.length);
+		    
+		    rows.sort((a, b) => {
+		        const rollA = Number(a[rollField]) || 0;
+		        const rollB = Number(b[rollField]) || 0;
+		        if(isNaN(rollA) || isNaN(rollB)) return String(a[rollField]||'').localeCompare(String(b[rollField]||''));
+		        return rollA - rollB;
+		    });
+		    
+		    latestFilteredRows = rows;
+		    console.debug('applySectionFilter: latestFilteredRows=', latestFilteredRows.length);
+		    const availableColumns = computeAvailableColumns();
+		    if((!selectedColumns || !selectedColumns.length) && availableColumns.length){ selectedColumns = availableColumns.slice(0, Math.min(4, availableColumns.length)); saveSelectedColumns(); }
+		    console.debug('applySectionFilter: selectedColumns=', selectedColumns);
+		    buildColumnControls(availableColumns);
+		    reRenderTable();
+		    statusEl.textContent = `Loaded ${latestFilteredRows.length} rows (Session: ${selectedSession}, Class: ${selectedClass}${selectedSection? ', Section: '+selectedSection:''})`;
+		}
+		async function loadGroupData(){
+		    if(!selectedClass){ return; }
+		    const field = `class_${selectedSession}`; // e.g., class_2025
+		    console.debug('loadGroupData: selectedSession=', selectedSession, 'field=', field, 'selectedClass=', selectedClass);
+	    const { data, error } = await supabaseClient.from('student_database_others').select('*').eq(field, selectedClass).limit(20000);
+		    if(error){ console.error('loadGroupData error:', error); statusEl.textContent='Load error'; return; }
+		    console.debug('loadGroupData: returned data rows=', data ? data.length : 0);
+		    allRows = (data||[]).filter(r=> !String(r.status||'').toUpperCase().includes('TC'));
+		    console.debug('loadGroupData: after TC filter, allRows=', allRows.length);
+		    buildSectionOptions();
+		    applySectionFilter();
+		}
+		// Allow selecting session; update class list on change
+		sessionFilterEl.addEventListener('change', async ()=>{ selectedSession=sessionFilterEl.value; console.debug('session changed ->', selectedSession, 'liteRows:', liteRows ? liteRows.length : 0); selectedClass=''; selectedSection=''; allRows=[]; latestFilteredRows=[]; await buildClassOptions(); container.innerHTML=''; statusEl.textContent= selectedSession? 'Select Class':'Select Session'; });
+		classFilterEl.addEventListener('change', async ()=>{ selectedClass=classFilterEl.value; selectedSection=''; allRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled=true; container.innerHTML=''; if(selectedClass){ await loadGroupData(); } else statusEl.textContent='Select Class'; });
+		sectionFilterEl.addEventListener('change', ()=>{ selectedSection=sectionFilterEl.value; applySectionFilter(); });
+
+		// Old initNew replaced by waitForSessionAndInit() above
+	</script>
+
+	<!-- floating print button (bottom-right) -->
+	<button class="print-button" id="btnPrint" type="button" title="Print">Print</button>
+	<!-- fixed page-size selector (top-right) -->
+	<div style="position:fixed; right:16px; top:12px; z-index:10000;">
+		<select id="printPageSize" title="Page size for printing" style="padding:8px;border-radius:6px;border:1px solid #e5e7eb;background:#fff;">
+			<option value="A4">A4</option>
+			<option value="Legal">Legal</option>
+		</select>
+	</div>
+	<script>
+		function applyPrintFit(size){
+			// Add a helper class to body for print styles
+			document.body.classList.add('print-fit');
+			// Ensure header hidden; we use title + selected text instead
+			const ph = document.getElementById('printHeader'); if(ph) ph.style.display='none';
+
+			// Smart auto-fit: compute CSS variables for font and padding
+			try{
+				const root = document.documentElement;
+				const table = document.querySelector('#container table');
+				if(table){
+					const pageWidthPx = (size === 'Legal') ? (14 * 96) : (11.69 * 96); // landscape width in px approximation
+					const marginPx = (size === 'Legal') ? (0.1 * 96) : (0.15 * 96);
+					const available = pageWidthPx - (marginPx * 2);
+					// estimate total columns
+					const colCount = table.querySelectorAll('thead th').length || 10;
+					// base desired font and padding
+					let fontPx = 11.5;
+					let padH = 6, padV = 4;
+					// heuristic width per column (in px) at base settings
+					const avgCharWidth = 6.2; // for 11.5px Kalpurush approx
+					const minColPx = 60; // minimum reasonable column width with wrapping
+					let estimatedTotal = colCount * (minColPx + (padH*2));
+					// If estimated width exceeds available, first shrink padding, then slightly font
+					if(estimatedTotal > available){
+						const over = estimatedTotal - available;
+						// reduce horizontal padding up to 2px total
+						const reducePad = Math.min(2, Math.ceil(over / colCount / 2));
+						padH = Math.max(2, padH - reducePad);
+						estimatedTotal = colCount * (minColPx + (padH*2));
+					}
+					if(estimatedTotal > available){
+						// slight font downscale, but not below 10px
+						const scale = Math.max(10, Math.round((available/estimatedTotal) * fontPx));
+						fontPx = Math.min(11.5, scale);
+					}
+					root.style.setProperty('--print-font', fontPx + 'px');
+					root.style.setProperty('--print-pad-h', padH + 'px');
+					root.style.setProperty('--print-pad-v', padV + 'px');
+				}
+			}catch(e){ /* ignore autofit errors */ }
+			// Create dynamic style tag for @page size and table fit rules
+			let dyn = document.getElementById('__print_page_style');
+			if(!dyn){ dyn = document.createElement('style'); dyn.id='__print_page_style'; document.head.appendChild(dyn); }
+			
+			const pageSizeRule = (size === 'Legal') ? 'legal landscape' : 'A4 landscape';
+			
+			// Enhanced dynamic styles for maximum data fitting
+			const dynamicStyles = `
+				@page{ 
+					size: ${pageSizeRule}; 
+					margin: ${size === 'Legal' ? '0.15cm 0.1cm' : '0.2cm 0.15cm'}; 
+				} 
+				@media print { 
+					body.print-fit { line-height: 1.2 !important; }
+					body.print-fit table{ 
+						table-layout: auto !important; 
+						width: 100% !important; 
+						border-collapse: collapse !important;
+						/* font-size controlled by CSS var on th/td */
+						border-spacing: 0 !important;
+					} 
+					body.print-fit th, body.print-fit td{ 
+						/* wrappers handled by main print CSS */
+						padding: var(--print-pad-v, 4px) var(--print-pad-h, 6px) !important;
+						line-height: 1.2 !important;
+						border: 0.5px solid #666 !important;
+						font-size: var(--print-font, 11.5px) !important;
+						vertical-align: middle !important;
+					}
+					body.print-fit th {
+						background: #e8e8e8 !important;
+						font-weight: bold !important;
+						padding: calc(var(--print-pad-v, 4px) + 1px) var(--print-pad-h, 6px) !important;
+					}
+					body.print-fit .col-sl { 
+						width: ${size === 'Legal' ? '28px' : '25px'} !important; 
+						min-width: ${size === 'Legal' ? '28px' : '25px'} !important; 
+						max-width: ${size === 'Legal' ? '28px' : '25px'} !important; 
+					}
+					body.print-fit #printHeader {
+						font-size: 12px !important;
+						padding: ${size === 'Legal' ? '5px 0' : '4px 0'} !important;
+						border-bottom: 1px solid #999 !important;
+					}
+					body.print-fit #container {
+						padding-top: ${size === 'Legal' ? '2.3cm' : '2.0cm'} !important;
+					}
+					/* Dynamic column sizing based on page size */
+					body.print-fit td:nth-child(1) { width: ${size === 'Legal' ? '28px' : '25px'} !important; max-width: ${size === 'Legal' ? '28px' : '25px'} !important; }
+					body.print-fit td:nth-child(2) { width: ${size === 'Legal' ? '50px' : '45px'} !important; max-width: ${size === 'Legal' ? '50px' : '45px'} !important; }
+					body.print-fit td:nth-child(3) { width: ${size === 'Legal' ? '80px' : '70px'} !important; max-width: ${size === 'Legal' ? '80px' : '70px'} !important; }
+					body.print-fit td:nth-child(4) { width: ${size === 'Legal' ? '40px' : '35px'} !important; max-width: ${size === 'Legal' ? '40px' : '35px'} !important; }
+					body.print-fit td:nth-child(5) { width: ${size === 'Legal' ? '120px' : '100px'} !important; max-width: ${size === 'Legal' ? '120px' : '100px'} !important; }
+				}
+			`;
+			
+			dyn.textContent = dynamicStyles;
+		}
+
+		function cleanupPrintFit(){
+			document.body.classList.remove('print-fit');
+			const dyn = document.getElementById('__print_page_style'); if(dyn && dyn.parentNode) dyn.parentNode.removeChild(dyn);
+			// Leave print header visible state to the render flow
+			try{
+				const root = document.documentElement;
+				root.style.removeProperty('--print-font');
+				root.style.removeProperty('--print-pad-h');
+				root.style.removeProperty('--print-pad-v');
+			}catch(e){}
+		}
+
+		document.getElementById('btnPrint').addEventListener('click', function(){
+			const size = document.getElementById('printPageSize').value || 'A4';
+			applyPrintFit(size);
+			// Footer is hidden during print
+			const pf = document.getElementById('printFooter'); if(pf){ pf.style.display='none'; }
+			
+			// Enhanced cleanup strategy with multiple fallbacks
+			let cleanupExecuted = false;
+			const performCleanup = () => {
+				if (cleanupExecuted) return;
+				cleanupExecuted = true;
+				try{ 
+					restoreOriginalTable(); 
+					cleanupPrintFit();
+				} catch(e) {
+					console.warn('Print cleanup error:', e);
+				}
+			};
+			
+			// Primary cleanup: onafterprint event
+			if('onafterprint' in window){
+				const originalAfterPrint = window.onafterprint;
+				window.onafterprint = function(){
+					performCleanup();
+					window.onafterprint = originalAfterPrint; // restore original handler
+				};
+			}
+			
+			// Secondary cleanup: focus event (when returning to page after print dialog)
+			const focusCleanup = () => {
+				setTimeout(performCleanup, 100);
+				window.removeEventListener('focus', focusCleanup);
+			};
+			window.addEventListener('focus', focusCleanup);
+			
+			// Tertiary cleanup: fallback timer (in case other methods fail)
+			setTimeout(() => {
+				if (!cleanupExecuted) {
+					console.log('Using fallback cleanup timer');
+					performCleanup();
+				}
+			}, 10000); // increased to 10 seconds
+			
+			window.print();
+		});
+
+		// Also listen for beforeprint/afterprint events to ensure proper print setup when user hits browser print
+		if('onbeforeprint' in window){
+			window.onbeforeprint = function(){ 
+				const pf = document.getElementById('printFooter'); 
+				if(pf) pf.style.display='none'; 
+				// Hide fixed header; we'll rely on table thead repeating
+				const ph = document.getElementById('printHeader'); 
+				if(ph) ph.style.display='none';
+			};
+			window.onafterprint = function(){ 
+				const pf = document.getElementById('printFooter'); 
+				if(pf) pf.style.display='none'; 
+				const ph = document.getElementById('printHeader'); 
+				if(ph) ph.style.display='none';
+				try{ restoreOriginalTable(); }catch(e){} 
+				cleanupPrintFit();
+			};
+		}
+
+			// Ensure print footer exists at end of body for reliable print positioning
+			(function ensureFooter(){
+				if(!document.getElementById('printFooter')){
+					const f = document.createElement('div'); f.id='printFooter'; f.className='print-footer'; f.style.display='none'; document.body.appendChild(f);
+				}
+			})();
+
+			// Pagination fallback disabled: keep a single table; rely on thead repeating across pages
+			let __pagedWrapper = null; let __originalTableParent = null; let __originalTable = null;
+			function mmToPx(mm){ return mm * 96 / 25.4; }
+			function buildTableWithRows(thead, rowNodes){
+				const tbl = document.createElement('table');
+				tbl.className = __originalTable ? __originalTable.className : '';
+				const theadClone = thead.cloneNode(true); tbl.appendChild(theadClone);
+				const tb = document.createElement('tbody'); for(const r of rowNodes){ tb.appendChild(r.cloneNode(true)); }
+				tbl.appendChild(tb); tbl.style.pageBreakAfter = 'always'; return tbl;
+			}
+			function createPagedTablesApprox(pageSize){
+				// Disabled
+				return;
+			}
+
+			// helper to run pagination and optionally update footer/headers
+			function preparePrintPagination(size){ /* disabled */ }
+			function restoreOriginalTable(){ 
+				try{ 
+					if(__pagedWrapper && __originalTable && __originalTableParent && __pagedWrapper.parentNode === __originalTableParent){ 
+						__originalTableParent.replaceChild(__originalTable, __pagedWrapper); 
+						console.log('Original table restored successfully');
+					} else {
+						console.log('Table restoration skipped - conditions not met');
+					}
+				} catch(e) { 
+					console.error('restoreOriginalTable error', e); 
+				} finally {
+					// Always reset the variables
+					__pagedWrapper = null; 
+					__originalTable = null; 
+					__originalTableParent = null; 
+				}
+			}
+	</script>
+</body>
+</html>
