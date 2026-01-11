@@ -433,7 +433,7 @@
                 if (error || !session) {
                     // No valid session, redirect to login page
                     console.log('No valid session found, redirecting to login...');
-                    window.location.href = './index.html';
+                    window.location.href = '/index.html';
                     return false;
                 }
                 
@@ -442,7 +442,7 @@
                 return true;
             } catch (error) {
                 console.error('Authentication check failed:', error);
-                window.location.href = './index.html';
+                window.location.href = '/index.html';
                 return false;
             }
         }
@@ -451,7 +451,7 @@
         supabaseClient.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || !session) {
                 console.log('User signed out or session expired, redirecting...');
-                window.location.href = './index.html';
+                window.location.href = '/index.html';
             }
         });
 
@@ -493,7 +493,7 @@
                 sessionStorage.clear();
                 
                 // Redirect to login page after successful logout
-                window.location.href = './index.html';
+                window.location.href = '/index.html';
             } catch (error) {
                 console.error("Logout error:", error);
                 alert('Error logging out: ' + error.message);
@@ -526,7 +526,7 @@
                         const { data: { session } } = await supabaseClient.auth.getSession();
                         if (!session) {
                             console.log('Session expired, redirecting to login...');
-                            window.location.href = './index.html';
+                            window.location.href = '/index.html';
                         }
                     }, 300000); // 5 minutes
                 }

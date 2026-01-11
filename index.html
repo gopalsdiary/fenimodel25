@@ -85,8 +85,8 @@
             .tag { position:absolute; top:.7rem; right:.7rem; font-size:.77rem; background:var(--brand); color:#fff; padding:.45rem .7rem .5rem; border-radius:999px; letter-spacing:.65px; font-weight:600; box-shadow:0 2px 6px rgba(0,0,0,.25); }
             .tag.alt { background:#dc2626; }
             .tag.green { background:#059669; }
-            footer { margin:3rem 0 1.5rem; text-align:center; font-size:.6rem; color:var(--text-soft); }
-            .note { margin:2rem 0 0; font-size:.7rem; color:var(--text-soft); text-align:center; }
+            footer { margin:3rem 0 1.5rem; text-align:center; font-size:1rem; color:var(--text-soft); }
+            .note { margin:2rem 0 0; font-size:1rem; color:var(--text-soft); text-align:center; }
             .pulse { position:absolute; inset:0; background:radial-gradient(circle at 25% 15%,rgba(14,165,233,.25),transparent 70%); mix-blend-mode:overlay; animation:pulse 8s linear infinite; opacity:.4; pointer-events:none; }
             @keyframes pulse { 0% { transform:scale(1); opacity:.45;} 50% { transform:scale(1.15); opacity:.25;} 100% { transform:scale(1); opacity:.45;} }
             @media (max-width:640px){ .gate-card { padding:1.8rem 1.4rem 2.1rem; } .grid { --min:220px; } }
@@ -347,7 +347,7 @@
                         </a>
                       
                         <a role="listitem" href="accounting/login.html" class="card-link" aria-label="Accounting Module">
-                            <span class="tag alt">Accounting</span>
+                            <span class="tag alt">-</span>
                             <span class="card-icon">💰</span>
                             <span class="card-title">অ্যাকাউন্টিং মডিউল (not active)</span>
                             <span class="card-desc">student payment</span>
@@ -393,12 +393,12 @@
                 </ul>
             </nav>
 
-                <p class="note">© <span id="year"></span> Feni Model High School · Auto session timeout enabled · Unauthorized access prohibited.</p>
-            </section>
-        </div>
-        <footer>
-            Powered by Sikhanobish
-        </footer>
+            <div class="site-footer" style="margin-top:1.6rem; text-align:center;">
+                <p class="note" style="margin:0;">© <span id="year"></span> Feni Model High School · Unauthorized access prohibited.</p>
+                <p style="margin:0.45rem 0 0; font-size:0.9rem; color:var(--text-soft);">Powered by <a href="https://modelresult.netlify.app/creator" style="color:var(--brand); text-decoration:none; font-weight:700;">Sikhanobish</a></p>
+            </div>
+        </section>
+    </div>
 
     <script>
         // Disable developer tools

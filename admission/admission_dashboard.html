@@ -66,11 +66,14 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 <div class="container">
   <div class="grid" id="statsGrid" aria-label="Summary statistics">
     <div class="stat"><h3>Total</h3><div class="val" id="statTotal">—</div></div>
-    <div class="stat"><h3>Male</h3><div class="val" id="statMale">—</div></div>
-    <div class="stat"><h3>Female</h3><div class="val" id="statFemale">—</div></div>
+    <div class="stat"><h3>Male (Day)</h3><div class="val" id="statMale">—</div></div>
+    <div class="stat"><h3>Female (Morning)</h3><div class="val" id="statFemale">—</div></div>
     <div class="stat"><h3>Freedom Fighter</h3><div class="val" id="statFF">—</div></div>
     <div class="stat"><h3>Approved</h3><div class="val" id="statApproved">—</div></div>
   </div>
+
+  <!-- Counts by admission class (populated dynamically) -->
+  <div id="classCounts" class="grid" aria-label="Count by Admission Class" style="margin-bottom:1rem;"></div>
 
   <div class="filters" aria-label="Filters">
     <select id="filterStatus" title="Admission Status">
@@ -332,13 +335,64 @@ document.getElementById('pagination').addEventListener('click',e=>{ const b=e.ta
 
 // Stats
 function updateStats(){
+  // Show count of currently-visible (filtered) rows
   document.getElementById('statTotal').textContent = filtered.length;
-  const male = filtered.filter(r=>String(r.student_gender||'').toLowerCase().startsWith('m')).length;
-  const female = filtered.filter(r=>String(r.student_gender||'').toLowerCase().startsWith('f')).length;
+
+  // Normalize gender values and count common labels (English + common Bangla words)
+  const maleRegex = /(^m|^male|ছে|ছেলে)/i;
+  const femaleRegex = /(^f|^female|মে|মেয়ে|মহিলা)/i;
+  const male = filtered.filter(r=> maleRegex.test(String(r.student_gender||'').toLowerCase())).length;
+  const female = filtered.filter(r=> femaleRegex.test(String(r.student_gender||'').toLowerCase())).length;
   document.getElementById('statMale').textContent = male;
   document.getElementById('statFemale').textContent = female;
-  const ff = filtered.filter(r=> (r.quote_freedomfighter||'').trim()!=='' ).length; document.getElementById('statFF').textContent=ff;
-  const approved = filtered.filter(r=> r.admission_status===true ).length; document.getElementById('statApproved').textContent=approved;
+
+  // Freedom fighter marker — count only explicit 'yes' values (accept common variants)
+  const ff = filtered.filter(r=>{
+    const v = String(r.quote_freedomfighter||'').toLowerCase().trim();
+    return v === 'yes' || v === 'y' || v === '1' || v === 'true' || v === 'হ্যাঁ' || v === 'হ্যা';
+  }).length;
+  document.getElementById('statFF').textContent = ff;
+
+  // Approved: handle booleans, numeric '1', or string 'true' / 'yes'
+  const approved = filtered.filter(r=>{
+    const v = r.admission_status;
+    if(v === true) return true;
+    const s = String(v||'').toLowerCase().trim();
+    return s === 'true' || s === '1' || s === 'yes';
+  }).length;
+  document.getElementById('statApproved').textContent=approved;
+
+  // Small hint to remind users these counts reflect current filters
+  const statusBar = document.getElementById('statusBar');
+  if(statusBar) statusBar.textContent = `Showing ${filtered.length} records (filters applied)`;
+
+  // Update class-by-class counts
+  updateClassCounts();
+}
+
+// Count by admission class (uses current filtered rows)
+function updateClassCounts(){
+  const container = document.getElementById('classCounts');
+  if(!container) return;
+  const counts = {};
+  filtered.forEach(r => {
+    const c = String(r.admisson_class || 'Unassigned').trim() || 'Unassigned';
+    counts[c] = (counts[c] || 0) + 1;
+  });
+  const keys = Object.keys(counts).sort((a,b)=>{
+    const na = parseInt(a,10), nb = parseInt(b,10);
+    if(!isNaN(na) && !isNaN(nb)) return na - nb;
+    if(!isNaN(na)) return -1;
+    if(!isNaN(nb)) return 1;
+    return a.localeCompare(b);
+  });
+  if(keys.length === 0){
+    container.innerHTML = '<div class="stat"><h3>By Class</h3><div class="val">—</div></div>';
+    return;
+  }
+  let html = '';
+  keys.forEach(k => { html += `<div class="stat"><h3>Class ${k}</h3><div class="val">${counts[k]}</div></div>`; });
+  container.innerHTML = html;
 }
 
 // Form modal build
