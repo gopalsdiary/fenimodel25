@@ -1,0 +1,2220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>New Admission Application</title>
+  <link rel="icon" href="../logo2.png" />
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+  <!-- PDF Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+    html {
+      font-size: 100%;
+    }
+
+    :root {
+      --bg: #f0f4f8;
+      --bg-alt: #ffffff;
+      --text: #1a202c;
+      --text-soft: #64748b;
+      --border: #e2e8f0;
+      --brand: #6366f1;
+      --brand-light: #818cf8;
+      --brand-dark: #4f46e5;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warn: #f59e0b;
+      --accent: #ec4899;
+      --shadow: 0 4px 20px rgba(0, 0, 0, .08);
+      --shadow-lg: 0 10px 40px rgba(0, 0, 0, .12);
+      --glass: rgba(255, 255, 255, .75);
+      --glass-border: rgba(255, 255, 255, .18);
+      --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      --gradient-orange: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+      --gradient-bg: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    }
+
+    .dark {
+      --bg: #0f172a;
+      --bg-alt: #1e293b;
+      --text: #f1f5f9;
+      --text-soft: #94a3b8;
+      --border: #334155;
+      --glass: rgba(30, 41, 59, .85);
+      --shadow: 0 8px 32px rgba(0, 0, 0, .4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 400px;
+      background: var(--gradient-bg);
+      opacity: .08;
+      z-index: -1;
+      border-radius: 0 0 50% 50%/0 0 100px 100px;
+    }
+
+    a {
+      text-decoration: none;
+      color: var(--brand);
+      transition: color .2s;
+    }
+
+    a:hover {
+      color: var(--brand-dark);
+    }
+
+    /* Header */
+    header {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 1.5rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, .05);
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 800;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -.5px;
+    }
+
+    /* Mode Button */
+    .mode-btn {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      padding: .65rem 1.1rem;
+      border-radius: 12px;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-soft);
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      box-shadow: var(--shadow);
+      transition: all .3s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .mode-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .shadow-orange {
+      box-shadow: 0 4px 20px rgba(249, 115, 22, .3) !important;
+    }
+
+    .mode-btn.orange {
+      background: var(--gradient-orange);
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(249, 115, 22, .35);
+    }
+
+    .mode-btn.orange:hover {
+      filter: brightness(1.08);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(249, 115, 22, .45);
+    }
+
+    /* Container */
+    .container {
+      width: 100%;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem 5rem;
+    }
+
+    /* Form Head */
+    .form-head {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem 0 2rem;
+    }
+
+    .badge {
+      background: var(--gradient-primary);
+      color: #fff;
+      font-size: .7rem;
+      padding: .4rem .9rem;
+      border-radius: 50px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, .3);
+    }
+
+    /* Section Cards */
+    .section {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 2rem 2.2rem;
+      box-shadow: var(--shadow);
+      margin: 0 0 2rem;
+      position: relative;
+      overflow: hidden;
+      transition: all .3s ease;
+    }
+
+    .section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--gradient-primary);
+      opacity: .6;
+    }
+
+    .section:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+    }
+
+    .section h3 {
+      margin: 0 0 1.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      color: var(--text);
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--border);
+      position: relative;
+    }
+
+    .section h3 span.icon {
+      font-size: 1.3rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: var(--gradient-primary);
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, .25);
+    }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      gap: 1.2rem;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+
+    /* Form Fields */
+    label.field {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      font-size: .8rem;
+      font-weight: 600;
+      letter-spacing: .2px;
+      color: var(--text-soft);
+      transition: color .2s;
+    }
+
+    label.field:focus-within {
+      color: var(--brand);
+    }
+
+    label.field input,
+    label.field select {
+      padding: .9rem 1.1rem;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      background: var(--bg-alt);
+      font-size: .9rem;
+      color: var(--text);
+      transition: all .3s cubic-bezier(.4, 0, .2, 1);
+      outline: none;
+      font-weight: 500;
+    }
+
+    label.field input:hover,
+    label.field select:hover {
+      border-color: var(--brand-light);
+    }
+
+    label.field input:focus,
+    label.field select:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, .15);
+      background: #fff;
+    }
+
+    label.field input::placeholder {
+      color: #a0aec0;
+      font-weight: 400;
+    }
+
+    label.field select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 1rem center;
+      background-size: 18px;
+      padding-right: 2.5rem;
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 2px solid var(--border);
+    }
+
+    /* Buttons */
+    .btn {
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: .9rem;
+      padding: 1rem 1.8rem;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: .6rem;
+      letter-spacing: .3px;
+      transition: all .3s cubic-bezier(.4, 0, .2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .25), transparent);
+      transition: left .5s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn.primary {
+      background: var(--gradient-primary);
+      color: #fff;
+      box-shadow: 0 6px 25px rgba(99, 102, 241, .4);
+    }
+
+    .btn.primary:hover {
+      box-shadow: 0 10px 40px rgba(99, 102, 241, .5);
+      transform: translateY(-3px);
+    }
+
+    .btn.secondary {
+      background: var(--bg-alt);
+      border: 2px solid var(--border);
+      color: var(--text-soft);
+      box-shadow: var(--shadow);
+    }
+
+    .btn.secondary:hover {
+      background: var(--bg);
+      border-color: var(--brand-light);
+      color: var(--brand);
+      transform: translateY(-2px);
+    }
+
+    .btn.danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+      box-shadow: 0 6px 25px rgba(239, 68, 68, .35);
+    }
+
+    /* Upload Buttons */
+    .btn-upload {
+      padding: .8rem 1.3rem;
+      font-size: .85rem;
+      background: var(--gradient-success);
+      color: #fff;
+      white-space: nowrap;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(16, 185, 129, .3);
+    }
+
+    .btn-upload:hover {
+      box-shadow: 0 8px 30px rgba(16, 185, 129, .45);
+      transform: translateY(-2px);
+    }
+
+    .btn-icon-upload {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 14px;
+      background: var(--gradient-orange);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all .3s cubic-bezier(.4, 0, .2, 1);
+      box-shadow: 0 4px 20px rgba(249, 115, 22, .35);
+      flex-shrink: 0;
+    }
+
+    .btn-icon-upload:hover {
+      box-shadow: 0 8px 30px rgba(249, 115, 22, .5);
+      transform: translateY(-3px) scale(1.05);
+    }
+
+    .btn-icon-upload.uploaded {
+      background: var(--gradient-success);
+      box-shadow: 0 4px 20px rgba(16, 185, 129, .35);
+    }
+
+    .btn-icon-upload.uploaded:hover {
+      box-shadow: 0 8px 30px rgba(16, 185, 129, .5);
+    }
+
+    .field-with-upload {
+      display: flex;
+      align-items: flex-end;
+      gap: .8rem;
+    }
+
+    /* Crop Modal */
+    .crop-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, .85);
+      backdrop-filter: blur(10px);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .crop-modal.active {
+      display: flex;
+    }
+
+    .crop-panel {
+      background: var(--bg-alt);
+      border-radius: 24px;
+      padding: 2.5rem;
+      max-width: 750px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      animation: modalSlideIn .4s ease;
+    }
+
+    @keyframes modalSlideIn {
+      from {
+        opacity: 0;
+        transform: scale(.9) translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .crop-panel h3 {
+      margin: 0 0 1.2rem;
+      font-size: 1.4rem;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .crop-info {
+      font-size: .85rem;
+      color: var(--text-soft);
+      margin-bottom: 1.2rem;
+      line-height: 1.6;
+    }
+
+    .crop-area {
+      border: 3px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 1.2rem 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg);
+    }
+
+    .crop-canvas {
+      max-width: 100%;
+      cursor: crosshair;
+      display: block;
+    }
+
+    .crop-controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+      justify-content: center;
+    }
+
+    /* Notice */
+    .notice {
+      margin: 1.5rem 0 0;
+      font-size: .85rem;
+      color: var(--text-soft);
+      line-height: 1.6;
+      padding: 1rem 1.2rem;
+      background: rgba(99, 102, 241, .08);
+      border-radius: 12px;
+      border-left: 4px solid var(--brand);
+    }
+
+    /* Download Section */
+    .download-section {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      display: flex;
+      gap: .6rem;
+      flex: 1;
+      min-width: 320px;
+    }
+
+    .search-box input {
+      flex: 1;
+      padding: 1rem 1.2rem;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      font-size: .9rem;
+      font-family: inherit;
+      transition: all .3s;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 4px rgba(99, 102, 241, .15);
+    }
+
+    /* Alerts */
+    .alert {
+      display: none;
+      margin: 1.2rem 0 0;
+      padding: 1rem 1.3rem;
+      border-radius: 14px;
+      font-size: .9rem;
+      font-weight: 500;
+      border: none;
+      animation: alertSlide .3s ease;
+    }
+
+    @keyframes alertSlide {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .alert.success {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      background: linear-gradient(135deg, rgba(16, 185, 129, .15) 0%, rgba(52, 211, 153, .15) 100%);
+      color: #065f46;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, .15);
+    }
+
+    .alert.error {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      background: linear-gradient(135deg, rgba(239, 68, 68, .15) 0%, rgba(248, 113, 113, .15) 100%);
+      color: #991b1b;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, .15);
+    }
+
+    /* Autofill */
+    .autofill {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      font-size: .85rem;
+      margin-top: .6rem;
+      color: var(--text-soft);
+    }
+
+    .autofill label {
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: .5rem 1rem;
+      background: var(--bg);
+      border-radius: 10px;
+      transition: all .2s;
+    }
+
+    .autofill label:hover {
+      background: rgba(99, 102, 241, .1);
+      color: var(--brand);
+    }
+
+    .autofill input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--brand);
+    }
+
+    /* Footer */
+    footer {
+      margin: 4rem 0 2rem;
+      text-align: center;
+      font-size: .85rem;
+      color: var(--text-soft);
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Required & Invalid */
+    .required::after {
+      content: ' *';
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .invalid {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, .15) !important;
+      animation: shake .4s ease;
+    }
+
+    @keyframes shake {
+
+      0%,
+      100% {
+        transform: translateX(0);
+      }
+
+      25% {
+        transform: translateX(-5px);
+      }
+
+      75% {
+        transform: translateX(5px);
+      }
+    }
+
+    /* Photo Preview */
+    #student_photo_preview,
+    #certificate_preview {
+      border-radius: 12px !important;
+      box-shadow: var(--shadow);
+    }
+
+    #student_photo_placeholder,
+    #certificate_placeholder {
+      border-radius: 12px !important;
+      border: 3px dashed var(--border) !important;
+      font-size: .75rem !important;
+      font-weight: 500;
+    }
+
+    /* Responsive */
+    @media (max-width:768px) {
+      .container {
+        padding: 1.2rem 1rem 4rem;
+      }
+
+      .section {
+        padding: 1.5rem 1.2rem;
+        border-radius: 16px;
+      }
+
+      .section h3 span.icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1.1rem;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .search-box {
+        min-width: 100%;
+      }
+
+      header {
+        padding: 1rem 1.2rem;
+      }
+
+      .form-head {
+        margin: .5rem 0 1.5rem;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--brand-light);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--brand);
+    }
+
+    /* Selection */
+    ::selection {
+      background: var(--brand);
+      color: #fff;
+    }
+  </style>
+</head>
+
+<body>
+  <header style="text-align:center;padding:1rem 1.2rem;">
+    <div style="width:100%;max-width:900px;margin:0 auto;">
+      <div style="font-weight:800;font-size:1.15rem;letter-spacing:.6px;">Feni Model High School</div>
+      <h1 class="title" style="margin:.35rem 0 0">Admission Form</h1>
+      <div style="margin-top:.6rem;">
+      </div>
+    </div>
+  </header>
+  <div class="container">
+    <div class="form-head">
+      <span class="badge">Form</span>
+      <p style="margin:0;font-size:.63rem;color:var(--text-soft)">Fill all required fields then save. Required marked
+        with red *</p>
+    </div>
+    <!-- Admission Selection -->
+    <div class="section" id="sec-admission">
+      <h3><span class="icon">🎯</span> Admission Selection (মডেল হাই স্কুলে প্রথম যে ক্লাসে ভর্তি দেখানো হয়েছে)</h3>
+      <div class="grid">
+        <label class="field required">Session (বর্তমান)
+          <select id="session" required>
+            <option value="">Select</option>
+            <option>2024</option>
+            <option>2025</option>
+            <option>2026</option>
+            <option>2027</option>
+
+          </select>
+        </label>
+        <label class="field required">Admission Class
+          <select id="admission_class" required>
+            <option value="">Select</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+          </select>
+        </label>
+        <label class="field required">Admission Section
+          <select id="admission_section" required>
+            <option value="">Select</option>
+            <option>Day (Shapla)</option>
+            <option>Day (Golap)</option>
+            <option>Morning</option>
+          </select>
+        </label>
+        <label class="field">School Name (Others)<input id="school_name_others" /></label>
+
+      </div>
+    </div>
+
+    <!-- Basic Information -->
+    <div class="section" id="sec-basic">
+      <h3><span class="icon">🧒</span> Basic Information</h3>
+      <div class="grid">
+        <label class="field required">Student Name English<input id="student_name_en" required /></label>
+        <label class="field">Student Name Bangla<input id="student_name_bn" /></label>
+        <label class="field">Birth Registration<input id="birth_registration" /></label>
+        <label class="field">Student Date of Birth<input id="student_dateofbirth" type="date" /></label>
+        <label class="field">Religion
+          <select id="religion">
+            <option value="">Select</option>
+            <option>HINDU</option>
+            <option>ISLAM</option>
+            <option>BUDDISM</option>
+            <option>CHRISTIAN</option>
+          </select>
+        </label>
+        <label class="field required">Student Gender
+          <select id="student_gender" required>
+            <option value="">Select</option>
+            <option>Male</option>
+            <option>Female</option>
+          </select>
+        </label>
+        <div class="field-with-upload">
+          <label class="field">Student Photo
+            <div style="display:flex;gap:.5rem;align-items:center;">
+              <img id="student_photo_preview" src="" alt=""
+                style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+              <span id="student_photo_placeholder"
+                style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No
+                Photo</span>
+            </div>
+            <input id="student_photo_url" type="hidden" />
+          </label>
+          <button type="button" id="upload_photo_btn" class="btn-icon-upload" onclick="uploadStudentPhoto()"
+            title="Upload Photo">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </button>
+          <input type="file" id="student_photo_file" accept="image/*" style="display:none;" />
+        </div>
+        <div class="field-with-upload">
+          <label class="field">Birth Certificate
+            <div style="display:flex;gap:.5rem;align-items:center;">
+              <img id="certificate_preview" src="" alt=""
+                style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+              <span id="certificate_placeholder"
+                style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No
+                Certificate</span>
+            </div>
+            <input id="birth_certificate_url" type="hidden" />
+          </label>
+          <button type="button" id="upload_certificate_btn" class="btn-icon-upload" onclick="uploadBirthCertificate()"
+            title="Upload Certificate">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </button>
+          <input type="file" id="birth_certificate_file" accept="image/*" style="display:none;" />
+        </div>
+        <div class="field-with-upload">
+          <label class="field">Registration Card
+            <div style="display:flex;gap:.5rem;align-items:center;">
+              <img id="registration_card_preview" src="" alt=""
+                style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+              <span id="registration_card_placeholder"
+                style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No
+                Card</span>
+            </div>
+            <input id="registration_card_url" type="hidden" />
+          </label>
+          <button type="button" id="upload_registration_card_btn" class="btn-icon-upload"
+            onclick="uploadRegistrationCard()" title="Upload Registration Card">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </button>
+          <input type="file" id="registration_card_file" accept="image/*" style="display:none;" />
+        </div>
+        <label class="field">Blood Group
+          <select id="student_blood_group">
+            <option value="">Select</option>
+            <option>A+</option>
+            <option>A-</option>
+            <option>B+</option>
+            <option>B-</option>
+            <option>O+</option>
+            <option>O-</option>
+            <option>AB+</option>
+            <option>AB-</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+
+    <!-- Board / Registration -->
+    <div class="section" id="sec-board">
+      <h3><span class="icon">🏫</span> Board / Registration</h3>
+      <div class="grid">
+        <label class="field">Admission Date<input id="admission_date" type="date" /></label>
+        <label class="field">Board Name<input id="board_name" /></label>
+        <label class="field">Board Roll<input id="board_roll" /></label>
+        <label class="field">Board Registration<input id="board_registration" /></label>
+        <label class="field">Group
+          <select id="group">
+            <option value="">Select</option>
+            <option>SCIENCE</option>
+            <option>BUSINESS STUDIES</option>
+            <option>HUMANATIES</option>
+          </select>
+        </label>
+        <label class="field">Optional Subject<input id="optional_subject" /></label>
+      </div>
+    </div>
+
+    <!-- Father Information -->
+    <div class="section" id="sec-father">
+      <h3><span class="icon">👨</span> Father Information</h3>
+      <div class="grid">
+        <label class="field required">Father Name English<input id="father_name_en" required /></label>
+        <label class="field">Father Name Bangla<input id="father_name_bn" /></label>
+        <label class="field">Father NID<input id="father_nid" /></label>
+        <label class="field">Father Mobile<input id="father_mobile" type="tel" value="880"
+            placeholder="880XXXXXXXXXX" /></label>
+        <label class="field">Father Occupation<input id="father_occupation" /></label>
+        <label class="field">Father Date of Birth<input id="father_dob" type="date" /></label>
+        <label class="field">Father Blood Group
+          <select id="father_blood_group">
+            <option value="">Select</option>
+            <option>A+</option>
+            <option>A-</option>
+            <option>B+</option>
+            <option>B-</option>
+            <option>O+</option>
+            <option>O-</option>
+            <option>AB+</option>
+            <option>AB-</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Mother Information -->
+    <div class="section" id="sec-mother">
+      <h3><span class="icon">👩</span> Mother Information</h3>
+      <div class="grid">
+        <label class="field">Mother Name English<input id="mother_name_en" /></label>
+        <label class="field">Mother Name Bangla<input id="mother_name_bn" /></label>
+        <label class="field">Mother NID<input id="mother_nid" /></label>
+        <label class="field">Mother Mobile<input id="mother_mobile" type="tel" value="880"
+            placeholder="880XXXXXXXXXX" /></label>
+        <label class="field">Mother Occupation<input id="mother_occupation" /></label>
+        <label class="field">Mother Date of Birth<input id="mother_dob" type="date" /></label>
+        <label class="field">Mother Blood Group
+          <select id="mother_blood_group">
+            <option value="">Select</option>
+            <option>A+</option>
+            <option>A-</option>
+            <option>B+</option>
+            <option>B-</option>
+            <option>O+</option>
+            <option>O-</option>
+            <option>AB+</option>
+            <option>AB-</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <!-- Guardian Information -->
+    <div class="section" id="sec-guardian">
+      <h3><span class="icon">🛡️</span> Guardian Information</h3>
+      <div class="autofill">
+        <label><input type="checkbox" id="guardian_from_father" /> Father as Guardian</label>
+        <label><input type="checkbox" id="guardian_from_mother" /> Mother as Guardian</label>
+      </div>
+      <div class="grid" style="margin-top:.6rem;">
+        <label class="field">Guardian Name English<input id="guardian_name_en" /></label>
+        <label class="field">Guardian Name Bangla<input id="guardian_name_bn" /></label>
+        <label class="field">Guardian NID<input id="guardian_nid" /></label>
+        <label class="field">Guardian Mobile<input id="guardian_mobile" type="tel" value="880"
+            placeholder="880XXXXXXXXXX" /></label>
+        <label class="field">Guardian Occupation<input id="guardian_occupation" /></label>
+      </div>
+    </div>
+
+    <!-- Address Information -->
+    <div class="section" id="sec-address">
+      <h3><span class="icon">📍</span> Address Information</h3>
+      <div class="grid">
+        <label class="field required">District English
+          <select id="district_en" required>
+            <option value="">Select</option>
+          </select>
+        </label>
+        <label class="field required">District Bangla
+          <select id="district_bn" required>
+            <option value="">Select</option>
+          </select>
+        </label>
+        <label class="field">Upazila English
+          <select id="upazilla_en">
+            <option value="">Select</option>
+          </select>
+        </label>
+        <label class="field">Upazila Bangla
+          <select id="upazilla_bn">
+            <option value="">Select</option>
+          </select>
+        </label>
+        <label class="field">Union English
+          <select id="union_en">
+            <option value="">Select</option>
+          </select>
+        </label>
+        <label class="field">Union Bangla
+          <select id="union_bn">
+            <option value="">Select</option>
+          </select>
+        </label>
+        <label class="field">Post Office English<input id="postoffice_en" /></label>
+        <label class="field">Post Office Bangla<input id="postoffice_bn" /></label>
+        <label class="field">Village English<input id="village_en" /></label>
+        <label class="field">Village Bangla<input id="village_bn" /></label>
+      </div>
+    </div>
+
+    <!-- Additional Information -->
+    <!-- Academic History -->
+    <div class="section" id="sec-academic">
+      <h3><span class="icon">📚</span> Academic History</h3>
+      <div class="grid">
+        <div style="border:1px solid var(--border);padding:10px;border-radius:8px;background:var(--bg-alt)">
+          <h4 style="margin:0 0 .6rem;font-size:.95rem;font-weight:700">Academic History 2024</h4>
+          <label class="field">Class 2024
+            <select id="class_2024">
+              <option value="">Select</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+            </select>
+          </label>
+          <label class="field">Section 2024
+            <select id="section_2024">
+              <option value="">Select</option>
+              <option>Day (Shapla)</option>
+              <option>Day (Golap)</option>
+              <option>Morning</option>
+            </select>
+          </label>
+          <label class="field">Roll 2024<input id="roll_2024" type="number" min="1" /></label>
+        </div>
+        <div style="border:1px solid var(--border);padding:10px;border-radius:8px;background:var(--bg-alt)">
+          <h4 style="margin:0 0 .6rem;font-size:.95rem;font-weight:700">Academic History 2025</h4>
+          <label class="field">Class 2025
+            <select id="class_2025">
+              <option value="">Select</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+            </select>
+          </label>
+          <label class="field">Section 2025
+            <select id="section_2025">
+              <option value="">Select</option>
+              <option>Day (Shapla)</option>
+              <option>Day (Golap)</option>
+              <option>Morning</option>
+            </select>
+          </label>
+          <label class="field">Roll 2025<input id="roll_2025" type="number" min="1" /></label>
+        </div> 
+        <div style="border:1px solid var(--border);padding:10px;border-radius:8px;background:var(--bg-alt)">
+          <h4 style="margin:0 0 .6rem;font-size:.95rem;font-weight:700">Academic History 2026</h4>
+          <label class="field">Class 2026
+            <select id="class_2026">
+              <option value="">Select</option>
+              <option>6</option>
+              <option>7</option>
+              <option>8</option>
+              <option>9</option>
+              <option>10</option>
+            </select>
+          </label>
+          <label class="field">Section 2026
+            <select id="section_2026">
+              <option value="">Select</option>
+              <option>Day (Shapla)</option>
+              <option>Day (Golap)</option>
+              <option>Morning</option>
+            </select>
+          </label>
+          <label class="field">Roll 2026<input id="roll_2026" type="number" min="1" /></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="sec-additional">
+      <h3><span class="icon">➕</span> Additional Information</h3>
+      <div class="grid">
+        <label class="field">Previous School<input id="previous_school" /></label>
+        <label class="field">Previous Class Roll<input id="previous_class_roll" /></label>
+        <label class="field">Comment (School)<input id="comment_school" /></label>
+        <label class="field">Quote Freedom Fighter
+          <select id="quote_freedomfighter">
+            <option value="">Select</option>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="saveBtn">✅ Submit</button>
+
+      <button class="btn secondary" id="resetBtn" type="button">🔁 Reset</button>
+    </div>
+    <div id="alertBox" class="alert"></div>
+    <p class="notice">After saving you can view / edit. Make sure sensitive data is correct after approval you can't
+      edit.</p>
+
+    <div class="download-section">
+      <div class="search-box">
+        <input type="text" id="searchBirthReg" placeholder="Enter Birth Registration Number" maxlength="17" />
+        <button type="button" class="btn primary" onclick="searchApplication()">🔍 Search</button>
+      </div>
+      <a href="download_form.html" class="mode-btn orange shadow-orange" title="Back to Dashboard">🔙 Download
+        application</a>
+    </div>
+
+    <!-- Crop Modal -->
+    <div id="cropModal" class="crop-modal">
+      <div class="crop-panel">
+        <h3>📸 Crop Student Photo</h3>
+        <p class="crop-info">Click and drag to create a rectangular crop area (900:1100 ratio). The cropped image will
+          be resized to 900x1100 pixels (96 DPI).</p>
+
+        <div class="crop-area">
+          <canvas id="cropCanvas" class="crop-canvas"></canvas>
+        </div>
+
+        <div class="crop-controls">
+          <button type="button" class="btn secondary" onclick="resetCrop()">🔄 Reset</button>
+          <button type="button" class="btn primary" onclick="confirmCrop()">✅ Confirm & Upload</button>
+          <button type="button" class="btn secondary" onclick="cancelCrop()">❌ Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>© <span id="year"></span> Feni Model High School · Admission</footer>
+  </div>
+  <script src="district.text"></script>
+  <script>
+
+    // ImageBB Configuration
+    const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+    const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+
+    // Cropping variables
+    let cropCanvas, cropContext, originalImage, cropSelection, isDragging = false, startX, startY;
+
+    // Upload Student Photo
+    window.uploadStudentPhoto = function () {
+      const fileInput = document.getElementById('student_photo_file');
+      fileInput.click();
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          showAlert('Please select an image file', 'error');
+          return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) { // 10MB limit
+          showAlert('File size too large. Please select an image under 10MB', 'error');
+          return;
+        }
+
+        // Load image for cropping
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          loadImageForCropping(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
+    // Upload Birth Certificate
+    window.uploadBirthCertificate = function () {
+      const fileInput = document.getElementById('birth_certificate_file');
+      const uploadBtn = document.getElementById('upload_certificate_btn');
+      fileInput.click();
+      fileInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          showAlert('Please select an image file', 'error');
+          return;
+        }
+
+        try {
+          uploadBtn.disabled = true;
+          uploadBtn.style.opacity = '0.6';
+          showAlert('Uploading birth certificate...', 'success');
+          const url = await uploadToImageBB(file, 'birth_certificate');
+          document.getElementById('birth_certificate_url').value = url;
+
+          // Update preview
+          const preview = document.getElementById('certificate_preview');
+          const placeholder = document.getElementById('certificate_placeholder');
+          preview.src = url;
+          preview.style.display = 'block';
+          placeholder.style.display = 'none';
+
+          uploadBtn.classList.add('uploaded');
+          uploadBtn.disabled = false;
+          uploadBtn.style.opacity = '1';
+          showAlert('Birth certificate uploaded successfully!', 'success');
+        } catch (error) {
+          console.error('Upload error:', error);
+          uploadBtn.disabled = false;
+          uploadBtn.style.opacity = '1';
+          showAlert('Upload failed: ' + error.message, 'error');
+        }
+      };
+
+      // Upload Registration Card
+      window.uploadRegistrationCard = function () {
+        const fileInput = document.getElementById('registration_card_file');
+        const uploadBtn = document.getElementById('upload_registration_card_btn');
+        fileInput.click();
+        fileInput.onchange = async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          if (!file.type.startsWith('image/')) {
+            showAlert('Please select an image file', 'error');
+            return;
+          }
+
+          try {
+            uploadBtn.disabled = true;
+            uploadBtn.style.opacity = '0.6';
+            showAlert('Uploading registration card...', 'success');
+            const url = await uploadToImageBB(file, 'registration_card');
+            document.getElementById('registration_card_url').value = url;
+
+            // Update preview
+            const preview = document.getElementById('registration_card_preview');
+            const placeholder = document.getElementById('registration_card_placeholder');
+            preview.src = url;
+            preview.style.display = 'block';
+            placeholder.style.display = 'none';
+
+            uploadBtn.classList.add('uploaded');
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '1';
+            showAlert('Registration card uploaded successfully!', 'success');
+          } catch (error) {
+            console.error('Upload error:', error);
+            uploadBtn.disabled = false;
+            uploadBtn.style.opacity = '1';
+            showAlert('Upload failed: ' + error.message, 'error');
+          }
+        };
+      };
+    }
+
+    // Upload to ImageBB
+    async function uploadToImageBB(file, prefix) {
+      const formData = new FormData();
+      formData.append('key', IMGBB_API_KEY);
+      formData.append('image', file);
+
+      const response = await fetch(IMGBB_UPLOAD_URL, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed: ' + response.statusText);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error('Upload failed: ' + (data.error?.message || 'Unknown error'));
+      }
+
+      return data.data.url;
+    }
+
+    // Load image for cropping
+    function loadImageForCropping(imageSrc) {
+      const img = new Image();
+      img.onload = function () {
+        originalImage = img;
+        setupCropCanvas();
+        document.getElementById('cropModal').classList.add('active');
+      };
+      img.src = imageSrc;
+    }
+
+    // Setup crop canvas
+    function setupCropCanvas() {
+      cropCanvas = document.getElementById('cropCanvas');
+      cropContext = cropCanvas.getContext('2d');
+
+      // Calculate canvas size maintaining aspect ratio
+      const maxWidth = 600;
+      const maxHeight = 400;
+      let canvasWidth = originalImage.width;
+      let canvasHeight = originalImage.height;
+
+      if (canvasWidth > maxWidth) {
+        canvasHeight = (canvasHeight * maxWidth) / canvasWidth;
+        canvasWidth = maxWidth;
+      }
+
+      if (canvasHeight > maxHeight) {
+        canvasWidth = (canvasWidth * maxHeight) / canvasHeight;
+        canvasHeight = maxHeight;
+      }
+
+      cropCanvas.width = canvasWidth;
+      cropCanvas.height = canvasHeight;
+
+      // Draw image
+      cropContext.drawImage(originalImage, 0, 0, canvasWidth, canvasHeight);
+
+      // Initialize crop selection (900*1100 ratio rectangle in center)
+      const aspectRatio = 900 / 1100; // width / height
+      let cropWidth, cropHeight;
+
+      if (canvasWidth / canvasHeight > aspectRatio) {
+        cropHeight = canvasHeight * 0.8;
+        cropWidth = cropHeight * aspectRatio;
+      } else {
+        cropWidth = canvasWidth * 0.8;
+        cropHeight = cropWidth / aspectRatio;
+      }
+
+      cropSelection = {
+        x: (canvasWidth - cropWidth) / 2,
+        y: (canvasHeight - cropHeight) / 2,
+        width: cropWidth,
+        height: cropHeight
+      };
+
+      drawCropOverlay();
+
+      // Add event listeners
+      cropCanvas.addEventListener('mousedown', startCrop);
+      cropCanvas.addEventListener('mousemove', updateCrop);
+      cropCanvas.addEventListener('mouseup', endCrop);
+      cropCanvas.addEventListener('mouseleave', endCrop);
+    }
+
+    // Draw crop overlay
+    function drawCropOverlay() {
+      cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+      cropContext.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+      // Draw overlay
+      cropContext.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+
+      // Clear crop area
+      cropContext.clearRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+      cropContext.drawImage(
+        originalImage,
+        (cropSelection.x / cropCanvas.width) * originalImage.width,
+        (cropSelection.y / cropCanvas.height) * originalImage.height,
+        (cropSelection.width / cropCanvas.width) * originalImage.width,
+        (cropSelection.height / cropCanvas.height) * originalImage.height,
+        cropSelection.x,
+        cropSelection.y,
+        cropSelection.width,
+        cropSelection.height
+      );
+
+      // Draw crop border
+      cropContext.strokeStyle = '#3b82f6';
+      cropContext.lineWidth = 2;
+      cropContext.strokeRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+    }
+
+    // Start crop
+    function startCrop(e) {
+      const rect = cropCanvas.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      isDragging = true;
+    }
+
+    // Update crop
+    function updateCrop(e) {
+      if (!isDragging) return;
+
+      const rect = cropCanvas.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const currentY = e.clientY - rect.top;
+
+      const width = Math.abs(currentX - startX);
+      const height = Math.abs(currentY - startY);
+      const aspectRatio = 900 / 1100;
+
+      // Maintain 900:1100 aspect ratio
+      let cropWidth, cropHeight;
+      if (width / height > aspectRatio) {
+        cropHeight = height;
+        cropWidth = cropHeight * aspectRatio;
+      } else {
+        cropWidth = width;
+        cropHeight = cropWidth / aspectRatio;
+      }
+
+      cropSelection.x = Math.min(startX, currentX);
+      cropSelection.y = Math.min(startY, currentY);
+      cropSelection.width = cropWidth;
+      cropSelection.height = cropHeight;
+
+      // Keep within canvas bounds
+      if (cropSelection.x + cropSelection.width > cropCanvas.width) {
+        cropSelection.width = cropCanvas.width - cropSelection.x;
+        cropSelection.height = cropSelection.width / aspectRatio;
+      }
+      if (cropSelection.y + cropSelection.height > cropCanvas.height) {
+        cropSelection.height = cropCanvas.height - cropSelection.y;
+        cropSelection.width = cropSelection.height * aspectRatio;
+      }
+
+      drawCropOverlay();
+    }
+
+    // End crop
+    function endCrop() {
+      isDragging = false;
+    }
+
+    // Reset crop
+    window.resetCrop = function () {
+      const aspectRatio = 900 / 1100;
+      let cropWidth, cropHeight;
+
+      if (cropCanvas.width / cropCanvas.height > aspectRatio) {
+        cropHeight = cropCanvas.height * 0.8;
+        cropWidth = cropHeight * aspectRatio;
+      } else {
+        cropWidth = cropCanvas.width * 0.8;
+        cropHeight = cropWidth / aspectRatio;
+      }
+
+      cropSelection = {
+        x: (cropCanvas.width - cropWidth) / 2,
+        y: (cropCanvas.height - cropHeight) / 2,
+        width: cropWidth,
+        height: cropHeight
+      };
+      drawCropOverlay();
+    }
+
+    // Cancel crop
+    window.cancelCrop = function () {
+      document.getElementById('cropModal').classList.remove('active');
+      document.getElementById('student_photo_file').value = '';
+      originalImage = null;
+    }
+
+    // Confirm crop and upload
+    window.confirmCrop = async function () {
+      if (!originalImage || cropSelection.width === 0) {
+        showAlert('Please select a crop area', 'error');
+        return;
+      }
+
+      const uploadBtn = document.getElementById('upload_photo_btn');
+
+      try {
+        uploadBtn.disabled = true;
+        uploadBtn.style.opacity = '0.6';
+        showAlert('Processing and uploading...', 'success');
+
+        // Create cropped image
+        const croppedCanvas = document.createElement('canvas');
+        const croppedContext = croppedCanvas.getContext('2d');
+
+        // Set target size (900x1100)
+        const targetWidth = 900;
+        const targetHeight = 1100;
+        croppedCanvas.width = targetWidth;
+        croppedCanvas.height = targetHeight;
+
+        // Calculate source coordinates
+        const scaleX = originalImage.width / cropCanvas.width;
+        const scaleY = originalImage.height / cropCanvas.height;
+
+        const sourceX = cropSelection.x * scaleX;
+        const sourceY = cropSelection.y * scaleY;
+        const sourceWidth = cropSelection.width * scaleX;
+        const sourceHeight = cropSelection.height * scaleY;
+
+        // Draw cropped image
+        croppedContext.drawImage(
+          originalImage,
+          sourceX, sourceY, sourceWidth, sourceHeight,
+          0, 0, targetWidth, targetHeight
+        );
+
+        // Convert to blob
+        const blob = await new Promise(resolve => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.95));
+
+        // Upload to ImageBB
+        const url = await uploadToImageBB(blob, 'student_photo');
+        document.getElementById('student_photo_url').value = url;
+
+        // Update preview
+        const preview = document.getElementById('student_photo_preview');
+        const placeholder = document.getElementById('student_photo_placeholder');
+        preview.src = url;
+        preview.style.display = 'block';
+        placeholder.style.display = 'none';
+
+        uploadBtn.classList.add('uploaded');
+        uploadBtn.disabled = false;
+        uploadBtn.style.opacity = '1';
+        showAlert('Photo uploaded successfully!', 'success');
+
+        // Close modal
+        document.getElementById('cropModal').classList.remove('active');
+
+      } catch (error) {
+        console.error('Upload error:', error);
+        uploadBtn.disabled = false;
+        uploadBtn.style.opacity = '1';
+        showAlert('Upload failed: ' + error.message, 'error');
+      }
+    }
+
+    // unions.text is in PHP array(...) format. We don't include it directly because
+    // that would break the page as it's not valid JS. Instead we fetch and parse it
+    // into a JS array `window.unions` before initializing the dropdown population.
+
+    function parsePhpArrayText(txt) {
+      const unions = [];
+      try {
+        // Match each array(...) block
+        const re = /array\s*\(([^\)]*)\)\s*,?/g;
+        let m;
+        while ((m = re.exec(txt)) !== null) {
+          const inside = m[1];
+          const obj = {};
+          // match key => 'value' pairs
+          const pairRe = /'([^']+)'\s*=>\s*'((?:\\'|[^'])*)'/g;
+          let p;
+          while ((p = pairRe.exec(inside)) !== null) {
+            obj[p[1]] = p[2];
+          }
+          if (Object.keys(obj).length) {
+            unions.push({
+              id: obj.id || '',
+              upazila_id: obj.upazila_id || obj.upazila || obj.upazilaId || '',
+              name: obj.name || '',
+              bn_name: obj.bn_name || obj.bn || '',
+              url: obj.url || ''
+            });
+          }
+        }
+      } catch (e) { console.warn('parsePhpArrayText error', e); }
+      return unions;
+    }
+
+    // load unions.text if needed and then run population init (defined later)
+    (async function ensureUnionsAndInit() {
+      if (typeof unions === 'undefined') {
+        try {
+          const txt = await fetch('unions.text').then(r => r.text());
+          window.unions = parsePhpArrayText(txt);
+        } catch (e) { console.warn('Failed to fetch/parse unions.text', e); window.unions = []; }
+      }
+      // signal ready by leaving window.unions defined, the population code below
+      // will be invoked after its function definition.
+    })();
+    // expose a promise so other scripts can await unions readiness
+    window.__unionsReady = (async function () {
+      // wait until window.unions is set (or timeout after 5s)
+      const start = Date.now();
+      while (typeof window.unions === 'undefined') {
+        if (Date.now() - start > 5000) { window.unions = []; break; }
+        await new Promise(r => setTimeout(r, 50));
+      }
+      return window.unions;
+    })();
+
+
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const TABLE = 'student_database_others';
+
+    let supabaseClient = null; function initSupabase() { if (supabaseClient) return supabaseClient; if (!window.supabase) { console.warn('Supabase lib not loaded yet'); return null; } supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); return supabaseClient; }
+    // load supabase script
+    (function () { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload = () => initSupabase(); document.head.appendChild(s); })();
+
+    function $(id) { return document.getElementById(id); }
+    function val(id) { return $(id).value.trim(); }
+    function setVal(id, v) { $(id).value = v || ''; }
+    function showAlert(msg, type = 'error') { const box = $('alertBox'); box.className = 'alert ' + type; box.textContent = msg; }
+    function clearAlert() { const box = $('alertBox'); box.className = 'alert'; box.textContent = ''; }
+
+    // guardian autofill
+    $('guardian_from_father').addEventListener('change', () => { if ($('guardian_from_father').checked) { copyParent('father', 'guardian'); $('guardian_from_mother').checked = false; } });
+    $('guardian_from_mother').addEventListener('change', () => { if ($('guardian_from_mother').checked) { copyParent('mother', 'guardian'); $('guardian_from_father').checked = false; } });
+    function copyParent(src, dst) { const fields = ['name_en', 'name_bn', 'nid', 'mobile', 'occupation']; fields.forEach(f => { setVal(dst + '_' + f, val(src + '_' + f)); }); }
+
+    function gatherPayload() {
+      // Helper function to convert to uppercase, handling null values
+      const upper = (str) => str ? str.toString().toUpperCase() : null;
+
+      // Helper function to get selected option text from dropdown
+      const getSelectedText = (id) => {
+        const el = $(id);
+        if (!el || !el.value) return null;
+        const selectedOption = el.options[el.selectedIndex];
+        return selectedOption ? selectedOption.text : null;
+      };
+
+      // Helper function to ensure mobile number has 880 prefix
+      const ensureMobile880 = (num) => {
+        if (!num) return null;
+        const clean = num.replace(/\D/g, ''); // Remove non-digits
+        if (!clean) return null;
+        return clean.startsWith('880') ? clean : '880' + clean;
+      };
+
+      const toNumber = (v) => {
+        if (v == null) return null;
+        const num = parseFloat(v);
+        return Number.isFinite(num) ? num : null;
+      };
+
+      const class2026 = toNumber(val('class_2026'));
+      const roll2026 = toNumber(val('roll_2026'));
+      const section2026 = upper(val('section_2026'));
+      const sessionVal = toNumber(val('session'));
+
+      return {
+        student_name_en: upper(val('student_name_en')),
+        birth_registration: upper(val('birth_registration')),
+        student_dateofbirth: val('student_dateofbirth') || null,
+        father_name_en: upper(val('father_name_en')),
+        father_name_bn: val('father_name_bn') || null,
+        father_nid: upper(val('father_nid')),
+        father_mobile: ensureMobile880(val('father_mobile')),
+        father_occupation: upper(val('father_occupation')),
+        mother_name_en: upper(val('mother_name_en')),
+        mother_name_bn: val('mother_name_bn') || null,
+        mother_nid: upper(val('mother_nid')),
+        mother_mobile: ensureMobile880(val('mother_mobile')),
+        mother_occupation: upper(val('mother_occupation')),
+        guardian_name_en: upper(val('guardian_name_en')),
+        guardian_name_bn: val('guardian_name_bn') || null,
+        guardian_nid: upper(val('guardian_nid')),
+        guardian_mobile: ensureMobile880(val('guardian_mobile')),
+        guardian_occupation: upper(val('guardian_occupation')),
+        religion: upper(val('religion')),
+        board_name: upper(val('board_name')),
+        board_roll: upper(val('board_roll')),
+        board_registration: upper(val('board_registration')),
+        student_gender: upper(val('student_gender')),
+        village_bn: val('village_bn') || null,
+        village_en: upper(val('village_en')),
+        postoffice_bn: val('postoffice_bn') || null,
+        postoffice_en: upper(val('postoffice_en')),
+        upazilla_bn: getSelectedText('upazilla_bn'),
+        upazilla_en: upper(getSelectedText('upazilla_en')),
+        district_bn: getSelectedText('district_bn'),
+        district_en: upper(getSelectedText('district_en')),
+        previous_school: upper(val('previous_school')),
+        school_name_others: upper(val('school_name_others')) || null,
+        class_2025: toNumber(val('class_2025')),
+        roll_2025: toNumber(val('roll_2025')),
+        section_2025: upper(val('section_2025')),
+        comment_school: val('comment_school') || null,
+        student_name_bn: val('student_name_bn') || null,
+        admission_date: val('admission_date') || null,
+        student_photo_url: val('student_photo_url') || null,
+        previous_class_roll: upper(val('previous_class_roll')),
+        session: sessionVal,
+        group: upper(val('group')),
+        optional_subject: upper(val('optional_subject')),
+        father_dob: val('father_dob') || null,
+        mother_dob: val('mother_dob') || null,
+        quote_freedomfighter: upper(val('quote_freedomfighter')),
+        class_2026: class2026,
+        section_2026: section2026,
+        roll_2026: roll2026,
+        student_blood_group: upper(val('student_blood_group')),
+        father_blood_group: upper(val('father_blood_group')),
+        mother_blood_group: upper(val('mother_blood_group')),
+        union_en: upper(getSelectedText('union_en')),
+        union_bn: getSelectedText('union_bn'),
+        class_2024: toNumber(val('class_2024')),
+        section_2024: upper(val('section_2024')),
+        roll_2024: toNumber(val('roll_2024')),
+        birth_certificate_url: val('birth_certificate_url') || null,
+        registration_card_url: val('registration_card_url') || null,
+        // user who submitted this admission (button_name stored as adminButton)
+        input_user_name: (function(){ try{ return localStorage.getItem('adminButton') || null; }catch(e){ return null; } })()
+      }; 
+    }
+
+    // Auto-set gender based on admission section
+    function syncGenderWithSection() {
+      const section = $('admission_section');
+      const gender = $('student_gender');
+      if (!section || !gender) return;
+      function apply() {
+        const v = (section.value || '').toLowerCase();
+        if (v === 'day') { gender.value = 'Male'; }
+        else if (v === 'morning') { gender.value = 'Female'; }
+        // else leave as selected
+      }
+      section.addEventListener('change', apply);
+      // run once on load
+      apply();
+    }
+    syncGenderWithSection();
+
+
+
+    async function save(stay) {
+      clearAlert();
+      // validate all fields before saving
+      if (!validateAll()) { return; }
+      const sb = initSupabase(); if (!sb) { showAlert('Supabase not ready yet', 'error'); return; }
+      const payload = gatherPayload();
+      try {
+        const { error } = await sb.from(TABLE).insert(payload);
+        if (error) throw error;
+        showAlert('Submitted successfully! Generating PDF...', 'success');
+
+        // Generate PDF directly instead of redirecting
+        await generatePdfFromPayload(payload);
+
+        if (stay) {
+          $('birth_registration').focus();
+        }
+      } catch (e) { console.error(e); showAlert('Save failed: ' + (e.message || e), 'error'); }
+    }
+
+    // ============== PDF GENERATION FUNCTIONS ==============
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[s]));
+    }
+
+    function fieldHtml(label, value) {
+      value = value == null || value === '' ? '—' : value;
+      return `<div class="f"><span class="l">${label}</span><span class="v">${escapeHtml(value)}</span></div>`;
+    }
+
+    function renderPdfSheet(o) {
+      const groups = [
+        {
+          title: 'Admission', fields: [
+            ['Session', o.session], ['School Name (Others)', o.school_name_others], ['Admission Class (2026)', o.class_2026], ['Admission Section (2026)', o.section_2026], ['Admission Roll (2026)', o.roll_2026], ['Admission Date', o.admission_date]
+          ]
+        },
+        {
+          title: 'Basic Information', fields: [
+            ['Student Name English', o.student_name_en], ['Student Name Bangla', o.student_name_bn], ['Birth Registration', o.birth_registration], ['Student Date of Birth', o.student_dateofbirth], ['Religion', o.religion], ['Student Gender', o.student_gender], ['Blood Group', o.student_blood_group]
+          ]
+        },
+        {
+          title: 'Board / Registration', fields: [
+            ['Board Name', o.board_name], ['Board Roll', o.board_roll], ['Board Registration', o.board_registration], ['Group', o.group], ['Optional Subject', o.optional_subject]
+          ]
+        },
+        {
+          title: 'Father Information', fields: [
+            ['Father Name English', o.father_name_en], ['Father Name Bangla', o.father_name_bn], ['Father NID', o.father_nid], ['Father Mobile', o.father_mobile], ['Father Occupation', o.father_occupation], ['Father Date of Birth', o.father_dob], ['Father Blood Group', o.father_blood_group]
+          ]
+        },
+        {
+          title: 'Mother Information', fields: [
+            ['Mother Name English', o.mother_name_en], ['Mother Name Bangla', o.mother_name_bn], ['Mother NID', o.mother_nid], ['Mother Mobile', o.mother_mobile], ['Mother Occupation', o.mother_occupation], ['Mother Date of Birth', o.mother_dob], ['Mother Blood Group', o.mother_blood_group]
+          ]
+        },
+        {
+          title: 'Guardian Information', fields: [
+            ['Guardian Name English', o.guardian_name_en], ['Guardian Name Bangla', o.guardian_name_bn], ['Guardian NID', o.guardian_nid], ['Guardian Mobile', o.guardian_mobile], ['Guardian Occupation', o.guardian_occupation]
+          ]
+        },
+        {
+          title: 'Address Information', fields: [
+            ['District English', o.district_en], ['District Bangla', o.district_bn], ['Upazila English', o.upazilla_en], ['Upazila Bangla', o.upazilla_bn], ['Union English', o.union_en], ['Union Bangla', o.union_bn], ['Post Office English', o.postoffice_en], ['Post Office Bangla', o.postoffice_bn], ['Village English', o.village_en], ['Village Bangla', o.village_bn]
+          ]
+        },
+        {
+          title: 'Academic History', fields: [
+            ['Class 2024', o.class_2024], ['Section 2024', o.section_2024], ['Roll 2024', o.roll_2024], ['Class 2025', o.class_2025], ['Section 2025', o.section_2025], ['Roll 2025', o.roll_2025], ['Class 2026', o.class_2026], ['Section 2026', o.section_2026], ['Roll 2026', o.roll_2026]
+          ]
+        }, 
+        {
+          title: 'Additional Information', fields: [
+            ['Previous School', o.previous_school], ['Previous Class Roll', o.previous_class_roll], ['Comment (School)', o.comment_school], ['Quote Freedom Fighter', o.quote_freedomfighter]
+          ]
+        }
+      ];
+
+      function renderGroup(g) {
+        const half = Math.ceil(g.fields.length / 2);
+        const left = g.fields.slice(0, half).map(([l, v]) => fieldHtml(l, v)).join('');
+        const right = g.fields.slice(half).map(([l, v]) => fieldHtml(l, v)).join('');
+        return `
+          <div class="group section">
+            <h3><span class="icon">📄</span> ${escapeHtml(g.title)}</h3>
+            <div class="cols" style="margin-top:6px">
+              <section>${left}</section>
+              <section>${right}</section>
+            </div>
+          </div>`;
+      }
+
+      const groupsHtml = groups.map(renderGroup).join('');
+
+      const photoHtml = o.student_photo_url ?
+        `<img src="${escapeHtml(o.student_photo_url)}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" crossorigin="anonymous" />` :
+        `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;text-align:center;">No Photo</div>`;
+
+      return `
+        <div class="sheet" id="pdfSheetRoot">
+          <div class="sheet-head">
+            <div class="logo-box">
+              <img src="https://i.ibb.co.com/fVQYbqCv/2ba607df-a5e3-4ff2-89d9-70a30871d946.png" alt="School Logo" crossorigin="anonymous" />
+            </div>
+            <div class="photo-box">${photoHtml}</div>
+            <div class="school">Feni Model High School</div>
+            <div class="subtitle">Admission Form (${o.session || ''})</div>
+            <div class="meta">
+              Birth Registration: <strong>${escapeHtml(o.birth_registration || '')}</strong>
+            </div>
+          </div>
+          ${groupsHtml}
+          <div class="sign-row" style="margin-top:8px">
+            <div>Guardian Signature: ____________________</div>
+            <div>Student Signature: ____________________</div>
+            <div>Date: _____________</div>
+          </div>
+        </div>`;
+    }
+
+    async function generatePdfFromPayload(payload) {
+      // Create a temporary container for the PDF content
+      const pdfContainer = document.createElement('div');
+      pdfContainer.id = 'pdfTempContainer';
+      pdfContainer.innerHTML = renderPdfSheet(payload);
+
+      // Add PDF styles
+      const pdfStyles = document.createElement('style');
+      pdfStyles.textContent = `
+        #pdfTempContainer { position: fixed; top: -9999px; left: 0; z-index: -1; }
+        .sheet { position: relative; box-sizing: border-box; width: 210mm; max-width: 100%; margin: 0 auto; background: rgba(255,243,205,0.2); padding: 14mm 12mm; border-radius: 4px; font-family: inherit; color: #0b1220; }
+        .sheet-head { position: relative; text-align: center; margin-bottom: 8px; border-bottom: 1px solid rgba(15,23,42,0.035); padding-bottom: 8px; min-height: 120px; }
+        .logo-box { position: absolute; top: 0; left: 10px; width: 80px; height: 80px; overflow: hidden; background: #fff; display: flex; align-items: center; justify-content: center; padding: 8px; }
+        .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .photo-box { position: absolute; top: 0; right: 12px; width: 100px; height: 120px; border: 2px solid #dc2626; border-radius: 4px; overflow: hidden; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+        .sheet-head .school { font-size: 18px; font-weight: 800; letter-spacing: .4px; color: #92400e; text-align: center; }
+        .sheet-head .subtitle { font-size: 12px; font-weight: 700; margin-top: 3px; color: #6b4226; text-align: center; }
+        .sheet-head .meta { font-size: 11px; margin-top: 4px; color: #475569; text-align: center; }
+        .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+        section { background: transparent; border-radius: 4px; padding: 4px 2px; }
+        .f { display: flex; font-size: 11px; padding: 4px 4px; border-bottom: 1px dashed #f1f6fb; gap: 6px; align-items: flex-start; line-height: 1.15; }
+        .f:last-child { border-bottom: none; }
+        .f .l { flex: 0 0 130px; font-weight: 700; color: #92400e; font-size: 11px; }
+        .f .v { flex: 1; color: #0f172a; font-size: 11px; }
+        .group.section { margin-bottom: 6px; padding: 6px 0; }
+        .group.section h3 { font-size: 12px; margin: 0 0 6px; display: flex; align-items: center; gap: 4px; }
+        .sign-row { display: flex; justify-content: space-between; font-size: 11px; margin-top: 12px; gap: 8px; }
+      `;
+      document.head.appendChild(pdfStyles);
+      document.body.appendChild(pdfContainer);
+
+      // Wait for images to load
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      try {
+        const root = document.getElementById('pdfSheetRoot');
+        if (!root) {
+          showAlert('PDF generation failed - no content', 'error');
+          return;
+        }
+
+        showAlert('Generating PDF...', 'success');
+
+        const canvasOpts = { scale: 2, useCORS: true, logging: false, backgroundColor: 'rgba(255,243,205,0.2)', allowTaint: true };
+        const canvas = await html2canvas(root, canvasOpts);
+        const imgData = canvas.toDataURL('image/png');
+
+        let JsPDFCtor = null;
+        if (window.jspdf && window.jspdf.jsPDF) JsPDFCtor = window.jspdf.jsPDF;
+        else if (window.jsPDF) JsPDFCtor = window.jsPDF;
+        else if (window.jspdf) JsPDFCtor = window.jspdf;
+
+        if (!JsPDFCtor) {
+          showAlert('PDF library not available', 'error');
+          return;
+        }
+
+        const pdf = new JsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pw = pdf.internal.pageSize.getWidth();
+        const ph = pdf.internal.pageSize.getHeight();
+
+        let imgW = pw;
+        let imgH = (canvas.height * imgW) / canvas.width;
+        let x = 0, y = 0;
+
+        if (imgH > ph) {
+          imgH = ph;
+          imgW = (canvas.width * imgH) / canvas.height;
+          x = (pw - imgW) / 2;
+          y = 0;
+        } else {
+          y = (ph - imgH) / 2;
+          x = 0;
+        }
+
+        pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH, undefined, 'FAST');
+        const filename = 'admission_' + (payload.birth_registration || new Date().getTime()) + '.pdf';
+        pdf.save(filename);
+
+        showAlert('PDF downloaded successfully! ✅', 'success');
+      } catch (e) {
+        console.error('PDF generation failed', e);
+        showAlert('PDF generation failed: ' + e.message, 'error');
+      } finally {
+        // Cleanup
+        if (pdfContainer.parentNode) pdfContainer.parentNode.removeChild(pdfContainer);
+        if (pdfStyles.parentNode) pdfStyles.parentNode.removeChild(pdfStyles);
+      }
+    }
+
+    // Search application by birth registration number
+    function searchApplication() {
+      const birthReg = $('searchBirthReg').value.trim();
+      if (!birthReg) {
+        showAlert('Please enter a birth registration number', 'error');
+        return;
+      }
+      window.location.href = `download_form.html?${encodeURIComponent(birthReg)}`;
+    }
+
+    // Allow Enter key to trigger search
+    $('searchBirthReg').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        searchApplication();
+      }
+    });
+
+    $('saveBtn').addEventListener('click', () => save(false));
+    // saveNewBtn removed
+    $('resetBtn').addEventListener('click', () => { document.querySelectorAll('input,select').forEach(el => { if (el.type !== 'checkbox') el.value = ''; }); clearAlert(); });
+
+    // Validate every input/select/textarea (except checkboxes) inside the form container
+    function validateAll() {
+      clearAlert();
+      const container = document.querySelector('.container');
+      if (!container) return true;
+      const controls = Array.from(container.querySelectorAll('input[required],select[required],textarea[required]')).filter(el => el.type !== 'checkbox');
+      const missing = [];
+      controls.forEach(el => {
+        const v = (el.value || '').toString().trim();
+        if (!v) {
+          el.classList.add('invalid');
+          if (missing.indexOf(el) === -1) missing.push(el);
+        } else {
+          el.classList.remove('invalid');
+        }
+      });
+      if (missing.length) {
+        const first = missing[0];
+        const label = first.closest('label.field');
+        let labelText = first.id || '';
+        if (label) {
+          const labSpan = label.querySelector('.label-text');
+          if (labSpan) labelText = labSpan.textContent.replace('*', '').trim();
+          else {
+            // fallback: use first text node
+            const txt = Array.from(label.childNodes).find(n => n.nodeType === 3 && n.textContent.trim());
+            labelText = txt ? txt.textContent.trim() : label.innerText.trim();
+          }
+        }
+        showAlert('Fill required: ' + labelText, 'error');
+        try { first.focus(); } catch (e) { }
+        return false;
+      }
+      return true;
+    }
+
+
+    // Clear invalid class when user interacts
+    document.addEventListener('input', e => { const t = e.target; if (t && (t.matches('input') || t.matches('select') || t.matches('textarea'))) { t.classList.remove('invalid'); } });
+    document.addEventListener('change', e => { const t = e.target; if (t && (t.matches('input') || t.matches('select') || t.matches('textarea'))) { t.classList.remove('invalid'); } });
+
+    // Mobile number handling - ensure 880 prefix
+    ; (function handleMobileNumbers() {
+      const mobileFields = ['father_mobile', 'mother_mobile', 'guardian_mobile'];
+
+      mobileFields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (!field) return;
+
+        // Prevent deleting 880 prefix
+        field.addEventListener('input', function (e) {
+          let val = this.value;
+
+          // Always ensure it starts with 880
+          if (!val.startsWith('880')) {
+            // If user deleted 880, restore it
+            this.value = '880';
+          }
+
+          // Remove any non-digit characters except at position 0-2 (880)
+          const prefix = this.value.substring(0, 3);
+          const rest = this.value.substring(3).replace(/\D/g, '');
+          this.value = prefix + rest;
+
+          // Limit to 880 + 11 digits = 14 total
+          if (this.value.length > 14) {
+            this.value = this.value.substring(0, 14);
+          }
+        });
+
+        // On focus, if empty, set to 880
+        field.addEventListener('focus', function () {
+          if (!this.value || this.value.length < 3) {
+            this.value = '880';
+          }
+        });
+
+        // Prevent cursor from going before position 3
+        field.addEventListener('click', function () {
+          if (this.selectionStart < 3) {
+            this.setSelectionRange(3, 3);
+          }
+        });
+
+        field.addEventListener('keydown', function (e) {
+          // Prevent backspace/delete from removing 880
+          if ((e.key === 'Backspace' || e.key === 'Delete') && this.selectionStart <= 3) {
+            e.preventDefault();
+            this.setSelectionRange(3, 3);
+          }
+        });
+      });
+    })();
+
+    function applyTheme(m) { document.documentElement.classList.toggle('dark', m === 'dark'); }
+    // Guard theme toggle in case the element is not present on this page
+    const _themeToggleEl = $('themeToggle');
+    if (_themeToggleEl) {
+      _themeToggleEl.addEventListener('click', () => { const cur = localStorage.getItem('theme') === 'dark' ? 'light' : 'dark'; localStorage.setItem('theme', cur); applyTheme(cur); });
+    }
+    applyTheme(localStorage.getItem('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+    $('year').textContent = new Date().getFullYear();
+
+
+    // Auto-capitalize specific English fields (Title Case) while typing বড় হাতের কাজ
+    ; (function autoCapitalizeFields() {
+      const ids = ['student_name_en', 'father_name_en', 'father_occupation', 'mother_name_en', 'mother_occupation', 'village_en', 'postoffice_en', 'upazilla_en', 'district_en', 'previous_school'];
+      function toTitleCase(s) { return s.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()); }
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('input', (e) => {
+          const start = el.selectionStart; const end = el.selectionEnd;
+          const newVal = toTitleCase(el.value);
+          if (newVal !== el.value) { el.value = newVal; try { el.setSelectionRange(start, end); } catch (e) { } }
+        });
+      });
+    })();
+
+    // Populate district dropdowns (English + Bangla) and upazila mapping
+    ; (async function populateDistrictsAndUpazilas() {
+      // ensure unions have been loaded/parsed before building unionsByUpazila
+      if (window.__unionsReady) await window.__unionsReady;
+
+      //districts & Upazillas take from district.text ** (code mover here)
+
+      // build lookup: districtId => upazila list
+      const upazilasByDistrict = {};
+      upazilas.forEach(u => {
+        if (!upazilasByDistrict[u.district_id]) upazilasByDistrict[u.district_id] = [];
+        // avoid duplicates by upazila id
+        const exists = upazilasByDistrict[u.district_id].some(x => x.id === u.id);
+        if (!exists) upazilasByDistrict[u.district_id].push({ id: u.id, name: u.name, bn_name: u.bn_name });
+      });
+
+      // build lookup: upazilaId => union list (from UnionSeeder.php data if provided as `unions`)
+      const unionsByUpazila = {};
+      if (typeof unions !== 'undefined' && Array.isArray(unions)) {
+        unions.forEach(r => {
+          const upId = r.upazila_id || r.upazila || r.upazilaId || '';
+          if (!unionsByUpazila[upId]) unionsByUpazila[upId] = [];
+          const exists = unionsByUpazila[upId].some(x => x.id === r.id);
+          if (!exists) unionsByUpazila[upId].push({ id: r.id, name: r.name, bn_name: r.bn_name || r.bn });
+        });
+      }
+
+      const selEn = document.getElementById('district_en');
+      const selBn = document.getElementById('district_bn');
+      const upEn = document.getElementById('upazilla_en');
+      const upBn = document.getElementById('upazilla_bn');
+      const unionEn = document.getElementById('union_en');
+      const unionBn = document.getElementById('union_bn');
+      if (!selEn || !selBn) return;
+
+      const prevEn = selEn.value;
+      const prevBn = selBn.value;
+
+      // sort districts by English name (ascending) then populate district selects with id values
+      districts.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' }));
+      districts.forEach(d => {
+        const o = document.createElement('option'); o.value = d.id; o.textContent = d.name; selEn.appendChild(o);
+        const p = document.createElement('option'); p.value = d.id; p.textContent = d.bn; selBn.appendChild(p);
+      });
+      if (prevEn) selEn.value = prevEn;
+      if (prevBn) selBn.value = prevBn;
+
+      // two-way sync for district selects (keep same index)
+      let _syncing = false;
+      selEn.addEventListener('change', () => {
+        if (_syncing) return;
+        try { _syncing = true; selBn.selectedIndex = selEn.selectedIndex; } finally { _syncing = false; }
+        populateUpazilas(selEn.value);
+      });
+      selBn.addEventListener('change', () => {
+        if (_syncing) return;
+        try { _syncing = true; selEn.selectedIndex = selBn.selectedIndex; } finally { _syncing = false; }
+        populateUpazilas(selBn.value);
+      });
+
+      // two-way sync for upazila selects
+      let _upSync = false;
+      upEn.addEventListener('change', () => { if (_upSync) return; try { _upSync = true; upBn.selectedIndex = upEn.selectedIndex; } finally { _upSync = false; } });
+      upBn.addEventListener('change', () => { if (_upSync) return; try { _upSync = true; upEn.selectedIndex = upBn.selectedIndex; } finally { _upSync = false; } });
+
+      // two-way sync for union selects
+      let _unionSync = false;
+      if (unionEn && unionBn) {
+        unionEn.addEventListener('change', () => { if (_unionSync) return; try { _unionSync = true; unionBn.selectedIndex = unionEn.selectedIndex; } finally { _unionSync = false; } });
+        unionBn.addEventListener('change', () => { if (_unionSync) return; try { _unionSync = true; unionEn.selectedIndex = unionBn.selectedIndex; } finally { _unionSync = false; } });
+      }
+
+      // populate upazilas on current selection if any
+      function populateUpazilas(districtId) {
+        // clear upazila selects and add a consistent 'Select' placeholder (no hyphen)
+        [upEn, upBn].forEach(s => { while (s.options.length > 0) s.remove(0); const def = document.createElement('option'); def.value = ''; def.textContent = 'Select'; s.appendChild(def); });
+        // clear unions as well
+        if (unionEn && unionBn) { [unionEn, unionBn].forEach(s => { while (s.options.length > 0) s.remove(0); const def = document.createElement('option'); def.value = ''; def.textContent = 'Select'; s.appendChild(def); }); }
+        if (!districtId) return;
+        let list = (upazilasByDistrict[districtId] || []).slice();
+        // sort upazilas by English name (ascending)
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' }));
+        list.forEach(u => {
+          const oe = document.createElement('option'); oe.value = u.id; oe.textContent = u.name; upEn.appendChild(oe);
+          const ob = document.createElement('option'); ob.value = u.id; ob.textContent = u.bn_name; upBn.appendChild(ob);
+        });
+        // reset unions placeholder to 'Select' (no hyphen)
+        if (unionEn && unionBn) { const def1 = document.createElement('option'); def1.value = ''; def1.textContent = 'Select'; unionEn.appendChild(def1); const def2 = document.createElement('option'); def2.value = ''; def2.textContent = 'Select'; unionBn.appendChild(def2); }
+      }
+
+      // Populate unions for selected upazila
+      function populateUnions(upazilaId) {
+        if (!unionEn || !unionBn) return;
+        [unionEn, unionBn].forEach(s => { while (s.options.length > 0) s.remove(0); const d = document.createElement('option'); d.value = ''; d.textContent = '-'; s.appendChild(d); });
+        if (!upazilaId) return;
+        const list = (unionsByUpazila[upazilaId] || []).slice();
+        list.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'en', { sensitivity: 'base' }));
+        list.forEach(u => {
+          const oe = document.createElement('option'); oe.value = u.id; oe.textContent = u.name; unionEn.appendChild(oe);
+          const ob = document.createElement('option'); ob.value = u.id; ob.textContent = u.bn_name; unionBn.appendChild(ob);
+        });
+      }
+
+      // initial population if a district was preselected
+      const curDistrict = selEn.value || selBn.value;
+      if (curDistrict) populateUpazilas(curDistrict);
+      // when upazila changes, populate unions
+      upEn.addEventListener('change', () => { populateUnions(upEn.value); });
+      upBn.addEventListener('change', () => { populateUnions(upBn.value); });
+    })();
+  </script>
+
+</body>
+
+</html>

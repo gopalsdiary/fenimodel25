@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Download Application Form</title>
+<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+<!-- Preload PDF libraries to avoid runtime load failures -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+body{margin:0;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;background:#f5f7fb;color:#1f2d3d;}header{padding:14px 20px;border-bottom:4px double #1f2d3d;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:1rem;background:#fff;}h1{font-size:1.35rem;margin:0;letter-spacing:.5px;text-transform:uppercase;font-weight:800;text-align:center;} .sub{font-size:.7rem;font-weight:600;letter-spacing:1px;color:#334155;margin-top:4px;text-align:center;} .top-actions{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;width:100%;justify-content:center;}button, input{font-family:inherit;} .btn{cursor:pointer;border:1px solid #334155;background:#1e3a8a;color:#fff;padding:.55rem .9rem;border-radius:8px;font-size:.65rem;font-weight:600;letter-spacing:.5px;display:inline-flex;align-items:center;gap:.35rem;} .btn.outline{background:#fff;color:#1f2d3d;} 
+.search-box{display:flex;align-items:center;gap:.4rem;background:#fff;padding:.45rem .6rem;border:1px solid #cbd5e1;border-radius:10px;} .search-box input{border:none;outline:none;font-size:.7rem;min-width:190px;} 
+/* Make the Download PDF button orange */
+#printBtn{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.25);} 
+#printBtn:hover{filter:brightness(1.05);transform:translateY(-1px);} 
+main{padding:18px 26px;max-width:900px;margin:0 auto;} #formContainer{background:#fff;border:1px solid #cbd5e1;box-shadow:0 4px 18px -4px rgba(0,0,0,.07);padding:26px 30px;border-radius:18px;min-height:400px;position:relative;}
+@media print{body{background:#fff;} header{border:none;padding:6px 0;margin-bottom:6px;} .top-actions{display:none!important;} .search-box{display:none!important;} main{padding:0;max-width:100%;} #formContainer{box-shadow:none;border:none;padding:0;} }
+</style>
+</head>
+<body>
+	<header>
+		<div>
+			<h1>Feni Model High School</h1>
+			<div class="sub">Admission Application Form</div>
+		</div>
+			<div class="top-actions">
+			<div class="search-box">
+				<input id="birthInput" placeholder="Birth Registration Number" />
+				<button class="btn outline" id="loadBtn">Load</button>
+			</div>
+				<button class="btn" id="printBtn">⬇️ Download PDF</button>
+				<button class="btn" id="editBtn">✏️ Edit Application</button>
+		</div>
+	</header>
+	<main>
+		<div id="status" style="font-size:.7rem;color:#475569;margin-bottom:10px;">Enter birth registration number then click Load.</div>
+		<div id="formContainer"></div>
+	</main>
+<script>
+const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+let sb=null; function init(){ if(sb) return sb; if(!window.supabase){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>{ try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ console.error('Supabase init failed',e); setStatus('Supabase init failed: '+(e.message||e)); } }; s.onerror=()=>{ console.error('Failed to load Supabase script'); setStatus('Failed to load Supabase library'); }; document.head.appendChild(s); } else { try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ console.error('Supabase init failed',e); setStatus('Supabase init failed: '+(e.message||e)); } } }
+init();
+const statusEl=document.getElementById('status');
+const birthInput=document.getElementById('birthInput');
+const formContainer=document.getElementById('formContainer');
+let lastLoadedRecord = null;
+document.getElementById('printBtn').addEventListener('click',()=>generatePdf());
+document.getElementById('loadBtn').addEventListener('click',loadApplication);
+birthInput.addEventListener('keydown',e=>{ if(e.key==='Enter'){ loadApplication(); }});
+
+// Check URL parameters and auto-load if birth registration number is provided
+function checkUrlParams(){
+	const urlParams = new URLSearchParams(window.location.search);
+	// Get the first parameter value (support both ?25305661133 and ?birth_reg=25305661133)
+	let birthReg = null;
+	
+	// Check if there's a parameter without a key (just ?25305661133)
+	const fullQuery = window.location.search.substring(1); // Remove the '?'
+	if(fullQuery && !fullQuery.includes('=')) {
+		birthReg = decodeURIComponent(fullQuery);
+	} else {
+		// Check for named parameters
+		birthReg = urlParams.get('birth_reg') || urlParams.get('birth_registration') || urlParams.get('br');
+	}
+	
+	if(birthReg){
+		birthInput.value = birthReg;
+		// Auto-load after a short delay to ensure Supabase is ready
+		setTimeout(()=>loadApplication(), 500);
+	}
+}
+
+// Run URL check when page loads
+window.addEventListener('DOMContentLoaded', checkUrlParams);
+checkUrlParams(); // Also run immediately in case DOMContentLoaded already fired
+
+function setStatus(msg,type='info'){ statusEl.textContent=msg; statusEl.style.color= type==='error'? '#b91c1c':'#475569'; }
+
+// Wire up Edit button
+const editBtn = document.getElementById('editBtn');
+function updateEditBtnState(){
+	const br = (birthInput.value||'').trim();
+	if(!br){ editBtn.disabled = true; editBtn.style.opacity = 0.6; }
+	else { editBtn.disabled = false; editBtn.style.opacity = 1; }
+}
+updateEditBtnState();
+birthInput.addEventListener('input', updateEditBtnState);
+editBtn.addEventListener('click', ()=>{
+	const br = (birthInput.value||'').trim();
+	if(!br){ setStatus('Enter birth registration number first','error'); return; }
+	// navigate to edit page with birth reg as query string
+	window.location.href = `edit_application.html?${encodeURIComponent(br)}`;
+});
+
+async function loadApplication(){
+	const br=birthInput.value.trim();
+	if(!br){ setStatus('Enter a birth registration number first','error'); return; }
+	setStatus('Loading...'); formContainer.innerHTML='<div style="font-size:.7rem;color:#475569;">Fetching data...</div>';
+		if(!sb){ setTimeout(loadApplication,300); init(); return; }
+	try{
+		const { data, error } = await sb.from('student_database_others').select('*').eq('birth_registration',br).limit(1);
+		if(error) { console.error('Supabase query error', error); setStatus('Error loading: '+(error.message||JSON.stringify(error)),'error'); throw error; }
+		if(!data || !data.length){ setStatus('No application found for this birth registration','error'); formContainer.innerHTML=''; return; }
+		render(data[0]);
+	lastLoadedRecord = data[0];
+		setStatus('Loaded application. You can download PDF.');
+		}catch(e){ console.error('Fetch exception', e); try{ setStatus('Error loading: '+(e.message||JSON.stringify(e)),'error'); }catch(_){ setStatus('Error loading (see console)','error'); } formContainer.innerHTML=''; }
+}
+
+// load html2pdf.js on demand
+function loadHtml2Pdf(){
+	if(window.html2pdf) return Promise.resolve();
+	return new Promise((resolve,reject)=>{
+		const s=document.createElement('script');
+		s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js';
+		s.onload=()=>resolve(); s.onerror=()=>reject(new Error('Failed to load html2pdf'));
+		document.head.appendChild(s);
+	});
+}
+
+// Ensure html2canvas and jsPDF available for fallback single-image PDF creation
+function ensureCanvasAndJsPdf(){
+	const jobs = [];
+	if(!window.html2canvas){ jobs.push(new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); })); }
+	if(!window.jspdf && !window.jsPDF){ jobs.push(new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); })); }
+	return Promise.all(jobs);
+}
+
+async function generatePdf(){
+	const root = document.getElementById('sheetRoot');
+	if(!root){ setStatus('No sheet available to download','error'); return; }
+	ensureFitOnA4();
+	setStatus('Preparing PDF...');
+	try{
+		await ensureCanvasAndJsPdf();
+	}catch(e){ console.error('Failed to load canvas/jsPDF', e); setStatus('PDF libraries not available','error'); showPrintFallback(); return; }
+
+	try{
+		// Render with the same yellow background so colors match on-screen
+		const canvasOpts = { scale:2, useCORS:true, logging:false, backgroundColor:'rgba(255,243,205,0.2)' };
+		const canvas = await (window.html2canvas ? window.html2canvas(root, canvasOpts) : html2canvas(root, canvasOpts));
+		const imgData = canvas.toDataURL('image/png');
+
+		let JsPDFCtor = null;
+		if(window.jspdf && window.jspdf.jsPDF) JsPDFCtor = window.jspdf.jsPDF;
+		else if(window.jsPDF) JsPDFCtor = window.jsPDF;
+		else if(window.jspdf) JsPDFCtor = window.jspdf;
+		if(!JsPDFCtor){ console.error('jsPDF constructor not found'); setStatus('jsPDF missing','error'); showPrintFallback(); return; }
+
+		const pdf = new JsPDFCtor({unit:'mm', format:'a4', orientation:'portrait'});
+		const pw = pdf.internal.pageSize.getWidth();
+		const ph = pdf.internal.pageSize.getHeight();
+
+		let imgW = pw;
+		let imgH = (canvas.height * imgW) / canvas.width;
+		let x = 0, y = 0;
+		if(imgH > ph){
+			imgH = ph;
+			imgW = (canvas.width * imgH) / canvas.height;
+			x = (pw - imgW) / 2;
+			y = 0;
+		}else{
+			y = (ph - imgH) / 2;
+			x = 0;
+		}
+		pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH, undefined, 'FAST');
+		const filename = 'admission_' + (lastLoadedRecord && lastLoadedRecord.birth_registration ? lastLoadedRecord.birth_registration : new Date().getTime()) + '.pdf';
+		pdf.save(filename);
+		setStatus('PDF ready');
+	}catch(e){
+		console.error('PDF generation failed', e);
+		setStatus('PDF generation failed','error');
+		showPrintFallback();
+	}
+}
+function showPrintFallback(){
+	// show a clickable print suggestion in the status area
+	try{
+		statusEl.innerHTML = '';
+		const msg=document.createElement('span'); msg.textContent='PDF generation not available. Use Print as alternative.';
+		const btn=document.createElement('button'); btn.textContent='Print'; btn.className='btn outline'; btn.style.marginLeft='10px'; btn.onclick=()=>window.print();
+		statusEl.appendChild(msg); statusEl.appendChild(btn);
+	}catch(e){ console.error('showPrintFallback error', e); }
+}
+
+function field(label,value){ value=value==null||value===''?'—':value; return `<div class="f"><span class="l">${label}</span><span class="v">${escapeHtml(value)}</span></div>`; }
+function escapeHtml(str){ return String(str).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s])); }
+
+function render(o){
+	// Build grouped sections mirroring new_admission.html
+	const groups = [
+		{ title: 'Admission Selection', fields: [
+			['Session', o.session], ['Class (2025)', o.class_2025], ['Section (2025)', o.section_2025], ['Roll (2025)', o.roll_2025]
+		]},
+		{ title: 'Basic Information', fields: [
+			['Student Name English', o.student_name_en], ['Student Name Bangla', o.student_name_bn], ['Birth Registration', o.birth_registration], ['Student Date of Birth', o.student_dateofbirth], ['Religion', o.religion], ['Student Gender', o.student_gender], ['Blood Group', o.student_blood_group]
+		]},
+		{ title: 'Father Information', fields: [
+			['Father Name English', o.father_name_en], ['Father Name Bangla', o.father_name_bn], ['Father NID', o.father_nid], ['Father Mobile', o.father_mobile], ['Father Occupation', o.father_occupation], ['Father Date of Birth', o.father_dob], ['Father Blood Group', o.father_blood_group]
+		]},
+		{ title: 'Mother Information', fields: [
+			['Mother Name English', o.mother_name_en], ['Mother Name Bangla', o.mother_name_bn], ['Mother NID', o.mother_nid], ['Mother Mobile', o.mother_mobile], ['Mother Occupation', o.mother_occupation], ['Mother Date of Birth', o.mother_dob], ['Mother Blood Group', o.mother_blood_group]
+		]},
+		{ title: 'Guardian Information', fields: [
+			['Guardian Name English', o.guardian_name_en], ['Guardian Name Bangla', o.guardian_name_bn], ['Guardian NID', o.guardian_nid], ['Guardian Mobile', o.guardian_mobile], ['Guardian Occupation', o.guardian_occupation]
+		]},
+		{ title: 'Address Information', fields: [
+			['District English', o.district_en], ['District Bangla', o.district_bn], ['Upazila English', o.upazilla_en], ['Upazila Bangla', o.upazilla_bn], ['Union English', o.union_en], ['Union Bangla', o.union_bn], ['Post Office English', o.postoffice_en], ['Post Office Bangla', o.postoffice_bn], ['Village English', o.village_en], ['Village Bangla', o.village_bn]
+		]},
+		{ title: 'Additional Information', fields: [
+			['Previous School', o.previous_school], ['Previous Class Roll', o.previous_class_roll], ['Quote Freedom Fighter', o.quote_freedomfighter]
+		]}
+	];
+
+	// helper to render a group's two-column layout
+	function renderGroup(g){
+		const half = Math.ceil(g.fields.length/2);
+		const left = g.fields.slice(0,half).map(([l,v])=>field(l,v)).join('');
+		const right = g.fields.slice(half).map(([l,v])=>field(l,v)).join('');
+		return `
+			<div class="group section">
+				<h3><span class="icon">📄</span> ${escapeHtml(g.title)}</h3>
+				<div class="cols" style="margin-top:6px">
+					<section>${left}</section>
+					<section>${right}</section>
+				</div>
+			</div>`;
+	}
+
+	// assemble html
+	const groupsHtml = groups.map(renderGroup).join('');
+	
+	// Student photo HTML
+	const photoHtml = o.student_photo_url ? 
+		`<img src="${escapeHtml(o.student_photo_url)}" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+		<div style="display:none;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;text-align:center;">No Photo</div>` :
+		`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#94a3b8;text-align:center;">No Photo Available</div>`;
+	
+	formContainer.innerHTML = `
+		<div class="sheet" id="sheetRoot">
+			<div class="sheet-head">
+				<div class="logo-box">
+					<img src="https://i.ibb.co.com/fVQYbqCv/2ba607df-a5e3-4ff2-89d9-70a30871d946.png" alt="School Logo" onerror="this.style.display='none';" />
+				</div>
+				<div class="photo-box">${photoHtml}</div>
+				<div class="school">Feni Model High School</div>
+				<div class="subtitle">Admission Form (${o.session||''})</div>
+				<div class="meta">
+				${o.iid ? `<span style="margin-right:20px;">IID: <strong>${escapeHtml(String(o.iid)||'')}</strong></span>` : ''}
+					Birth Registration: <strong>${escapeHtml(o.birth_registration||'')}</strong>
+				</div>
+			</div>
+			${groupsHtml}
+			<div class="sign-row" style="margin-top:8px"><div>Guardian Signature: ____________________</div><div>Student Signature: ____________________</div><div>Date: _____________</div></div>
+		</div>`;
+	ensureFitOnA4();
+}
+
+function ensureFitOnA4(){
+	const root=document.getElementById('sheetRoot');
+	if(!root) return; // approximate available height for content (A4 ~ 1122px at 96dpi minus margins)
+	requestAnimationFrame(()=>{
+		const h=root.offsetHeight; if(h>1000){ root.style.transformOrigin='top left'; const scale=1000/h; root.style.transform=`scale(${scale.toFixed(3)})`; } });
+}
+
+// dynamic styles for A4
+const style=document.createElement('style');
+style.textContent=`
+	/* Portrait A4 sheet styling (compact) */
+	/* 20% yellow tint */
+	.sheet{position:relative;box-sizing:border-box;width:210mm;max-width:100%;margin:0 auto;background:rgba(255,243,205,0.2);padding:14mm 12mm;border-radius:4px;box-shadow:0 6px 20px rgba(2,6,23,.06);font-family:inherit;color:#0b1220}
+	.sheet-head{position:relative;text-align:center;margin-bottom:8px;border-bottom:1px solid rgba(15,23,42,0.035);padding-bottom:8px;min-height:120px}
+	.logo-box{position:absolute;top:0;left:10px;width:80px;height:80px;border:0px solid #dc2626;border-radius:0px;overflow:hidden;background:#fff;box-shadow:0 0px 0px rgba(0,0,0,.1);display:flex;align-items:center;justify-content:center;padding:8px}
+	.logo-box img{max-width:100%;max-height:100%;object-fit:contain}
+	.photo-box{position:absolute;top:0;right:12px;width:100px;height:120px;border:2px solid #dc2626;border-radius:4px;overflow:hidden;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+	.sheet-head .school{font-size:18px;font-weight:800;letter-spacing:.4px;color:#92400e;text-align:center}
+	.sheet-head .subtitle{font-size:12px;font-weight:700;margin-top:3px;color:#6b4226;text-align:center}
+	.sheet-head .meta{font-size:11px;margin-top:4px;color:#475569;text-align:center}
+	.cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+	section{background:transparent;border-radius:4px;padding:4px 2px}
+	.f{display:flex;font-size:11px;padding:4px 4px;border-bottom:1px dashed #f1f6fb;gap:6px;align-items:flex-start;line-height:1.15}
+	.f:last-child{border-bottom:none}
+	.f .l{flex:0 0 130px;font-weight:700;color:#92400e;font-size:11px}
+	.f .v{flex:1;color:#0f172a;font-size:11px}
+	.group.section{margin-bottom:6px;padding:6px 0}
+	.group.section h3{font-size:12px;margin:0 0 6px}
+	.sign-row{display:flex;justify-content:space-between;font-size:11px;margin-top:12px;gap:8px}
+	/* Responsive for small screens */
+	@media (max-width:760px){ .cols{grid-template-columns:1fr} .sheet{padding:10mm} .f .l{flex-basis:110px} .photo-box{width:80px;height:100px;right:8px} }
+	/* Print rules - portrait A4 */
+	@media print{ html,body{background:#fff} @page{size:A4 portrait;margin:12mm} body{margin:0} .sheet{box-shadow:none;border-radius:0;padding:8mm 10mm;width:100%;} .top-actions{display:none!important} .photo-box{border:2px solid #000 !important} }
+`;
+document.head.appendChild(style);
+</script>
+</body>
+</html>

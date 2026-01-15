@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
   <title>Button Settings - Create & Edit</title>
+  <script src="/login/auth-check_copy.js"></script>
   <style>
     :root {
       --primary-color: #4f46e5;
@@ -284,6 +285,7 @@
             <th style="width: 60px; text-align: center;">#</th>
             <th>Button Name</th>
             <th>Status</th>
+            <th>Password</th>
             <th style="text-align: right;">Actions</th>
           </tr>
         </thead>
@@ -312,6 +314,11 @@
           <option value="Active">Active</option>
           <option value="Deactive">Deactive</option>
         </select>
+      </div>
+
+      <div class="form-group">
+        <label for="buttonPassword">Password (optional)</label>
+        <input type="text" id="buttonPassword" class="form-control" placeholder="Leave empty for no password">
       </div>
 
       <div id="modalNotice" class="notice"></div>
@@ -350,6 +357,7 @@
     const modalTitle = document.getElementById('modalTitle');
     const buttonNameInput = document.getElementById('buttonName');
     const buttonStatusSelect = document.getElementById('buttonStatus');
+    const buttonPasswordInput = document.getElementById('buttonPassword');
     const cancelBtn = document.getElementById('cancelBtn');
     const saveBtn = document.getElementById('saveBtn');
     const modalNotice = document.getElementById('modalNotice');
@@ -414,6 +422,17 @@
         statusTd.appendChild(statusSpan);
         tr.appendChild(statusTd);
 
+        // Password column
+        const pwdTd = document.createElement('td');
+        if (btn.button_password && String(btn.button_password).trim() !== '') {
+          pwdTd.textContent = '●●●';
+          pwdTd.title = 'Password is set';
+        } else {
+          pwdTd.textContent = '';
+          pwdTd.title = 'No password';
+        }
+        tr.appendChild(pwdTd);
+
         // Actions column
         const actionsTd = document.createElement('td');
         actionsTd.style.textAlign = 'right';
@@ -424,13 +443,8 @@
         editButton.style.marginRight = '8px';
         editButton.addEventListener('click', () => openEditModal(btn));
         
-        const deleteButton = document.createElement('button');
-        deleteButton.className = 'btn btn-danger btn-sm';
-        deleteButton.textContent = 'Delete';
-        deleteButton.addEventListener('click', () => deleteButton_(btn.user_iid));
-        
+        // Delete option removed per request
         actionsTd.appendChild(editButton);
-        actionsTd.appendChild(deleteButton);
         tr.appendChild(actionsTd);
 
         tbody.appendChild(tr);
@@ -444,6 +458,7 @@
       buttonNameInput.value = '';
       buttonNameInput.disabled = false;
       buttonStatusSelect.value = 'Active';
+      if (buttonPasswordInput) buttonPasswordInput.value = '';
       modalNotice.textContent = '';
       editModal.style.display = 'flex';
       buttonNameInput.focus();
@@ -456,6 +471,7 @@
       buttonNameInput.value = btn.button_name || '';
       buttonNameInput.disabled = true;
       buttonStatusSelect.value = btn.button_status || 'Active';
+      if (buttonPasswordInput) buttonPasswordInput.value = btn.button_password || '';
       modalNotice.textContent = '';
       editModal.style.display = 'flex';
     }
@@ -466,6 +482,7 @@
       editingButtonId = null;
       buttonNameInput.value = '';
       buttonStatusSelect.value = 'Active';
+      if (buttonPasswordInput) buttonPasswordInput.value = '';
       modalNotice.textContent = '';
     }
 
@@ -473,6 +490,7 @@
     async function saveButton(){
       const buttonName = buttonNameInput.value.trim();
       const buttonStatus = buttonStatusSelect.value;
+      const buttonPassword = (buttonPasswordInput && buttonPasswordInput.value) ? String(buttonPasswordInput.value).trim() : '';
 
       if(!buttonName){
         modalNotice.style.color = '#ef4444';
@@ -492,7 +510,8 @@
             .from(tableName)
             .insert({
               button_name: buttonName,
-              button_status: buttonStatus
+              button_status: buttonStatus,
+              button_password: buttonPassword || null
             })
             .select();
 
@@ -505,7 +524,8 @@
           const { data, error } = await supabaseClient
             .from(tableName)
             .update({
-              button_status: buttonStatus
+              button_status: buttonStatus,
+              button_password: buttonPassword || null
             })
             .eq('user_iid', editingButtonId);
 
@@ -529,32 +549,12 @@
       }
     }
 
-    // Delete button
+    // Delete action disabled — preserved placeholder to avoid runtime errors
     async function deleteButton_(buttonId){
-      if(!confirm('Are you sure you want to delete this button? This action cannot be undone.')) return;
-
-      const password = prompt("Please enter the password to confirm deletion:");
-      if (password !== "11223") {
-        alert("Incorrect password. Deletion cancelled.");
-        return;
-      }
-
-      statusEl.textContent = 'Deleting...';
-      try{
-        const { error } = await supabaseClient
-          .from(tableName)
-          .delete()
-          .eq('user_iid', buttonId);
-
-        if(error) throw new Error(error.message || 'Unknown error');
-
-        await loadButtons();
-        // statusEl updated by loadButtons
-
-      }catch(err){
-        console.error('deleteButton error:', err);
-        statusEl.textContent = 'Error deleting button: ' + (err.message || err);
-      }
+      console.warn('Delete action is disabled.');
+      // Optionally alert the user if invoked from elsewhere
+      try{ alert('Delete action is disabled by configuration.'); }catch(e){}
+      return;
     }
 
     function escapeHtml(s){

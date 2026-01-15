@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>New Admission Application</title>
+<link rel="icon" href="../logo2.png" />
+<link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+
+<style>
+html{font-size:126.5%;}
+:root{--bg:#e8edf2;--bg-alt:#ffffff;--text:#1f2937;--text-soft:#6b7280;--border:#d1d5db;--brand:#2563eb;--danger:#dc2626;--success:#15803d;--warn:#f59e0b;--shadow:0 1px 3px rgba(0,0,0,.08);} 
+.dark{--bg:#0d1117;--bg-alt:#161b22;--text:#e6edf3;--text-soft:#93a4b8;--border:#273649;--shadow:0 6px 28px -4px rgba(0,0,0,.65);} 
+*{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;} 
+body{margin:0;background:var(--bg);color:var(--text);} 
+a{text-decoration:none;color:var(--brand);} 
+header{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.2rem;flex-wrap:wrap;gap:1rem;background:#fff;border-bottom:1px solid #e5e7eb;} 
+.title{margin:0;font-size:clamp(1.4rem,2.5vw,2.05rem);font-weight:700;letter-spacing:.5px;background:linear-gradient(90deg,#0ea5e9,#6366f1,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;} 
+.mode-btn{background:var(--bg-alt);border:1px solid var(--border);padding:.55rem .85rem;border-radius:8px;font-size:.72rem;font-weight:600;cursor:pointer;color:var(--text-soft);display:inline-flex;align-items:center;gap:.45rem;box-shadow:var(--shadow);transition:all .2s;} 
+.shadow-orange{box-shadow:0 2px 8px rgba(249,115,22,.25) !important;}
+.mode-btn.orange{background:linear-gradient(90deg,#f97316,#f59e0b);border-color:transparent;color:#fff;box-shadow:0 2px 8px rgba(249,115,22,.3);} 
+.mode-btn.orange:hover{filter:brightness(1.05);transform:translateY(-1px);}
+.container{width:100%;max-width:1600px;margin:0 auto;padding:1.5rem 2rem 4rem;} 
+.form-head{display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;margin:.2rem 0 1rem;} 
+.badge{background:var(--brand);color:#fff;font-size:.55rem;padding:.27rem .55rem;border-radius:999px;font-weight:600;letter-spacing:.5px;} 
+.section{background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:1.5rem 1.8rem;box-shadow:0 1px 2px rgba(0,0,0,.05);margin:0 0 1.5rem;position:relative;} 
+.section h3{margin:0 0 1.2rem;font-size:.88rem;letter-spacing:.3px;font-weight:700;display:flex;align-items:center;gap:.5rem;color:#111827;padding-bottom:.8rem;border-bottom:1px solid #f3f4f6;} 
+.section h3 span.icon{font-size:1.1rem;} 
+.grid{display:grid;gap:.95rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));} 
+label.field{display:flex;flex-direction:column;gap:.4rem;font-size:.65rem;font-weight:600;letter-spacing:.3px;color:#374151;} 
+label.field input, label.field select{padding:.7rem .85rem;border:1px solid #d1d5db;border-radius:6px;background:#fff;font-size:.75rem;color:var(--text);transition:all .2s;outline:none;}
+label.field input:focus, label.field select:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+label.field input::placeholder{color:#9ca3af;}
+.actions{display:flex;gap:.8rem;flex-wrap:wrap;margin-top:1.8rem;} 
+.btn{border:none;cursor:pointer;font-weight:600;font-size:.75rem;padding:.85rem 1.4rem;border-radius:6px;display:inline-flex;align-items:center;gap:.5rem;letter-spacing:.3px;transition:all .2s;} 
+.btn.primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.3);} 
+.btn.primary:hover{box-shadow:0 4px 12px rgba(37,99,235,.4);transform:translateY(-1px);}
+.btn.secondary{background:#fff;border:1px solid #d1d5db;color:#6b7280;box-shadow:0 1px 2px rgba(0,0,0,.05);} 
+.btn.secondary:hover{background:#f9fafb;border-color:#9ca3af;}
+.btn.danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;box-shadow:0 2px 8px rgba(239,68,68,.3);} 
+.btn-upload{padding:.6rem 1rem;font-size:.7rem;background:linear-gradient(135deg,#10b981,#059669);color:#fff;white-space:nowrap;}
+.btn-upload:hover{background:linear-gradient(135deg,#059669,#047857);box-shadow:0 2px 8px rgba(16,185,129,.4);}
+.btn-icon-upload{
+  width:40px;
+  height:40px;
+  border:none;
+  border-radius:8px;
+  background:linear-gradient(135deg,#f97316,#ea580c);
+  color:#fff;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all .3s;
+  box-shadow:0 2px 6px rgba(249,115,22,.3);
+  flex-shrink:0;
+}
+.btn-icon-upload:hover{
+  background:linear-gradient(135deg,#ea580c,#c2410c);
+  box-shadow:0 4px 10px rgba(249,115,22,.4);
+  transform:translateY(-2px);
+}
+.btn-icon-upload.uploaded{
+  background:linear-gradient(135deg,#10b981,#059669);
+  box-shadow:0 2px 6px rgba(16,185,129,.3);
+}
+.btn-icon-upload.uploaded:hover{
+  background:linear-gradient(135deg,#059669,#047857);
+  box-shadow:0 4px 10px rgba(16,185,129,.4);
+}
+.crop-modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,.7);
+  z-index:9999;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+.crop-modal.active{display:flex;}
+.crop-panel{
+  background:#fff;
+  border-radius:12px;
+  padding:2rem;
+  max-width:700px;
+  width:100%;
+  max-height:90vh;
+  overflow-y:auto;
+}
+.crop-panel h3{margin:0 0 1rem;font-size:1.2rem;color:#111;}
+.crop-info{font-size:.7rem;color:#6b7280;margin-bottom:1rem;line-height:1.5;}
+.crop-area{
+  border:2px solid #e5e7eb;
+  border-radius:8px;
+  overflow:hidden;
+  margin:1rem 0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#f9fafb;
+}
+.crop-canvas{
+  max-width:100%;
+  cursor:crosshair;
+  display:block;
+}
+.crop-controls{
+  display:flex;
+  gap:.8rem;
+  flex-wrap:wrap;
+  margin-top:1.5rem;
+  justify-content:center;
+}
+.notice{margin:1rem 0 0;font-size:.65rem;color:var(--text-soft);line-height:1.5;} 
+.download-section{display:flex;align-items:center;gap:1rem;margin:1.5rem 0;flex-wrap:wrap;}
+.search-box{display:flex;gap:.5rem;flex:1;min-width:300px;}
+.search-box input{flex:1;padding:.6rem .8rem;border:1px solid #d1d5db;border-radius:6px;font-size:.72rem;font-family:inherit;}
+.search-box input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.1);}
+.alert{display:none;margin:1rem 0 0;padding:.8rem 1rem;border-radius:6px;font-size:.68rem;border:1px solid transparent;} 
+.alert.success{display:block;background:#d1fae5;border-color:#6ee7b7;color:#065f46;} 
+.alert.error{display:block;background:#fee2e2;border-color:#fca5a5;color:#991b1b;} 
+.autofill{display:flex;gap:1.1rem;flex-wrap:wrap;font-size:.62rem;margin-top:.4rem;color:var(--text-soft);} 
+.autofill label{display:flex;align-items:center;gap:.4rem;font-weight:600;cursor:pointer;} 
+footer{margin:3rem 0 1.5rem;text-align:center;font-size:.58rem;color:var(--text-soft);} 
+.required::after{content:' *';color:var(--danger);} 
+.invalid{border-color:#ef4444 !important;box-shadow:0 0 0 3px rgba(239,68,68,.1) !important}
+@media (max-width:768px){ 
+  .container{padding:1rem .8rem 3rem;}
+  .section{padding:1.2rem 1rem;}
+  .grid{grid-template-columns:1fr;gap:.8rem;} 
+}
+</style>
+</head>
+<body>
+<header style="text-align:center;padding:1rem 1.2rem;">
+  <div style="width:100%;max-width:900px;margin:0 auto;">
+    <div style="font-weight:800;font-size:1.15rem;letter-spacing:.6px;">Feni Model High School</div>
+    <h1 class="title" style="margin:.35rem 0 0">Edit Admission Form</h1>
+    <div style="margin-top:.6rem;">
+    </div>
+  </div>
+</header>
+<div class="container">
+  <div class="form-head">
+    <span class="badge">Form</span>
+    <p style="margin:0;font-size:.63rem;color:var(--text-soft)">Fill all required fields then save. Required marked with red *</p>
+  </div>
+  <!-- Admission Selection -->
+  <div class="section" id="sec-admission">
+    <h3><span class="icon">🎯</span> Admission Selection</h3>
+    <div class="grid">
+      <label class="field required">Session
+        <select id="session" required>
+          <option value="">Select</option>
+          <option>2026</option>
+
+        </select>
+      </label>
+      <label class="field required">Admission Class
+        <select id="admission_class" required>
+          <option value="">Select</option>
+          <option>6</option>
+          <option>7</option>
+          <option>8</option>
+          <option>9</option>
+          <option>10</option>
+        </select>
+      </label>
+      <label class="field required">Admission Section
+        <select id="admission_section" required>
+          <option value="">Select</option>
+          <option>Day (Shapla)</option>
+          <option>Day (Golap)</option>
+          <option>Morning</option>
+        </select>
+      </label>
+      <label class="field">School Name (Others)<input id="school_name_others" /></label>
+    </div>
+  </div>
+
+  <!-- Basic Information -->
+  <div class="section" id="sec-basic">
+    <h3><span class="icon">🧒</span> Basic Information</h3>
+    <div class="grid">
+      <label class="field required">Student Name English<input id="student_name_en" /></label>
+      <label class="field">Student Name Bangla<input id="student_name_bn" /></label>
+      <label class="field">Birth Registration<input id="birth_registration" /></label>
+      <label class="field">Student Date of Birth<input id="student_dateofbirth" type="date" /></label>
+      <label class="field">Religion
+        <select id="religion">
+          <option value="">Select</option>
+          <option>HINDU</option>
+          <option>ISLAM</option>
+          <option>BUDDISM</option>
+          <option>CHRISTIAN</option>
+        </select>
+      </label>
+      <label class="field required">Student Gender
+        <select id="student_gender" required>
+          <option value="">Select</option>
+          <option>Male</option>
+          <option>Female</option>
+        </select>
+      </label>
+      <div class="field-with-upload">
+        <label class="field">Student Photo
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <img id="student_photo_preview" src="" alt="" style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+            <span id="student_photo_placeholder" style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No Photo</span>
+          </div>
+          <input id="student_photo_url" type="hidden" />
+        </label>
+        <button type="button" id="upload_photo_btn" class="btn-icon-upload" onclick="uploadStudentPhoto()" title="Upload Photo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <input type="file" id="student_photo_file" accept="image/*" style="display:none;" />
+      </div>
+      <div class="field-with-upload">
+        <label class="field">Birth Certificate
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <img id="certificate_preview" src="" alt="" style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+            <span id="certificate_placeholder" style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No Certificate</span>
+          </div>
+          <input id="birth_certificate_url" type="hidden" />
+        </label>
+        <button type="button" id="upload_certificate_btn" class="btn-icon-upload" onclick="uploadBirthCertificate()" title="Upload Certificate">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <input type="file" id="birth_certificate_file" accept="image/*" style="display:none;" />
+      </div>
+
+      <div class="field-with-upload">
+        <label class="field">Registration Card
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <img id="registration_card_preview" src="" alt="" style="width:80px;height:100px;object-fit:cover;border:1px solid #d1d5db;border-radius:6px;display:none;background:#f9fafb;" />
+            <span id="registration_card_placeholder" style="display:inline-block;width:80px;height:100px;border:2px dashed #d1d5db;border-radius:6px;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#9ca3af;text-align:center;padding:.5rem;">No Card</span>
+          </div>
+          <input id="registration_card_url" type="hidden" />
+        </label>
+        <button type="button" id="upload_registration_card_btn" class="btn-icon-upload" onclick="uploadRegistrationCard()" title="Upload Registration Card">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
+        <input type="file" id="registration_card_file" accept="image/*" style="display:none;" />
+      </div>
+
+      <label class="field">Blood Group
+        <select id="student_blood_group">
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Board / Registration -->
+  <div class="section" id="sec-board">
+    <h3><span class="icon">🏫</span> Board / Registration</h3>
+    <div class="grid">
+      <label class="field">Admission Date<input id="admission_date" type="date" /></label>
+      <label class="field">Board Name<input id="board_name" /></label>
+      <label class="field">Board Roll<input id="board_roll" /></label>
+      <label class="field">Board Registration<input id="board_registration" /></label>
+      <label class="field">Group
+        <select id="group">
+          <option value="">Select</option>
+          <option>SCIENCE</option>
+          <option>BUSINESS STUDIES</option>
+          <option>HUMANATIES</option>
+        </select>
+      </label>
+      <label class="field">Optional Subject<input id="optional_subject" /></label>
+    </div>
+  </div>
+
+  <!-- Father Information -->
+  <div class="section" id="sec-father">
+    <h3><span class="icon">👨</span> Father Information</h3>
+    <div class="grid">
+      <label class="field required">Father Name English<input id="father_name_en" /></label>
+      <label class="field">Father Name Bangla<input id="father_name_bn" /></label>
+      <label class="field">Father NID<input id="father_nid" /></label>
+      <label class="field">Father Mobile<input id="father_mobile" type="tel" value="880" placeholder="880XXXXXXXXXX" /></label>
+      <label class="field">Father Occupation<input id="father_occupation" /></label>
+      <label class="field">Father Date of Birth<input id="father_dob" type="date" /></label>
+      <label class="field">Father Blood Group
+        <select id="father_blood_group">
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Mother Information -->
+  <div class="section" id="sec-mother">
+    <h3><span class="icon">👩</span> Mother Information</h3>
+    <div class="grid">
+      <label class="field">Mother Name English<input id="mother_name_en" /></label>
+      <label class="field">Mother Name Bangla<input id="mother_name_bn" /></label>
+      <label class="field">Mother NID<input id="mother_nid" /></label>
+      <label class="field">Mother Mobile<input id="mother_mobile" type="tel" value="880" placeholder="880XXXXXXXXXX" /></label>
+      <label class="field">Mother Occupation<input id="mother_occupation" /></label>
+      <label class="field">Mother Date of Birth<input id="mother_dob" type="date" /></label>
+      <label class="field">Mother Blood Group
+        <select id="mother_blood_group">
+          <option value="">Select</option>
+          <option>A+</option><option>A-</option>
+          <option>B+</option><option>B-</option>
+          <option>O+</option><option>O-</option>
+          <option>AB+</option><option>AB-</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <!-- Guardian Information -->
+  <div class="section" id="sec-guardian">
+    <h3><span class="icon">🛡️</span> Guardian Information</h3>
+    <div class="autofill">
+      <label><input type="checkbox" id="guardian_from_father" /> Father as Guardian</label>
+      <label><input type="checkbox" id="guardian_from_mother" /> Mother as Guardian</label>
+    </div>
+    <div class="grid" style="margin-top:.6rem;">
+      <label class="field">Guardian Name English<input id="guardian_name_en" /></label>
+      <label class="field">Guardian Name Bangla<input id="guardian_name_bn" /></label>
+      <label class="field">Guardian NID<input id="guardian_nid" /></label>
+      <label class="field">Guardian Mobile<input id="guardian_mobile" type="tel" value="880" placeholder="880XXXXXXXXXX" /></label>
+      <label class="field">Guardian Occupation<input id="guardian_occupation" /></label>
+    </div>
+  </div>
+
+  <!-- Address Information -->
+  <div class="section" id="sec-address">
+    <h3><span class="icon">📍</span> Address Information</h3>
+    <div class="grid">
+      <label class="field required">District English
+        <select id="district_en" required>
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field required">District Bangla
+        <select id="district_bn" required>
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Upazila English
+        <select id="upazilla_en">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Upazila Bangla
+        <select id="upazilla_bn">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Union English
+        <select id="union_en">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Union Bangla
+        <select id="union_bn">
+          <option value="">Select</option>
+        </select>
+      </label>
+      <label class="field">Post Office English<input id="postoffice_en" /></label>
+      <label class="field">Post Office Bangla<input id="postoffice_bn" /></label>
+      <label class="field">Village English<input id="village_en" /></label>
+      <label class="field">Village Bangla<input id="village_bn" /></label>
+    </div>
+  </div>
+
+  <!-- Academic History -->
+  <div class="section" id="sec-academic">
+    <h3><span class="icon">📚</span> Academic History</h3>
+    <div class="grid">
+      <div style="border:1px solid var(--border);padding:10px;border-radius:8px;background:#fff">
+        <h4 style="margin:0 0 .6rem;font-size:.95rem;font-weight:700">Academic History 2024</h4>
+        <label class="field">Class 2024
+          <select id="class_2024">
+            <option value="">Select</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+          </select>
+        </label>
+        <label class="field">Section 2024
+          <select id="section_2024">
+            <option value="">Select</option>
+            <option>Day (Shapla)</option>
+            <option>Day (Golap)</option>
+            <option>Morning</option>
+          </select>
+        </label>
+        <label class="field">Roll 2024<input id="roll_2024" type="number" min="1" /></label>
+      </div>
+      <div style="border:1px solid var(--border);padding:10px;border-radius:8px;background:#fff">
+        <h4 style="margin:0 0 .6rem;font-size:.95rem;font-weight:700">Academic History 2025</h4>
+        <label class="field">Class 2025
+          <select id="class_2025">
+            <option value="">Select</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+          </select>
+        </label>
+        <label class="field">Section 2025
+          <select id="section_2025">
+            <option value="">Select</option>
+            <option>Day (Shapla)</option>
+            <option>Day (Golap)</option>
+            <option>Morning</option>
+          </select>
+        </label>
+        <label class="field">Roll 2025<input id="roll_2025" type="number" min="1" /></label>
+      </div>
+      <div style="border:1px solid var(--border);padding:10px;border-radius:8px;background:#fff">
+        <h4 style="margin:0 0 .6rem;font-size:.95rem;font-weight:700">Academic History 2026</h4>
+        <label class="field">Class 2026
+          <select id="class_2026">
+            <option value="">Select</option>
+            <option>6</option>
+            <option>7</option>
+            <option>8</option>
+            <option>9</option>
+            <option>10</option>
+          </select>
+        </label>
+        <label class="field">Section 2026
+          <select id="section_2026">
+            <option value="">Select</option>
+            <option>Day (Shapla)</option>
+            <option>Day (Golap)</option>
+            <option>Morning</option>
+          </select>
+        </label>
+        <label class="field">Roll 2026<input id="roll_2026" type="number" min="1" /></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Additional Information -->
+  <div class="section" id="sec-additional">
+    <h3><span class="icon">➕</span> Additional Information</h3>
+    <div class="grid">
+      <label class="field">Previous School<input id="previous_school" /></label>
+      <label class="field">Previous Class Roll<input id="previous_class_roll" /></label>
+      <label class="field">Quote Freedom Fighter
+        <select id="quote_freedomfighter">
+          <option value="">Select</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </label>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="saveBtn">✅ Submit</button>
+  </div>
+  <div id="alertBox" class="alert"></div>
+  <div id="admissionStatusDebug" style="display:none;margin-top:.6rem;font-size:.78rem;color:#b45309;background:#fff7ed;border:1px solid #fcd34d;padding:.6rem;border-radius:6px;"></div>
+  <p class="notice">After saving you can view / edit. Make sure sensitive data is correct after approval you can't edit.</p>
+  
+  <div class="download-section">
+    <div class="search-box">
+      <input type="text" id="searchBirthReg" placeholder="Enter Birth Registration Number" maxlength="17" />
+      <button type="button" class="btn primary" onclick="searchApplication()">🔍 Search</button>
+    </div>
+  </div>
+
+<!-- Crop Modal -->
+<div id="cropModal" class="crop-modal">
+  <div class="crop-panel">
+    <h3>📸 Crop Student Photo</h3>
+    <p class="crop-info">Click and drag to create a rectangular crop area (944:1181 ratio). The cropped image will be resized to 944x1181 pixels (96 DPI).</p>
+    
+    <div class="crop-area">
+      <canvas id="cropCanvas" class="crop-canvas"></canvas>
+    </div>
+
+    <div class="crop-controls">
+      <button type="button" class="btn secondary" onclick="resetCrop()">🔄 Reset</button>
+      <button type="button" class="btn primary" onclick="confirmCrop()">✅ Confirm & Upload</button>
+      <button type="button" class="btn secondary" onclick="cancelCrop()">❌ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<footer>© <span id="year"></span> Feni Model High School · Admission</footer>
+</div>
+<script src="district.text"></script>
+<script>
+
+// ImageBB Configuration
+const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+
+// Cropping variables
+let cropCanvas, cropContext, originalImage, cropSelection, isDragging = false, startX, startY;
+
+// Upload Student Photo
+window.uploadStudentPhoto = function() {
+  const fileInput = document.getElementById('student_photo_file');
+  fileInput.click();
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      showAlert('Please select an image file', 'error');
+      return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      showAlert('File size too large. Please select an image under 10MB', 'error');
+      return;
+    }
+    
+    // Load image for cropping
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      loadImageForCropping(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+}
+
+// Upload Birth Certificate
+window.uploadBirthCertificate = function() {
+  const fileInput = document.getElementById('birth_certificate_file');
+  const uploadBtn = document.getElementById('upload_certificate_btn');
+  fileInput.click();
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      showAlert('Please select an image file', 'error');
+      return;
+    }
+    
+    try {
+      uploadBtn.disabled = true;
+      uploadBtn.style.opacity = '0.6';
+      showAlert('Uploading birth certificate...', 'success');
+      const url = await uploadToImageBB(file, 'birth_certificate');
+      document.getElementById('birth_certificate_url').value = url;
+      
+      // Update preview
+      const preview = document.getElementById('certificate_preview');
+      const placeholder = document.getElementById('certificate_placeholder');
+      preview.src = url;
+      preview.style.display = 'block';
+      placeholder.style.display = 'none';
+      
+      uploadBtn.classList.add('uploaded');
+      uploadBtn.disabled = false;
+      uploadBtn.style.opacity = '1';
+      showAlert('Birth certificate uploaded successfully!', 'success');
+    } catch (error) {
+      console.error('Upload error:', error);
+      uploadBtn.disabled = false;
+      uploadBtn.style.opacity = '1';
+      showAlert('Upload failed: ' + error.message, 'error');
+    }
+  };
+}
+
+// Upload to ImageBB
+async function uploadToImageBB(file, prefix) {
+  const formData = new FormData();
+  formData.append('key', IMGBB_API_KEY);
+  formData.append('image', file);
+  
+  const response = await fetch(IMGBB_UPLOAD_URL, {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (!response.ok) {
+    throw new Error('Upload failed: ' + response.statusText);
+  }
+  
+  const data = await response.json();
+  
+  if (!data.success) {
+    throw new Error('Upload failed: ' + (data.error?.message || 'Unknown error'));
+  }
+  
+  return data.data.url;
+}
+
+// Load image for cropping
+function loadImageForCropping(imageSrc) {
+  const img = new Image();
+  img.onload = function() {
+    originalImage = img;
+    setupCropCanvas();
+    document.getElementById('cropModal').classList.add('active');
+  };
+  img.src = imageSrc;
+}
+
+// Setup crop canvas
+function setupCropCanvas() {
+  cropCanvas = document.getElementById('cropCanvas');
+  cropContext = cropCanvas.getContext('2d');
+
+  // Calculate canvas size maintaining aspect ratio
+  const maxWidth = 600;
+  const maxHeight = 400;
+  let canvasWidth = originalImage.width;
+  let canvasHeight = originalImage.height;
+
+  if (canvasWidth > maxWidth) {
+    canvasHeight = (canvasHeight * maxWidth) / canvasWidth;
+    canvasWidth = maxWidth;
+  }
+
+  if (canvasHeight > maxHeight) {
+    canvasWidth = (canvasWidth * maxHeight) / canvasHeight;
+    canvasHeight = maxHeight;
+  }
+
+  cropCanvas.width = canvasWidth;
+  cropCanvas.height = canvasHeight;
+
+  // Draw image
+  cropContext.drawImage(originalImage, 0, 0, canvasWidth, canvasHeight);
+
+  // Initialize crop selection (944x1181 ratio rectangle in center)
+  const aspectRatio = 944 / 1181; // width / height
+  let cropWidth, cropHeight;
+  
+  if (canvasWidth / canvasHeight > aspectRatio) {
+    cropHeight = canvasHeight * 0.8;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    cropWidth = canvasWidth * 0.8;
+    cropHeight = cropWidth / aspectRatio;
+  }
+  
+  cropSelection = {
+    x: (canvasWidth - cropWidth) / 2,
+    y: (canvasHeight - cropHeight) / 2,
+    width: cropWidth,
+    height: cropHeight
+  };
+
+  drawCropOverlay();
+  
+  // Add event listeners
+  cropCanvas.addEventListener('mousedown', startCrop);
+  cropCanvas.addEventListener('mousemove', updateCrop);
+  cropCanvas.addEventListener('mouseup', endCrop);
+  cropCanvas.addEventListener('mouseleave', endCrop);
+}
+
+// Draw crop overlay
+function drawCropOverlay() {
+  cropContext.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
+  cropContext.drawImage(originalImage, 0, 0, cropCanvas.width, cropCanvas.height);
+
+  // Draw overlay
+  cropContext.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  cropContext.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+
+  // Clear crop area
+  cropContext.clearRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+  cropContext.drawImage(
+    originalImage,
+    (cropSelection.x / cropCanvas.width) * originalImage.width,
+    (cropSelection.y / cropCanvas.height) * originalImage.height,
+    (cropSelection.width / cropCanvas.width) * originalImage.width,
+    (cropSelection.height / cropCanvas.height) * originalImage.height,
+    cropSelection.x,
+    cropSelection.y,
+    cropSelection.width,
+    cropSelection.height
+  );
+
+  // Draw crop border
+  cropContext.strokeStyle = '#3b82f6';
+  cropContext.lineWidth = 2;
+  cropContext.strokeRect(cropSelection.x, cropSelection.y, cropSelection.width, cropSelection.height);
+}
+
+// Start crop
+function startCrop(e) {
+  const rect = cropCanvas.getBoundingClientRect();
+  startX = e.clientX - rect.left;
+  startY = e.clientY - rect.top;
+  isDragging = true;
+}
+
+// Update crop
+function updateCrop(e) {
+  if (!isDragging) return;
+
+  const rect = cropCanvas.getBoundingClientRect();
+  const currentX = e.clientX - rect.left;
+  const currentY = e.clientY - rect.top;
+
+  const width = Math.abs(currentX - startX);
+  const height = Math.abs(currentY - startY);
+  const aspectRatio = 944 / 1181;
+
+  // Maintain 944:1181 aspect ratio
+  let cropWidth, cropHeight;
+  if (width / height > aspectRatio) {
+    cropHeight = height;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    cropWidth = width;
+    cropHeight = cropWidth / aspectRatio;
+  }
+
+  cropSelection.x = Math.min(startX, currentX);
+  cropSelection.y = Math.min(startY, currentY);
+  cropSelection.width = cropWidth;
+  cropSelection.height = cropHeight;
+
+  // Keep within canvas bounds
+  if (cropSelection.x + cropSelection.width > cropCanvas.width) {
+    cropSelection.width = cropCanvas.width - cropSelection.x;
+    cropSelection.height = cropSelection.width / aspectRatio;
+  }
+  if (cropSelection.y + cropSelection.height > cropCanvas.height) {
+    cropSelection.height = cropCanvas.height - cropSelection.y;
+    cropSelection.width = cropSelection.height * aspectRatio;
+  }
+
+  drawCropOverlay();
+}
+
+// End crop
+function endCrop() {
+  isDragging = false;
+}
+
+// Reset crop
+window.resetCrop = function() {
+  const aspectRatio = 944 / 1181;
+  let cropWidth, cropHeight;
+  
+  if (cropCanvas.width / cropCanvas.height > aspectRatio) {
+    cropHeight = cropCanvas.height * 0.8;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    cropWidth = cropCanvas.width * 0.8;
+    cropHeight = cropWidth / aspectRatio;
+  }
+  
+  cropSelection = {
+    x: (cropCanvas.width - cropWidth) / 2,
+    y: (cropCanvas.height - cropHeight) / 2,
+    width: cropWidth,
+    height: cropHeight
+  };
+  drawCropOverlay();
+}
+
+// Cancel crop
+window.cancelCrop = function() {
+  document.getElementById('cropModal').classList.remove('active');
+  document.getElementById('student_photo_file').value = '';
+  originalImage = null;
+}
+
+// Confirm crop and upload
+window.confirmCrop = async function() {
+  if (!originalImage || cropSelection.width === 0) {
+    showAlert('Please select a crop area', 'error');
+    return;
+  }
+
+  const uploadBtn = document.getElementById('upload_photo_btn');
+  
+  try {
+    uploadBtn.disabled = true;
+    uploadBtn.style.opacity = '0.6';
+    showAlert('Processing and uploading...', 'success');
+
+    // Create cropped image
+    const croppedCanvas = document.createElement('canvas');
+    const croppedContext = croppedCanvas.getContext('2d');
+
+    // Set target size (944x1181)
+    const targetWidth = 944;
+    const targetHeight = 1181;
+    croppedCanvas.width = targetWidth;
+    croppedCanvas.height = targetHeight;
+
+    // Calculate source coordinates
+    const scaleX = originalImage.width / cropCanvas.width;
+    const scaleY = originalImage.height / cropCanvas.height;
+    
+    const sourceX = cropSelection.x * scaleX;
+    const sourceY = cropSelection.y * scaleY;
+    const sourceWidth = cropSelection.width * scaleX;
+    const sourceHeight = cropSelection.height * scaleY;
+
+    // Draw cropped image
+    croppedContext.drawImage(
+      originalImage,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      0, 0, targetWidth, targetHeight
+    );
+
+    // Convert to blob
+    const blob = await new Promise(resolve => croppedCanvas.toBlob(resolve, 'image/jpeg', 0.95));
+
+    // Upload to ImageBB
+    const url = await uploadToImageBB(blob, 'student_photo');
+    document.getElementById('student_photo_url').value = url;
+    
+    // Update preview
+    const preview = document.getElementById('student_photo_preview');
+    const placeholder = document.getElementById('student_photo_placeholder');
+    preview.src = url;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+    
+    uploadBtn.classList.add('uploaded');
+    uploadBtn.disabled = false;
+    uploadBtn.style.opacity = '1';
+    showAlert('Photo uploaded successfully!', 'success');
+    
+    // Close modal
+    document.getElementById('cropModal').classList.remove('active');
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    uploadBtn.disabled = false;
+    uploadBtn.style.opacity = '1';
+    showAlert('Upload failed: ' + error.message, 'error');
+  }
+}
+
+// unions.text is in PHP array(...) format. We don't include it directly because
+// that would break the page as it's not valid JS. Instead we fetch and parse it
+// into a JS array `window.unions` before initializing the dropdown population.
+
+function parsePhpArrayText(txt){
+  const unions = [];
+  try{
+    // Match each array(...) block
+    const re = /array\s*\(([^\)]*)\)\s*,?/g;
+    let m;
+    while((m = re.exec(txt)) !== null){
+      const inside = m[1];
+      const obj = {};
+      // match key => 'value' pairs
+      const pairRe = /'([^']+)'\s*=>\s*'((?:\\'|[^'])*)'/g;
+      let p;
+      while((p = pairRe.exec(inside)) !== null){
+        obj[p[1]] = p[2];
+      }
+      if(Object.keys(obj).length){
+        unions.push({
+          id: obj.id || '',
+          upazila_id: obj.upazila_id || obj.upazila || obj.upazilaId || '',
+          name: obj.name || '',
+          bn_name: obj.bn_name || obj.bn || '',
+          url: obj.url || ''
+        });
+      }
+    }
+  }catch(e){ console.warn('parsePhpArrayText error', e); }
+  return unions;
+}
+
+// load unions.text if needed and then run population init (defined later)
+(async function ensureUnionsAndInit(){
+  if(typeof unions === 'undefined'){
+    try{
+      const txt = await fetch('unions.text').then(r=>r.text());
+      window.unions = parsePhpArrayText(txt);
+    }catch(e){ console.warn('Failed to fetch/parse unions.text', e); window.unions = []; }
+  }
+  // signal ready by leaving window.unions defined, the population code below
+  // will be invoked after its function definition.
+})();
+// expose a promise so other scripts can await unions readiness
+window.__unionsReady = (async function(){
+  // wait until window.unions is set (or timeout after 5s)
+  const start = Date.now();
+  while(typeof window.unions === 'undefined'){
+    if(Date.now() - start > 5000) { window.unions = []; break; }
+    await new Promise(r=>setTimeout(r,50));
+  }
+  return window.unions;
+})();
+
+
+const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';  
+const TABLE='student_database_others';
+
+let supabaseClient=null; function initSupabase(){ if(supabaseClient) return supabaseClient; if(!window.supabase){ console.warn('Supabase lib not loaded yet'); return null;} supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); return supabaseClient; }
+// load supabase script
+(function(){ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload=()=>initSupabase(); document.head.appendChild(s); })();
+
+function $(id){ return document.getElementById(id); }
+function val(id){ return $(id).value.trim(); }
+function setVal(id,v){ $(id).value=v||''; }
+function showAlert(msg,type='error'){ const box=$('alertBox'); box.className='alert '+type; box.textContent=msg; }
+function clearAlert(){ const box=$('alertBox'); box.className='alert'; box.textContent=''; }
+
+// --- Edit mode helpers ---
+let EDIT_RECORD_ID = null; // will be set when editing an existing record
+function getQueryBirthReg(){ const q = window.location.search.substring(1); if(!q) return null; if(!q.includes('=')) return decodeURIComponent(q); const ps=new URLSearchParams(window.location.search); return ps.get('birth_reg')||ps.get('birth_registration')||ps.get('br'); }
+
+async function loadRecordForEdit(brArg){
+  const br = brArg || getQueryBirthReg();
+  if(!br) return; // nothing to do
+  
+  // Show birth reg in search box and disable it (prevent re-loading)
+  const searchBox = $('searchBirthReg');
+  if(searchBox){
+    searchBox.value = br;
+    searchBox.disabled = true;
+    searchBox.style.opacity = '0.6';
+  }
+  
+  const sb = initSupabase(); if(!sb){ setTimeout(()=>loadRecordForEdit(br),300); return; }
+  try{
+    const { data, error } = await sb.from(TABLE).select('*').eq('birth_registration', br).limit(1);
+    if(error){ console.error('Edit load error', error); showAlert('Error loading application for edit','error'); return; }
+    if(!data || !data.length){ showAlert('No application found for '+br,'error'); if(searchBox){ searchBox.disabled=false; searchBox.style.opacity='1'; } return; }
+    const rec = data[0];
+    EDIT_RECORD_ID = rec.iid; // use iid primary key from student_database_others
+    
+    // Wait for district/upazila data to be ready
+    if(window.__unionsReady) await window.__unionsReady;
+    
+    populateFormFromRecord(rec);
+    // Evaluate locking conditions with stricter checks
+    const statusVal = rec.status;
+    const statusLocked = (typeof statusVal !== 'undefined' && statusVal !== null && String(statusVal).trim() !== '' && String(statusVal).toLowerCase() !== 'null' && String(statusVal).toLowerCase() !== '0');
+    const admissionLocked = (rec.admission_status === true || String(rec.admission_status).toLowerCase() === 'true' || rec.admission_status === 1 || rec.admission_status === '1');
+    // Update debug box with details (show admission_status and status conditionally)
+    try{
+      const dbg = $('admissionStatusDebug');
+      if(dbg){
+        const as = (typeof rec.admission_status === 'undefined') ? 'Not Set' : (rec.admission_status === null ? 'Not Approved' : String(rec.admission_status));
+        const parts = [];
+        parts.push(`admission_status: ${as}`);
+        if(typeof statusVal !== 'undefined' && statusVal !== null && String(statusVal).trim() !== '' && String(statusVal).toLowerCase() !== 'null') parts.push(`status: ${String(statusVal)}`);
+        parts.push(`statusLocked: ${statusLocked}`);
+        parts.push(`admissionLocked: ${admissionLocked}`);
+        dbg.textContent = parts.join('  | ');
+        dbg.style.display = 'block';
+      }
+    }catch(e){ console.warn('setting debug failed', e); }
+
+    if(statusLocked || admissionLocked){
+      showAlert('This application is approved/locked and cannot be edited.','error');
+      // disable inputs and hide save
+      document.querySelectorAll('input,select,textarea,button').forEach(el=>{ if(el.id!=='searchBirthReg' && el.id!=='loadBtn' && el.id!=='printBtn' && el.id!=='editBtn') el.disabled = true; });
+    }
+    else {
+      // Re-enable inputs in case they were disabled previously
+      document.querySelectorAll('input,select,textarea,button').forEach(el=>{ if(el.id!=='searchBirthReg' && el.id!=='loadBtn' && el.id!=='printBtn' && el.id!=='editBtn') el.disabled = false; });
+      showAlert('Application loaded for editing','success');
+    }
+  }catch(e){ console.error(e); showAlert('Failed to load record for edit','error'); }
+}
+
+function populateFormFromRecord(o){
+  try{
+    const map = [
+      'session','admission_class','admission_section','student_name_en','student_name_bn','birth_registration','student_dateofbirth','religion','student_gender','student_blood_group',
+      'school_name_others','admission_date','board_name','board_roll','board_registration','group','optional_subject',
+      'father_name_en','father_name_bn','father_nid','father_mobile','father_occupation','father_dob','father_blood_group',
+      'mother_name_en','mother_name_bn','mother_nid','mother_mobile','mother_occupation','mother_dob','mother_blood_group',
+      'guardian_name_en','guardian_name_bn','guardian_nid','guardian_mobile','guardian_occupation',
+      'village_en','village_bn','postoffice_en','postoffice_bn','previous_school','previous_class_roll','comment_school','quote_freedomfighter',
+      'class_2024','section_2024','roll_2024','class_2025','section_2025','roll_2025','class_2026','section_2026','roll_2026','registration_card_url'
+    ];
+    map.forEach(k=>{ if($(k)) setVal(k, o[k]||''); });
+
+    // Map admission selection fields to form controls (student_database_others uses class_2025/section_2025)
+    try{ if($('admission_class')) setVal('admission_class', o.class_2025 || o.class_2026 || o.active_class || ''); }catch(e){}
+    try{ if($('admission_section')) setVal('admission_section', o.section_2025 || o.section_2026 || o.active_section || ''); }catch(e){}
+    try{ if($('session')) setVal('session', o.session || ''); }catch(e){}
+
+    // Show admission_status for debugging (display friendly labels for null/undefined)
+    try{
+      const dbg = $('admissionStatusDebug');
+      if(dbg){
+        let as;
+        if(typeof o.admission_status === 'undefined') as = 'Not Set';
+        else if(o.admission_status === null) as = 'Not Approved';
+        else as = String(o.admission_status);
+        dbg.textContent = 'admission_status: ' + as;
+        dbg.style.display = 'block';
+      }
+    }catch(e){ console.warn('admission status debug set failed', e); }
+
+    // photos
+    // Map admission selection fields to form controls (student_database_others uses class_2025/section_2025)
+    try{ if($('admission_class')) setVal('admission_class', o.class_2025 || o.class_2026 || o.active_class || ''); }catch(e){}
+    try{ if($('admission_section')) setVal('admission_section', o.section_2025 || o.section_2026 || o.active_section || ''); }catch(e){}
+    try{ if($('session')) setVal('session', o.session || ''); }catch(e){}
+    
+    // Show admission_status for debugging (display friendly labels for null/undefined)
+    try{
+      const dbg = $('admissionStatusDebug');
+      if(dbg){
+        let as;
+        if(typeof o.admission_status === 'undefined') as = 'Not Set';
+        else if(o.admission_status === null) as = 'Not Approved';
+        else as = String(o.admission_status);
+        dbg.textContent = 'admission_status: ' + as;
+        dbg.style.display = 'block';
+      }
+    }catch(e){ console.warn('admission status debug set failed', e); }
+    
+    // photos
+    if(o.student_photo_url){ 
+      const img=$('student_photo_preview'); 
+      if(img){ img.src=o.student_photo_url; img.style.display='block'; }
+      const ph=$('student_photo_placeholder'); 
+      if(ph) ph.style.display='none'; 
+      setVal('student_photo_url', o.student_photo_url); 
+    }
+    if(o.birth_certificate_url){ 
+      const img=$('certificate_preview'); 
+      if(img){ img.src=o.birth_certificate_url; img.style.display='block'; }
+      const ph=$('certificate_placeholder'); 
+      if(ph) ph.style.display='none'; 
+      setVal('birth_certificate_url', o.birth_certificate_url); 
+    }
+    if(o.registration_card_url){ 
+      const img=$('registration_card_preview'); 
+      if(img){ img.src=o.registration_card_url; img.style.display='block'; }
+      const ph=$('registration_card_placeholder'); 
+      if(ph) ph.style.display='none'; 
+      setVal('registration_card_url', o.registration_card_url); 
+    }
+    
+    // Handle district/upazila/union dropdown selection properly
+    // These dropdowns are populated by populateDistrictsAndUpazilas() which should already be done
+    // Use a cascading approach: set district → trigger change → set upazila → trigger change → set union
+    setTimeout(()=>{
+      try{
+        // Step 1: Set district (will auto-populate upazilas)
+        const distEn = $('district_en');
+        if(distEn && o.district_en){
+          for(let i=0; i<distEn.options.length; i++){
+            if(distEn.options[i].text.trim().toUpperCase() === (o.district_en||'').toString().trim().toUpperCase()){
+              distEn.selectedIndex = i;
+              // Manually trigger change to populate upazilas
+              const changeEvent = new Event('change', { bubbles: true });
+              distEn.dispatchEvent(changeEvent);
+              break;
+            }
+          }
+        }
+        
+        // Step 2: After district change populates upazilas, set upazila (will auto-populate unions)
+        setTimeout(()=>{
+          const upEn = $('upazilla_en');
+          if(upEn && o.upazilla_en){
+            for(let i=0; i<upEn.options.length; i++){
+              if(upEn.options[i].text.trim().toUpperCase() === (o.upazilla_en||'').toString().trim().toUpperCase()){
+                upEn.selectedIndex = i;
+                // Trigger change to populate unions
+                const changeEvent = new Event('change', { bubbles: true });
+                upEn.dispatchEvent(changeEvent);
+                break;
+              }
+            }
+          }
+          
+          // Step 3: After upazila change populates unions, set union
+          setTimeout(()=>{
+            const unionEn = $('union_en');
+            if(unionEn && o.union_en){
+              for(let i=0; i<unionEn.options.length; i++){
+                if(unionEn.options[i].text.trim().toUpperCase() === (o.union_en||'').toString().trim().toUpperCase()){
+                  unionEn.selectedIndex = i;
+                  break;
+                }
+              }
+            }
+          }, 300);
+        }, 400);
+      }catch(e){ console.warn('district/upazila/union populate error', e); }
+    }, 150);
+    
+  }catch(e){ console.warn('populate error', e); }
+}
+
+// guardian autofill
+$('guardian_from_father').addEventListener('change',()=>{ if($('guardian_from_father').checked){ copyParent('father','guardian'); $('guardian_from_mother').checked=false; } });
+$('guardian_from_mother').addEventListener('change',()=>{ if($('guardian_from_mother').checked){ copyParent('mother','guardian'); $('guardian_from_father').checked=false; } });
+function copyParent(src,dst){ const fields=['name_en','name_bn','nid','mobile','occupation']; fields.forEach(f=>{ setVal(dst+'_'+f, val(src+'_'+f)); }); }
+
+function gatherPayload(){
+  // Helper function to convert to uppercase, handling null values
+  const upper = (str) => str ? str.toString().toUpperCase() : null;
+  // Helper to convert to number or null
+  const toNumber = (v) => { const n = parseInt(String(v||'').replace(/\D/g,''),10); return isNaN(n)?null:n; };
+  
+  // Helper function to get selected option text from dropdown
+  const getSelectedText = (id) => {
+    const el = $(id);
+    if(!el || !el.value) return null;
+    const selectedOption = el.options[el.selectedIndex];
+    return selectedOption ? selectedOption.text : null;
+  };
+  
+  // Helper function to ensure mobile number has 880 prefix
+  const ensureMobile880 = (num) => {
+    if (!num) return null;
+    const clean = num.replace(/\D/g, ''); // Remove non-digits
+    if (!clean) return null;
+    return clean.startsWith('880') ? clean : '880' + clean;
+  };
+  
+  return {
+    session:upper(val('session')),
+    admission_class:upper(val('admission_class')),
+    admission_section:upper(val('admission_section')),
+    school_name_others: upper(val('school_name_others')) || null,
+    admission_date: val('admission_date') || null,
+    board_name: upper(val('board_name')),
+    board_roll: upper(val('board_roll')),
+    board_registration: upper(val('board_registration')),
+    group: upper(val('group')) || null,
+    optional_subject: upper(val('optional_subject')) || null,
+    student_name_en:upper(val('student_name_en')),
+    student_name_bn:val('student_name_bn')||null,
+    birth_registration:upper(val('birth_registration')),
+    student_dateofbirth:val('student_dateofbirth')||null,
+    religion:upper(val('religion')),
+    student_gender:upper(val('student_gender')),
+    student_photo_url:val('student_photo_url')||null,
+    birth_certificate_url:val('birth_certificate_url')||null,
+    registration_card_url: val('registration_card_url') || null,
+    student_blood_group:upper(val('student_blood_group')),
+    father_name_en:upper(val('father_name_en')),
+    father_name_bn:val('father_name_bn')||null,
+    father_nid:upper(val('father_nid')),
+    father_mobile:ensureMobile880(val('father_mobile')),
+    father_occupation:upper(val('father_occupation')),
+    father_dob:val('father_dob')||null,
+    father_blood_group:upper(val('father_blood_group')),
+    mother_name_en:upper(val('mother_name_en')),
+    mother_name_bn:val('mother_name_bn')||null,
+    mother_nid:upper(val('mother_nid')),
+    mother_mobile:ensureMobile880(val('mother_mobile')),
+    mother_occupation:upper(val('mother_occupation')),
+    mother_dob:val('mother_dob')||null,
+    mother_blood_group:upper(val('mother_blood_group')),
+    guardian_name_en:upper(val('guardian_name_en')),
+    guardian_name_bn:val('guardian_name_bn')||null,
+    guardian_nid:upper(val('guardian_nid')),
+    guardian_mobile:ensureMobile880(val('guardian_mobile')),
+    guardian_occupation:upper(val('guardian_occupation')),
+    village_bn:val('village_bn')||null,
+    village_en:upper(val('village_en')),
+    postoffice_bn:val('postoffice_bn')||null,
+    postoffice_en:upper(val('postoffice_en')),
+    upazilla_bn:getSelectedText('upazilla_bn'),
+    upazilla_en:upper(getSelectedText('upazilla_en')),
+    district_bn:getSelectedText('district_bn'),
+    district_en:upper(getSelectedText('district_en')),
+    previous_school:upper(val('previous_school')),
+    previous_class_roll:upper(val('previous_class_roll')),
+    comment_school: val('comment_school') || null,
+    quote_freedomfighter:upper(val('quote_freedomfighter')),
+    union_bn:getSelectedText('union_bn'),
+    union_en:upper(getSelectedText('union_en')),
+    class_2024: toNumber(val('class_2024')),
+    section_2024: upper(val('section_2024')),
+    roll_2024: toNumber(val('roll_2024')),
+    class_2025: toNumber(val('class_2025')),
+    section_2025: upper(val('section_2025')),
+    roll_2025: toNumber(val('roll_2025')),
+    class_2026: toNumber(val('class_2026')),
+    section_2026: upper(val('section_2026')),
+    roll_2026: toNumber(val('roll_2026'))
+  };
+}
+
+// Auto-set gender based on admission section
+function syncGenderWithSection(){
+  const section = $('admission_section');
+  const gender = $('student_gender');
+  if(!section || !gender) return;
+  function apply(){
+    const v = (section.value||'').toLowerCase();
+    if(v.includes('day')) { gender.value='Male'; }
+    else if(v.includes('morning')) { gender.value='Female'; }
+    // else leave as selected
+  }
+  section.addEventListener('change', apply);
+  // run once on load
+  apply();
+}
+syncGenderWithSection();
+
+async function save(stay){
+  clearAlert();
+  // validate all fields before saving
+  if(!validateAll()){ return; }
+  const sb=initSupabase(); if(!sb){ showAlert('Supabase not ready yet','error'); return; }
+  const payload=gatherPayload();
+  try{
+    let result;
+    if(EDIT_RECORD_ID){
+      result = await sb.from(TABLE).update(payload).eq('iid', EDIT_RECORD_ID);
+    } else {
+      result = await sb.from(TABLE).insert(payload);
+    }
+    if(result.error) throw result.error;
+    showAlert(EDIT_RECORD_ID ? 'Updated successfully' : 'Submitted successfully','success');
+    if(!stay){ 
+      const birthReg = val('birth_registration');
+      setTimeout(()=>{ 
+        window.location.href= birthReg ? `download_form.html?${encodeURIComponent(birthReg)}` : 'download_form.html';
+      }, 900); 
+    }
+    else { // reset minimal
+      $('birth_registration').focus();
+    }
+  }catch(e){ console.error(e); showAlert('Save failed: '+(e.message||e),'error'); }
+}
+
+// Search application by birth registration number
+function searchApplication(){
+  const birthReg = $('searchBirthReg').value.trim();
+  if(!birthReg){
+    showAlert('Please enter a birth registration number','error');
+    return;
+  }
+  clearAlert();
+  loadRecordForEdit(birthReg);
+} 
+
+// Allow Enter key to trigger search
+$('searchBirthReg').addEventListener('keypress', function(e){
+  if(e.key === 'Enter'){
+    searchApplication();
+  }
+});
+
+$('saveBtn').addEventListener('click',()=>save(false));
+// saveNewBtn removed
+
+// Validate every input/select/textarea (except checkboxes) inside the form container
+function validateAll(){
+  clearAlert();
+  const container = document.querySelector('.container');
+  if(!container) return true;
+  const controls = Array.from(container.querySelectorAll('input,select,textarea')).filter(el=>el.type!=='checkbox');
+  const missing = [];
+  controls.forEach(el=>{
+    const v = (el.value||'').toString().trim();
+    if(!v){
+      el.classList.add('invalid');
+      if(missing.indexOf(el)===-1) missing.push(el);
+    } else {
+      el.classList.remove('invalid');
+    }
+  });
+  if(missing.length){
+    const first = missing[0];
+    const label = first.closest('label.field');
+    let labelText = first.id || '';
+    if(label){
+      const labSpan = label.querySelector('.label-text');
+      if(labSpan) labelText = labSpan.textContent.replace('*','').trim();
+      else {
+        // fallback: use first text node
+        const txt = Array.from(label.childNodes).find(n=>n.nodeType===3 && n.textContent.trim());
+        labelText = txt? txt.textContent.trim(): label.innerText.trim();
+      }
+    }
+    showAlert('Fill required: '+labelText,'error');
+    try{ first.focus(); }catch(e){}
+    return false;
+  }
+  return true;
+}
+
+
+// Clear invalid class when user interacts
+document.addEventListener('input', e=>{ const t=e.target; if(t && (t.matches('input')||t.matches('select')||t.matches('textarea'))){ t.classList.remove('invalid'); } });
+document.addEventListener('change', e=>{ const t=e.target; if(t && (t.matches('input')||t.matches('select')||t.matches('textarea'))){ t.classList.remove('invalid'); } });
+
+// Mobile number handling - ensure 880 prefix
+;(function handleMobileNumbers(){
+  const mobileFields = ['father_mobile', 'mother_mobile', 'guardian_mobile'];
+  
+  mobileFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if(!field) return;
+    
+    // Prevent deleting 880 prefix
+    field.addEventListener('input', function(e) {
+      let val = this.value;
+      
+      // Always ensure it starts with 880
+      if(!val.startsWith('880')) {
+        // If user deleted 880, restore it
+        this.value = '880';
+      }
+      
+      // Remove any non-digit characters except at position 0-2 (880)
+      const prefix = this.value.substring(0, 3);
+      const rest = this.value.substring(3).replace(/\D/g, '');
+      this.value = prefix + rest;
+      
+      // Limit to 880 + 11 digits = 14 total
+      if(this.value.length > 14) {
+        this.value = this.value.substring(0, 14);
+      }
+    });
+    
+    // On focus, if empty, set to 880
+    field.addEventListener('focus', function() {
+      if(!this.value || this.value.length < 3) {
+        this.value = '880';
+      }
+    });
+    
+    // Prevent cursor from going before position 3
+    field.addEventListener('click', function() {
+      if(this.selectionStart < 3) {
+        this.setSelectionRange(3, 3);
+      }
+    });
+    
+    field.addEventListener('keydown', function(e) {
+      // Prevent backspace/delete from removing 880
+      if((e.key === 'Backspace' || e.key === 'Delete') && this.selectionStart <= 3) {
+        e.preventDefault();
+        this.setSelectionRange(3, 3);
+      }
+    });
+  });
+})();
+
+function applyTheme(m){ document.documentElement.classList.toggle('dark',m==='dark'); }
+// Guard theme toggle in case the element is not present on this page
+const _themeToggleEl = $('themeToggle');
+if(_themeToggleEl){
+  _themeToggleEl.addEventListener('click',()=>{ const cur=localStorage.getItem('theme')==='dark'?'light':'dark'; localStorage.setItem('theme',cur); applyTheme(cur); });
+}
+applyTheme(localStorage.getItem('theme')|| (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+$('year').textContent=new Date().getFullYear();
+
+// If this page was opened with a birth registration in query string, load that record for editing
+// Wait longer to ensure districts/upazilas are populated first
+setTimeout(()=>{ try{ loadRecordForEdit(); }catch(e){ console.warn('loadRecordForEdit failed',e); } }, 1200);
+
+
+// Auto-capitalize specific English fields (Title Case) while typing বড় হাতের কাজ
+;(function autoCapitalizeFields(){
+  const ids = ['student_name_en','father_name_en','father_occupation','mother_name_en','mother_occupation','village_en','postoffice_en','upazilla_en','district_en','previous_school'];
+  function toTitleCase(s){ return s.replace(/\w\S*/g, txt=>txt.charAt(0).toUpperCase()+txt.substr(1).toLowerCase()); }
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener('input', (e)=>{
+      const start = el.selectionStart; const end = el.selectionEnd;
+      const newVal = toTitleCase(el.value);
+      if(newVal!==el.value){ el.value=newVal; try{ el.setSelectionRange(start,end); }catch(e){} }
+    });
+  });
+})();
+
+// Populate district dropdowns (English + Bangla) and upazila mapping
+;(async function populateDistrictsAndUpazilas(){
+  // ensure unions have been loaded/parsed before building unionsByUpazila
+  if(window.__unionsReady) await window.__unionsReady;
+
+//districts & Upazillas take from district.text ** (code mover here)
+
+  // build lookup: districtId => upazila list
+  const upazilasByDistrict = {};
+  upazilas.forEach(u=>{
+    if(!upazilasByDistrict[u.district_id]) upazilasByDistrict[u.district_id]=[];
+    // avoid duplicates by upazila id
+    const exists = upazilasByDistrict[u.district_id].some(x=>x.id===u.id);
+    if(!exists) upazilasByDistrict[u.district_id].push({id:u.id,name:u.name,bn_name:u.bn_name});
+  });
+
+  // build lookup: upazilaId => union list (from UnionSeeder.php data if provided as `unions`)
+  const unionsByUpazila = {};
+  if(typeof unions !== 'undefined' && Array.isArray(unions)){
+    unions.forEach(r=>{
+      const upId = r.upazila_id || r.upazila || r.upazilaId || '';
+      if(!unionsByUpazila[upId]) unionsByUpazila[upId]=[];
+      const exists = unionsByUpazila[upId].some(x=>x.id===r.id);
+      if(!exists) unionsByUpazila[upId].push({id:r.id,name:r.name,bn_name:r.bn_name||r.bn});
+    });
+  }
+
+  const selEn = document.getElementById('district_en');
+  const selBn = document.getElementById('district_bn');
+  const upEn = document.getElementById('upazilla_en');
+  const upBn = document.getElementById('upazilla_bn');
+  const unionEn = document.getElementById('union_en');
+  const unionBn = document.getElementById('union_bn');
+  if(!selEn || !selBn) return;
+
+  const prevEn = selEn.value;
+  const prevBn = selBn.value;
+
+  // sort districts by English name (ascending) then populate district selects with id values
+  districts.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'en', {sensitivity:'base'}));
+  districts.forEach(d=>{
+    const o=document.createElement('option'); o.value=d.id; o.textContent=d.name; selEn.appendChild(o);
+    const p=document.createElement('option'); p.value=d.id; p.textContent=d.bn; selBn.appendChild(p);
+  });
+  if(prevEn) selEn.value = prevEn;
+  if(prevBn) selBn.value = prevBn;
+
+  // two-way sync for district selects (keep same index)
+  let _syncing = false;
+  selEn.addEventListener('change', ()=>{
+    if(_syncing) return;
+    try{ _syncing = true; selBn.selectedIndex = selEn.selectedIndex; }finally{ _syncing = false; }
+    populateUpazilas(selEn.value);
+  });
+  selBn.addEventListener('change', ()=>{
+    if(_syncing) return;
+    try{ _syncing = true; selEn.selectedIndex = selBn.selectedIndex; }finally{ _syncing = false; }
+    populateUpazilas(selBn.value);
+  });
+
+  // two-way sync for upazila selects
+  let _upSync = false;
+  upEn.addEventListener('change', ()=>{ if(_upSync) return; try{ _upSync=true; upBn.selectedIndex=upEn.selectedIndex; }finally{ _upSync=false; } });
+  upBn.addEventListener('change', ()=>{ if(_upSync) return; try{ _upSync=true; upEn.selectedIndex=upBn.selectedIndex; }finally{ _upSync=false; } });
+
+  // two-way sync for union selects
+  let _unionSync = false;
+  if(unionEn && unionBn){
+    unionEn.addEventListener('change', ()=>{ if(_unionSync) return; try{ _unionSync=true; unionBn.selectedIndex=unionEn.selectedIndex; }finally{ _unionSync=false; } });
+    unionBn.addEventListener('change', ()=>{ if(_unionSync) return; try{ _unionSync=true; unionEn.selectedIndex=unionBn.selectedIndex; }finally{ _unionSync=false; } });
+  }
+
+  // populate upazilas on current selection if any
+  function populateUpazilas(districtId){
+    // clear upazila selects and add a consistent 'Select' placeholder (no hyphen)
+  [upEn, upBn].forEach(s=>{ while(s.options.length>0) s.remove(0); const def=document.createElement('option'); def.value=''; def.textContent='Select'; s.appendChild(def); });
+    // clear unions as well
+  if(unionEn && unionBn){ [unionEn, unionBn].forEach(s=>{ while(s.options.length>0) s.remove(0); const def=document.createElement('option'); def.value=''; def.textContent='Select'; s.appendChild(def); }); }
+    if(!districtId) return;
+    let list = (upazilasByDistrict[districtId]||[]).slice();
+    // sort upazilas by English name (ascending)
+    list.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'en', {sensitivity:'base'}));
+    list.forEach(u=>{
+      const oe=document.createElement('option'); oe.value=u.id; oe.textContent=u.name; upEn.appendChild(oe);
+      const ob=document.createElement('option'); ob.value=u.id; ob.textContent=u.bn_name; upBn.appendChild(ob);
+    });
+    // reset unions placeholder to 'Select' (no hyphen)
+  if(unionEn && unionBn){ const def1=document.createElement('option'); def1.value=''; def1.textContent='Select'; unionEn.appendChild(def1); const def2=document.createElement('option'); def2.value=''; def2.textContent='Select'; unionBn.appendChild(def2); }
+  }
+
+  // Populate unions for selected upazila
+  function populateUnions(upazilaId){
+    if(!unionEn || !unionBn) return;
+  [unionEn, unionBn].forEach(s=>{ while(s.options.length>0) s.remove(0); const d=document.createElement('option'); d.value=''; d.textContent='-'; s.appendChild(d); });
+    if(!upazilaId) return;
+    const list = (unionsByUpazila[upazilaId]||[]).slice();
+    list.sort((a,b)=> (a.name||'').localeCompare(b.name||'', 'en', {sensitivity:'base'}));
+    list.forEach(u=>{
+      const oe=document.createElement('option'); oe.value=u.id; oe.textContent=u.name; unionEn.appendChild(oe);
+      const ob=document.createElement('option'); ob.value=u.id; ob.textContent=u.bn_name; unionBn.appendChild(ob);
+    });
+  }
+
+  // initial population if a district was preselected
+  const curDistrict = selEn.value || selBn.value;
+  if(curDistrict) populateUpazilas(curDistrict);
+  // when upazila changes, populate unions
+  upEn.addEventListener('change', ()=>{ populateUnions(upEn.value); });
+  upBn.addEventListener('change', ()=>{ populateUnions(upBn.value); });
+})();
+</script>
+
+</body>
+</html>

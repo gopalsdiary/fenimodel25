@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FMHS School Login</title>
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+  <style>
+    :root{--bg:#f5f7fb;--card:#fff;--text:#0f172a;--muted:#64748b;--brand:#2563eb;--border:#e2e8f0;--danger:#dc2626;}
+    *{box-sizing:border-box;font-family:'Noto Sans Bengali',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;}
+    body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;}
+    .card{width:100%;max-width:520px;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px 26px;box-shadow:0 10px 30px rgba(2,6,23,.08);} 
+    h1{margin:0 0 10px;font-size:1.2rem;font-weight:800;letter-spacing:.3px;}
+    .sub{margin:0 0 18px;color:var(--muted);font-size:.8rem;}
+    label{display:block;font-size:.75rem;font-weight:700;margin:12px 0 6px;color:#334155;}
+    select,input{width:100%;padding:.7rem .8rem;border:1px solid var(--border);border-radius:10px;font-size:.8rem;outline:none;background:#fff;}
+    select:focus,input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.12);} 
+    .btn{margin-top:16px;width:100%;padding:.7rem .9rem;border:none;border-radius:10px;background:var(--brand);color:#fff;font-weight:700;cursor:pointer;}
+    .btn:disabled{opacity:.6;cursor:not-allowed;}
+    .alert{margin-top:12px;font-size:.75rem;color:var(--danger);}
+    .actions{display:none;margin-top:18px;gap:10px;flex-wrap:wrap;}
+    .actions a{flex:1 1 48%;text-align:center;text-decoration:none;padding:.7rem;border-radius:10px;background:#0ea5e9;color:#fff;font-weight:700;font-size:.75rem;}
+    .actions a.secondary{background:#10b981;}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>FMHS Login</h1>
+    <p class="sub">Select user name, enter password if required.</p>
+
+    <label for="buttonSelect">User Name</label>
+    <select id="buttonSelect">
+      <option value="">Loading...</option>
+    </select>
+
+    <div id="passwordWrap" style="display:none;">
+      <label for="passwordInput">Password</label>
+      <input id="passwordInput" type="password" placeholder="Enter password" />
+    </div>
+
+    <button class="btn" id="loginBtn" disabled>Login</button>
+    <div id="alert" class="alert"></div>
+
+    
+
+  
+      
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL='https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const TABLE='button_status';
+
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const selectEl = document.getElementById('buttonSelect');
+    const passwordWrap = document.getElementById('passwordWrap');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const alertEl = document.getElementById('alert');
+    const actionsEl = document.getElementById('actions');
+
+    let rows = [];
+
+    function setAlert(msg=''){
+      alertEl.textContent = msg || '';
+    }
+
+    function getSelectedRow(){
+      const name = selectEl.value;
+      return rows.find(r => String(r.button_name||'') === name) || null;
+    }
+
+    function updatePasswordVisibility(){
+      const row = getSelectedRow();
+      const hasPassword = !!(row && row.button_password && String(row.button_password).trim() !== '');
+      passwordWrap.style.display = hasPassword ? 'block' : 'none';
+      loginBtn.disabled = !selectEl.value;
+      if(!hasPassword) passwordInput.value = '';
+    }
+
+    async function loadButtons(){
+      setAlert('');
+      selectEl.innerHTML = '<option value="">Loading...</option>';
+      try{
+        const { data, error } = await sb.from(TABLE).select('button_name, button_password, button_status');
+        if(error) throw error;
+        // Only include rows that have a non-empty button_password and are not disabled/deactive
+        rows = (data || []).filter(r => {
+          if(!r || !r.button_name) return false;
+          const pwd = String(r.button_password || '').trim();
+          if(!pwd) return false;
+          const status = String(r.button_status || '').toLowerCase();
+          if(status.includes('disable') || status.includes('deactive')) return false; // exclude disabled or deactive buttons
+          return true;
+        });
+        if(!rows.length){
+          selectEl.innerHTML = '<option value="">No active buttons available</option>';
+          selectEl.disabled = true;
+          return;
+        }
+        selectEl.disabled = false;
+        selectEl.innerHTML = '<option value="">Select</option>';
+        rows.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.button_name;
+          opt.textContent = r.button_name;
+          selectEl.appendChild(opt);
+        });
+      }catch(e){
+        console.error(e);
+        selectEl.innerHTML = '<option value="">Failed to load</option>';
+        setAlert('Failed to load button list.');
+      }
+    }
+
+    selectEl.addEventListener('change', updatePasswordVisibility);
+
+    // Allow pressing Enter inside password field to trigger login
+    passwordInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); loginBtn.click(); } });
+
+    function showDashboard(row){
+      // persist session
+      try{ localStorage.setItem('adminButton', String(row.button_name)); }catch(e){}
+      // redirect to dashboard
+      window.location.href = 'other_school_dashboard.html';
+    }
+
+    function hideDashboard(){
+      try{ localStorage.removeItem('adminButton'); }catch(e){}
+      actionsEl.style.display = '';
+      document.getElementById('dashboard').style.display = 'none';
+      document.querySelector('.card h1').textContent = 'Login';
+      document.getElementById('welcome').textContent = '';
+    }
+
+    loginBtn.addEventListener('click', () => {
+      setAlert('');
+      const row = getSelectedRow();
+      if(!row){ setAlert('Select a User name first.'); return; }
+      const requiredPassword = row.button_password ? String(row.button_password) : '';
+      const needsPassword = requiredPassword.trim() !== '';
+      if(needsPassword){
+        const entered = (passwordInput.value || '').trim();
+        if(!entered){ setAlert('Password required.'); return; }
+        if(entered !== requiredPassword){ setAlert('Wrong password.'); return; }
+      }
+      showDashboard(row);
+    });
+
+    const logoutBtnEl = document.getElementById('logoutBtn');
+    if(logoutBtnEl){
+      logoutBtnEl.addEventListener('click', ()=>{ hideDashboard(); setAlert('Logged out'); });
+    }
+
+    loadButtons().then(()=>{
+      // if session persisted, redirect to dashboard
+      try{
+        const s = localStorage.getItem('adminButton');
+        if(s){
+          // try to find the row
+          const row = rows.find(r=>String(r.button_name)===String(s));
+          if(row) {
+            window.location.href = 'other_school_dashboard.html';
+          }
+        }
+      }catch(e){}
+    });
+  </script>
+
+  <div class="site-footer" style="margin-top:1.6rem; text-align:center; color:var(--muted); font-size:0.9rem; max-width:520px; margin-left:auto; margin-right:auto;">
+    <p style="margin:0;">© <span id="year"></span> Feni Model High School · Unauthorized access prohibited.</p>
+    <p style="margin:0.45rem 0 0; font-size:0.9rem; color:var(--muted); style="color:inherit; text-decoration:underline; font-weight:700;">Gopals Diary</a> · Powered by <a href="https://modelresult.netlify.app/creator" style="color:inherit; text-decoration:underline; font-weight:700;">Sikhanobish</a></p>
+  </div>
+
+  <script>try{document.getElementById('year').textContent = new Date().getFullYear();}catch(e){}</script>
+</body>
+</html>
