@@ -122,8 +122,13 @@
     passwordInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); loginBtn.click(); } });
 
     function showDashboard(row){
-      // persist session
-      try{ localStorage.setItem('adminButton', String(row.button_name)); }catch(e){}
+      // persist session and set timestamps for inactivity logout
+      try{ 
+        localStorage.setItem('adminButton', String(row.button_name)); 
+        const now = Date.now();
+        localStorage.setItem('adminLoginAt', String(now));
+        localStorage.setItem('adminLastActivity', String(now));
+      }catch(e){}
       // redirect to dashboard
       window.location.href = 'other_school_dashboard.html';
     }
@@ -156,18 +161,36 @@
     }
 
     loadButtons().then(()=>{
-      // if session persisted, redirect to dashboard
+      // if session persisted, check expiry then redirect to dashboard
       try{
         const s = localStorage.getItem('adminButton');
         if(s){
-          // try to find the row
+          const last = Number(localStorage.getItem('adminLastActivity') || 0);
+          const timeout = 30 * 60 * 1000; // 30 minutes
+          const now = Date.now();
+          if(last && (now - last) > timeout){
+            // expired session -> clear and do not redirect
+            try{ localStorage.removeItem('adminButton'); localStorage.removeItem('adminLastActivity'); localStorage.removeItem('adminLoginAt'); }catch(e){}
+            setAlert('Previous session expired. Please login again.');
+            return;
+          }
+          // try to find the row and redirect
           const row = rows.find(r=>String(r.button_name)===String(s));
           if(row) {
+            // update last activity and go
+            try{ localStorage.setItem('adminLastActivity', String(now)); }catch(e){}
             window.location.href = 'other_school_dashboard.html';
           }
         }
       }catch(e){}
     });
+
+    // Helper: clear session and redirect to login
+    function clearSessionAndRedirect(msg){
+      try{ localStorage.removeItem('adminButton'); localStorage.removeItem('adminLastActivity'); localStorage.removeItem('adminLoginAt'); }catch(e){}
+      if(msg) setAlert(msg);
+      // keep user on login page
+    }
   </script>
 
   <div class="site-footer" style="margin-top:1.6rem; text-align:center; color:var(--muted); font-size:0.9rem; max-width:520px; margin-left:auto; margin-right:auto;">

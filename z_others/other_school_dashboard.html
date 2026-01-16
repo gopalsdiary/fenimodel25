@@ -207,7 +207,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏫 School Admin Panel</h1>
+            <h1>🏫 School Admin Panel (FMHS)</h1>
             <div id="header-center"></div>
             <button class="logout-btn" id="logoutBtn">Logout</button>
         </div>
@@ -267,9 +267,45 @@
         logoutBtn.addEventListener('click', () => {
             try {
                 localStorage.removeItem('adminButton');
+                localStorage.removeItem('adminLastActivity');
+                localStorage.removeItem('adminLoginAt');
             } catch(e) {}
             window.location.href = 'index.html';
         });
+
+        // --- Inactivity auto-logout (30 minutes) ---
+        (function setupAutoLogout(){
+            const TIMEOUT = 30 * 60 * 1000; // 30 minutes
+            let checkInterval = null;
+
+            function updateActivity(){
+                try{ localStorage.setItem('adminLastActivity', String(Date.now())); }catch(e){}
+            }
+
+            // Attach common user-activity listeners
+            ['click','mousemove','keydown','touchstart'].forEach(ev => {
+                document.addEventListener(ev, updateActivity, {passive:true});
+            });
+
+            function checkExpiry(){
+                try{
+                    const last = Number(localStorage.getItem('adminLastActivity') || 0);
+                    if(!last) return;
+                    if(Date.now() - last > TIMEOUT){
+                        // clear session and redirect to login with a message
+                        try{ localStorage.removeItem('adminButton'); localStorage.removeItem('adminLastActivity'); localStorage.removeItem('adminLoginAt'); }catch(e){}
+                        alert('Session expired due to inactivity (30 minutes). You will be logged out.');
+                        window.location.href = 'index.html';
+                    }
+                }catch(e){ console.error('Session expiry check failed', e); }
+            }
+
+            // Run periodic check every minute
+            checkInterval = setInterval(checkExpiry, 60 * 1000);
+
+            // Also run an immediate check on load
+            checkExpiry();
+        })();
 
         // Load all buttons
         async function loadButtons() {

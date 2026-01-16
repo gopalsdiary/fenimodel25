@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="/login/auth-check_copy.js"></script>
+  <title>Result Entry - Others School</title>
+  <style>
+    :root { 
+      --bg:#f6f8fa; 
+      --card:#ffffff; 
+      --border:#d0d7de; 
+      --accent:#0366d6; 
+      --accent-hover:#024c9e; 
+      --danger:#d73a49; 
+      --success:#1a7f37; 
+      --warning:#ff8a00; 
+      --radius:6px; 
+      font-family:  system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,sans-serif; 
+    }
+    body { margin:0; background:var(--bg); color:#24292f; padding: 20px; }
+    .wrap { 
+      width:100%; 
+      max-width:900px; 
+      margin:0 auto 60px; 
+      background:var(--card); 
+      border:1px solid var(--border); 
+      border-radius:var(--radius); 
+      padding:24px; 
+      box-shadow:0 2px 4px rgba(0,0,0,.04); 
+    }
+    h2 { font-size:22px; margin:0 0 8px 0; font-weight:600; color:#24292f; }
+    p { font-size:14px; color:#6a737d; margin:0 0 20px 0; }
+    .card-section { 
+      margin:20px 0; 
+      padding:16px; 
+      border:1px solid var(--border); 
+      background:var(--card); 
+      border-radius:var(--radius); 
+    }
+    .form-group { margin-bottom:16px; }
+    .form-group label { 
+      display:block; 
+      font-size:13px; 
+      font-weight:600; 
+      color:#555; 
+      margin-bottom:6px; 
+    }
+    input[type=text], input[type=number], select { 
+      width:100%; 
+      padding:10px 12px; 
+      border:1px solid var(--border); 
+      border-radius:4px; 
+      font-size:14px; 
+      background:#fff; 
+      font-family: inherit;
+    }
+    input[type=number]::-webkit-outer-spin-button, 
+    input[type=number]::-webkit-inner-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+    input:focus, select:focus { 
+      outline:none; 
+      border-color:var(--accent); 
+      box-shadow:0 0 0 3px rgba(3,102,214,0.1); 
+    }
+    .row { display:flex; gap:16px; margin-bottom:16px; }
+    .row .form-group { flex:1; margin-bottom:0; }
+    button { 
+      cursor:pointer; 
+      font-size:14px; 
+      padding:10px 20px; 
+      border-radius:4px; 
+      border:1px solid var(--accent); 
+      background:var(--accent); 
+      color:#fff; 
+      font-weight:500; 
+      font-family: inherit;
+    }
+    button:hover { background:var(--accent-hover); }
+    button:disabled { opacity:0.5; cursor:not-allowed; }
+    button.success { background:var(--success); border-color:var(--success); }
+    button.success:hover { background:#0f5132; }
+    button.warning { background:var(--warning); border-color:var(--warning); }
+    button.warning:hover { background:#e07000; }
+    .status { font-size:13px; margin-top:8px; min-height:18px; }
+    .status.ok { color:var(--success); font-weight:600; }
+    .status.err { color:var(--danger); font-weight:600; }
+    .note-danger { color:var(--danger); font-weight:700; }
+    .subject-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .subject-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      background: #fafbfc;
+      display: grid;
+      grid-template-columns: 200px repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      align-items: center;
+    }
+    .subject-card h4 {
+      margin: 0;
+      font-size: 14px;
+      color: #0366d6;
+      font-weight: 600;
+      grid-column: 1;
+    }
+    .subject-card .form-group {
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .subject-card .form-group label {
+      font-size: 11px;
+      margin-bottom: 4px;
+      font-weight: 600;
+      color: #666;
+    }
+    .subject-card input {
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .subject-card .readonly-field {
+      padding: 6px 8px;
+      font-size: 13px;
+      min-height: auto;
+    }
+    .gpa-input {
+      width: 84px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .readonly-field {
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #374151;
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+    }
+    .gpa-display {
+      font-weight: 700;
+      color: var(--success);
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>📊 Result Entry - Others School</h2>
+    <p>রেজাল্ট এন্ট্রি করার সময় সাবধানতা অবলম্বন করুন। প্রথমে IID দিয়ে তথ্য লোড করুন।</p>
+    <p class="note-danger">GPA ঘরগুলোত ভালোভাবে দেখুন এবং সঠিক মান প্রদান করুন।</p>
+
+    <!-- Step 1: Load Student by IID -->
+    <div class="card-section" style="background:#f8fbff;">
+      <h3 style="margin:0 0 12px 0; font-size:16px;">Step 1: Load Student Information</h3>
+      <div class="row">
+        <div class="form-group">
+          <label for="iidInput">Enter IID</label>
+          <input type="number" id="iidInput" placeholder="Enter student IID">
+        </div>
+        <div style="display:flex; align-items:flex-end;">
+          <button id="loadBtn">Load Student</button>
+        </div>
+      </div>
+      <div id="loadStatus" class="status"></div>
+    </div>
+
+    <!-- Step 2: Student Info Display (Hidden initially) -->
+    <div id="studentInfoSection" class="card-section" style="background:#fff9f0; display:none;">
+      <h3 style="margin:0 0 12px 0; font-size:16px;">Step 2: Student Information</h3>
+      <div class="row">
+        <div class="form-group">
+          <label>Student Name (English)</label>
+          <div id="studentNameDisplay" class="readonly-field">-</div>
+        </div>
+        <div class="form-group">
+          <label>Father Name (English)</label>
+          <div id="fatherNameDisplay" class="readonly-field">-</div>
+        </div>
+        <div class="form-group">
+          <label>Father Mobile</label>
+          <div id="fatherMobileDisplay" class="readonly-field">-</div>
+        </div>
+        <div class="form-group">
+          <label>Record Owner</label>
+          <div id="studentOwnerDisplay" class="readonly-field">-</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label for="class2025Input">Class</label>
+          <input type="text" id="class2025Input" placeholder="e.g., Six">
+        </div>
+        <div class="form-group">
+          <label for="section2025Input">Section </label>
+          <input type="text" id="section2025Input" placeholder="e.g., Shapla">
+        </div>
+        <div class="form-group">
+          <label for="roll2025Input">Roll </label>
+          <input type="number" id="roll2025Input" placeholder="Roll number">
+        </div>
+        <div class="form-group">
+          <label for="examNameYearInput">Exam Name/Year</label>
+          <input type="text" id="examNameYearInput" placeholder="e.g., Half Yearly 2025">
+        </div>
+      </div>
+      <button id="proceedBtn" class="success">Proceed to Marks Entry</button>
+      <div id="proceedStatus" class="status"></div>
+    </div>
+
+    <!-- Step 3: Marks Entry (Hidden initially) -->
+    <div id="marksEntrySection" class="card-section" style="background:#f0fff4; display:none;">
+      <h3 style="margin:0 0 12px 0; font-size:16px;">Step 3: Enter Subject Marks</h3>
+      
+      <div class="subject-grid">
+        <!-- Bangla 1st Paper -->
+        <div class="subject-card">
+          <h4>📚 Bangla 1st Paper</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="bangla1_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="bangla1_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="bangla1_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="bangla1_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+
+        <!-- Bangla 2nd Paper -->
+        <div class="subject-card">
+          <h4>📚 Bangla 2nd Paper</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="bangla2_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="bangla2_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="bangla2_total" class="readonly-field">0</div>
+          </div>
+        </div>
+
+        <!-- English 1st Paper -->
+        <div class="subject-card">
+          <h4>🔤 English 1st Paper</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="english1_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="english1_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="english1_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+
+        <!-- English 2nd Paper -->
+        <div class="subject-card">
+          <h4>🔤 English 2nd Paper</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="english2_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="english2_total" class="readonly-field">0</div>
+          </div>
+        </div>
+
+        <!-- Mathematics -->
+        <div class="subject-card">
+          <h4>🔢 Mathematics</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="math_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="math_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="math_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="math_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+
+        <!-- Religion -->
+        <div class="subject-card">
+          <h4>🕌 Religion</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="religion_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="religion_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="religion_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="religion_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+
+        <!-- Science -->
+        <div class="subject-card">
+          <h4>🔬 Science</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="science_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="science_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="science_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="science_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+
+        <!-- ICT -->
+        <div class="subject-card">
+          <h4>💻 ICT</h4>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="ict_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Practical</label>
+            <input type="number" id="ict_practical" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="ict_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="ict_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+
+        <!-- BGS -->
+        <div class="subject-card">
+          <h4>🌍 Bangladesh and Global Studies</h4>
+          <div class="form-group">
+            <label>CQ</label>
+            <input type="number" id="bgs_cq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>MCQ</label>
+            <input type="number" id="bgs_mcq" min="0" max="100" step="0.01">
+          </div>
+          <div class="form-group">
+            <label>Total</label>
+            <div id="bgs_total" class="readonly-field">0</div>
+          </div>
+          <div class="form-group">
+            <label>GPA</label>
+            <input type="number" id="bgs_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px; padding:16px; background:#f8fafc; border-radius:6px;">
+        <h4 style="margin:0 0 12px 0;">📊 Overall Result</h4>
+        <div class="row">
+          <div class="form-group">
+            <label>Total Marks</label>
+            <div id="totalMarkDisplay" class="readonly-field" style="font-weight:700; font-size:18px;">0</div>
+          </div>
+          <div class="form-group">
+            <label>Average</label>
+            <div id="averageDisplay" class="readonly-field" style="font-weight:700; font-size:18px;">0</div>
+          </div>
+          <div class="form-group">
+            <label>Final GPA</label>
+            <div id="gpaFinalDisplay" class="readonly-field gpa-display" style="font-size:22px;">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div class="row">
+          <div class="form-group" style="flex:0 0 180px;">
+            <label>Class Rank</label>
+            <input type="number" id="class_rank" min="0" step="1" placeholder="" />
+          </div>
+          <div class="form-group" style="flex:1;">
+            <label>Remark</label>
+            <input type="text" id="remark" placeholder="" />
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px; display:flex; gap:12px;">
+        <button id="saveBtn" class="success">💾 Save Result</button>
+        <button id="clearBtn" class="warning">🔄 Clear Form</button>
+      </div>
+      <div id="saveStatus" class="status"></div>
+
+      <div style="margin-top:10px; max-width:420px;">
+        <label style="font-size:13px; color:#555; font-weight:600; display:block; margin-bottom:6px;">Input User</label>
+        <div id="inputUserDisplay" class="readonly-field" style="width:260px;">-</div>
+      </div> 
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // Require login: if no admin session, redirect to login page
+    try{
+      if(!localStorage.getItem('adminButton')){
+        // replace so user can't go back to a protected page easily
+        window.location.replace('index.html');
+      }
+    }catch(e){}
+
+    const TABLE_STUDENT = 'student_database_others';
+    const TABLE_EXAM = 'exam_others_school';
+
+    // DOM Elements
+    const iidInput = document.getElementById('iidInput');
+    const loadBtn = document.getElementById('loadBtn');
+    const loadStatus = document.getElementById('loadStatus');
+
+    // Allow pressing Enter in the IID input to trigger the Load action
+    try{ iidInput.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); loadBtn.click(); } }); }catch(e){}
+
+    const studentInfoSection = document.getElementById('studentInfoSection');
+    const studentNameDisplay = document.getElementById('studentNameDisplay');
+    const fatherNameDisplay = document.getElementById('fatherNameDisplay');
+    const class2025Input = document.getElementById('class2025Input');
+    const section2025Input = document.getElementById('section2025Input');
+    const roll2025Input = document.getElementById('roll2025Input');
+    const examNameYearInput = document.getElementById('examNameYearInput');
+    const proceedBtn = document.getElementById('proceedBtn');
+    const proceedStatus = document.getElementById('proceedStatus');
+    const marksEntrySection = document.getElementById('marksEntrySection');
+    const saveBtn = document.getElementById('saveBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const saveStatus = document.getElementById('saveStatus');
+    const inputUserDisplay = document.getElementById('inputUserDisplay');
+
+    // Show currently logged-in user (from localStorage 'adminButton')
+    try{ if(inputUserDisplay) inputUserDisplay.textContent = localStorage.getItem('adminButton') || '-'; }catch(e){}
+
+    let currentIID = null;
+    let currentStudentData = null;
+
+    // GPA Calculation Function
+    function calculateGPA(marks) {
+      if (marks === null || marks === undefined || isNaN(marks)) return null;
+      const m = parseFloat(marks);
+      if (m >= 80) return 5.0;
+      if (m >= 70) return 4.0;
+      if (m >= 60) return 3.5;
+      if (m >= 50) return 3.0;
+      if (m >= 40) return 2.0;
+      if (m >= 33) return 1.0;
+      return 0.0;
+    }
+
+    // Auto-calculate totals and GPAs
+    function setupAutoCalculations() {
+      // Bangla 1st Paper
+      ['bangla1_cq', 'bangla1_mcq'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cq = parseFloat(document.getElementById('bangla1_cq').value) || 0;
+          const mcq = parseFloat(document.getElementById('bangla1_mcq').value) || 0;
+          const total = cq + mcq;
+          document.getElementById('bangla1_total').textContent = total.toFixed(2);
+          const gpa = calculateGPA(total);
+          document.getElementById('bangla1_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          calculateOverall();
+        });
+      });
+
+      // Bangla 2nd Paper
+      ['bangla2_cq', 'bangla2_mcq'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cq = parseFloat(document.getElementById('bangla2_cq').value) || 0;
+          const mcq = parseFloat(document.getElementById('bangla2_mcq').value) || 0;
+          const total = cq + mcq;
+          document.getElementById('bangla2_total').textContent = total.toFixed(2);
+          calculateOverall();
+        });
+      });
+
+      // English 1st Paper
+      document.getElementById('english1_cq').addEventListener('input', () => {
+        const cq = parseFloat(document.getElementById('english1_cq').value) || 0;
+        document.getElementById('english1_total').textContent = cq.toFixed(2);
+        const gpa = calculateGPA(cq);
+        document.getElementById('english1_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+        calculateOverall();
+      });
+
+      // English 2nd Paper
+      document.getElementById('english2_cq').addEventListener('input', () => {
+        const cq = parseFloat(document.getElementById('english2_cq').value) || 0;
+        document.getElementById('english2_total').textContent = cq.toFixed(2);
+        calculateOverall();
+      });
+
+      // Mathematics
+      ['math_cq', 'math_mcq'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cq = parseFloat(document.getElementById('math_cq').value) || 0;
+          const mcq = parseFloat(document.getElementById('math_mcq').value) || 0;
+          const total = cq + mcq;
+          document.getElementById('math_total').textContent = total.toFixed(2);
+          const gpa = calculateGPA(total);
+          document.getElementById('math_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          calculateOverall();
+        });
+      });
+
+      // Religion
+      ['religion_cq', 'religion_mcq'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cq = parseFloat(document.getElementById('religion_cq').value) || 0;
+          const mcq = parseFloat(document.getElementById('religion_mcq').value) || 0;
+          const total = cq + mcq;
+          document.getElementById('religion_total').textContent = total.toFixed(2);
+          const gpa = calculateGPA(total);
+          document.getElementById('religion_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          calculateOverall();
+        });
+      });
+
+      // Science
+      ['science_cq', 'science_mcq'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cq = parseFloat(document.getElementById('science_cq').value) || 0;
+          const mcq = parseFloat(document.getElementById('science_mcq').value) || 0;
+          const total = cq + mcq;
+          document.getElementById('science_total').textContent = total.toFixed(2);
+          const gpa = calculateGPA(total);
+          document.getElementById('science_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          calculateOverall();
+        });
+      });
+
+      // ICT
+      ['ict_mcq', 'ict_practical'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const mcq = parseFloat(document.getElementById('ict_mcq').value) || 0;
+          const practical = parseFloat(document.getElementById('ict_practical').value) || 0;
+          const total = mcq + practical;
+          document.getElementById('ict_total').textContent = total.toFixed(2);
+          const gpa = calculateGPA(total);
+          document.getElementById('ict_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          calculateOverall();
+        });
+      });
+
+      // BGS
+      ['bgs_cq', 'bgs_mcq'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          const cq = parseFloat(document.getElementById('bgs_cq').value) || 0;
+          const mcq = parseFloat(document.getElementById('bgs_mcq').value) || 0;
+          const total = cq + mcq;
+          document.getElementById('bgs_total').textContent = total.toFixed(2);
+          const gpa = calculateGPA(total);
+          document.getElementById('bgs_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          calculateOverall();
+        });
+      });
+
+      // allow manual GPA edits to recalc final GPA
+      document.querySelectorAll('.gpa-input').forEach(el => el.addEventListener('input', () => { calculateOverall(); }));
+    }
+
+    // Calculate overall marks and GPA
+    function calculateOverall() {
+      const bangla1Total = parseFloat(document.getElementById('bangla1_total').textContent) || 0;
+      const bangla2Total = parseFloat(document.getElementById('bangla2_total').textContent) || 0;
+      const english1Total = parseFloat(document.getElementById('english1_total').textContent) || 0;
+      const english2Total = parseFloat(document.getElementById('english2_total').textContent) || 0;
+      const mathTotal = parseFloat(document.getElementById('math_total').textContent) || 0;
+      const religionTotal = parseFloat(document.getElementById('religion_total').textContent) || 0;
+      const scienceTotal = parseFloat(document.getElementById('science_total').textContent) || 0;
+      const ictTotal = parseFloat(document.getElementById('ict_total').textContent) || 0;
+      const bgsTotal = parseFloat(document.getElementById('bgs_total').textContent) || 0;
+
+      const totalMark = bangla1Total + bangla2Total + english1Total + english2Total + mathTotal + religionTotal + scienceTotal + ictTotal + bgsTotal;
+      const average = totalMark / 9;
+
+      document.getElementById('totalMarkDisplay').textContent = totalMark.toFixed(2);
+      document.getElementById('averageDisplay').textContent = average.toFixed(2);
+
+      // Calculate final GPA (average of GPAs)
+      const gpas = [
+        parseFloat(document.getElementById('bangla1_gpa').value || ''),
+        parseFloat(document.getElementById('english1_gpa').value || ''),
+        parseFloat(document.getElementById('math_gpa').value || ''),
+        parseFloat(document.getElementById('religion_gpa').value || ''),
+        parseFloat(document.getElementById('science_gpa').value || ''),
+        parseFloat(document.getElementById('ict_gpa').value || ''),
+        parseFloat(document.getElementById('bgs_gpa').value || '')
+      ].filter(g => !isNaN(g) && g !== null);
+
+      const finalGPA = gpas.length > 0 ? (gpas.reduce((a, b) => a + b, 0) / gpas.length) : 0;
+      document.getElementById('gpaFinalDisplay').textContent = finalGPA > 0 ? finalGPA.toFixed(2) : '-';
+    }
+
+    // Load Student by IID
+    loadBtn.addEventListener('click', async () => {
+      const iid = parseInt(iidInput.value);
+      if (!iid || isNaN(iid)) {
+        loadStatus.textContent = '❌ Please enter a valid IID';
+        loadStatus.className = 'status err';
+        return;
+      }
+
+      loadStatus.textContent = '🔄 Loading student data...';
+      loadStatus.className = 'status';
+      loadBtn.disabled = true;
+
+      try {
+        const { data, error } = await sb.from(TABLE_STUDENT).select('*').eq('iid', iid);
+        
+        if (error) {
+          loadStatus.textContent = '❌ Error: ' + error.message;
+          loadStatus.className = 'status err';
+          loadBtn.disabled = false;
+          return;
+        }
+
+        if (!data || data.length === 0) {
+          loadStatus.textContent = '❌ No student found with this IID';
+          loadStatus.className = 'status err';
+          loadBtn.disabled = false;
+          return;
+        }
+
+        const student = data[0];
+        currentIID = iid;
+        currentStudentData = student;
+
+        studentNameDisplay.textContent = student.student_name_en || '-';
+        fatherNameDisplay.textContent = student.father_name_en || '-';
+        // show father's mobile beside name
+        try{ document.getElementById('fatherMobileDisplay').textContent = student.father_mobile || '-'; }catch(e){}
+
+        // Show owner (no blocking) — editing allowed for any user regardless of owner
+        try{ document.getElementById('studentOwnerDisplay').textContent = student.input_user_name || '-'; }catch(e){ }
+
+        // Ensure proceed and save buttons are enabled for editing
+        try{ proceedBtn.disabled = false; saveBtn.disabled = false; }catch(e){}
+
+        // No owner-based restrictions: keep proceed and save enabled
+        try{ proceedBtn.disabled = false; saveBtn.disabled = false; }catch(e){}
+
+        studentInfoSection.style.display = 'block';
+        loadStatus.textContent = '✅ Student loaded successfully!';
+        loadStatus.className = 'status ok';
+        loadBtn.disabled = false;
+
+        // Try to load existing exam data
+        await loadExistingExamData(iid);
+
+      } catch (e) {
+        loadStatus.textContent = '❌ Error: ' + e.message;
+        loadStatus.className = 'status err';
+        loadBtn.disabled = false;
+      }
+    });
+
+    // Load existing exam data if available
+    async function loadExistingExamData(iid) {
+      try {
+        const { data, error } = await sb.from(TABLE_EXAM).select('*').eq('iid', iid);
+        
+        if (!error && data && data.length > 0) {
+          const examData = data[0];
+          // Populate form with existing data
+          class2025Input.value = examData.class_2025 || '';
+          section2025Input.value = examData.section_2025 || '';
+          roll2025Input.value = examData.roll_2025 || '';
+          examNameYearInput.value = examData.exam_name_year || '';
+          
+          // Populate marks
+          document.getElementById('bangla1_cq').value = examData['*Bangla 1st Paper_CQ'] || '';
+          document.getElementById('bangla1_mcq').value = examData['*Bangla 1st Paper_MCQ'] || '';
+          document.getElementById('bangla2_cq').value = examData['*Bangla 2nd Paper_CQ'] || '';
+          document.getElementById('bangla2_mcq').value = examData['*Bangla 2nd Paper_MCQ'] || '';
+          document.getElementById('english1_cq').value = examData['*English 1st Paper_CQ'] || '';
+          document.getElementById('english2_cq').value = examData['*English 2nd Paper_CQ'] || '';
+          document.getElementById('math_cq').value = examData['*Mathematics_CQ'] || '';
+          document.getElementById('math_mcq').value = examData['*Mathematics_MCQ'] || '';
+          document.getElementById('religion_cq').value = examData['*Religion_CQ'] || '';
+          document.getElementById('religion_mcq').value = examData['*Religion_MCQ'] || '';
+          document.getElementById('science_cq').value = examData['*Science_CQ'] || '';
+          document.getElementById('science_mcq').value = examData['*Science_MCQ'] || '';
+          document.getElementById('ict_mcq').value = examData['*ICT_MCQ'] || '';
+          document.getElementById('ict_practical').value = examData['*ICT_Practical'] || '';
+          document.getElementById('bgs_cq').value = examData['*Bangladesh And Global Studies_CQ'] || '';
+          document.getElementById('bgs_mcq').value = examData['*Bangladesh And Global Studies_MCQ'] || '';
+
+          // Trigger calculations
+          document.getElementById('bangla1_cq').dispatchEvent(new Event('input'));
+          document.getElementById('bangla2_cq').dispatchEvent(new Event('input'));
+          document.getElementById('english1_cq').dispatchEvent(new Event('input'));
+          document.getElementById('english2_cq').dispatchEvent(new Event('input'));
+          document.getElementById('math_cq').dispatchEvent(new Event('input'));
+          document.getElementById('religion_cq').dispatchEvent(new Event('input'));
+          document.getElementById('science_cq').dispatchEvent(new Event('input'));
+          document.getElementById('ict_mcq').dispatchEvent(new Event('input'));
+          document.getElementById('bgs_cq').dispatchEvent(new Event('input'));
+
+          // If GPAs were stored, use them (overrides calculated values)
+          try{
+            document.getElementById('bangla1_gpa').value = examData['*Bangla 1st Paper_GPA'] || document.getElementById('bangla1_gpa').value || '';
+            document.getElementById('english1_gpa').value = examData['*English 1st Paper_GPA'] || document.getElementById('english1_gpa').value || '';
+            document.getElementById('math_gpa').value = examData['*Mathematics_GPA'] || document.getElementById('math_gpa').value || '';
+            document.getElementById('religion_gpa').value = examData['*Religion_GPA'] || document.getElementById('religion_gpa').value || '';
+            document.getElementById('science_gpa').value = examData['*Science_GPA'] || document.getElementById('science_gpa').value || '';
+            document.getElementById('ict_gpa').value = examData['*ICT_GPA'] || document.getElementById('ict_gpa').value || '';
+            document.getElementById('bgs_gpa').value = examData['*Bangladesh And Global Studies_GPA'] || document.getElementById('bgs_gpa').value || '';
+          }catch(e){}
+
+          // Recalculate overall to account for any manual/DB GPA values
+          try{ calculateOverall(); }catch(e){}
+
+          // Populate class rank and remark if present
+          try {
+            document.getElementById('class_rank').value = examData.class_rank || '';
+            document.getElementById('remark').value = examData.remark || '';
+          } catch(e){}
+
+          // Populate input user and overall stored fields if present (override calculated values when available)
+          try{
+            if(examData.input_user_name) {
+              inputUserDisplay.textContent = examData.input_user_name;
+              // also keep currentStudentData in sync
+              if(currentStudentData) currentStudentData.input_user_name = examData.input_user_name;
+            }
+            if(examData.total_mark != null) document.getElementById('totalMarkDisplay').textContent = parseFloat(examData.total_mark).toFixed(2);
+            if(examData.average_mark != null) document.getElementById('averageDisplay').textContent = parseFloat(examData.average_mark).toFixed(2);
+            if(examData.gpa_final != null && examData.gpa_final !== '') document.getElementById('gpaFinalDisplay').textContent = parseFloat(examData.gpa_final).toFixed(2);
+          }catch(e){console.error('populate overall fields failed',e);}
+
+          // Show marks entry and indicate existing data was loaded
+          try{
+            marksEntrySection.style.display = 'block';
+            proceedStatus.textContent = '✅ Existing data loaded!';
+            proceedStatus.className = 'status ok';
+          }catch(e){
+            // fallback: show the section
+            marksEntrySection.style.display = 'block';
+            proceedStatus.textContent = '✅ Existing data loaded!';
+            proceedStatus.className = 'status ok';
+          }
+        }
+      } catch (e) {
+        console.log('No existing exam data');
+      }
+    }
+
+    // Proceed to marks entry
+    proceedBtn.addEventListener('click', () => {
+      const class2025 = class2025Input.value.trim();
+      const section2025 = section2025Input.value.trim();
+      const roll2025 = roll2025Input.value.trim();
+      const examNameYear = examNameYearInput.value.trim();
+
+      if (!class2025 || !section2025 || !roll2025 || !examNameYear) {
+        proceedStatus.textContent = '❌ Please fill all fields';
+        proceedStatus.className = 'status err';
+        return;
+      }
+
+      // Proceed allowed regardless of record owner — editing permitted for any user
+      // (Owner displayed for traceability but does not block editing) 
+
+      marksEntrySection.style.display = 'block';
+      proceedStatus.textContent = '✅ Ready for marks entry!';
+      proceedStatus.className = 'status ok';
+    });
+
+    // Save Result
+    saveBtn.addEventListener('click', async () => {
+      if (!currentIID) {
+        saveStatus.textContent = '❌ Please load a student first';
+        saveStatus.className = 'status err';
+        return;
+      }
+
+      // Saving allowed for all users (owner info retained for audit)
+
+      saveStatus.textContent = '💾 Saving result...';
+      saveStatus.className = 'status';
+      saveBtn.disabled = true;
+
+      const payload = {
+        iid: currentIID,
+        class_2025: class2025Input.value.trim(),
+        section_2025: section2025Input.value.trim(),
+        roll_2025: parseFloat(roll2025Input.value) || null,
+        student_name_en: currentStudentData.student_name_en,
+        father_name_en: currentStudentData.father_name_en,
+        father_mobile: currentStudentData.father_mobile || null,
+        exam_name_year: examNameYearInput.value.trim(),
+        
+        '*Bangla 1st Paper_CQ': parseFloat(document.getElementById('bangla1_cq').value) || null,
+        '*Bangla 1st Paper_MCQ': parseFloat(document.getElementById('bangla1_mcq').value) || null,
+        '*Bangla 1st Paper_Total': parseFloat(document.getElementById('bangla1_total').textContent) || null,
+        '*Bangla 1st Paper_GPA': document.getElementById('bangla1_gpa').value || null,
+        
+        '*Bangla 2nd Paper_CQ': parseFloat(document.getElementById('bangla2_cq').value) || null,
+        '*Bangla 2nd Paper_MCQ': parseFloat(document.getElementById('bangla2_mcq').value) || null,
+        '*Bangla 2nd Paper_Total': parseFloat(document.getElementById('bangla2_total').textContent) || null,
+        
+        '*English 1st Paper_CQ': parseFloat(document.getElementById('english1_cq').value) || null,
+        '*English 1st Paper_Total': parseFloat(document.getElementById('english1_total').textContent) || null,
+        '*English 1st Paper_GPA': document.getElementById('english1_gpa').value || null,
+        
+        '*English 2nd Paper_CQ': parseFloat(document.getElementById('english2_cq').value) || null,
+        '*English 2nd Paper_Total': parseFloat(document.getElementById('english2_total').textContent) || null,
+        
+        '*Mathematics_CQ': parseFloat(document.getElementById('math_cq').value) || null,
+        '*Mathematics_MCQ': parseFloat(document.getElementById('math_mcq').value) || null,
+        '*Mathematics_Total': parseFloat(document.getElementById('math_total').textContent) || null,
+        '*Mathematics_GPA': document.getElementById('math_gpa').value || null,
+        
+        '*Religion_CQ': parseFloat(document.getElementById('religion_cq').value) || null,
+        '*Religion_MCQ': parseFloat(document.getElementById('religion_mcq').value) || null,
+        '*Religion_Total': parseFloat(document.getElementById('religion_total').textContent) || null,
+        '*Religion_GPA': document.getElementById('religion_gpa').value || null,
+        
+        '*Science_CQ': parseFloat(document.getElementById('science_cq').value) || null,
+        '*Science_MCQ': parseFloat(document.getElementById('science_mcq').value) || null,
+        '*Science_Total': parseFloat(document.getElementById('science_total').textContent) || null,
+        '*Science_GPA': document.getElementById('science_gpa').value || null,
+        
+        '*ICT_MCQ': parseFloat(document.getElementById('ict_mcq').value) || null,
+        '*ICT_Practical': parseFloat(document.getElementById('ict_practical').value) || null,
+        '*ICT_Total': parseFloat(document.getElementById('ict_total').textContent) || null,
+        '*ICT_GPA': document.getElementById('ict_gpa').value || null,
+        
+        '*Bangladesh And Global Studies_CQ': parseFloat(document.getElementById('bgs_cq').value) || null,
+        '*Bangladesh And Global Studies_MCQ': parseFloat(document.getElementById('bgs_mcq').value) || null,
+        '*Bangladesh And Global Studies_Total': parseFloat(document.getElementById('bgs_total').textContent) || null,
+        '*Bangladesh And Global Studies_GPA': document.getElementById('bgs_gpa').value || null,
+        
+        class_rank: parseFloat(document.getElementById('class_rank').value) || null,
+        remark: document.getElementById('remark').value.trim() || null,
+
+        // user who saved this entry (button_name stored as adminButton in localStorage)
+        input_user_name: (function(){ try{ return localStorage.getItem('adminButton') || null; }catch(e){ return null; } })(),
+
+        total_mark: parseFloat(document.getElementById('totalMarkDisplay').textContent) || null,
+        average_mark: parseFloat(document.getElementById('averageDisplay').textContent) || null,
+        gpa_final: document.getElementById('gpaFinalDisplay').textContent !== '-' ? parseFloat(document.getElementById('gpaFinalDisplay').textContent) : null
+      };
+
+      try {
+        const { data, error } = await sb.from(TABLE_EXAM).upsert(payload, { onConflict: 'iid' }).select();
+        
+        if (error) throw error;
+
+        saveStatus.textContent = '✅ Result saved successfully! Updated data shown above.';
+        saveStatus.className = 'status ok';
+        saveBtn.disabled = false;
+
+      } catch (e) {
+        saveStatus.textContent = '❌ Error saving: ' + e.message;
+        saveStatus.className = 'status err';
+        saveBtn.disabled = false;
+      }
+    });
+
+    // Clear form
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear all marks? Student information will be kept.')) {
+        document.querySelectorAll('input[type=number]').forEach(inp => {
+          if (inp.id !== 'iidInput' && inp.id !== 'roll2025Input') {
+            inp.value = '';
+          }
+        });
+        // also clear remark
+        try{ document.getElementById('remark').value = ''; }catch(e){}
+        // Trigger recalculation
+        document.getElementById('bangla1_cq').dispatchEvent(new Event('input'));
+        saveStatus.textContent = '🔄 Form cleared';
+        saveStatus.className = 'status';
+      }
+    });
+
+    // Initialize auto-calculations
+    setupAutoCalculations();
+
+    // Auto-load IID from URL if present (accepts 'ইইদ', 'IID' or 'iid')
+    (function autoLoadFromURL(){
+      try{
+        const params = new URLSearchParams(window.location.search);
+        const keys = ['ইইদ','IID','iid'];
+        for(const k of keys){
+          if(params.has(k)){
+            const v = params.get(k);
+            const n = Number(v);
+            if(v && !isNaN(n)){
+              iidInput.value = String(v);
+              // trigger the same load behavior as clicking the Load button
+              loadBtn.click();
+            }
+            break;
+          }
+        }
+      }catch(e){console.error('Auto load failed',e);}    
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Result - Feni Model High School</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Add security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    
+    <!-- QR Code Library -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        :root{
+            --brand: #1976D2;
+            --accent: #2e7d32;
+            --muted: #6b7280;
+            --card-bg: #ffffff;
+            --page-bg: #f6f8fa;
+            --max-width: 900px;
+            --radius: 10px;
+        }
+
+        html,body{height:100%;margin:0;padding:0;font-family:Inter, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;background:var(--page-bg);color:#111}
+        .container{max-width:var(--max-width);margin:18px auto;padding:12px}
+        .marksheet{background:linear-gradient(180deg,#fff,#fbfcfe);border-radius:var(--radius);padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.08);border:1px solid rgba(2,6,23,0.06)}
+
+        /* Header / title */
+        .school-title{font-weight:800;font-size:1.25rem;text-align:center;margin-bottom:6px}
+        .exam-title{font-weight:700;color:var(--brand);text-align:center;margin-bottom:6px;font-size:1rem}
+        .report-title{font-size:1.05rem;font-weight:700;color:var(--brand);text-align:center;margin:6px 0 12px}
+
+        /* Loading / errors */
+        .loading, .error{ text-align:center;padding:34px 16px;font-size:1.05rem}
+        .error{color:#b71c1c;background:linear-gradient(180deg, #fff0f0, #fff);border-radius:8px;padding:18px;border:1px solid #f4c2c2}
+
+        /* Buttons */
+        .actions{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-top:12px}
+        .print-btn{background:var(--brand);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:700}
+        .print-btn.secondary{background:#4caf50}
+
+        /* Verification badge (replaces QR) */
+        .verify-badge{display:inline-flex;align-items:center;gap:.7rem;padding:8px 12px;border-radius:999px;background:#e8f5e9;border:1px solid #c8e6c9;color:var(--accent);font-weight:800}
+        .verify-badge svg{flex-shrink:0}
+
+        /* Highlights */
+        .highlight-box{display:flex;gap:0.75rem;flex-wrap:wrap;justify-content:center;margin:12px 0}
+        .highlight-item{min-width:120px;padding:10px 14px;border-radius:8px;background:#fff;border:1px solid #eee;text-align:center}
+        .highlight-item small{display:block;color:var(--muted)}
+
+        /* Subject totals list: stacked rows (mobile-first). On wide screens display as two-column grid */
+        .subject-totals{display:flex;flex-direction:column;gap:.6rem;margin:10px auto;max-width:720px;padding:6px}
+        .subject-card{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:#fff;border:1px solid #e6e6e6;width:100%}
+        .subject-card .name{font-weight:700}
+        .subject-card .value{color:var(--muted);font-size:0.95rem;font-weight:700}
+        /* Wider screens: use two-column grid */
+        @media(min-width:720px){
+            .subject-totals{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;max-width:820px}
+            .subject-card{padding:12px}
+        }
+
+        /* Table styles (used rarely in summary) */
+        .table-wrapper{overflow-x:auto;border-radius:8px;margin-top:8px}
+        table{width:100%;border-collapse:collapse;background:transparent}
+        th,td{padding:8px 10px;border-bottom:1px solid #f2f2f2}
+        thead th{background:linear-gradient(135deg,var(--brand),#1565c0);color:#fff;font-weight:700}
+        tbody td:first-child{font-weight:700;color:#111}
+
+        /* QR containers (now badge containers) */
+        .qr-code-bottom, .qr-code-print{display:block;text-align:center}
+
+        /* Responsive adjustments */
+        @media (max-width: 920px){:root{--max-width:720px} .school-title{font-size:1.15rem}.report-title{font-size:1rem}}
+        @media (max-width: 640px){
+            .container{padding:10px}
+            .marksheet{padding:14px}
+            .school-title{font-size:1.05rem}
+            .exam-title{font-size:0.95rem}
+            .highlight-item{min-width:100px;padding:8px}
+            .subject-card{min-width:100px;padding:8px}
+            .print-btn{padding:10px 12px;font-size:0.95rem}
+        }
+
+        /* Print tweaks */
+        @media print{
+            body{background:#fff}
+            .container{max-width:100%;margin:0;padding:0}
+            .actions{display:none}
+            .verify-badge{box-shadow:none;border:none}
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;" onselectstart="return false;" oncopy="return false;">
+    <!-- Header image (pad.png) and dynamic title will be injected within content -->
+
+    <div class="container">
+        <div id="marksheet" class="marksheet">
+            <!-- QR code for print view only -->
+            <div class="qr-code-print" id="qrCodePrint" style="display: none;"></div>
+            
+            <div id="marksheetContent">
+                <!-- Content will be dynamically loaded here -->
+                <div class="loading">Loading student details...</div>
+            </div>
+           
+            <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.75rem;justify-content:center;">
+                <button class="print-btn" onclick="printResult()">🖨️ Print Result</button>
+                <button id="downloadPdfBtn" class="print-btn" style="background:#4caf50;" onclick="downloadPdf()">⬇️ Download PDF</button>
+                <a class="print-btn" style="background:#4caf50;" href="https://modelresult.netlify.app" target="_blank" rel="noopener">Search Result</a>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Disable developer tools
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'F12' || 
+                (e.ctrlKey && e.shiftKey && e.key === 'I') || 
+                (e.ctrlKey && e.shiftKey && e.key === 'C') || 
+                (e.ctrlKey && e.key === 'U')) {
+                e.preventDefault();
+            }
+        });
+
+        // Supabase setup
+        const supabaseUrl = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Data loading variables
+        let students = [];
+        let headers = [];
+        let SUBJECT_MAP = {};
+
+        // Build subject map from headers (match "*_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA")
+        function generateSubjectMapFromHeaders(hdrs){
+            const map = {};
+            if(!Array.isArray(hdrs)) return map;
+            const norm = s => String(s||'').replace(/\*/g,'').trim();
+
+            // Collect unique subject bases
+            const subjects = new Set();
+            hdrs.forEach(hRaw => {
+                const h = norm(hRaw);
+                const m = h.match(/^(.*?)(_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA)$/i);
+                if(m) subjects.add(m[1]);
+            });
+
+            // Build map preferring _WRITTEN when present, else _CQ
+            subjects.forEach(subject => {
+                const find = (suffixes) => hdrs.find(h => {
+                    const hh = norm(h);
+                    return suffixes.some(s => hh.endsWith(s) && hh.startsWith(subject));
+                }) || '';
+                map[subject] = {
+                    CQ: find(['_CQ','_WRITTEN']),
+                    MCQ: find(['_MCQ']),
+                    CA: find(['_CA']),
+                    Practical: find(['_Practical']),
+                    Total: find(['_Total']),
+                    GPA: find(['_GPA'])
+                };
+            });
+
+            return map;
+        }
+
+        function cleanHeaderKey(h){
+            if(!h) return '';
+                return String(h)
+                    .replace(/\*/g,'')
+                    .replace(/"/g,'')
+                    .toLowerCase()
+                    .trim()
+                    .replace(/\s+/g,'_')
+                    .replace(/[^\w_]/g,'_')
+                    .replace(/_+/g,'_')
+                    .replace(/^_|_$/g,'');
+        }
+
+        // Try multiple sanitized variants of a header to fetch a student's value
+        function getStudentValueByHeader(student, hdr){
+            if(!hdr) return '';
+            const variants = [];
+            const original = String(hdr);
+            // raw -> cleaned
+            variants.push(cleanHeaderKey(original));
+            // remove extra spaces around underscores
+            variants.push(cleanHeaderKey(original.replace(/\s*_\s*/g,'_')));
+            // collapse multiple spaces inside
+            variants.push(cleanHeaderKey(original.replace(/\s{2,}/g,' ')));
+            // hyphen as underscore
+            variants.push(cleanHeaderKey(original.replace(/\s*-\s*/g,'_')));
+            // explicit practical short alias
+            const ck = variants[0];
+            if(/_practical$/.test(ck)) variants.push(ck.replace(/_practical$/,'_prac'));
+            // unique
+            const used = new Set();
+            for(const k of variants){
+                if(!k || used.has(k)) continue; used.add(k);
+                const v = student[k];
+                if(v!=null && String(v).trim()!=='') return v;
+            }
+            return '';
+        }
+
+        // Get IID from URL parameter
+        function getIIDFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('IID');
+        }
+
+        function normalizeRow(row, rawHeaders){
+            const out = {};
+            const seen = new Set();
+            const cols = Array.isArray(rawHeaders) && rawHeaders.length ? rawHeaders : Object.keys(row||{});
+            cols.forEach(h=>{
+                const key = cleanHeaderKey(h);
+                if(!key || seen.has(key)) return;
+                seen.add(key);
+                let v;
+                if(row && Object.prototype.hasOwnProperty.call(row,h)) v = row[h];
+                else if(row && Object.prototype.hasOwnProperty.call(row, h?.toLowerCase?.())) v = row[h.toLowerCase()];
+                else if(row && Object.prototype.hasOwnProperty.call(row, h?.toUpperCase?.())) v = row[h.toUpperCase()];
+                else v = '';
+                out[key] = (v===null||v===undefined) ? '' : String(v).trim();
+            });
+            return out;
+        }
+
+        async function loadData() {
+            const targetIID = getIIDFromURL();
+
+            if (!targetIID || targetIID === 'unknown') {
+                document.getElementById('marksheetContent').innerHTML = `
+                    <div class="error">
+                        <p>No student ID specified or invalid ID.</p>
+                        <p><a href="resultlist.html">Return to student list</a></p>
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                console.log('Loading data for IID:', targetIID);
+
+                // Query Supabase for the student by IID
+                const { data, error } = await supabaseClient
+                    .from('exam_others_school')
+                    .select('*')
+                    .eq('iid', targetIID)
+                    .limit(1);
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    document.getElementById('marksheetContent').innerHTML = `
+                        <div class="error">
+                            <p>Student with IID "${targetIID}" not found.</p>
+                            <p><a href="resultlist.html">Return to student list</a></p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Set headers and normalize the single student row
+                headers = Object.keys(data[0]);
+                const student = normalizeRow(data[0], headers);
+
+                // Keep headers on the student for subject mapping that expects __headers
+                Object.defineProperty(student, '__headers', { value: headers.slice(), enumerable: false });
+
+                displayStudentDetails(student);
+                generateQRCode(student.iid);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('marksheetContent').innerHTML = `
+                    <div class="error">
+                        <p>Error loading student data. Please try again.</p>
+                        <p>Error details: ${error.message}</p>
+                        <p><a href="resultlist.html">Return to student list</a></p>
+                    </div>
+                `;
+            }
+        }
+
+    function generateSubjectMap(headers) { 
+            // First collect all subjects and their column indices
+            const subjectColumns = {};
+            
+            // List of non-subject columns to exclude
+        const excludeColumns = ['fail+gpa', 'rank', 'remark', 'mobile', 'password', 'class_2025', 'section_2025', 'sms', 'absent', 'fail count', 'gpa_final'];
+            
+            headers.forEach((header, index) => {
+                const cleanHeader = header.replace(/\*/g, '').trim();
+                
+                const match = cleanHeader.match(/^(.*?)(_CQ|_WRITTEN|_MCQ|_CA|_Practical|_Total|_GPA)$/i);
+                if (match) {
+                    const subject = match[1];
+                    const component = match[2];
+                    
+            // Skip if subject base name is too generic or in exclude list
+            if (excludeColumns.some(exclude => subject.toLowerCase().includes(exclude.toLowerCase()))) {
+                        return;
+                    }
+                    
+                    if (!subjectColumns[subject]) {
+                        subjectColumns[subject] = {};
+                    }
+                    subjectColumns[subject][component] = index;
+                }
+            });
+
+            // Check if subject has any valid data (not empty, not "-", and not just whitespace)
+            function hasValidData(subject) {
+                const indices = Object.values(subjectColumns[subject] || {});
+                if (indices.length === 0) return false;
+                
+                // Check data in all rows for this subject's columns
+                for (let student of students) {
+                    for (let index of indices) {
+                        const value = (Object.values(student)[index] || '').toString().trim();
+                        // If we find any non-empty value that's not "-", consider it valid
+                        if (value && value !== '-' && value !== '0' && value.toLowerCase() !== 'fail') {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // Only include subjects that have valid data
+            const validSubjects = Object.keys(subjectColumns).filter(hasValidData);
+            
+            validSubjects.forEach(subject => {
+                SUBJECT_MAP[subject] = {
+                    CQ: headers.find(h => /_(CQ|WRITTEN)\b/i.test(h) && h.startsWith(subject)) || '',
+                    MCQ: headers.find(h => h.includes(`${subject}_MCQ`)) || '',
+                    Practical: headers.find(h => h.includes(`${subject}_Practical`)) || '',
+                    Total: headers.find(h => h.includes(`${subject}_Total`)) || '',
+                    GPA: headers.find(h => h.includes(`${subject}_GPA`)) || ''
+                };
+            });
+        }
+
+    // Helper to determine if a result is approved (handles multiple possible representations)
+    function isResultApproved(student){
+            if(!student) return false;
+            const keys = ['result_approval','resultapproval','result_approved','approved','is_approved'];
+            for(const k of keys){
+                if(Object.prototype.hasOwnProperty.call(student,k)){
+                    const v = String(student[k]).trim().toLowerCase();
+                    if(['1','true','t','yes','y'].includes(v)) return true;
+                    if(['0','false','f','no','n'].includes(v)) return false;
+                }
+            }
+            return false; // default deny
+        }
+
+    function displayStudentDetails(student) { 
+            const container = document.getElementById('marksheetContent');
+
+            // If result is not approved, show a short not-approved message
+            if(!isResultApproved(student)){
+                const examTitle = student.exam_name_year || student.exam_name || '';
+                container.innerHTML = `
+                    <div style="text-align:center;font-weight:800;font-size:1.25em;margin-bottom:6px;">Feni Model High School</div>
+                    ${examTitle ? `<div style="text-align:center;font-weight:800;font-size:1.1em;margin-bottom:4px;">${examTitle}</div>` : ''}
+                    <div class="error">
+                        <h2>Not approved result</h2>
+                        <p>This result has not been approved by the authority and cannot be displayed.</p>
+                        <p><strong>IID:</strong> ${student.iid || 'N/A'} | <strong>Name:</strong> ${student.student_name_en || 'N/A'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Approved -> show brief summary only
+            const getFirst = (obj, keys) => {
+                for(const k of keys){
+                    const v = obj[k];
+                    if(v!=null && String(v).trim()!=='') return String(v).trim();
+                }
+                return '';
+            };
+
+            const gpa  = getFirst(student, ['gpa_final','gpa','gpa_final']);
+            const total = getFirst(student, ['total_mark','total']);
+            const avg = getFirst(student, ['average_mark','average']);
+            const rank = getFirst(student, ['class_rank','rank']);
+            const remark = getFirst(student, ['remark']);
+
+            // Build brief subject totals list (subject: total) if available
+            const subjMap = generateSubjectMapFromHeaders(student.__headers || headers, student);
+            const subjectTotals = Object.entries(subjMap).map(([subject, cols]) => {
+                const totalHdr = cols.Total;
+                const totalVal = totalHdr ? getStudentValueByHeader(student, totalHdr) : '';
+                return {
+                    subject: subject.replace(/\*/g,''),
+                    total: (totalVal && String(totalVal).trim() && totalVal!=='-') ? String(totalVal).trim() : ''
+                };
+            }).filter(s=>s.total);
+
+            const examTitle = student.exam_name_year || student.exam_name || '';
+            container.innerHTML = `
+                <div style="text-align:center;font-weight:800;font-size:1.5em;margin-bottom:6px;">Feni Model High School</div>
+                ${examTitle ? `<div style="text-align:center;font-weight:800;font-size:1.15em;margin-bottom:2px;">${examTitle}</div>` : ''}
+                <div id="padHeader" class="pad-header" style="text-align:center;display:none;">
+                    <img src="pad.png" alt="Letterhead" style="max-width:100%;height:auto;display:block;margin:0 auto 6px;" />
+                </div>
+                <p class="report-title">Result (Summary)</p>
+                <h2>${student.student_name_en}</h2>
+                <p>Roll: ${student.roll_2025 || 'N/A'} | Class: ${student.class_2025 || 'N/A'} | Section: ${student.section_2025 || 'N/A'}</p>
+                <p>IID: ${student.iid || 'N/A'} | Mobile: ${student.mobile || 'N/A'}</p>
+
+                <div class="highlight-box" style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin:12px 0;">
+                    ${gpa ? `<div class="highlight-item" style="min-width:120px;padding:10px 14px;border-radius:8px;background:#e8f5e9;border:1px solid #c8e6c9;text-align:center;"><div style="font-size:12px;color:#2e7d32;font-weight:600;">GPA</div><div style="font-size:18px;color:#1b5e20;font-weight:700;">${gpa}</div></div>` : ''}
+                    ${total ? `<div class="highlight-item" style="min-width:120px;padding:10px 14px;border-radius:8px;background:#fff8e1;border:1px solid #ffe082;text-align:center;"><div style="font-size:12px;color:#ef6c00;font-weight:600;">Total</div><div style="font-size:18px;color:#e65100;font-weight:700;">${total}</div></div>` : ''}
+                    ${avg ? `<div class="highlight-item" style="min-width:120px;padding:10px 14px;border-radius:8px;background:#f3e5f5;border:1px solid #e1bee7;text-align:center;"><div style="font-size:12px;color:#6a1b9a;font-weight:600;">Average</div><div style="font-size:18px;color:#4a148c;font-weight:700;">${avg}</div></div>` : ''}
+                    ${rank ? `<div class="highlight-item" style="min-width:120px;padding:10px 14px;border-radius:8px;background:#fce4ec;border:1px solid #f8bbd0;text-align:center;"><div style="font-size:12px;color:#c2185b;font-weight:600;">Class Rank</div><div style="font-size:18px;color:#880e4f;font-weight:700;">${rank}</div></div>` : ''}
+                    ${remark ? `<div class="highlight-item" style="min-width:160px;padding:10px 14px;border-radius:8px;background:#e3f2fd;border:1px solid #bbdefb;text-align:center;"><div style="font-size:12px;color:#1565c0;font-weight:600;">Remark</div><div style="font-size:16px;color:#0d47a1;font-weight:700;">${remark}</div></div>` : ''}
+                </div>
+
+                ${subjectTotals.length ? `
+                    <div style="max-width:640px;margin:16px auto;">
+                        <h4 style="text-align:center;margin-bottom:8px;">Subject Totals</h4>
+                        <div class="subject-totals" aria-label="Subject totals" role="list">
+                            ${subjectTotals.map(s=>`<div class="subject-card" role="listitem"><div class="name">${s.subject}</div><div class="value">${s.total}</div></div>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div style="display:flex;justify-content:center;margin-top:14px;">
+                    <div class="qr-code-bottom" id="qrCodeBottom" style="text-align:center;"></div>
+                </div>
+            `;
+        }
+
+        function goBack() {
+            window.location.href = 'resultlist.html';
+        }
+        
+        function printResult() {
+            // Temporarily show pad header then print; keep buttons hidden after as previous behavior
+            const pad = document.getElementById('padHeader');
+            if(pad) pad.style.display='block';
+            const actionBtns = document.querySelectorAll('.print-btn, .back-btn');
+            actionBtns.forEach(b=>{ b.style.display='none'; });
+            window.print();
+            // After print dialog (cannot detect close reliably) leave pad visible in print output only; hide again on screen
+            setTimeout(()=>{ if(pad) pad.style.display='none'; },800);
+        }
+
+        // Show verification badge (no QR code)
+        function generateQRCode(studentIID = null) {
+            try {
+                const currentIID = studentIID || getIIDFromURL();
+                if(!currentIID) return;
+
+                // Build a small verification badge (used both on screen and print)
+                const badgeHtml = `
+                    <div class="verify-badge" style="display:inline-flex;align-items:center;gap:.6rem;padding:8px 12px;border-radius:8px;background:#e8f5e9;border:1px solid #c8e6c9;color:#1b5e20;font-weight:700;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10" fill="#2e7d32"></circle>
+                            <path d="M16 9l-4.5 6L8 12.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                        <div style="display:flex;flex-direction:column;line-height:1;">
+                            <span style="font-size:14px;font-weight:800;">Result Verifies</span>
+                            <small style="font-size:11px;color:rgba(0,0,0,0.6);font-weight:600;">IID: ${currentIID}</small>
+                        </div>
+                    </div>
+                `;
+
+                const bottomQRContainer = document.getElementById('qrCodeBottom');
+                const printQRContainer = document.getElementById('qrCodePrint');
+
+                if (bottomQRContainer) {
+                    bottomQRContainer.innerHTML = badgeHtml;
+                }
+                if (printQRContainer) {
+                    // keep print container synchronized (may be hidden on screen)
+                    printQRContainer.innerHTML = badgeHtml;
+                }
+
+            } catch (error) {
+                console.error('Verification badge rendering failed:', error);
+            }
+        }
+        
+        // Initialize
+        loadData();
+
+        // PDF libs (lazy injected if not already)
+        function ensurePdfLibs(){
+            return new Promise((resolve,reject)=>{
+                if(window.jspdf && window.html2canvas){ resolve(); return; }
+                let need=0,done=0,failed=false;
+                function ok(){ if(failed) return; done++; if(done===need) resolve(); }
+                function add(src){ need++; const s=document.createElement('script'); s.src=src; s.onload=ok; s.onerror=()=>{failed=true; reject(new Error('Failed to load '+src));}; document.head.appendChild(s); }
+                add('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js');
+                add('https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js');
+                add('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+                add('https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js');
+            });
+        }
+
+        async function downloadPdf(){
+            const btn=document.getElementById('downloadPdfBtn');
+            // Hide buttons (so they won't appear in PDF) and keep hidden after
+            const actionBtns = document.querySelectorAll('.print-btn, .back-btn');
+            actionBtns.forEach(b=>{ b.style.display='none'; });
+            // Show pad temporarily for capture
+            const pad = document.getElementById('padHeader');
+            const prevDisplay = pad ? pad.style.display : null;
+            if(pad) pad.style.display='block';
+            if(btn){ btn.disabled=true; }
+            try{
+                await ensurePdfLibs();
+                const target=document.getElementById('marksheet');
+                const prevScroll=window.scrollY;
+                window.scrollTo(0,0);
+                await new Promise(r=>setTimeout(r,40));
+                // Capture high-res snapshot
+                const canvas=await html2canvas(target,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+                const { jsPDF } = window.jspdf;
+                const pdf=new jsPDF('p','mm','a4');
+                const pageWidth=210, pageHeight=297, margin=10; // mm
+                const availW = pageWidth - margin*2;
+                const availH = pageHeight - margin*2;
+                // Original image size in px
+                const imgWpx = canvas.width;
+                const imgHpx = canvas.height;
+                // Convert px ratio to mm using width fit then scale
+                let scaledW = availW;
+                let scaledH = imgHpx * (scaledW / imgWpx);
+                if(scaledH > availH){
+                    const scale = availH / scaledH; // shrink further to fit height
+                    scaledH = availH;
+                    scaledW = scaledW * scale;
+                }
+                // Top align (no vertical centering) per requirement: pad.png stays at very top
+                const posX = margin + (availW - scaledW)/2; // still horizontally center
+                const posY = margin; // start right below top margin
+                // Load and place pad.png as background (full page)
+                // (Removed full-page background; pad.png now inline at top)
+                const imgData = canvas.toDataURL('image/jpeg',0.92);
+                pdf.addImage(imgData,'JPEG',posX,posY,scaledW,scaledH,'','FAST');
+                const fileName = 'Result_'+ (document.querySelector('#marksheetContent h2')?.textContent||'student') + '.pdf';
+                pdf.save(fileName.replace(/\s+/g,'_'));
+                window.scrollTo(0,prevScroll);
+            }catch(err){
+                alert('PDF তৈরি ব্যর্থ: '+err.message);
+                console.error(err);
+            }finally{
+                if(btn){ btn.disabled=false; }
+                // Hide pad again after capture
+                if(pad) pad.style.display= prevDisplay || 'none';
+            }
+        }
+    </script>
+</body>
+</html>
