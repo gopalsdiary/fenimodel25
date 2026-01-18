@@ -102,7 +102,11 @@
   <div class="container">
   <div class="toolbar">
     <div class="filters left" style="align-items:center">
-      <span class="muted">Showing all students</span>
+      <label for="inputUserFilter" class="muted" style="margin-right:8px">Input User:</label>
+      <select id="inputUserFilter" style="padding:8px;border-radius:4px;border:1px solid var(--border);background:#fff">
+        <option value="">All Users</option>
+      </select>
+      <span class="muted" style="margin-left:12px">Showing all students</span>
     </div>
     <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
       <button id="refreshBtn">Refresh</button>
@@ -122,6 +126,7 @@
         <th>Name</th>
         <th>Father Name</th>
         <th>Father Mobile</th>
+        <th>Input User</th>
         <th>Photo</th>
         <th>বর্তমান Session</th>
         <th>Status</th>
@@ -130,7 +135,7 @@
       </tr>
     </thead>
     <tbody>
-      <tr><td colspan="13">Loading...</td></tr>
+      <tr><td colspan="14">Loading...</td></tr>
     </tbody>
   </table>
   </div>
@@ -187,6 +192,20 @@
   const classFilter = document.getElementById('classFilter');
   const sectionFilter = document.getElementById('sectionFilter');
   const clearFilters = document.getElementById('clearFilters');
+  const inputUserFilter = document.getElementById('inputUserFilter');
+
+  if(classFilter) classFilter.addEventListener('change', () => { onClassChange(); });
+  if(sectionFilter) sectionFilter.addEventListener('change', () => { if(classFilter && classFilter.value){ loadDataForClass(classFilter.value); return; } applyFilters(); });
+  if(inputUserFilter) inputUserFilter.addEventListener('change', () => { if(classFilter && classFilter.value){ loadDataForClass(classFilter.value); return; } applyFilters(); });
+  if(clearFilters){
+    clearFilters.addEventListener('click', ()=>{
+      classFilter.value='';
+      sectionFilter.value='';
+      allRowsCache = [];
+      tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
+      statusEl.textContent = 'Pick class and section';
+    });
+  }
 
   // Stable centered photo preview (no flicker)
   let previewTimeout;
@@ -280,7 +299,7 @@
 
   function buildSelectCols(){
     // Base columns always safe
-    const base = ['iid','student_name_en','father_name_en','father_mobile','student_photo_url','status','session','fulldata_ok'];
+    const base = ['iid','student_name_en','father_name_en','father_mobile','input_user_name','student_photo_url','status','session','fulldata_ok'];
     const sessions = ['2024','2025','2026','2027'];
     sessions.forEach(s=>{
       if(existingSessionCols.classes.has('class_'+s)) base.push('class_'+s);
@@ -398,6 +417,7 @@
         const selectCols = buildSelectCols();
         let q = supabaseClient.from(tableName).select(selectCols).eq(classKey, classValue);
         if(sectionFilter && sectionFilter.value) q = q.eq(sectionKey, sectionFilter.value);
+        if(inputUserFilter && inputUserFilter.value){ const iu = String(inputUserFilter.value).trim(); if(iu) q = q.ilike('input_user_name', iu); }
         q = q.order(rollKey, { ascending: true }).limit(10000);
         const { data, error } = await q;
         if(error){
@@ -558,8 +578,7 @@
     allRowsCache = allData.sort((a,b)=> (Number(a[rk])||0) - (Number(b[rk])||0));
   } else {
     allRowsCache = allData.sort((a,b)=> Number(a.iid || 0) - Number(b.iid || 0));
-  }
-        populateFilterOptions(allRowsCache);
+  }        populateInputUserOptions(allRowsCache);        populateFilterOptions(allRowsCache);
         renderTable(allRowsCache);
         statusEl.textContent = `Total: ${allRowsCache.length} records (ALL)`;
       }catch(err){
@@ -595,9 +614,37 @@
       sectionFilter.onchange = () => { if(classFilter.value) applyFilters(); };
     }
 
+    // Populate Input User select from rows (unique input_user_name)
+    async function populateInputUserOptions(rows){
+      if(!inputUserFilter) return;
+      const set = new Set();
+      (rows||[]).forEach(r => {
+        const u = (r && (r.input_user_name || r.input_user || r.input_user_name_en)) ? String(r.input_user_name || r.input_user || r.input_user_name_en).trim() : '';
+        if(u) set.add(u);
+      });
+
+      // If none found in rows, try DB fallback
+      if(set.size === 0 && typeof supabaseClient !== 'undefined' && supabaseClient){
+        try{
+          const { data, error } = await supabaseClient.from(tableName).select('input_user_name').not('input_user_name','is',null).limit(20000);
+          if(!error && data){ data.forEach(r=>{ const u = (r && r.input_user_name)? String(r.input_user_name).trim():''; if(u) set.add(u); }); }
+        }catch(e){ /* ignore fallback errors */ }
+      }
+
+      // Build options using DOM API so option.value remains the exact original string
+      inputUserFilter.innerHTML = '';
+      const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'All Users'; inputUserFilter.appendChild(optAll);
+      const list = Array.from(set).sort((a,b)=> a.localeCompare(b));
+      const prev = inputUserFilter.value;
+      list.forEach(u => { const opt = document.createElement('option'); opt.value = u; opt.textContent = u; inputUserFilter.appendChild(opt); });
+      // restore previous selection if still present
+      try{ if(prev && Array.from(list).includes(prev)) inputUserFilter.value = prev; }catch(e){}
+    }
+
     function applyFilters(){
-  const c = classFilter.value;
-  const s = sectionFilter.value;
+  const c = classFilter ? classFilter.value : '';
+  const s = sectionFilter ? sectionFilter.value : '';
+  const u = inputUserFilter ? inputUserFilter.value : '';
   const { classKey, sectionKey, rollKey, available: availFilter } = getActiveKeys();
   function recordHasFieldValue(rec, prefix, value){
     if(!rec) return false;
@@ -616,6 +663,8 @@
     if(availFilter && sectionKey) filtered = filtered.filter(r => String(r[sectionKey]) === s);
     else filtered = filtered.filter(r => recordHasFieldValue(r, 'section', s));
   }
+  // Filter by input user if selected (trim + case-insensitive)
+  if(u){ const uNorm = String(u).trim().toLowerCase(); filtered = filtered.filter(r => { const v = String((r && (r.input_user_name || r.input_user || '')) || '').trim().toLowerCase(); return v === uNorm; }); }
   // If session-specific keys are available, try to remove rows with none of those values
   if(availFilter && (classKey || sectionKey || rollKey)){
     filtered = filtered.filter(r => r && (r[classKey] || r[sectionKey] || r[rollKey]));
@@ -629,7 +678,7 @@
 
     function renderTable(rows){
     if(!rows || rows.length === 0){
-  tbody.innerHTML = '<tr><td colspan="13">No records found</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="14">No records found</td></tr>';
         return;
       }
       tbody.innerHTML = '';
@@ -681,6 +730,10 @@
   const tdFatherMobile = document.createElement('td');
   const fm = getField(r, ['father_mobile','father_mobile_en','father_mobile_bn','father_mobile ']);
   tdFatherMobile.textContent = escapeHtml(fm || '');
+
+  const tdInputUser = document.createElement('td');
+  const iu = getField(r, ['input_user_name','input_user','input_user_name_en']);
+  tdInputUser.textContent = escapeHtml(iu || '');
 
   const tdPhoto = document.createElement('td');
         const src = getThumbnailSrc(r, iid);
@@ -737,6 +790,7 @@
   tr.appendChild(tdName);
   tr.appendChild(tdFatherName);
   tr.appendChild(tdFatherMobile);
+  tr.appendChild(tdInputUser);
   tr.appendChild(tdPhoto);
   tr.appendChild(tdSession);
   tr.appendChild(tdStatus);
@@ -942,7 +996,7 @@
     viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
 
   // initial load: show all data for 2025 by default
-  tbody.innerHTML = '<tr><td colspan="13">Loading all records for 2025... (this may take a moment)</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="14">Loading all records for 2025... (this may take a moment)</td></tr>';
   (async ()=>{ const si = document.getElementById('sessionInfo'); try{ await discoverSessionColumns(); const active = getActiveKeys(); if(si){ if(active && active.session){ si.textContent = `Using session: ${active.session}`; } else { si.textContent = 'No session-specific columns found — using fallback (ordering by IID)'; } } }catch(e){ console.error('Discovery/init error', e); if(si) si.textContent = 'Discovery failed — loading all data (see console)'; } finally { await loadData(); } })();
   </script>
   

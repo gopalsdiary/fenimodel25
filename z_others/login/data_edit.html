@@ -99,20 +99,9 @@
 	<div id="printHeader" style="display:none; text-align:center; font-weight:700; font-size:14px; margin-bottom:6px"></div>
 	<!-- print footer placeholder will be inserted at end of body for reliable positioning -->
 	<div class="toolbar">
-		<label for="sessionFilter">Session:</label>
-		<select id="sessionFilter">
-			<option value="">Select Session</option>
-			<option value="2024">2024</option>
-			<option value="2025">2025</option>
-			<option value="2026">2026</option>
-		</select>
-		<label for="classFilter">Class:</label>
-		<select id="classFilter" disabled>
-			<option value="">Select Class</option>
-		</select>
-		<label for="sectionFilter">Section:</label>
-		<select id="sectionFilter" disabled>
-			<option value="">All Sections</option>
+		<label for="inputUserFilter">Input User:</label>
+		<select id="inputUserFilter">
+			<option value="">All Users</option>
 		</select>
 		<span id="status" class="status"></span>
 		<div id="columnControls" class="column-controls"></div>
@@ -144,7 +133,10 @@
 				s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 				s.onload = () => { 
 					window.__supabaseClients = window.__supabaseClients || {};
-					window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); 
+					// Use a global cache to avoid creating multiple GoTrueClient instances
+				window.__supabaseClients = window.__supabaseClients || {};
+				window.__supabaseClients[SUPABASE_URL] = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+				window.supabaseClient = window.__supabaseClients[SUPABASE_URL]; 
 					window.__supabaseClients[SUPABASE_URL] = window.supabaseClient;
 					supabaseClient = window.supabaseClient;
 				};
@@ -484,12 +476,8 @@
 		selectedColumns = loadSelectedColumns();
 
 		/* ===================== NEW FILTER RENDER FLOW (Class -> Section, Session=2025) ===================== */
-		let selectedSession = '';
-		let selectedClass = '';
-		let selectedSection = '';
-		const sessionFilterEl = document.getElementById('sessionFilter');
-		const classFilterEl = document.getElementById('classFilter');
-		const sectionFilterEl = document.getElementById('sectionFilter');
+let selectedInputUser = '';
+	const inputUserFilterEl = document.getElementById('inputUserFilter');
 
 		function getActiveFields(row){
 			const sNum = Number(row.session);
@@ -591,19 +579,27 @@
 			}
 		}
 
-		// Allow selecting session; update classes on change
-		sessionFilterEl.addEventListener('change', async ()=>{
-			selectedSession = sessionFilterEl.value; console.debug('session changed (edit) ->', selectedSession, 'liteRows:', liteRows ? liteRows.length : 0);
-			selectedClass=''; selectedSection='';
+		// Session/Class/Section filtering was replaced by Input User filtering.
+		// If you need to restore session/class/section controls, re-add the selects and call the original functions.
+		// No-op placeholder kept for backward compatibility.
+		// input user filter handler
+		inputUserFilterEl.addEventListener('change', async ()=>{
+			selectedInputUser = (inputUserFilterEl.value || '').toString().trim();
 			container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[];
-			await buildClassOptions();
-			statusEl.textContent = selectedSession? 'Select Class' : 'Select Session';
+			statusEl.textContent = 'Loading...';
+			try{
+				const all = await fetchGroupFull('__ALL__');
+				if(selectedInputUser){
+					latestFilteredRows = (all||[]).filter(r => (r.input_user_name||'').toString().trim() === selectedInputUser);
+				} else {
+					latestFilteredRows = all || [];
+				}
+				currentGroupRows = latestFilteredRows;
+				// rebuild controls and render
+				buildColumnControls(computeAvailableColumns());
+				reRenderTable();
+			}catch(e){ console.error('Input user filter failed', e); statusEl.textContent='Filter failed'; }
 		});
-		classFilterEl.addEventListener('change', async ()=>{
-			selectedClass = classFilterEl.value; selectedSection=''; container.innerHTML=''; currentGroupRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
-			if(selectedClass){ await loadGroupData(); } else { statusEl.textContent='Select Class'; }
-		});
-		sectionFilterEl.addEventListener('change', ()=>{ selectedSection = sectionFilterEl.value; applySectionFilter(); });
 
 		/* ===================== LEGACY RENDER FUNCTION (unused now) LEFT FOR REFERENCE ===================== */
 		async function render(groups){
@@ -615,13 +611,35 @@
 
 		// legacy loadLite/loadGroup removed in favor of new flow
 
+		// Build Input User options from liteRows
+		async function buildInputUserOptions(){
+			if(!inputUserFilterEl) return;
+			const set = new Set();
+			for(const r of (liteRows||[])){
+				const u = (r.input_user_name||'').toString().trim(); if(u) set.add(u);
+			}
+			// If none found in liteRows, try DB fallback
+			if(set.size === 0 && typeof supabaseClient !== 'undefined' && supabaseClient){
+				try{
+					statusEl.textContent = 'Loading users...';
+					const { data, error } = await supabaseClient.from('student_database_others').select('input_user_name').not('input_user_name','is',null).limit(20000);
+					if(!error && data && data.length){
+						for(const r of data){ const u = (r.input_user_name||'').toString().trim(); if(u) set.add(u); }
+					}
+				}catch(e){ console.warn('buildInputUserOptions DB fallback failed', e); }
+			}
+			const arr = Array.from(set).sort((a,b)=> a.localeCompare(b));
+			inputUserFilterEl.innerHTML = '<option value="">All Users</option>' + arr.map(u=>`<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+			statusEl.textContent = arr.length ? `Loaded ${arr.length} users` : 'No users found';
+		}
+
 		// Init: lite first
 		(async function init(){
 			await waitForSupabase();
 			await loadColumnOrder();
 			liteRows = await fetchLite();
-			buildSessionOptions();
-			statusEl.textContent='Select Session';
+			buildInputUserOptions();
+			statusEl.textContent='Select Input User';
 		})();
 	</script>
 </body>

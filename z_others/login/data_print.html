@@ -3,9 +3,7 @@
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	    <script src="/login/auth-check_copy.js"></script>
-
-	<link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet">
+	<script src="/login/auth-check_copy.js"></script>
 	<title>All Students List - Dynamic Columns</title>
 	<style>
 		html{font-size:85%}
@@ -122,24 +120,11 @@
 	<div id="printHeader" style="display:none; text-align:center; font-weight:700; font-size:14px; margin-bottom:6px"></div>
 	<!-- print footer placeholder will be inserted at end of body for reliable positioning -->
 	<div class="toolbar">
-		<label for="sessionFilter">Session:</label>
-		<select id="sessionFilter">
-			<option value="">Select Session</option>
-			<option value="2024">2024</option>
-			<option value="2025">2025</option>
-			<option value="2026">2026</option>
-		</select>
-		<label for="classFilter">Class:</label>
-		<select id="classFilter" disabled>
-			<option value="">Select Class</option>
-		</select>
-		<label for="sectionFilter">Section:</label>
-		<select id="sectionFilter" disabled>
-			<option value="">All Sections</option>
+		<label for="inputUserFilter">Input User:</label>
+		<select id="inputUserFilter">
+			<option value="">All Users</option>
 		</select>
 		<span id="status" class="status"></span>
-		<!-- Debug: shows computed classes and fallback status -->
-		<div id="debugClasses" style="font-size:12px;color:#334155;margin-left:8px;white-space:pre-wrap;"></div>
 		<div id="columnControls" class="column-controls"></div>
 	</div>
 
@@ -148,7 +133,6 @@
 	<div id="container" class="container">
 		<!-- groups will be rendered here -->
 	</div>
-  <script src="./auth-check_copy.js"></script>
 	<script>
 		// Direct Supabase data source (localStorage cache removed)
 		const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
@@ -190,8 +174,8 @@
 							// Proceed to column order + lite data
 							await loadColumnOrder();
 							liteRows = await fetchLite();
-							buildSessionOptions();
-							statusEl.textContent='Select Session';
+							await buildInputUserOptions();
+							statusEl.textContent='Select Input User';
 							return;
 						}
 					}catch(err){ console.warn('Session poll error', err); }
@@ -228,7 +212,7 @@
 	            .select('session,roll_2024,class_2024,section_2024,roll_2025,class_2025,section_2025,roll_2026,class_2026,section_2026')
 	            .limit(20000);
 	        if(error) throw error;
-	        statusEl.textContent='Select Session';
+	        statusEl.textContent='Select Input User';
 	        return data||[];
 	    } catch(err){ console.error('fetchLite error', err); statusEl.textContent='Lite load error'; return []; }
 	}
@@ -374,9 +358,9 @@
 				const lines = [];
 				lines.push(headers.map(escapeCSV).join(','));
 				latestFilteredRows.forEach((row, idx)=>{
-			const classField = `class_${selectedSession}`;
-			const sectionField = `section_${selectedSession}`;
-			const rollField = `roll_${selectedSession}`;
+				const classField = pickField(row, 'class');
+				const sectionField = pickField(row, 'section');
+				const rollField = pickField(row, 'roll');
 			const active_class = row[classField] ?? '';
 			const active_section = row[sectionField] ?? '';
 			const active_roll = row[rollField] ?? '';
@@ -399,9 +383,9 @@
 					// Build minimal HTML table which Excel can open
 					let html = '<table><thead><tr>' + headers.map(h=>'<th>'+String(h).replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</th>').join('') + '</tr></thead><tbody>';
 					latestFilteredRows.forEach((row, idx)=>{
-				const classField = `class_${selectedSession}`;
-				const sectionField = `section_${selectedSession}`;
-				const rollField = `roll_${selectedSession}`;
+				const classField = pickField(row, 'class');
+				const sectionField = pickField(row, 'section');
+				const rollField = pickField(row, 'roll');
 				const active_class = row[classField] ?? '';
 				const active_section = row[sectionField] ?? '';
 				const active_roll = row[rollField] ?? '';
@@ -455,9 +439,9 @@
 				sltd.textContent=(idx+1); 
 				tr.appendChild(sltd);
 				
-				const classField = `class_${selectedSession}`;
-				const sectionField = `section_${selectedSession}`;
-				const rollField = `roll_${selectedSession}`;
+const classField = pickField(row, 'class');
+			const sectionField = pickField(row, 'section');
+			const rollField = pickField(row, 'roll');
 				const active_class = row[classField] ?? '';
 				const active_section = row[sectionField] ?? '';
 				const active_roll = row[rollField] ?? '';
@@ -524,18 +508,44 @@
 
 		selectedColumns = loadSelectedColumns();
 		let liteRows = [];
-		let selectedSession = '';
-		let selectedClass = '';
-		let selectedSection = '';
-		const sessionFilterEl = document.getElementById('sessionFilter');
-		const classFilterEl = document.getElementById('classFilter');
-		const sectionFilterEl = document.getElementById('sectionFilter');
+	let selectedSession = '';
+	let selectedClass = '';
+	let selectedSection = '';
+	let selectedInputUser = '';
+	const inputUserFilterEl = document.getElementById('inputUserFilter');
+	allRows = []; // current loaded full rows based on selection
 
-		function buildSessionOptions(){
-			// Provide fixed session options for selection
-			sessionFilterEl.innerHTML = '<option value="">Select Session</option>\n\t\t\t<option value="2024">2024</option>\n\t\t\t<option value="2025">2025</option>\n\t\t\t<option value="2026">2026</option>';
-			classFilterEl.innerHTML = '<option value="">Select Class</option>'; classFilterEl.disabled=true;
-			sectionFilterEl.innerHTML = '<option value="">All Sections</option>'; sectionFilterEl.disabled=true;
+		// Helper: pick best matching field for a base name (class/section/roll) for a row
+		function pickField(row, base){
+			if(!row) return base;
+			// Prefer explicit sessioned field if selected
+			if(selectedSession){ const f = `${base}_${selectedSession}`; if(Object.prototype.hasOwnProperty.call(row, f)) return f; }
+			// Prefer the simple base field if present
+			if(Object.prototype.hasOwnProperty.call(row, base)) return base;
+			// Fall back to any key that starts with base_
+			for(const k of Object.keys(row)){
+				if(k.toLowerCase().startsWith(base + '_')) return k;
+			}
+			return base;
+		}
+
+		async function buildInputUserOptions(){
+			if(!inputUserFilterEl) return;
+			const set = new Set();
+			for(const r of (liteRows||[])){
+				const u = (r.input_user_name||'').toString().trim(); if(u) set.add(u);
+			}
+			// DB fallback if none found in liteRows
+			if(set.size === 0 && typeof supabaseClient !== 'undefined' && supabaseClient){
+				try{
+					statusEl.textContent = 'Loading users...';
+					const { data, error } = await supabaseClient.from('student_database_others').select('input_user_name').not('input_user_name','is',null).limit(20000);
+					if(!error && data) data.forEach(r=>{ const u=(r.input_user_name||'').toString().trim(); if(u) set.add(u); });
+				}catch(e){ console.warn('buildInputUserOptions DB fallback failed', e); }
+			}
+			const arr = Array.from(set).sort((a,b)=> a.localeCompare(b));
+			inputUserFilterEl.innerHTML = '<option value="">All Users</option>' + arr.map(u=>`<option value="${escapeHtml(u)}">${escapeHtml(u)}</option>`).join('');
+			statusEl.textContent = arr.length ? `Loaded ${arr.length} users` : 'No users found';
 		}
 
 		async function buildClassOptions(){
@@ -639,10 +649,27 @@
 		    buildSectionOptions();
 		    applySectionFilter();
 		}
-		// Allow selecting session; update class list on change
-		sessionFilterEl.addEventListener('change', async ()=>{ selectedSession=sessionFilterEl.value; console.debug('session changed ->', selectedSession, 'liteRows:', liteRows ? liteRows.length : 0); selectedClass=''; selectedSection=''; allRows=[]; latestFilteredRows=[]; await buildClassOptions(); container.innerHTML=''; statusEl.textContent= selectedSession? 'Select Class':'Select Session'; });
-		classFilterEl.addEventListener('change', async ()=>{ selectedClass=classFilterEl.value; selectedSection=''; allRows=[]; latestFilteredRows=[]; sectionFilterEl.innerHTML='<option value="">All Sections</option>'; sectionFilterEl.disabled=true; container.innerHTML=''; if(selectedClass){ await loadGroupData(); } else statusEl.textContent='Select Class'; });
-		sectionFilterEl.addEventListener('change', ()=>{ selectedSection=sectionFilterEl.value; applySectionFilter(); });
+		// Input User change handler: load rows for selected input_user_name (or all if empty)
+		inputUserFilterEl.addEventListener('change', async ()=>{
+			selectedInputUser = (inputUserFilterEl.value || '').toString().trim();
+			statusEl.textContent = 'Loading...';
+			try{
+				let data;
+				if(!selectedInputUser){
+					const { data: all, error } = await supabaseClient.from('student_database_others').select('*').limit(20000);
+					if(error) throw error; data = all || [];
+				} else {
+					const { data: rows, error } = await supabaseClient.from('student_database_others').select('*').eq('input_user_name', selectedInputUser).limit(20000);
+					if(error) throw error; data = rows || [];
+				}
+				allRows = (data||[]).filter(r=> !String(r.status||'').toUpperCase().includes('TC'));
+				latestFilteredRows = allRows.slice();
+				const availableColumns = computeAvailableColumns();
+				buildColumnControls(availableColumns);
+				reRenderTable();
+				statusEl.textContent = `Loaded ${latestFilteredRows.length} rows (User: ${selectedInputUser || 'All'})`;
+			}catch(e){ console.error('Input user load failed', e); statusEl.textContent='Load error'; }
+		});
 
 		// Old initNew replaced by waitForSessionAndInit() above
 	</script>

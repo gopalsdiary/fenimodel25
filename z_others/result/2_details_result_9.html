@@ -420,7 +420,7 @@
 
                 // Query Supabase for the student by IID
                 const { data, error } = await supabaseClient
-                    .from('exam_others_school')
+                    .from('exam_9_10_other_school')
                     .select('*')
                     .eq('iid', targetIID)
                     .limit(1);

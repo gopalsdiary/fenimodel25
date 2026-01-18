@@ -450,8 +450,10 @@
   <script>
     const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+    // Use a global cache to avoid creating multiple GoTrueClient instances in the same browser context
+    window.__supabaseClients = window.__supabaseClients || {};
+    window.__supabaseClients[SUPABASE_URL] = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const sb = window.__supabaseClients[SUPABASE_URL];
     // Require login: if no admin session, redirect to login page
     try{
       if(!localStorage.getItem('adminButton')){
@@ -461,7 +463,7 @@
     }catch(e){}
 
     const TABLE_STUDENT = 'student_database_others';
-    const TABLE_EXAM = 'exam_others_school';
+    const TABLE_EXAM = 'exam_9_10_other_school';
 
     // DOM Elements
     const iidInput = document.getElementById('iidInput');

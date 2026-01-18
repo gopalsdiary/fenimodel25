@@ -222,9 +222,10 @@
     <!-- Step 3: Marks Entry (Hidden initially) -->
     <div id="marksEntrySection" class="card-section" style="background:#f0fff4; display:none;">
       <h3 style="margin:0 0 12px 0; font-size:16px;">Step 3: Enter Subject Marks</h3>
+      <p style="margin:6px 0 0 0; font-size:13px; color:#555;">নোট: প্রতিটি বিষয়ের <strong>Total</strong> স্বয়ংক্রিয়ভাবে গণনা করা হবে এবং সম্পাদনা করা যাবে না; বাকি সব বক্স সম্পাদনাযোগ্য।</p>
       
       <div id="subjectGrid" class="subject-grid">
-        <!-- Subject cards will be rendered dynamically from SUBJECTS array -->
+        <!-- Subject cards are rendered dynamically by JavaScript from the SUBJECTS array -->
       </div>
 
       <div style="margin-top:24px; padding:16px; background:#f8fafc; border-radius:6px;">
@@ -292,7 +293,7 @@
     }catch(e){}
 
     const TABLE_STUDENT = 'student_database_others';
-    const TABLE_EXAM = 'exam_others_school';
+    const TABLE_EXAM = 'exam_9_10_other_school';
 
     // DOM Elements
     const iidInput = document.getElementById('iidInput');
@@ -348,7 +349,18 @@
       { id: 'religion', db: '*Religion', label: 'Religion', parts: ['CQ','MCQ'], gpa: true },
       { id: 'science', db: '*Science', label: 'Science', parts: ['CQ','MCQ'], gpa: true },
       { id: 'ict', db: '*ICT', label: 'ICT', parts: ['MCQ','Practical'], gpa: true },
-      { id: 'bgs', db: '*Bangladesh And Global Studies', label: 'Bangladesh And Global Studies', parts: ['CQ','MCQ'], gpa: true }
+      { id: 'bgs', db: '*Bangladesh And Global Studies', label: 'Bangladesh And Global Studies', parts: ['CQ','MCQ'], gpa: true },
+      { id: 'history', db: '*History', label: 'History', parts: ['CQ','MCQ'], gpa: true },
+      { id: 'geography', db: '*Geography', label: 'Geography', parts: ['CQ','MCQ'], gpa: true },
+      { id: 'civics', db: '*Civics', label: 'Civics', parts: ['CQ','MCQ'], gpa: true },
+      { id: 'agriculture', db: '*Agriculture', label: 'Agriculture', parts: ['CQ','MCQ','Practical'], gpa: true },
+      { id: 'physics', db: '*Physics', label: 'Physics', parts: ['CQ','MCQ','Practical'], gpa: true },
+      { id: 'chemistry', db: '*Chemistry', label: 'Chemistry', parts: ['CQ','MCQ','Practical'], gpa: true },
+      { id: 'biology', db: '*Biology', label: 'Biology', parts: ['CQ','MCQ','Practical'], gpa: true },
+      { id: 'higher_math', db: '*Higher Mathematics', label: 'Higher Mathematics', parts: ['CQ','MCQ','Practical'], gpa: true },
+      { id: 'accounting', db: '*Accounting', label: 'Accounting', parts: ['CQ','MCQ'], gpa: true },
+      { id: 'finance', db: '*Finance And Banking', label: 'Finance And Banking', parts: ['CQ','MCQ'], gpa: true },
+      { id: 'business', db: '*Business Entrepreneurship', label: 'Business Entrepreneurship', parts: ['CQ','MCQ'], gpa: true }
     ];
 
     function renderSubjectGrid() {
@@ -438,42 +450,35 @@
 
     // Calculate overall marks and GPA
     function calculateOverall() {
-      const bangla1Total = parseFloat(document.getElementById('bangla1_total').textContent) || 0;
-      const bangla2Total = parseFloat(document.getElementById('bangla2_total').textContent) || 0;
-      const english1Total = parseFloat(document.getElementById('english1_total').textContent) || 0;
-      const english2Total = parseFloat(document.getElementById('english2_total').textContent) || 0;
-      const mathTotal = parseFloat(document.getElementById('math_total').textContent) || 0;
-      const religionTotal = parseFloat(document.getElementById('religion_total').textContent) || 0;
-      const scienceTotal = parseFloat(document.getElementById('science_total').textContent) || 0;
-      const ictTotal = parseFloat(document.getElementById('ict_total').textContent) || 0;
-      const bgsTotal = parseFloat(document.getElementById('bgs_total').textContent) || 0;
+      const subjectTotals = [
+        'bangla1_total','bangla2_total','english1_total','english2_total','math_total','religion_total','science_total','ict_total','bgs_total',
+        'history_total','geography_total','civics_total','agriculture_total','physics_total','chemistry_total','biology_total','higher_math_total',
+        'accounting_total','finance_total','business_total'
+      ];
 
-      const totalMark = bangla1Total + bangla2Total + english1Total + english2Total + mathTotal + religionTotal + scienceTotal + ictTotal + bgsTotal;
-      const average = totalMark / 9;
+      let totalMark = 0;
+      let filledCount = 0;
+      subjectTotals.forEach(id => {
+        const v = parseFloat(document.getElementById(id).textContent) || 0;
+        if (v > 0) filledCount++;
+        totalMark += v;
+      });
+
+      const average = filledCount > 0 ? (totalMark / filledCount) : 0;
 
       document.getElementById('totalMarkDisplay').textContent = totalMark.toFixed(2);
       document.getElementById('averageDisplay').textContent = average.toFixed(2);
 
-      // Calculate final GPA (average of GPAs)
-      const gpas = [
-        parseFloat(document.getElementById('bangla1_gpa').value || ''),
-        parseFloat(document.getElementById('english1_gpa').value || ''),
-        parseFloat(document.getElementById('math_gpa').value || ''),
-        parseFloat(document.getElementById('religion_gpa').value || ''),
-        parseFloat(document.getElementById('science_gpa').value || ''),
-        parseFloat(document.getElementById('ict_gpa').value || ''),
-        parseFloat(document.getElementById('bgs_gpa').value || '')
-      ].filter(g => !isNaN(g) && g !== null);
-
-      const finalGPA = gpas.length > 0 ? (gpas.reduce((a, b) => a + b, 0) / gpas.length) : 0;
-      // Write final GPA into editable input unless user has manually overridden it
+      // Final GPA: average of any non-empty GPA inputs
+      const gpaEls = Array.from(document.querySelectorAll('.gpa-input'));
+      const gpas = gpaEls.map(el => parseFloat(el.value || '')).filter(g => !isNaN(g));
+      const finalGPA = gpas.length > 0 ? (gpas.reduce((a,b) => a+b, 0) / gpas.length) : 0;
       const gEl = document.getElementById('gpaFinalInput');
       if (!finalGpaManual) {
         if (gEl) {
           gEl.value = finalGPA > 0 ? finalGPA.toFixed(2) : '';
           if (finalGPA > 0) gEl.classList.add('gpa-display'); else gEl.classList.remove('gpa-display');
         } else {
-          // fallback for older display
           document.getElementById('gpaFinalDisplay').textContent = finalGPA > 0 ? finalGPA.toFixed(2) : '-';
         }
       }
@@ -577,8 +582,15 @@
           // Populate subject fields dynamically
           try{ loadSubjectsToForm(examData); }catch(e){ console.error('Error loading subjects', e); }
 
-          // Recalculate overall
-          try{ calculateOverall(); }catch(e){}
+          // If DB stored a final GPA, prefer that and mark as manual override; otherwise allow auto-calc
+          try{
+            if (examData.gpa_final !== undefined && examData.gpa_final !== null) {
+              try{ document.getElementById('gpaFinalInput').value = examData.gpa_final; document.getElementById('gpaFinalInput').classList.add('gpa-display'); }catch(e){}
+              finalGpaManual = true;
+            } else {
+              finalGpaManual = false;
+            }
+          }catch(e){ finalGpaManual = false; }
 
           // Recalculate overall to account for any manual/DB GPA values
           try{ calculateOverall(); }catch(e){}
@@ -671,36 +683,13 @@
         father_name_en: currentStudentData.father_name_en,
         father_mobile: currentStudentData.father_mobile || null,
         exam_name_year: examNameYearInput.value.trim(),
-        
-        '*Bangla 1st Paper_CQ': parseFloat(document.getElementById('bangla1_cq').value) || null,
-        '*Bangla 1st Paper_MCQ': parseFloat(document.getElementById('bangla1_mcq').value) || null,
-        '*Bangla 1st Paper_Total': parseFloat(document.getElementById('bangla1_total').textContent) || null,
-        '*Bangla 1st Paper_GPA': document.getElementById('bangla1_gpa').value || null,
-        
-        '*Bangla 2nd Paper_CQ': parseFloat(document.getElementById('bangla2_cq').value) || null,
-        '*Bangla 2nd Paper_MCQ': parseFloat(document.getElementById('bangla2_mcq').value) || null,
-        '*Bangla 2nd Paper_Total': parseFloat(document.getElementById('bangla2_total').textContent) || null,
-        
-        '*English 1st Paper_CQ': parseFloat(document.getElementById('english1_cq').value) || null,
-        '*English 1st Paper_Total': parseFloat(document.getElementById('english1_total').textContent) || null,
-        '*English 1st Paper_GPA': document.getElementById('english1_gpa').value || null,
-        
-        '*English 2nd Paper_CQ': parseFloat(document.getElementById('english2_cq').value) || null,
-        '*English 2nd Paper_Total': parseFloat(document.getElementById('english2_total').textContent) || null,
-        
-        '*Mathematics_CQ': parseFloat(document.getElementById('math_cq').value) || null,
-        '*Mathematics_MCQ': parseFloat(document.getElementById('math_mcq').value) || null,
-        '*Mathematics_Total': parseFloat(document.getElementById('math_total').textContent) || null,
-        '*Mathematics_GPA': document.getElementById('math_gpa').value || null,
-        
-        '*Religion_CQ': parseFloat(document.getElementById('religion_cq').value) || null,
-        '*Religion_MCQ': parseFloat(document.getElementById('religion_mcq').value) || null,
-        '*Religion_Total': parseFloat(document.getElementById('religion_total').textContent) || null,
-        '*Religion_GPA': document.getElementById('religion_gpa').value || null,
-        
+
         // subject fields are included dynamically below via gatherSubjectPayload()
-        ...gatherSubjectPayload(),
         
+        
+        // dynamically include subject fields
+        ...gatherSubjectPayload(),
+
         class_rank: parseFloat(document.getElementById('class_rank').value) || null,
         remark: document.getElementById('remark').value.trim() || null,
 
@@ -738,10 +727,10 @@
         });
         // also clear remark
         try{ document.getElementById('remark').value = ''; }catch(e){}
-        // clear final GPA manual override and input
-        try{ finalGpaManual = false; const gef = document.getElementById('gpaFinalInput'); if (gef) { gef.value = ''; gef.classList.remove('gpa-display'); } }catch(e){}
-        // Trigger recalculation for all subjects
-        try{ SUBJECTS.forEach(sub => sub.parts.forEach(p => { try{ document.getElementById(`${sub.id}_${p.toLowerCase()}`).dispatchEvent(new Event('input')); }catch(e){} })); }catch(e){ try{ document.getElementById('bangla1_cq').dispatchEvent(new Event('input')); }catch(e){} }
+        // Trigger recalculation for all subject inputs
+        try{
+          SUBJECTS.forEach(sub => sub.parts.forEach(p => { try{ document.getElementById(`${sub.id}_${p.toLowerCase()}`).dispatchEvent(new Event('input')); }catch(e){} }));
+        }catch(e){ try{ document.getElementById('bangla1_cq').dispatchEvent(new Event('input')); }catch(e){} }
         saveStatus.textContent = '🔄 Form cleared';
         saveStatus.className = 'status';
       }

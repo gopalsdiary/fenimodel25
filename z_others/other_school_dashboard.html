@@ -229,8 +229,15 @@
                     <div style="grid-column: 1/-1; display:flex; gap:12px; justify-content:center; padding-bottom:10px;">
                         <a href="database_other_school.html" class="sidebar-btn">📝 Student Database</a>
                         <a href="admission_form_others.html" class="sidebar-btn">📝 New Admission</a>
-                        <a href="edit_application.html" class="sidebar-btn secondary">✏️ Edit Application</a>
+                        <a href="edit_application.html" class="sidebar-btn secondary">✏️ Edit admission form</a>
+                        
+                    </div>
+                    
+                    <div id="buttonsContainer" class="dropdown-content">
+                    <div style="grid-column: 1/-1; display:flex; gap:12px; justify-content:center; padding-bottom:10px;">
                         <a href="result_entry_other_form.html" class="sidebar-btn secondary">✏️ Result Entry</a>
+                        <a href="result_entry_other_form_9.html" class="sidebar-btn secondary">✏️ Result Entry (9, 10)</a>
+
 
                     </div>
                 </div>
@@ -243,7 +250,10 @@
         const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
         const TABLE='button_status';
 
-        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Use a global cache to avoid creating multiple GoTrueClient instances in the same browser context
+        window.__supabaseClients = window.__supabaseClients || {};
+        window.__supabaseClients[SUPABASE_URL] = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const sb = window.__supabaseClients[SUPABASE_URL];
         const buttonsContainer = document.getElementById('buttonsContainer');
         const buttonsList = document.getElementById('buttonsList');
         const headerCenter = document.getElementById('header-center');

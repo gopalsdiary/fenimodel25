@@ -54,7 +54,10 @@
     const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
     const TABLE='button_status';
 
-    const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Use a global cache to avoid creating multiple GoTrueClient instances
+    window.__supabaseClients = window.__supabaseClients || {};
+    window.__supabaseClients[SUPABASE_URL] = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const sb = window.__supabaseClients[SUPABASE_URL];
     const selectEl = document.getElementById('buttonSelect');
     const passwordWrap = document.getElementById('passwordWrap');
     const passwordInput = document.getElementById('passwordInput');
