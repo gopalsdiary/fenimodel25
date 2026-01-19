@@ -58,6 +58,14 @@
                 <label for="student_name_en">Student Name (English)</label>
                 <input type="text" id="student_name_en" name="student_name_en" required>
             </div>
+
+            <div class="form-group">
+                <label for="input_user_name">Input User Name</label>
+                <select id="input_user_name" name="input_user_name">
+                    <option value="">Select User</option>
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="father_name_en">Father Name (English)</label>
                 <input type="text" id="father_name_en" name="father_name_en" required>
@@ -110,6 +118,43 @@
           window.__supabaseClients[supabaseUrl] = window.supabaseClient;
         }
         const supabaseClient = window.supabaseClient;
+
+        // Populate `input_user_name` dropdown from 'button_status' table (only entries that have a password)
+        async function populateInputUserDropdown(){
+            try{
+                const sel = document.getElementById('input_user_name');
+                if(!sel) return;
+                sel.innerHTML = '<option value="">Select User</option>';
+                const { data: users, error } = await supabaseClient
+                    .from('button_status')
+                    .select('button_name,button_password')
+                    .order('button_name', { ascending: true });
+                if(error) throw error;
+                // filter client-side: include only rows with a non-empty button_password
+                const validUsers = (users || []).filter(u => u.button_password && String(u.button_password).trim() !== '');
+                if(validUsers.length === 0){
+                    sel.innerHTML = '<option value="">No users with password found</option>';
+                    return;
+                }
+                validUsers.forEach(u=>{
+                    const opt = document.createElement('option');
+                    opt.value = u.button_name;
+                    // display only the button_name in dropdown as required
+                    opt.textContent = u.button_name;
+                    sel.appendChild(opt);
+                });
+                // restore currently selected user from localStorage (adminButton stores button_name)
+                try{
+                    const current = localStorage.getItem('adminButton');
+                    if(current) sel.value = current;
+                }catch(e){}
+                sel.addEventListener('change', ()=> {
+                    try{ localStorage.setItem('adminButton', sel.value || ''); }catch(e){}
+                });
+            }catch(e){ console.warn('populateInputUserDropdown error', e); }
+        }
+        // run it when DOM is ready
+        document.addEventListener('DOMContentLoaded', populateInputUserDropdown);
 
         const form = document.getElementById('studentForm');
         const messageDiv = document.getElementById('message');
