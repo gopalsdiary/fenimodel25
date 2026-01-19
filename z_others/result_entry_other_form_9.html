@@ -374,7 +374,7 @@
           const id = `${sub.id}_${p.toLowerCase()}`;
           inner += `\n  <div class="form-group">\n    <label>${p}</label>\n    <input type="number" id="${id}" min="0" max="100" step="0.01">\n  </div>`;
         });
-        inner += `\n  <div class="form-group">\n    <label>Total</label>\n    <div id="${sub.id}_total" class="readonly-field">0</div>\n  </div>`;
+        inner += `\n  <div class="form-group">\n    <label>Total</label>\n    <div id="${sub.id}_total" class="readonly-field"></div>\n  </div>`;
         if(sub.gpa) {
           inner += `\n  <div class="form-group">\n    <label>GPA</label>\n    <input type="number" id="${sub.id}_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />\n  </div>`;
         }
@@ -392,6 +392,20 @@
         const gpaId = sub.gpa ? `${sub.id}_gpa` : null;
 
         function recalc() {
+          // if none of the parts have an explicit value, treat this subject as empty/optional
+          const hasAnyInput = parts.some(pid => {
+            const v = document.getElementById(pid).value;
+            return v !== null && v !== undefined && String(v).trim() !== '';
+          });
+
+          if (!hasAnyInput) {
+            // clear total and GPA for this subject when nothing provided
+            document.getElementById(totalId).textContent = '';
+            if (gpaId) document.getElementById(gpaId).value = '';
+            calculateOverall();
+            return;
+          }
+
           let sum = 0;
           parts.forEach(pid => { const v = parseFloat(document.getElementById(pid).value) || 0; sum += v; });
           document.getElementById(totalId).textContent = sum.toFixed(2);
@@ -422,7 +436,11 @@
         // set GPA if stored
         if (sub.gpa) {
           const gpakey = sub.db + '_GPA';
-          try { document.getElementById(`${sub.id}_gpa`).value = examData[gpakey] || document.getElementById(`${sub.id}_gpa`).value || ''; }catch(e){}
+          try {
+            const existing = document.getElementById(`${sub.id}_gpa`).value || '';
+            const gval = (examData[gpakey] !== undefined && examData[gpakey] !== null) ? examData[gpakey] : existing;
+            document.getElementById(`${sub.id}_gpa`).value = gval;
+          }catch(e){}
         }
       });
 

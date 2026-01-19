@@ -554,8 +554,17 @@
       // Mathematics
       ['math_cq', 'math_mcq'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const cq = parseFloat(document.getElementById('math_cq').value) || 0;
-          const mcq = parseFloat(document.getElementById('math_mcq').value) || 0;
+          const a = document.getElementById('math_cq').value;
+          const b = document.getElementById('math_mcq').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('math_total').textContent = '';
+            document.getElementById('math_gpa').value = '';
+            calculateOverall();
+            return;
+          }
+          const cq = parseFloat(a) || 0;
+          const mcq = parseFloat(b) || 0;
           const total = cq + mcq;
           document.getElementById('math_total').textContent = total.toFixed(2);
           const gpa = calculateGPA(total);
@@ -567,8 +576,17 @@
       // Religion
       ['religion_cq', 'religion_mcq'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const cq = parseFloat(document.getElementById('religion_cq').value) || 0;
-          const mcq = parseFloat(document.getElementById('religion_mcq').value) || 0;
+          const a = document.getElementById('religion_cq').value;
+          const b = document.getElementById('religion_mcq').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('religion_total').textContent = '';
+            document.getElementById('religion_gpa').value = '';
+            calculateOverall();
+            return;
+          }
+          const cq = parseFloat(a) || 0;
+          const mcq = parseFloat(b) || 0;
           const total = cq + mcq;
           document.getElementById('religion_total').textContent = total.toFixed(2);
           const gpa = calculateGPA(total);
@@ -580,8 +598,17 @@
       // Science
       ['science_cq', 'science_mcq'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const cq = parseFloat(document.getElementById('science_cq').value) || 0;
-          const mcq = parseFloat(document.getElementById('science_mcq').value) || 0;
+          const a = document.getElementById('science_cq').value;
+          const b = document.getElementById('science_mcq').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('science_total').textContent = '';
+            document.getElementById('science_gpa').value = '';
+            calculateOverall();
+            return;
+          }
+          const cq = parseFloat(a) || 0;
+          const mcq = parseFloat(b) || 0;
           const total = cq + mcq;
           document.getElementById('science_total').textContent = total.toFixed(2);
           const gpa = calculateGPA(total);
@@ -593,8 +620,17 @@
       // ICT
       ['ict_mcq', 'ict_practical'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const mcq = parseFloat(document.getElementById('ict_mcq').value) || 0;
-          const practical = parseFloat(document.getElementById('ict_practical').value) || 0;
+          const a = document.getElementById('ict_mcq').value;
+          const b = document.getElementById('ict_practical').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('ict_total').textContent = '';
+            document.getElementById('ict_gpa').value = '';
+            calculateOverall();
+            return;
+          }
+          const mcq = parseFloat(a) || 0;
+          const practical = parseFloat(b) || 0;
           const total = mcq + practical;
           document.getElementById('ict_total').textContent = total.toFixed(2);
           const gpa = calculateGPA(total);
@@ -606,8 +642,17 @@
       // BGS
       ['bgs_cq', 'bgs_mcq'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const cq = parseFloat(document.getElementById('bgs_cq').value) || 0;
-          const mcq = parseFloat(document.getElementById('bgs_mcq').value) || 0;
+          const a = document.getElementById('bgs_cq').value;
+          const b = document.getElementById('bgs_mcq').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('bgs_total').textContent = '';
+            document.getElementById('bgs_gpa').value = '';
+            calculateOverall();
+            return;
+          }
+          const cq = parseFloat(a) || 0;
+          const mcq = parseFloat(b) || 0;
           const total = cq + mcq;
           document.getElementById('bgs_total').textContent = total.toFixed(2);
           const gpa = calculateGPA(total);
@@ -622,35 +667,37 @@
 
     // Calculate overall marks and GPA
     function calculateOverall() {
-      const bangla1Total = parseFloat(document.getElementById('bangla1_total').textContent) || 0;
-      const bangla2Total = parseFloat(document.getElementById('bangla2_total').textContent) || 0;
-      const english1Total = parseFloat(document.getElementById('english1_total').textContent) || 0;
-      const english2Total = parseFloat(document.getElementById('english2_total').textContent) || 0;
-      const mathTotal = parseFloat(document.getElementById('math_total').textContent) || 0;
-      const religionTotal = parseFloat(document.getElementById('religion_total').textContent) || 0;
-      const scienceTotal = parseFloat(document.getElementById('science_total').textContent) || 0;
-      const ictTotal = parseFloat(document.getElementById('ict_total').textContent) || 0;
-      const bgsTotal = parseFloat(document.getElementById('bgs_total').textContent) || 0;
+      const ids = ['bangla1_total','bangla2_total','english1_total','english2_total','math_total','religion_total','science_total','ict_total','bgs_total'];
+      let totalMark = 0;
+      let filledCount = 0;
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        const t = el ? String(el.textContent).trim() : '';
+        if (t !== '') {
+          const v = parseFloat(t) || 0;
+          totalMark += v;
+          filledCount++;
+        }
+      });
 
-      const totalMark = bangla1Total + bangla2Total + english1Total + english2Total + mathTotal + religionTotal + scienceTotal + ictTotal + bgsTotal;
-      const average = totalMark / 9;
+      if (filledCount > 0) {
+        document.getElementById('totalMarkDisplay').textContent = totalMark.toFixed(2);
+        document.getElementById('averageDisplay').textContent = (totalMark / filledCount).toFixed(2);
+      } else {
+        document.getElementById('totalMarkDisplay').textContent = '';
+        document.getElementById('averageDisplay').textContent = '';
+      }
 
-      document.getElementById('totalMarkDisplay').textContent = totalMark.toFixed(2);
-      document.getElementById('averageDisplay').textContent = average.toFixed(2);
-
-      // Calculate final GPA (average of GPAs)
-      const gpas = [
-        parseFloat(document.getElementById('bangla1_gpa').value || ''),
-        parseFloat(document.getElementById('english1_gpa').value || ''),
-        parseFloat(document.getElementById('math_gpa').value || ''),
-        parseFloat(document.getElementById('religion_gpa').value || ''),
-        parseFloat(document.getElementById('science_gpa').value || ''),
-        parseFloat(document.getElementById('ict_gpa').value || ''),
-        parseFloat(document.getElementById('bgs_gpa').value || '')
-      ].filter(g => !isNaN(g) && g !== null);
+      // Calculate final GPA (average of provided GPAs)
+      const gpaIds = ['bangla1_gpa','english1_gpa','math_gpa','religion_gpa','science_gpa','ict_gpa','bgs_gpa'];
+      const gpas = gpaIds.map(id => {
+        const el = document.getElementById(id);
+        const v = el ? el.value : '';
+        const n = parseFloat(v);
+        return !isNaN(n) ? n : null;
+      }).filter(g => g !== null);
 
       const finalGPA = gpas.length > 0 ? (gpas.reduce((a, b) => a + b, 0) / gpas.length) : 0;
-      // If we have an editable input, only update it when the user has not manually overridden
       const gpi = document.getElementById('gpaFinalInput');
       if (gpi) {
         if (!finalGpaManual) {
@@ -859,7 +906,11 @@
         return;
       }
 
-      // Saving allowed for all users (owner info retained for audit)
+      // Helper parsers to preserve explicit zeros while treating empty inputs as null
+    function numValue(id){ try{ const el=document.getElementById(id); if(!el) return null; const v=el.value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; }catch(e){ return null; } }
+    function textNumValue(id){ try{ const el=document.getElementById(id); if(!el) return null; const t=String(el.textContent).trim(); return t !== '' ? parseFloat(t) : null; }catch(e){ return null; } }
+
+    // Saving allowed for all users (owner info retained for audit)
 
       saveStatus.textContent = '💾 Saving result...';
       saveStatus.className = 'status';
@@ -875,46 +926,46 @@
         father_mobile: currentStudentData.father_mobile || null,
         exam_name_year: examNameYearInput.value.trim(),
         
-        '*Bangla 1st Paper_CQ': parseFloat(document.getElementById('bangla1_cq').value) || null,
-        '*Bangla 1st Paper_MCQ': parseFloat(document.getElementById('bangla1_mcq').value) || null,
-        '*Bangla 1st Paper_Total': parseFloat(document.getElementById('bangla1_total').textContent) || null,
-        '*Bangla 1st Paper_GPA': document.getElementById('bangla1_gpa').value || null,
+        '*Bangla 1st Paper_CQ': numValue('bangla1_cq'),
+        '*Bangla 1st Paper_MCQ': numValue('bangla1_mcq'),
+        '*Bangla 1st Paper_Total': textNumValue('bangla1_total'),
+        '*Bangla 1st Paper_GPA': (function(){ const v=document.getElementById('bangla1_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        '*Bangla 2nd Paper_CQ': parseFloat(document.getElementById('bangla2_cq').value) || null,
-        '*Bangla 2nd Paper_MCQ': parseFloat(document.getElementById('bangla2_mcq').value) || null,
-        '*Bangla 2nd Paper_Total': parseFloat(document.getElementById('bangla2_total').textContent) || null,
+        '*Bangla 2nd Paper_CQ': numValue('bangla2_cq'),
+        '*Bangla 2nd Paper_MCQ': numValue('bangla2_mcq'),
+        '*Bangla 2nd Paper_Total': textNumValue('bangla2_total'),
         
-        '*English 1st Paper_CQ': parseFloat(document.getElementById('english1_cq').value) || null,
-        '*English 1st Paper_Total': parseFloat(document.getElementById('english1_total').textContent) || null,
-        '*English 1st Paper_GPA': document.getElementById('english1_gpa').value || null,
+        '*English 1st Paper_CQ': numValue('english1_cq'),
+        '*English 1st Paper_Total': textNumValue('english1_total'),
+        '*English 1st Paper_GPA': (function(){ const v=document.getElementById('english1_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        '*English 2nd Paper_CQ': parseFloat(document.getElementById('english2_cq').value) || null,
-        '*English 2nd Paper_Total': parseFloat(document.getElementById('english2_total').textContent) || null,
+        '*English 2nd Paper_CQ': numValue('english2_cq'),
+        '*English 2nd Paper_Total': textNumValue('english2_total'),
         
-        '*Mathematics_CQ': parseFloat(document.getElementById('math_cq').value) || null,
-        '*Mathematics_MCQ': parseFloat(document.getElementById('math_mcq').value) || null,
-        '*Mathematics_Total': parseFloat(document.getElementById('math_total').textContent) || null,
-        '*Mathematics_GPA': document.getElementById('math_gpa').value || null,
+        '*Mathematics_CQ': numValue('math_cq'),
+        '*Mathematics_MCQ': numValue('math_mcq'),
+        '*Mathematics_Total': textNumValue('math_total'),
+        '*Mathematics_GPA': (function(){ const v=document.getElementById('math_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        '*Religion_CQ': parseFloat(document.getElementById('religion_cq').value) || null,
-        '*Religion_MCQ': parseFloat(document.getElementById('religion_mcq').value) || null,
-        '*Religion_Total': parseFloat(document.getElementById('religion_total').textContent) || null,
-        '*Religion_GPA': document.getElementById('religion_gpa').value || null,
+        '*Religion_CQ': numValue('religion_cq'),
+        '*Religion_MCQ': numValue('religion_mcq'),
+        '*Religion_Total': textNumValue('religion_total'),
+        '*Religion_GPA': (function(){ const v=document.getElementById('religion_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        '*Science_CQ': parseFloat(document.getElementById('science_cq').value) || null,
-        '*Science_MCQ': parseFloat(document.getElementById('science_mcq').value) || null,
-        '*Science_Total': parseFloat(document.getElementById('science_total').textContent) || null,
-        '*Science_GPA': document.getElementById('science_gpa').value || null,
+        '*Science_CQ': numValue('science_cq'),
+        '*Science_MCQ': numValue('science_mcq'),
+        '*Science_Total': textNumValue('science_total'),
+        '*Science_GPA': (function(){ const v=document.getElementById('science_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        '*ICT_MCQ': parseFloat(document.getElementById('ict_mcq').value) || null,
-        '*ICT_Practical': parseFloat(document.getElementById('ict_practical').value) || null,
-        '*ICT_Total': parseFloat(document.getElementById('ict_total').textContent) || null,
-        '*ICT_GPA': document.getElementById('ict_gpa').value || null,
+        '*ICT_MCQ': numValue('ict_mcq'),
+        '*ICT_Practical': numValue('ict_practical'),
+        '*ICT_Total': textNumValue('ict_total'),
+        '*ICT_GPA': (function(){ const v=document.getElementById('ict_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        '*Bangladesh And Global Studies_CQ': parseFloat(document.getElementById('bgs_cq').value) || null,
-        '*Bangladesh And Global Studies_MCQ': parseFloat(document.getElementById('bgs_mcq').value) || null,
-        '*Bangladesh And Global Studies_Total': parseFloat(document.getElementById('bgs_total').textContent) || null,
-        '*Bangladesh And Global Studies_GPA': document.getElementById('bgs_gpa').value || null,
+        '*Bangladesh And Global Studies_CQ': numValue('bgs_cq'),
+        '*Bangladesh And Global Studies_MCQ': numValue('bgs_mcq'),
+        '*Bangladesh And Global Studies_Total': textNumValue('bgs_total'),
+        '*Bangladesh And Global Studies_GPA': (function(){ const v=document.getElementById('bgs_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
         class_rank: parseFloat(document.getElementById('class_rank').value) || null,
         remark: document.getElementById('remark').value.trim() || null,
@@ -922,8 +973,8 @@
         // user who saved this entry (button_name stored as adminButton in localStorage)
         input_user_name: (function(){ try{ return localStorage.getItem('adminButton') || null; }catch(e){ return null; } })(),
 
-        total_mark: parseFloat(document.getElementById('totalMarkDisplay').textContent) || null,
-        average_mark: parseFloat(document.getElementById('averageDisplay').textContent) || null,
+        total_mark: (function(){ const t = String(document.getElementById('totalMarkDisplay').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
+        average_mark: (function(){ const t = String(document.getElementById('averageDisplay').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         gpa_final: (function(){ const el = document.getElementById('gpaFinalInput'); return el && el.value !== '' ? parseFloat(el.value) : null; })()
       };
 
