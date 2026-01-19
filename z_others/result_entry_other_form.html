@@ -380,6 +380,20 @@
         const gpaId = sub.gpa ? `${sub.id}_gpa` : null;
 
         function recalc() {
+          // if none of the parts have an explicit value, treat this subject as empty/optional
+          const hasAnyInput = parts.some(pid => {
+            const v = document.getElementById(pid).value;
+            return v !== null && v !== undefined && String(v).trim() !== '';
+          });
+
+          if (!hasAnyInput) {
+            // clear total and GPA for this subject when nothing provided
+            document.getElementById(totalId).textContent = '';
+            if (gpaId) document.getElementById(gpaId).value = '';
+            calculateOverall();
+            return;
+          }
+
           let sum = 0;
           parts.forEach(pid => { const v = parseFloat(document.getElementById(pid).value) || 0; sum += v; });
           document.getElementById(totalId).textContent = sum.toFixed(2);
@@ -410,7 +424,7 @@
         // set GPA if stored
         if (sub.gpa) {
           const gpakey = sub.db + '_GPA';
-          try { document.getElementById(`${sub.id}_gpa`).value = examData[gpakey] || document.getElementById(`${sub.id}_gpa`).value || ''; }catch(e){}
+          try { const existing = document.getElementById(`${sub.id}_gpa`).value || ''; const gval = (examData[gpakey] !== undefined && examData[gpakey] !== null) ? examData[gpakey] : existing; document.getElementById(`${sub.id}_gpa`).value = (gval !== undefined && gval !== null) ? String(gval) : ''; }catch(e){}
         }
       });
 
@@ -671,42 +685,42 @@
         iid: currentIID,
         class_2025: class2025Input.value.trim(),
         section_2025: section2025Input.value.trim(),
-        roll_2025: parseFloat(roll2025Input.value) || null,
+        roll_2025: (function(){ const v = roll2025Input.value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         student_name_en: currentStudentData.student_name_en,
         father_name_en: currentStudentData.father_name_en,
         father_mobile: currentStudentData.father_mobile || null,
         exam_name_year: examNameYearInput.value.trim(),
         
-        '*Bangla 1st Paper_CQ': parseFloat(document.getElementById('bangla1_cq').value) || null,
-        '*Bangla 1st Paper_MCQ': parseFloat(document.getElementById('bangla1_mcq').value) || null,
-        '*Bangla 1st Paper_Total': parseFloat(document.getElementById('bangla1_total').textContent) || null,
+        '*Bangla 1st Paper_CQ': (function(){ const v=document.getElementById('bangla1_cq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Bangla 1st Paper_MCQ': (function(){ const v=document.getElementById('bangla1_mcq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Bangla 1st Paper_Total': (function(){ const t = String(document.getElementById('bangla1_total').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         '*Bangla 1st Paper_GPA': document.getElementById('bangla1_gpa').value || null,
         
-        '*Bangla 2nd Paper_CQ': parseFloat(document.getElementById('bangla2_cq').value) || null,
-        '*Bangla 2nd Paper_MCQ': parseFloat(document.getElementById('bangla2_mcq').value) || null,
-        '*Bangla 2nd Paper_Total': parseFloat(document.getElementById('bangla2_total').textContent) || null,
+        '*Bangla 2nd Paper_CQ': (function(){ const v=document.getElementById('bangla2_cq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Bangla 2nd Paper_MCQ': (function(){ const v=document.getElementById('bangla2_mcq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Bangla 2nd Paper_Total': (function(){ const t = String(document.getElementById('bangla2_total').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         
-        '*English 1st Paper_CQ': parseFloat(document.getElementById('english1_cq').value) || null,
-        '*English 1st Paper_Total': parseFloat(document.getElementById('english1_total').textContent) || null,
+        '*English 1st Paper_CQ': (function(){ const v=document.getElementById('english1_cq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*English 1st Paper_Total': (function(){ const t = String(document.getElementById('english1_total').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         '*English 1st Paper_GPA': document.getElementById('english1_gpa').value || null,
         
-        '*English 2nd Paper_CQ': parseFloat(document.getElementById('english2_cq').value) || null,
-        '*English 2nd Paper_Total': parseFloat(document.getElementById('english2_total').textContent) || null,
+        '*English 2nd Paper_CQ': (function(){ const v=document.getElementById('english2_cq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*English 2nd Paper_Total': (function(){ const t = String(document.getElementById('english2_total').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         
-        '*Mathematics_CQ': parseFloat(document.getElementById('math_cq').value) || null,
-        '*Mathematics_MCQ': parseFloat(document.getElementById('math_mcq').value) || null,
-        '*Mathematics_Total': parseFloat(document.getElementById('math_total').textContent) || null,
+        '*Mathematics_CQ': (function(){ const v=document.getElementById('math_cq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Mathematics_MCQ': (function(){ const v=document.getElementById('math_mcq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Mathematics_Total': (function(){ const t = String(document.getElementById('math_total').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         '*Mathematics_GPA': document.getElementById('math_gpa').value || null,
         
-        '*Religion_CQ': parseFloat(document.getElementById('religion_cq').value) || null,
-        '*Religion_MCQ': parseFloat(document.getElementById('religion_mcq').value) || null,
-        '*Religion_Total': parseFloat(document.getElementById('religion_total').textContent) || null,
+        '*Religion_CQ': (function(){ const v=document.getElementById('religion_cq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Religion_MCQ': (function(){ const v=document.getElementById('religion_mcq').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
+        '*Religion_Total': (function(){ const t = String(document.getElementById('religion_total').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         '*Religion_GPA': document.getElementById('religion_gpa').value || null,
         
         // subject fields are included dynamically below via gatherSubjectPayload()
         ...gatherSubjectPayload(),
         
-        class_rank: parseFloat(document.getElementById('class_rank').value) || null,
+        class_rank: (function(){ const v = document.getElementById('class_rank').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         remark: document.getElementById('remark').value.trim() || null,
 
         // user who saved this entry (button_name stored as adminButton in localStorage)

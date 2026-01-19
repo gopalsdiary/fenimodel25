@@ -458,10 +458,14 @@
           const key = sub.db + '_' + p;
           const id = `${sub.id}_${p.toLowerCase()}`;
           const el = document.getElementById(id);
-          out[key] = el ? (parseFloat(el.value) || null) : null;
+          out[key] = (el && String(el.value).trim() !== '') ? parseFloat(el.value) : null;
         });
-        out[sub.db + '_Total'] = parseFloat(document.getElementById(`${sub.id}_total`).textContent) || null;
-        if (sub.gpa) out[sub.db + '_GPA'] = document.getElementById(`${sub.id}_gpa`).value || null;
+        const totalText = String(document.getElementById(`${sub.id}_total`).textContent).trim();
+        out[sub.db + '_Total'] = totalText !== '' ? parseFloat(totalText) : null;
+        if (sub.gpa) {
+          const g = document.getElementById(`${sub.id}_gpa`).value;
+          out[sub.db + '_GPA'] = (g !== undefined && String(g).trim() !== '') ? g : null;
+        }
       });
       return out;
     }
@@ -696,7 +700,7 @@
         iid: currentIID,
         class_2025: class2025Input.value.trim(),
         section_2025: section2025Input.value.trim(),
-        roll_2025: parseFloat(roll2025Input.value) || null,
+        roll_2025: (function(){ const v = roll2025Input.value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         student_name_en: currentStudentData.student_name_en,
         father_name_en: currentStudentData.father_name_en,
         father_mobile: currentStudentData.father_mobile || null,
@@ -708,14 +712,14 @@
         // dynamically include subject fields
         ...gatherSubjectPayload(),
 
-        class_rank: parseFloat(document.getElementById('class_rank').value) || null,
+        class_rank: (function(){ const v = document.getElementById('class_rank').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         remark: document.getElementById('remark').value.trim() || null,
 
         // user who saved this entry (button_name stored as adminButton in localStorage)
         input_user_name: (function(){ try{ return localStorage.getItem('adminButton') || null; }catch(e){ return null; } })(),
 
-        total_mark: parseFloat(document.getElementById('totalMarkDisplay').textContent) || null,
-        average_mark: parseFloat(document.getElementById('averageDisplay').textContent) || null,
+        total_mark: (function(){ const t = String(document.getElementById('totalMarkDisplay').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
+        average_mark: (function(){ const t = String(document.getElementById('averageDisplay').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         gpa_final: (function(){ const el = document.getElementById('gpaFinalInput'); if (el) { return el.value !== '' ? parseFloat(el.value) : null; } const old = document.getElementById('gpaFinalDisplay'); return (old && old.textContent !== '-') ? parseFloat(old.textContent) : null; })()
       };
 

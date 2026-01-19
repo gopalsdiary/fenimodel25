@@ -238,7 +238,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="bangla1_total" class="readonly-field">0</div>
+            <div id="bangla1_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -259,7 +259,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="bangla2_total" class="readonly-field">0</div>
+            <div id="bangla2_total" class="readonly-field"></div>
           </div>
         </div>
 
@@ -272,7 +272,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="english1_total" class="readonly-field">0</div>
+            <div id="english1_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -289,7 +289,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="english2_total" class="readonly-field">0</div>
+            <div id="english2_total" class="readonly-field"></div>
           </div>
         </div>
 
@@ -306,7 +306,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="math_total" class="readonly-field">0</div>
+            <div id="math_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -327,7 +327,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="religion_total" class="readonly-field">0</div>
+            <div id="religion_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -348,7 +348,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="science_total" class="readonly-field">0</div>
+            <div id="science_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -369,7 +369,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="ict_total" class="readonly-field">0</div>
+            <div id="ict_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -390,7 +390,7 @@
           </div>
           <div class="form-group">
             <label>Total</label>
-            <div id="bgs_total" class="readonly-field">0</div>
+            <div id="bgs_total" class="readonly-field"></div>
           </div>
           <div class="form-group">
             <label>GPA</label>
@@ -514,8 +514,17 @@
       // Bangla 1st Paper
       ['bangla1_cq', 'bangla1_mcq'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const cq = parseFloat(document.getElementById('bangla1_cq').value) || 0;
-          const mcq = parseFloat(document.getElementById('bangla1_mcq').value) || 0;
+          const a = document.getElementById('bangla1_cq').value;
+          const b = document.getElementById('bangla1_mcq').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('bangla1_total').textContent = '';
+            document.getElementById('bangla1_gpa').value = '';
+            calculateOverall();
+            return;
+          }
+          const cq = parseFloat(a) || 0;
+          const mcq = parseFloat(b) || 0;
           const total = cq + mcq;
           document.getElementById('bangla1_total').textContent = total.toFixed(2);
           const gpa = calculateGPA(total);
@@ -527,8 +536,16 @@
       // Bangla 2nd Paper
       ['bangla2_cq', 'bangla2_mcq'].forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
-          const cq = parseFloat(document.getElementById('bangla2_cq').value) || 0;
-          const mcq = parseFloat(document.getElementById('bangla2_mcq').value) || 0;
+          const a = document.getElementById('bangla2_cq').value;
+          const b = document.getElementById('bangla2_mcq').value;
+          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
+          if (!hasAny) {
+            document.getElementById('bangla2_total').textContent = '';
+            calculateOverall();
+            return;
+          }
+          const cq = parseFloat(a) || 0;
+          const mcq = parseFloat(b) || 0;
           const total = cq + mcq;
           document.getElementById('bangla2_total').textContent = total.toFixed(2);
           calculateOverall();
@@ -537,7 +554,14 @@
 
       // English 1st Paper
       document.getElementById('english1_cq').addEventListener('input', () => {
-        const cq = parseFloat(document.getElementById('english1_cq').value) || 0;
+        const v = document.getElementById('english1_cq').value;
+        if (v === undefined || String(v).trim() === '') {
+          document.getElementById('english1_total').textContent = '';
+          document.getElementById('english1_gpa').value = '';
+          calculateOverall();
+          return;
+        }
+        const cq = parseFloat(v) || 0;
         document.getElementById('english1_total').textContent = cq.toFixed(2);
         const gpa = calculateGPA(cq);
         document.getElementById('english1_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
@@ -546,7 +570,13 @@
 
       // English 2nd Paper
       document.getElementById('english2_cq').addEventListener('input', () => {
-        const cq = parseFloat(document.getElementById('english2_cq').value) || 0;
+        const v = document.getElementById('english2_cq').value;
+        if (v === undefined || String(v).trim() === '') {
+          document.getElementById('english2_total').textContent = '';
+          calculateOverall();
+          return;
+        }
+        const cq = parseFloat(v) || 0;
         document.getElementById('english2_total').textContent = cq.toFixed(2);
         calculateOverall();
       });
@@ -813,15 +843,16 @@
           document.getElementById('ict_mcq').dispatchEvent(new Event('input'));
           document.getElementById('bgs_cq').dispatchEvent(new Event('input'));
 
-          // If GPAs were stored, use them (overrides calculated values)
+          // If GPAs were stored, use them (overrides calculated values) — preserve explicit zeros
           try{
-            document.getElementById('bangla1_gpa').value = examData['*Bangla 1st Paper_GPA'] || document.getElementById('bangla1_gpa').value || '';
-            document.getElementById('english1_gpa').value = examData['*English 1st Paper_GPA'] || document.getElementById('english1_gpa').value || '';
-            document.getElementById('math_gpa').value = examData['*Mathematics_GPA'] || document.getElementById('math_gpa').value || '';
-            document.getElementById('religion_gpa').value = examData['*Religion_GPA'] || document.getElementById('religion_gpa').value || '';
-            document.getElementById('science_gpa').value = examData['*Science_GPA'] || document.getElementById('science_gpa').value || '';
-            document.getElementById('ict_gpa').value = examData['*ICT_GPA'] || document.getElementById('ict_gpa').value || '';
-            document.getElementById('bgs_gpa').value = examData['*Bangladesh And Global Studies_GPA'] || document.getElementById('bgs_gpa').value || '';
+            function setGpa(id, key){ try{ const g = (examData[key] !== undefined && examData[key] !== null) ? examData[key] : document.getElementById(id).value || ''; document.getElementById(id).value = (g !== undefined && g !== null) ? String(g) : ''; }catch(e){} }
+            setGpa('bangla1_gpa','*Bangla 1st Paper_GPA');
+            setGpa('english1_gpa','*English 1st Paper_GPA');
+            setGpa('math_gpa','*Mathematics_GPA');
+            setGpa('religion_gpa','*Religion_GPA');
+            setGpa('science_gpa','*Science_GPA');
+            setGpa('ict_gpa','*ICT_GPA');
+            setGpa('bgs_gpa','*Bangladesh And Global Studies_GPA');
           }catch(e){}
 
           // Recalculate overall to account for any manual/DB GPA values
@@ -920,7 +951,7 @@
         iid: currentIID,
         class_2025: class2025Input.value.trim(),
         section_2025: section2025Input.value.trim(),
-        roll_2025: parseFloat(roll2025Input.value) || null,
+        roll_2025: (function(){ const v = roll2025Input.value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         student_name_en: currentStudentData.student_name_en,
         father_name_en: currentStudentData.father_name_en,
         father_mobile: currentStudentData.father_mobile || null,
@@ -967,7 +998,7 @@
         '*Bangladesh And Global Studies_Total': textNumValue('bgs_total'),
         '*Bangladesh And Global Studies_GPA': (function(){ const v=document.getElementById('bgs_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
         
-        class_rank: parseFloat(document.getElementById('class_rank').value) || null,
+        class_rank: (function(){ const v = document.getElementById('class_rank').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         remark: document.getElementById('remark').value.trim() || null,
 
         // user who saved this entry (button_name stored as adminButton in localStorage)
