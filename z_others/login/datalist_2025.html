@@ -569,7 +569,8 @@
     const withClassCount = (allData||[]).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== '')).length;
     // Apply class-based filtering only when a meaningful portion of data contains class values (>=5% and at least 1)
     if(withClassCount >= Math.max(1, Math.floor(allData.length * 0.05))){
-      allData = (allData || []).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== ''));
+      // Keep rows that have the class value OR at least an IID (so IID-only rows are still shown)
+      allData = (allData || []).filter(r => r && ((r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== '') || (r.iid !== undefined && r.iid !== null && String(r.iid).trim() !== '')));
       try{ const si = document.getElementById('sessionInfo'); if(si) si.textContent = (si.textContent||'') + ` · filtered by ${ck} (${withClassCount} rows)`; }catch(e){}
     }
   }
@@ -665,9 +666,12 @@
   }
   // Filter by input user if selected (trim + case-insensitive)
   if(u){ const uNorm = String(u).trim().toLowerCase(); filtered = filtered.filter(r => { const v = String((r && (r.input_user_name || r.input_user || '')) || '').trim().toLowerCase(); return v === uNorm; }); }
-  // If session-specific keys are available, try to remove rows with none of those values
+  // If session-specific keys are available, try to remove rows with none of those values *unless* the row has an IID only
   if(availFilter && (classKey || sectionKey || rollKey)){
-    filtered = filtered.filter(r => r && (r[classKey] || r[sectionKey] || r[rollKey]));
+    filtered = filtered.filter(r => {
+      const hasIID = r && (r.iid !== undefined && r.iid !== null && String(r.iid).trim() !== '');
+      return (r && (r[classKey] || r[sectionKey] || r[rollKey])) || hasIID;
+    });
   }
   // Sort by roll if available else by iid to give deterministic order
   if(rollKey) filtered = filtered.sort((a,b)=> (Number(a[rollKey])||0) - (Number(b[rollKey])||0));
