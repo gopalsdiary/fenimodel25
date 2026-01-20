@@ -8,18 +8,19 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
 
     function getLoginIndexUrl() {
-        // Always resolve correctly regardless of current folder depth
-        return new URL('../login/index.html', window.location.href).toString();
+        // Use absolute login path to avoid relative resolution issues across nested folders
+        // This ensures pages under /z_others/ or other subfolders always redirect to the real login page
+        return window.location.origin + '/login/index.html';
     }
 
     function getReturnToParam() {
-        const path = window.location.pathname || '';
-        // If already in /login/, return only the filename.
+        // Return full pathname and query so login can redirect back correctly to the exact page
+        const path = (window.location.pathname || '') + (window.location.search || '');
+        // If already on a login page, return a safe value to avoid an infinite redirect loop
         if (path.includes('/login/')) {
-            return path.split('/').pop() || 'index.html';
+            return 'index.html';
         }
-        // From /login/index.html, go back one level then to the current path
-        return '../' + path.replace(/^\/+/, '');
+        return path || '/';
     }
 
     function redirectToLogin() {

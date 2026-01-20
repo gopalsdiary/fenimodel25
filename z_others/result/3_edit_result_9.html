@@ -224,179 +224,9 @@
     <div id="marksEntrySection" class="card-section" style="background:#f0fff4; display:none;">
       <h3 style="margin:0 0 12px 0; font-size:16px;">Step 3: Enter Subject Marks</h3>
       
-      <div class="subject-grid">
-        <!-- Bangla 1st Paper -->
-        <div class="subject-card">
-          <h4>📚 Bangla 1st Paper</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="bangla1_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="bangla1_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="bangla1_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="bangla1_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
-
-        <!-- Bangla 2nd Paper -->
-        <div class="subject-card">
-          <h4>📚 Bangla 2nd Paper</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="bangla2_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="bangla2_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="bangla2_total" class="readonly-field"></div>
-          </div>
-        </div>
-
-        <!-- English 1st Paper -->
-        <div class="subject-card">
-          <h4>🔤 English 1st Paper</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="english1_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="english1_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="english1_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
-
-        <!-- English 2nd Paper -->
-        <div class="subject-card">
-          <h4>🔤 English 2nd Paper</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="english2_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="english2_total" class="readonly-field"></div>
-          </div>
-        </div>
-
-        <!-- Mathematics -->
-        <div class="subject-card">
-          <h4>🔢 Mathematics</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="math_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="math_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="math_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="math_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
-
-        <!-- Religion -->
-        <div class="subject-card">
-          <h4>🕌 Religion</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="religion_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="religion_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="religion_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="religion_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
-
-        <!-- Science -->
-        <div class="subject-card">
-          <h4>🔬 Science</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="science_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="science_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="science_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="science_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
-
-        <!-- ICT -->
-        <div class="subject-card">
-          <h4>💻 ICT</h4>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="ict_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Practical</label>
-            <input type="number" id="ict_practical" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="ict_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="ict_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
-
-        <!-- BGS -->
-        <div class="subject-card">
-          <h4>🌍 Bangladesh and Global Studies</h4>
-          <div class="form-group">
-            <label>CQ</label>
-            <input type="number" id="bgs_cq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>MCQ</label>
-            <input type="number" id="bgs_mcq" min="0" max="100" step="0.01">
-          </div>
-          <div class="form-group">
-            <label>Total</label>
-            <div id="bgs_total" class="readonly-field"></div>
-          </div>
-          <div class="form-group">
-            <label>GPA</label>
-            <input type="number" id="bgs_gpa" class="gpa-input" step="0.01" min="0" max="5" placeholder="-" />
-          </div>
-        </div>
+      <!-- All subjects displayed dynamically from Supabase exam table columns -->
+      <div id="subjectGrid" class="subject-grid">
+        <!-- will be populated dynamically from TABLE_EXAM columns -->
       </div>
 
       <div style="margin-top:24px; padding:16px; background:#f8fafc; border-radius:6px;">
@@ -454,13 +284,18 @@
     window.__supabaseClients = window.__supabaseClients || {};
     window.__supabaseClients[SUPABASE_URL] = window.__supabaseClients[SUPABASE_URL] || window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const sb = window.__supabaseClients[SUPABASE_URL];
-    // Require login: if no admin session, redirect to login page
+    // Require login: if no admin session, do NOT redirect; mark page to require login and show inline warning
     try{
       if(!localStorage.getItem('adminButton')){
-        // replace so user can't go back to a protected page easily
-        window.location.replace('index.html');
+        // Do not redirect — set a flag that will be handled after DOM elements are available
+        window.requireLogin = true;
+      } else {
+        window.requireLogin = false;
       }
-    }catch(e){}
+    }catch(e){
+      // On error, be conservative: require login
+      window.requireLogin = true;
+    }
 
     const TABLE_STUDENT = 'student_database_others';
     const TABLE_EXAM = 'exam_9_10_other_school';
@@ -491,6 +326,49 @@
     // Show currently logged-in user (from localStorage 'adminButton')
     try{ if(inputUserDisplay) inputUserDisplay.textContent = localStorage.getItem('adminButton') || '-'; }catch(e){}
 
+    // If page is flagged as requiring login, show inline warning and disable load/save/proceed actions
+    try{
+      if(window.requireLogin){
+        const warn = document.createElement('div');
+        warn.style.background = '#fff4e5';
+        warn.style.border = '1px solid #ffd39b';
+        warn.style.padding = '10px';
+        warn.style.margin = '0 0 12px 0';
+        warn.style.borderRadius = '6px';
+        warn.style.color = '#7a4a00';
+        warn.innerHTML = '⚠️ <strong>Login required:</strong> You are not signed in. Loading/saving is disabled. <a href="/login/index.html?returnTo=' + encodeURIComponent(window.location.pathname + window.location.search) + '">Login</a>';
+        const container = document.querySelector('.wrap') || document.body;
+        container.insertBefore(warn, container.firstChild);
+        try{ if(loadBtn) loadBtn.disabled = true; }catch(e){}
+        try{ if(proceedBtn) proceedBtn.disabled = true; }catch(e){}
+        try{ if(saveBtn) saveBtn.disabled = true; }catch(e){}
+
+        // Additionally try to detect Supabase session and auto-enable if valid
+        (async function tryDetectSession(){
+          try{
+            const client = (typeof sb !== 'undefined' && sb) || (window.__supabaseClients ? Object.values(window.__supabaseClients)[0] : null);
+            if(client && client.auth && typeof client.auth.getSession === 'function'){
+              const { data: { session }, error } = await client.auth.getSession();
+              if(!error && session){
+                try{ if(warn && warn.parentNode) warn.parentNode.removeChild(warn); }catch(e){}
+                try{ if(loadBtn) loadBtn.disabled = false; }catch(e){}
+                try{ if(proceedBtn) proceedBtn.disabled = false; }catch(e){}
+                try{ if(saveBtn) saveBtn.disabled = false; }catch(e){}
+                window.requireLogin = false;
+                try{
+                  const email = session.user && session.user.email;
+                  if(email){
+                    if(!localStorage.getItem('adminButton')) localStorage.setItem('adminButton', email);
+                    if(inputUserDisplay) inputUserDisplay.textContent = localStorage.getItem('adminButton') || email;
+                  }
+                }catch(e){}
+              }
+            }
+          }catch(e){ console.warn('Session detect failed', e); }
+        })();
+      }
+    }catch(e){}
+
     let currentIID = null;
     let currentStudentData = null;
     // When user types final GPA manually this flag prevents auto overwrite
@@ -509,200 +387,128 @@
       return 0.0;
     }
 
-    // Auto-calculate totals and GPAs
+    // Auto-calculate totals and GPAs (safe: only attach listeners when elements exist)
     function setupAutoCalculations() {
+      // Helper to attach safely
+      function safeAttach(id, ev, cb){ const el = document.getElementById(id); if(el && typeof el.addEventListener === 'function') el.addEventListener(ev, cb); }
+
       // Bangla 1st Paper
-      ['bangla1_cq', 'bangla1_mcq'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('bangla1_cq').value;
-          const b = document.getElementById('bangla1_mcq').value;
+      ['bangla1_cq','bangla1_mcq'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const aEl = document.getElementById('bangla1_cq');
+          const bEl = document.getElementById('bangla1_mcq');
+          const a = aEl ? aEl.value : '';
+          const b = bEl ? bEl.value : '';
           const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
           if (!hasAny) {
-            document.getElementById('bangla1_total').textContent = '';
-            document.getElementById('bangla1_gpa').value = '';
-            calculateOverall();
-            return;
+            const t = document.getElementById('bangla1_total'); if(t) t.textContent = '';
+            const g = document.getElementById('bangla1_gpa'); if(g) g.value = '';
+            calculateOverall(); return;
           }
-          const cq = parseFloat(a) || 0;
-          const mcq = parseFloat(b) || 0;
-          const total = cq + mcq;
-          document.getElementById('bangla1_total').textContent = total.toFixed(2);
-          const gpa = calculateGPA(total);
-          document.getElementById('bangla1_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
+          const cq = parseFloat(a) || 0; const mcq = parseFloat(b) || 0; const total = cq + mcq;
+          const t = document.getElementById('bangla1_total'); if(t) t.textContent = total.toFixed(2);
+          const g = document.getElementById('bangla1_gpa'); if(g){ const gp = calculateGPA(total); g.value = gp !== null ? gp.toFixed(1) : ''; }
           calculateOverall();
         });
       });
 
       // Bangla 2nd Paper
-      ['bangla2_cq', 'bangla2_mcq'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('bangla2_cq').value;
-          const b = document.getElementById('bangla2_mcq').value;
-          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
-          if (!hasAny) {
-            document.getElementById('bangla2_total').textContent = '';
-            calculateOverall();
-            return;
-          }
-          const cq = parseFloat(a) || 0;
-          const mcq = parseFloat(b) || 0;
-          const total = cq + mcq;
-          document.getElementById('bangla2_total').textContent = total.toFixed(2);
-          calculateOverall();
+      ['bangla2_cq','bangla2_mcq'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const a = document.getElementById('bangla2_cq')?.value || '';
+          const b = document.getElementById('bangla2_mcq')?.value || '';
+          const hasAny = (a.trim() !== '') || (b.trim() !== '');
+          const t = document.getElementById('bangla2_total');
+          if(!hasAny){ if(t) t.textContent = ''; calculateOverall(); return; }
+          const total = (parseFloat(a)||0) + (parseFloat(b)||0); if(t) t.textContent = total.toFixed(2); calculateOverall();
         });
       });
 
       // English 1st Paper
-      document.getElementById('english1_cq').addEventListener('input', () => {
-        const v = document.getElementById('english1_cq').value;
-        if (v === undefined || String(v).trim() === '') {
-          document.getElementById('english1_total').textContent = '';
-          document.getElementById('english1_gpa').value = '';
-          calculateOverall();
-          return;
-        }
-        const cq = parseFloat(v) || 0;
-        document.getElementById('english1_total').textContent = cq.toFixed(2);
-        const gpa = calculateGPA(cq);
-        document.getElementById('english1_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
-        calculateOverall();
+      safeAttach('english1_cq','input', ()=>{
+        const v = document.getElementById('english1_cq')?.value || '';
+        const t = document.getElementById('english1_total'); const g = document.getElementById('english1_gpa');
+        if(v.trim() === ''){ if(t) t.textContent = ''; if(g) g.value = ''; calculateOverall(); return; }
+        const cq = parseFloat(v)||0; if(t) t.textContent = cq.toFixed(2); if(g){ const gp = calculateGPA(cq); g.value = gp !== null ? gp.toFixed(1) : ''; } calculateOverall();
       });
 
       // English 2nd Paper
-      document.getElementById('english2_cq').addEventListener('input', () => {
-        const v = document.getElementById('english2_cq').value;
-        if (v === undefined || String(v).trim() === '') {
-          document.getElementById('english2_total').textContent = '';
-          calculateOverall();
-          return;
-        }
-        const cq = parseFloat(v) || 0;
-        document.getElementById('english2_total').textContent = cq.toFixed(2);
-        calculateOverall();
+      safeAttach('english2_cq','input', ()=>{
+        const v = document.getElementById('english2_cq')?.value || ''; const t = document.getElementById('english2_total');
+        if(v.trim() === ''){ if(t) t.textContent = ''; calculateOverall(); return; }
+        if(t) t.textContent = (parseFloat(v)||0).toFixed(2); calculateOverall();
       });
 
       // Mathematics
-      ['math_cq', 'math_mcq'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('math_cq').value;
-          const b = document.getElementById('math_mcq').value;
-          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
-          if (!hasAny) {
-            document.getElementById('math_total').textContent = '';
-            document.getElementById('math_gpa').value = '';
-            calculateOverall();
-            return;
-          }
-          const cq = parseFloat(a) || 0;
-          const mcq = parseFloat(b) || 0;
-          const total = cq + mcq;
-          document.getElementById('math_total').textContent = total.toFixed(2);
-          const gpa = calculateGPA(total);
-          document.getElementById('math_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
-          calculateOverall();
+      ['math_cq','math_mcq'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const a = document.getElementById('math_cq')?.value || '';
+          const b = document.getElementById('math_mcq')?.value || '';
+          const t = document.getElementById('math_total'); const g = document.getElementById('math_gpa');
+          const hasAny = (a.trim() !== '') || (b.trim() !== ''); if(!hasAny){ if(t) t.textContent = ''; if(g) g.value = ''; calculateOverall(); return; }
+          const total = (parseFloat(a)||0) + (parseFloat(b)||0); if(t) t.textContent = total.toFixed(2); if(g){ const gp = calculateGPA(total); g.value = gp !== null ? gp.toFixed(1) : ''; } calculateOverall();
         });
       });
 
       // Religion
-      ['religion_cq', 'religion_mcq'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('religion_cq').value;
-          const b = document.getElementById('religion_mcq').value;
-          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
-          if (!hasAny) {
-            document.getElementById('religion_total').textContent = '';
-            document.getElementById('religion_gpa').value = '';
-            calculateOverall();
-            return;
-          }
-          const cq = parseFloat(a) || 0;
-          const mcq = parseFloat(b) || 0;
-          const total = cq + mcq;
-          document.getElementById('religion_total').textContent = total.toFixed(2);
-          const gpa = calculateGPA(total);
-          document.getElementById('religion_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
-          calculateOverall();
+      ['religion_cq','religion_mcq'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const a = document.getElementById('religion_cq')?.value || '';
+          const b = document.getElementById('religion_mcq')?.value || '';
+          const t = document.getElementById('religion_total'); const g = document.getElementById('religion_gpa');
+          const hasAny = (a.trim() !== '') || (b.trim() !== ''); if(!hasAny){ if(t) t.textContent = ''; if(g) g.value = ''; calculateOverall(); return; }
+          const total = (parseFloat(a)||0) + (parseFloat(b)||0); if(t) t.textContent = total.toFixed(2); if(g){ const gp = calculateGPA(total); g.value = gp !== null ? gp.toFixed(1) : ''; } calculateOverall();
         });
       });
 
       // Science
-      ['science_cq', 'science_mcq'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('science_cq').value;
-          const b = document.getElementById('science_mcq').value;
-          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
-          if (!hasAny) {
-            document.getElementById('science_total').textContent = '';
-            document.getElementById('science_gpa').value = '';
-            calculateOverall();
-            return;
-          }
-          const cq = parseFloat(a) || 0;
-          const mcq = parseFloat(b) || 0;
-          const total = cq + mcq;
-          document.getElementById('science_total').textContent = total.toFixed(2);
-          const gpa = calculateGPA(total);
-          document.getElementById('science_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
-          calculateOverall();
+      ['science_cq','science_mcq'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const a = document.getElementById('science_cq')?.value || '';
+          const b = document.getElementById('science_mcq')?.value || '';
+          const t = document.getElementById('science_total'); const g = document.getElementById('science_gpa');
+          const hasAny = (a.trim() !== '') || (b.trim() !== ''); if(!hasAny){ if(t) t.textContent = ''; if(g) g.value = ''; calculateOverall(); return; }
+          const total = (parseFloat(a)||0) + (parseFloat(b)||0); if(t) t.textContent = total.toFixed(2); if(g){ const gp = calculateGPA(total); g.value = gp !== null ? gp.toFixed(1) : ''; } calculateOverall();
         });
       });
 
       // ICT
-      ['ict_mcq', 'ict_practical'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('ict_mcq').value;
-          const b = document.getElementById('ict_practical').value;
-          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
-          if (!hasAny) {
-            document.getElementById('ict_total').textContent = '';
-            document.getElementById('ict_gpa').value = '';
-            calculateOverall();
-            return;
-          }
-          const mcq = parseFloat(a) || 0;
-          const practical = parseFloat(b) || 0;
-          const total = mcq + practical;
-          document.getElementById('ict_total').textContent = total.toFixed(2);
-          const gpa = calculateGPA(total);
-          document.getElementById('ict_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
-          calculateOverall();
+      ['ict_mcq','ict_practical'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const a = document.getElementById('ict_mcq')?.value || '';
+          const b = document.getElementById('ict_practical')?.value || '';
+          const t = document.getElementById('ict_total'); const g = document.getElementById('ict_gpa');
+          const hasAny = (a.trim() !== '') || (b.trim() !== ''); if(!hasAny){ if(t) t.textContent = ''; if(g) g.value = ''; calculateOverall(); return; }
+          const total = (parseFloat(a)||0) + (parseFloat(b)||0); if(t) t.textContent = total.toFixed(2); if(g){ const gp = calculateGPA(total); g.value = gp !== null ? gp.toFixed(1) : ''; } calculateOverall();
         });
       });
 
       // BGS
-      ['bgs_cq', 'bgs_mcq'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => {
-          const a = document.getElementById('bgs_cq').value;
-          const b = document.getElementById('bgs_mcq').value;
-          const hasAny = (a !== undefined && a !== null && String(a).trim() !== '') || (b !== undefined && b !== null && String(b).trim() !== '');
-          if (!hasAny) {
-            document.getElementById('bgs_total').textContent = '';
-            document.getElementById('bgs_gpa').value = '';
-            calculateOverall();
-            return;
-          }
-          const cq = parseFloat(a) || 0;
-          const mcq = parseFloat(b) || 0;
-          const total = cq + mcq;
-          document.getElementById('bgs_total').textContent = total.toFixed(2);
-          const gpa = calculateGPA(total);
-          document.getElementById('bgs_gpa').value = gpa !== null ? gpa.toFixed(1) : '';
-          calculateOverall();
+      ['bgs_cq','bgs_mcq'].forEach(id => {
+        safeAttach(id,'input', ()=>{
+          const a = document.getElementById('bgs_cq')?.value || '';
+          const b = document.getElementById('bgs_mcq')?.value || '';
+          const t = document.getElementById('bgs_total'); const g = document.getElementById('bgs_gpa');
+          const hasAny = (a.trim() !== '') || (b.trim() !== ''); if(!hasAny){ if(t) t.textContent = ''; if(g) g.value = ''; calculateOverall(); return; }
+          const total = (parseFloat(a)||0) + (parseFloat(b)||0); if(t) t.textContent = total.toFixed(2); if(g){ const gp = calculateGPA(total); g.value = gp !== null ? gp.toFixed(1) : ''; } calculateOverall();
         });
       });
 
       // allow manual GPA edits to recalc final GPA
-      document.querySelectorAll('.gpa-input').forEach(el => el.addEventListener('input', () => { calculateOverall(); }));
+      Array.from(document.querySelectorAll('.gpa-input') || []).forEach(el => { try{ el.addEventListener('input', () => { calculateOverall(); }); }catch(e){} });
     }
 
     // Calculate overall marks and GPA
     function calculateOverall() {
-      const ids = ['bangla1_total','bangla2_total','english1_total','english2_total','math_total','religion_total','science_total','ict_total','bgs_total'];
+      // Sum all subject totals (dynamic)
+      const totalEls = Array.from(document.querySelectorAll('[id$="_total"]'));
       let totalMark = 0;
       let filledCount = 0;
-      ids.forEach(id => {
-        const el = document.getElementById(id);
-        const t = el ? String(el.textContent).trim() : '';
+      totalEls.forEach(el => {
+        let t = '';
+        try{
+          if(el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') t = String(el.value).trim(); else t = String(el.textContent).trim();
+        }catch(e){ t = String(el.textContent || '').trim(); }
         if (t !== '') {
           const v = parseFloat(t) || 0;
           totalMark += v;
@@ -718,13 +524,10 @@
         document.getElementById('averageDisplay').textContent = '';
       }
 
-      // Calculate final GPA (average of provided GPAs)
-      const gpaIds = ['bangla1_gpa','english1_gpa','math_gpa','religion_gpa','science_gpa','ict_gpa','bgs_gpa'];
-      const gpas = gpaIds.map(id => {
-        const el = document.getElementById(id);
-        const v = el ? el.value : '';
-        const n = parseFloat(v);
-        return !isNaN(n) ? n : null;
+      // Calculate final GPA (average of provided GPAs dynamically)
+      const gpaEls = Array.from(document.querySelectorAll('[id$="_gpa"]'));
+      const gpas = gpaEls.map(el => {
+        try{ const v = el.value; const n = parseFloat(v); return !isNaN(n) ? n : null; }catch(e){ return null; }
       }).filter(g => g !== null);
 
       const finalGPA = gpas.length > 0 ? (gpas.reduce((a, b) => a + b, 0) / gpas.length) : 0;
@@ -734,9 +537,215 @@
           gpi.value = finalGPA > 0 ? finalGPA.toFixed(2) : '';
         }
       } else {
-        document.getElementById('gpaFinalDisplay').textContent = finalGPA > 0 ? finalGPA.toFixed(2) : '-';
+        try{ document.getElementById('gpaFinalDisplay').textContent = finalGPA > 0 ? finalGPA.toFixed(2) : '-'; }catch(e){}
       }
     }
+
+    // === Dynamic subjects helpers ===
+    // SUBJECT_MAP: { 'Bangla 1st Paper': { CQ: '*Bangla 1st Paper_CQ', MCQ: '*Bangla 1st Paper_MCQ', GPA: '*Bangla 1st Paper_GPA', Total: '*Bangla 1st Paper_Total' } }
+    const SUBJECT_MAP = {};
+    const DYNAMIC_SUBJECTS = [];
+    function sanitizeForId(s){ return String(s||'').replace(/\*/g,'').trim().toLowerCase().replace(/\s+/g,'_').replace(/[^\w\-]/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,''); }
+
+    function parseAndBuildSubjectsFromRow(row){
+      // build SUBJECT_MAP from a single row's keys (very tolerant: tries splitting on last token, then regex fallback)
+      try{
+        const TOKENS = ['CQ','WRITTEN','MCQ','CA','PRACTICAL','PRAC','PRACT','TOTAL','GPA'];
+        Object.keys(row||{}).forEach(h => {
+          const orig = String(h);
+          const clean = orig.replace(/\*/g,'').trim();
+
+          // Attempt 1: split by separators and check last token
+          let subject = null;
+          let comp = null;
+          const parts = clean.split(/[_\s-]+/);
+          if(parts.length > 1){
+            const last = parts[parts.length - 1].toUpperCase();
+            if(TOKENS.includes(last)){
+              comp = last;
+              subject = parts.slice(0, -1).join(' ').trim();
+            }
+          }
+
+          // Attempt 2: regex fallback (captures trailing component)
+          if(!subject){
+            const m = clean.match(/^(.*?)(?:[_\s-]+)?(CQ|WRITTEN|MCQ|CA|PRACTICAL|PRAC|Practical|Total|GPA)$/i);
+            if(m){ subject = m[1].trim(); comp = m[2].toUpperCase(); }
+          }
+
+          // If still not recognized, skip this header
+          if(!subject) return;
+
+          // normalize synonyms
+          if(comp === 'CA') comp = 'MCQ';
+          if(comp === 'PRAC' || comp === 'PRACT') comp = 'PRACTICAL';
+          if(comp === 'TOTAL') comp = 'TOTAL';
+
+          SUBJECT_MAP[subject] = SUBJECT_MAP[subject] || {};
+          SUBJECT_MAP[subject][comp] = h; // store original header name
+
+          // Keep legacy 'Total' key for compatibility with older code paths
+          if(comp === 'TOTAL') SUBJECT_MAP[subject]['Total'] = h;
+        });
+
+        // Convert to sorted list
+        DYNAMIC_SUBJECTS.length = 0;
+        Object.keys(SUBJECT_MAP).sort((a,b)=> a.localeCompare(b)).forEach(s => DYNAMIC_SUBJECTS.push(s));
+
+        if(DYNAMIC_SUBJECTS.length === 0) {
+          console.warn('No subjects detected from sample row. Headers:', Object.keys(row || {}));
+          const det = document.getElementById('detectedSubjects'); if(det) det.textContent = 'No subjects detected from exam table. Please check the table columns (e.g., "*Subject_CQ", "*Subject_MCQ", etc.).';
+          const container = document.getElementById('subjectGrid'); if(container) container.innerHTML = '';
+        } else {
+          buildSubjectGrid(DYNAMIC_SUBJECTS);
+          updateDetectedSubjectsUI(DYNAMIC_SUBJECTS);
+        }
+      }catch(e){ console.error('parse subjects failed', e); }
+    }
+
+    async function buildSubjectGridFromSample(){
+      try{
+        const { data, error } = await sb.from(TABLE_EXAM).select('*').limit(1);
+        if(!error && data && data.length>0){
+          parseAndBuildSubjectsFromRow(data[0]);
+        } else {
+          const det = document.getElementById('detectedSubjects'); if(det) det.textContent = 'No sample exam row found; subjects not detected.';
+        }
+
+        // Log detected subjects for debugging
+        if(DYNAMIC_SUBJECTS.length === 0) {
+          console.warn('No subjects detected from exam table.');
+        } else {
+          console.log('Detected subjects:', DYNAMIC_SUBJECTS.map(s => s.replace(/^\*+\s*/,'')).join(', '));
+        }
+      }catch(e){
+        console.warn('Could not fetch sample exam row for subjects', e);
+        try{ buildSubjectGrid(DEFAULT_SUBJECTS); }catch(e2){}
+      }
+    }
+
+    function buildSubjectGrid(subjects){
+      const container = document.getElementById('subjectGrid');
+      if(!container) return;
+      container.innerHTML = '';
+
+      subjects.forEach(sub => {
+        const comps = SUBJECT_MAP[sub] || {};
+        const sid = sanitizeForId(sub);
+        const card = document.createElement('div');
+        card.className = 'subject-card';
+
+        const h4 = document.createElement('h4'); h4.textContent = sub.replace(/^\*+\s*/,''); card.appendChild(h4);
+
+        function addField(labelText, id, attrs){
+          const fg = document.createElement('div'); fg.className = 'form-group';
+          const label = document.createElement('label'); label.textContent = labelText; fg.appendChild(label);
+          let field;
+          if(attrs && attrs.readonly){ field = document.createElement('div'); field.id = id; field.className = 'readonly-field'; } else { field = document.createElement('input'); field.type = 'number'; field.id = id; field.step = '0.01'; if(attrs && attrs.min !== undefined) field.min = attrs.min; if(attrs && attrs.max !== undefined) field.max = attrs.max; }
+          if(attrs && attrs.dataKey) field.setAttribute('data-key', attrs.dataKey);
+          fg.appendChild(field); card.appendChild(fg);
+          return field;
+        }
+
+        // Always show all standard fields for every subject
+        const cqHeader = comps['CQ'] || comps['WRITTEN'];
+        const mcqHeader = comps['MCQ'];
+        const prHeader = comps['PRACTICAL'];
+        const gpaHeader = comps['GPA'];
+        const totalHeader = comps['TOTAL'] || comps['Total'];
+
+        // Always create all fields (whether database column exists or not)
+        const cqEl = addField('CQ', sid + '_cq', { dataKey: cqHeader });
+        const mcqEl = addField('MCQ', sid + '_mcq', { dataKey: mcqHeader });
+        const prEl = addField('Practical', sid + '_practical', { dataKey: prHeader });
+        const totalEl = addField('Total', sid + '_total', { dataKey: totalHeader });
+        const gpaEl = addField('GPA', sid + '_gpa', { dataKey: gpaHeader });
+
+        // Attach listeners
+        function onInput(){
+          const a = cqEl ? parseFloat(cqEl.value) || 0 : 0;
+          const b = mcqEl ? parseFloat(mcqEl.value) || 0 : 0;
+          const c = prEl ? parseFloat(prEl.value) || 0 : 0;
+          const hasAny = (cqEl && String(cqEl.value).trim()!=='') || (mcqEl && String(mcqEl.value).trim()!=='') || (prEl && String(prEl.value).trim()!=='');
+          if(!hasAny){ if(totalEl && totalEl.tagName === 'INPUT') totalEl.value = ''; else if(totalEl) totalEl.textContent = ''; if(gpaEl) gpaEl.value = ''; calculateOverall(); return; }
+          const total = a + b + c;
+          if(totalEl && totalEl.tagName === 'INPUT') totalEl.value = total.toFixed(2); else if(totalEl) totalEl.textContent = total.toFixed(2);
+          if(gpaEl){ const g = calculateGPA(total); gpaEl.value = g !== null ? g.toFixed(1) : ''; }
+          calculateOverall();
+        }
+        if(cqEl) cqEl.addEventListener('input', onInput);
+        if(mcqEl) mcqEl.addEventListener('input', onInput);
+        if(prEl) prEl.addEventListener('input', onInput);
+
+        // When user types into Total directly, update GPA
+        try{ if(totalEl && totalEl.tagName === 'INPUT') totalEl.addEventListener('input', ()=>{ const t = parseFloat(totalEl.value) || 0; if(gpaEl){ const g = calculateGPA(t); gpaEl.value = g !== null ? g.toFixed(1) : ''; } calculateOverall(); }); }catch(e){}
+        if(gpaEl) gpaEl.addEventListener('input', ()=>{ calculateOverall(); });
+      });
+      // After building, update detection summary UI
+      try{ updateDetectedSubjectsUI(subjects); }catch(e){}
+    }
+
+    function updateDetectedSubjectsUI(subjects){
+      try{
+        const det = document.getElementById('detectedSubjects'); if(!det) return;
+        if(!subjects || subjects.length === 0){ det.textContent = 'No subjects detected from exam table.'; return; }
+        det.innerHTML = subjects.map(s=>{ const comps = Object.keys(SUBJECT_MAP[s]||{}).join(', '); return `<div style="margin-top:4px">${String(s).replace(/^\*+\s*/,'')} — <small style="color:#666">${comps}</small></div>`}).join('');
+      }catch(e){}
+    }
+
+    function ensureSubjectGrid(){
+      try{
+        const container = document.getElementById('subjectGrid');
+        if(!container) return;
+        const hasCards = container.querySelector('.subject-card');
+        const det = document.getElementById('detectedSubjects');
+        if(!hasCards){
+          if(det) det.textContent = 'No subjects detected yet. Ensure the exam table has subject columns and reload.';
+        } else {
+          // update detected subjects UI to reflect current map
+          updateDetectedSubjectsUI(DYNAMIC_SUBJECTS);
+        }
+      }catch(e){}
+    }
+
+    function populateSubjectValues(examData){
+      try{
+        if(!examData) return;
+        Object.keys(SUBJECT_MAP).forEach(sub => {
+          const sid = sanitizeForId(sub);
+          const comps = SUBJECT_MAP[sub] || {};
+          const cqKey = comps['CQ'] || comps['WRITTEN'];
+          if(cqKey && document.getElementById(sid + '_cq')){ const v = examData[cqKey]; if(v !== undefined && v !== null) document.getElementById(sid + '_cq').value = v; }
+          if(comps['MCQ'] && document.getElementById(sid + '_mcq')){ const v = examData[comps['MCQ']]; if(v !== undefined && v !== null) document.getElementById(sid + '_mcq').value = v; }
+          if(comps['PRACTICAL'] && document.getElementById(sid + '_practical')){ const v = examData[comps['PRACTICAL']]; if(v !== undefined && v !== null) document.getElementById(sid + '_practical').value = v; }
+          if((comps['TOTAL'] || comps['Total']) && document.getElementById(sid + '_total')){
+            const key = comps['TOTAL'] || comps['Total']; const v = examData[key];
+            try{
+              const el = document.getElementById(sid + '_total');
+              if(v !== undefined && v !== null){
+                if(el.tagName === 'INPUT') el.value = (isNaN(parseFloat(v)) ? String(v) : parseFloat(v).toFixed(2)); else el.textContent = (isNaN(parseFloat(v)) ? String(v) : parseFloat(v).toFixed(2));
+              }
+            }catch(e){}
+          }
+          if(comps['GPA'] && document.getElementById(sid + '_gpa')){ const v = examData[comps['GPA']]; if(v !== undefined && v !== null) document.getElementById(sid + '_gpa').value = v; }
+        });
+
+        // Trigger recalculation for all subjects
+        Object.keys(SUBJECT_MAP).forEach(sub => {
+          const sid = sanitizeForId(sub);
+          try{ const cqEl = document.getElementById(sid + '_cq'); if(cqEl) cqEl.dispatchEvent(new Event('input')); }catch(e){}
+          try{ const mcqEl = document.getElementById(sid + '_mcq'); if(mcqEl) mcqEl.dispatchEvent(new Event('input')); }catch(e){}
+          try{ const prEl = document.getElementById(sid + '_practical'); if(prEl) prEl.dispatchEvent(new Event('input')); }catch(e){}
+        });
+
+        // Recalculate overall after populating all subjects
+        setTimeout(() => { try{ calculateOverall(); }catch(e){} }, 100);
+      }catch(e){ console.error('populate dynamic subjects failed', e); }
+    }
+
+    // Try to build subject grid at startup
+    try{ buildSubjectGridFromSample(); }catch(e){}
+    try{ ensureSubjectGrid(); }catch(e){}
 
     // Load Student by IID
     loadBtn.addEventListener('click', async () => {
@@ -814,46 +823,8 @@
           roll2025Input.value = examData.roll_2025 || '';
           examNameYearInput.value = examData.exam_name_year || '';
           
-          // Populate marks
-          document.getElementById('bangla1_cq').value = examData['*Bangla 1st Paper_CQ'] || '';
-          document.getElementById('bangla1_mcq').value = examData['*Bangla 1st Paper_MCQ'] || '';
-          document.getElementById('bangla2_cq').value = examData['*Bangla 2nd Paper_CQ'] || '';
-          document.getElementById('bangla2_mcq').value = examData['*Bangla 2nd Paper_MCQ'] || '';
-          document.getElementById('english1_cq').value = examData['*English 1st Paper_CQ'] || '';
-          document.getElementById('english2_cq').value = examData['*English 2nd Paper_CQ'] || '';
-          document.getElementById('math_cq').value = examData['*Mathematics_CQ'] || '';
-          document.getElementById('math_mcq').value = examData['*Mathematics_MCQ'] || '';
-          document.getElementById('religion_cq').value = examData['*Religion_CQ'] || '';
-          document.getElementById('religion_mcq').value = examData['*Religion_MCQ'] || '';
-          document.getElementById('science_cq').value = examData['*Science_CQ'] || '';
-          document.getElementById('science_mcq').value = examData['*Science_MCQ'] || '';
-          document.getElementById('ict_mcq').value = examData['*ICT_MCQ'] || '';
-          document.getElementById('ict_practical').value = examData['*ICT_Practical'] || '';
-          document.getElementById('bgs_cq').value = examData['*Bangladesh And Global Studies_CQ'] || '';
-          document.getElementById('bgs_mcq').value = examData['*Bangladesh And Global Studies_MCQ'] || '';
-
-          // Trigger calculations
-          document.getElementById('bangla1_cq').dispatchEvent(new Event('input'));
-          document.getElementById('bangla2_cq').dispatchEvent(new Event('input'));
-          document.getElementById('english1_cq').dispatchEvent(new Event('input'));
-          document.getElementById('english2_cq').dispatchEvent(new Event('input'));
-          document.getElementById('math_cq').dispatchEvent(new Event('input'));
-          document.getElementById('religion_cq').dispatchEvent(new Event('input'));
-          document.getElementById('science_cq').dispatchEvent(new Event('input'));
-          document.getElementById('ict_mcq').dispatchEvent(new Event('input'));
-          document.getElementById('bgs_cq').dispatchEvent(new Event('input'));
-
-          // If GPAs were stored, use them (overrides calculated values) — preserve explicit zeros
-          try{
-            function setGpa(id, key){ try{ const g = (examData[key] !== undefined && examData[key] !== null) ? examData[key] : document.getElementById(id).value || ''; document.getElementById(id).value = (g !== undefined && g !== null) ? String(g) : ''; }catch(e){} }
-            setGpa('bangla1_gpa','*Bangla 1st Paper_GPA');
-            setGpa('english1_gpa','*English 1st Paper_GPA');
-            setGpa('math_gpa','*Mathematics_GPA');
-            setGpa('religion_gpa','*Religion_GPA');
-            setGpa('science_gpa','*Science_GPA');
-            setGpa('ict_gpa','*ICT_GPA');
-            setGpa('bgs_gpa','*Bangladesh And Global Studies_GPA');
-          }catch(e){}
+          // Populate marks using dynamic subject mapping
+          populateSubjectValues(examData);
 
           // Recalculate overall to account for any manual/DB GPA values
           try{ calculateOverall(); }catch(e){}
@@ -896,11 +867,13 @@
             marksEntrySection.style.display = 'block';
             proceedStatus.textContent = '✅ Existing data loaded!';
             proceedStatus.className = 'status ok';
+            try{ ensureSubjectGrid(); }catch(e){}
           }catch(e){
             // fallback: show the section
             marksEntrySection.style.display = 'block';
             proceedStatus.textContent = '✅ Existing data loaded!';
             proceedStatus.className = 'status ok';
+            try{ ensureSubjectGrid(); }catch(e){}
           }
         }
       } catch (e) {
@@ -923,6 +896,9 @@
 
       // Proceed allowed regardless of record owner — editing permitted for any user
       // (Owner displayed for traceability but does not block editing) 
+
+      // Ensure subject cards list is up-to-date
+      try{ ensureSubjectGrid(); }catch(e){}
 
       marksEntrySection.style.display = 'block';
       proceedStatus.textContent = '✅ Ready for marks entry!';
@@ -957,47 +933,7 @@
         father_mobile: currentStudentData.father_mobile || null,
         exam_name_year: examNameYearInput.value.trim(),
         
-        '*Bangla 1st Paper_CQ': numValue('bangla1_cq'),
-        '*Bangla 1st Paper_MCQ': numValue('bangla1_mcq'),
-        '*Bangla 1st Paper_Total': textNumValue('bangla1_total'),
-        '*Bangla 1st Paper_GPA': (function(){ const v=document.getElementById('bangla1_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
-        '*Bangla 2nd Paper_CQ': numValue('bangla2_cq'),
-        '*Bangla 2nd Paper_MCQ': numValue('bangla2_mcq'),
-        '*Bangla 2nd Paper_Total': textNumValue('bangla2_total'),
-        
-        '*English 1st Paper_CQ': numValue('english1_cq'),
-        '*English 1st Paper_Total': textNumValue('english1_total'),
-        '*English 1st Paper_GPA': (function(){ const v=document.getElementById('english1_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
-        '*English 2nd Paper_CQ': numValue('english2_cq'),
-        '*English 2nd Paper_Total': textNumValue('english2_total'),
-        
-        '*Mathematics_CQ': numValue('math_cq'),
-        '*Mathematics_MCQ': numValue('math_mcq'),
-        '*Mathematics_Total': textNumValue('math_total'),
-        '*Mathematics_GPA': (function(){ const v=document.getElementById('math_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
-        '*Religion_CQ': numValue('religion_cq'),
-        '*Religion_MCQ': numValue('religion_mcq'),
-        '*Religion_Total': textNumValue('religion_total'),
-        '*Religion_GPA': (function(){ const v=document.getElementById('religion_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
-        '*Science_CQ': numValue('science_cq'),
-        '*Science_MCQ': numValue('science_mcq'),
-        '*Science_Total': textNumValue('science_total'),
-        '*Science_GPA': (function(){ const v=document.getElementById('science_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
-        '*ICT_MCQ': numValue('ict_mcq'),
-        '*ICT_Practical': numValue('ict_practical'),
-        '*ICT_Total': textNumValue('ict_total'),
-        '*ICT_GPA': (function(){ const v=document.getElementById('ict_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
-        '*Bangladesh And Global Studies_CQ': numValue('bgs_cq'),
-        '*Bangladesh And Global Studies_MCQ': numValue('bgs_mcq'),
-        '*Bangladesh And Global Studies_Total': textNumValue('bgs_total'),
-        '*Bangladesh And Global Studies_GPA': (function(){ const v=document.getElementById('bgs_gpa').value; return (v !== undefined && String(v).trim() !== '') ? v : null; })(),
-        
+       
         class_rank: (function(){ const v = document.getElementById('class_rank').value; return (v !== undefined && String(v).trim() !== '') ? parseFloat(v) : null; })(),
         remark: document.getElementById('remark').value.trim() || null,
 
@@ -1008,6 +944,20 @@
         average_mark: (function(){ const t = String(document.getElementById('averageDisplay').textContent).trim(); return t !== '' ? parseFloat(t) : null; })(),
         gpa_final: (function(){ const el = document.getElementById('gpaFinalInput'); return el && el.value !== '' ? parseFloat(el.value) : null; })()
       };
+
+      // Merge dynamic subject fields collected from SUBJECT_MAP into the payload
+      try{
+        Object.keys(SUBJECT_MAP||{}).forEach(function(sub){
+          const comps = SUBJECT_MAP[sub] || {};
+          const sid = sanitizeForId(sub);
+          if(comps['CQ'] || comps['WRITTEN']) payload[comps['CQ'] || comps['WRITTEN']] = numValue(sid + '_cq');
+          if(comps['MCQ']) payload[comps['MCQ']] = numValue(sid + '_mcq');
+          if(comps['PRACTICAL']) payload[comps['PRACTICAL']] = numValue(sid + '_practical');
+          // Prefer normalized TOTAL key but accept legacy 'Total' as fallback
+          if(comps['TOTAL'] || comps['Total']) payload[(comps['TOTAL'] || comps['Total'])] = numValue(sid + '_total');
+          if(comps['GPA']) payload[comps['GPA']] = (function(){ const el = document.getElementById(sid + '_gpa'); return el && el.value !== '' ? parseFloat(el.value) : null; })();
+        });
+      }catch(e){ console.error('Failed to merge dynamic subjects into payload', e); }
 
       try {
         const { data, error } = await sb.from(TABLE_EXAM).upsert(payload, { onConflict: 'iid' }).select();

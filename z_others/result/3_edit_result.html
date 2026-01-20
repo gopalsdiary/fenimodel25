@@ -452,13 +452,18 @@
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Require login: if no admin session, redirect to login page
+    // Require login: if no admin session, do NOT redirect; mark page to require login and show inline warning
     try{
       if(!localStorage.getItem('adminButton')){
-        // replace so user can't go back to a protected page easily
-        window.location.replace('index.html');
+        // Do not redirect — set a flag that will be handled after DOM elements are available
+        window.requireLogin = true;
+      } else {
+        window.requireLogin = false;
       }
-    }catch(e){}
+    }catch(e){
+      // On error, be conservative: require login
+      window.requireLogin = true;
+    }
 
     const TABLE_STUDENT = 'student_database_others';
     const TABLE_EXAM = 'exam_others_school';
@@ -488,6 +493,49 @@
 
     // Show currently logged-in user (from localStorage 'adminButton')
     try{ if(inputUserDisplay) inputUserDisplay.textContent = localStorage.getItem('adminButton') || '-'; }catch(e){}
+
+    // If page is flagged as requiring login, show inline warning and disable load/save/proceed actions
+    try{
+      if(window.requireLogin){
+        const warn = document.createElement('div');
+        warn.style.background = '#fff4e5';
+        warn.style.border = '1px solid #ffd39b';
+        warn.style.padding = '10px';
+        warn.style.margin = '0 0 12px 0';
+        warn.style.borderRadius = '6px';
+        warn.style.color = '#7a4a00';
+        warn.innerHTML = '⚠️ <strong>Login required:</strong> You are not signed in. Loading/saving is disabled. <a href="/login/index.html?returnTo=' + encodeURIComponent(window.location.pathname + window.location.search) + '">Login</a>';
+        const container = document.querySelector('.wrap') || document.body;
+        container.insertBefore(warn, container.firstChild);
+        try{ if(loadBtn) loadBtn.disabled = true; }catch(e){}
+        try{ if(proceedBtn) proceedBtn.disabled = true; }catch(e){}
+        try{ if(saveBtn) saveBtn.disabled = true; }catch(e){}
+
+        // Additionally try to detect Supabase session and auto-enable if valid
+        (async function tryDetectSession(){
+          try{
+            const client = (typeof sb !== 'undefined' && sb) || (window.__supabaseClients ? Object.values(window.__supabaseClients)[0] : null);
+            if(client && client.auth && typeof client.auth.getSession === 'function'){
+              const { data: { session }, error } = await client.auth.getSession();
+              if(!error && session){
+                try{ if(warn && warn.parentNode) warn.parentNode.removeChild(warn); }catch(e){}
+                try{ if(loadBtn) loadBtn.disabled = false; }catch(e){}
+                try{ if(proceedBtn) proceedBtn.disabled = false; }catch(e){}
+                try{ if(saveBtn) saveBtn.disabled = false; }catch(e){}
+                window.requireLogin = false;
+                try{
+                  const email = session.user && session.user.email;
+                  if(email){
+                    if(!localStorage.getItem('adminButton')) localStorage.setItem('adminButton', email);
+                    if(inputUserDisplay) inputUserDisplay.textContent = localStorage.getItem('adminButton') || email;
+                  }
+                }catch(e){}
+              }
+            }
+          }catch(e){ console.warn('Session detect failed', e); }
+        })();
+      }
+    }catch(e){}
 
     let currentIID = null;
     let currentStudentData = null;
