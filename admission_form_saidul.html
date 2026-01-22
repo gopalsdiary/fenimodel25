@@ -410,7 +410,7 @@
 <body>
   <div class="container">
     <div class="form-header">
-      <h1>Student Admission Form</h1>
+      <h1>Student ID Card Form</h1>
     </div>
 
     <div class="form-body">
@@ -430,7 +430,7 @@
             </div>
             <input type="file" id="studentPhoto" name="studentPhoto" accept="image/*">
             <button type="button" class="photo-upload-btn" onclick="document.getElementById('studentPhoto').click()">
-              📸 ছবি নির্বাচন করুন
+              📸 Select picture
             </button>
           </div>
         </div>
@@ -467,6 +467,11 @@
             <div class="form-group">
               <label>Date of Birth</label>
               <input type="date" id="dateOfBirth" name="student_dateofbirth">
+            </div>
+
+            <div class="form-group">
+              <label>Valid Till</label>
+              <input type="text" id="validTill" name="valid_till" placeholder="e.g., December 2025">
             </div>
 
             <div class="form-group">
@@ -598,6 +603,7 @@ document.getElementById('admissionForm').addEventListener('submit', async functi
     const data = {
       student_name_en: toUpperIf(formData.get('student_name_en')),
       student_dateofbirth: formData.get('student_dateofbirth'),
+      valid_till: toUpperIf(formData.get('valid_till')),
       father_name_en: toUpperIf(formData.get('father_name_en')),
       // initially attempt to save with "+88" prefix (string); fallback to numeric if server rejects
       father_mobile: fatherMobilePlus,
@@ -609,7 +615,7 @@ document.getElementById('admissionForm').addEventListener('submit', async functi
       session: formData.get('session') ? parseFloat(formData.get('session')) : 2025,
       student_photo_url: photoUrl,
       admission_date: new Date().toISOString().split('T')[0]
-    };
+    }; 
     
     successMsg.textContent = 'Saving data...';
     
@@ -778,6 +784,7 @@ async function loadStudentList() {
             <th style="padding: 10px; border: 1px solid #ddd;">Roll</th>
             <th style="padding: 10px; border: 1px solid #ddd;">Father's Name</th>
             <th style="padding: 10px; border: 1px solid #ddd;">Mobile</th>
+            <th style="padding: 10px; border: 1px solid #ddd;">Valid Till</th>
             <th style="padding: 10px; border: 1px solid #ddd;">Date</th>
             <th style="padding: 10px; border: 1px solid #ddd;">Actions</th>
           </tr>
@@ -797,6 +804,7 @@ async function loadStudentList() {
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.roll_2025 || ''}</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${student.father_name_en || ''}</td>
           <td style="padding: 8px; border: 1px solid #ddd;">${student.father_mobile || ''}</td>
+          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.valid_till || ''}</td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.admission_date || ''}</td>
           <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
             <button class="btn btn-secondary" onclick="editStudent(${student.iid})" style="padding:6px 10px; border-radius:6px;">Edit</button>
@@ -829,8 +837,7 @@ async function editStudent(id) {
     // Populate form fields
     document.getElementById('studentNameEn').value = student.student_name_en || '';
     document.getElementById('dateOfBirth').value = student.student_dateofbirth || '';
-    document.getElementById('fatherNameEn').value = student.father_name_en || '';
-    // Normalize stored father_mobile for input (show local format starting with 0)
+    document.getElementById('fatherNameEn').value = student.father_name_en || '';    document.getElementById('validTill').value = student.valid_till || '';    // Normalize stored father_mobile for input (show local format starting with 0)
     let storedMobile = student.father_mobile || '';
     if (storedMobile) {
       let sm = String(storedMobile).replace(/\D/g, '');
