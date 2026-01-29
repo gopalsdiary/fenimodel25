@@ -9,17 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* Modern Reset & Base Styles */
+        /* Modern Reset & Base Styles (White-based theme) */
         :root {
-            --primary-color: #4f46e5;
-            --primary-hover: #4338ca;
-            --secondary-color: #ec4899;
-            --secondary-hover: #db2777;
-            --bg-color: #0f172a;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --text-color: #f8fafc;
-            --text-muted: #94a3b8;
-            --glass-border: rgba(255, 255, 255, 0.1);
+            --primary-color: #2563eb; /* blue-600 */
+            --primary-hover: #1e40af; /* darker blue */
+            --secondary-color: #ec4899; /* keep accent */
+            --secondary-hover: #be185d;
+            --bg-color: #ffffff;
+            --card-bg: #ffffff;
+            --card-border: #e6e8f0;
+            --text-color: #0f172a;
+            --text-muted: #475569;
+            --glass-border: rgba(15, 23, 42, 0.04);
+            --btn-shadow: rgba(15, 23, 42, 0.06);
         }
 
         * {
@@ -31,135 +33,145 @@
         body {
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg-color);
-            background-image:
-                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
-                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
-                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             color: var(--text-color);
-            overflow: hidden;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
         }
 
-        /* Glassmorphism Card */
+        /* Card */
         .dashboard-card {
             background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 24px;
-            padding: 3rem 4rem;
-            width: 90%;
-            max-width: 500px;
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 2.25rem 2.5rem;
+            width: 95%;
+            max-width: 760px;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.8s ease-out;
+            box-shadow: 0 8px 24px var(--btn-shadow);
+            animation: fadeIn 0.6s ease-out;
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         h1 {
-            font-size: 2.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(to right, #818cf8, #e879f9);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+            font-size: 1.9rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            color: var(--text-color);
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
         }
 
         p.subtitle {
             color: var(--text-muted);
-            margin-bottom: 3rem;
-            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
         }
 
         /* Button Grid */
         .button-group {
             display: grid;
-            gap: 1.5rem;
+            gap: 1rem;
             width: 100%;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
         }
 
         .reg-btn {
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 1.25rem;
-            border-radius: 16px;
+            padding: 1rem 1.15rem;
+            border-radius: 6px; /* rectangular-rounded */
             text-decoration: none;
             font-weight: 600;
-            font-size: 1.2rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1rem;
+            transition: transform 0.28s cubic-bezier(.2,.9,.3,1), box-shadow 0.28s cubic-bezier(.2,.9,.3,1), background 0.28s ease, color 0.28s ease;
             position: relative;
             overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            letter-spacing: 0.5px;
+            border: 1px solid var(--card-border);
+            background: linear-gradient(180deg, #ffffff, #f8fafc);
+            color: var(--primary-color);
+            box-shadow: 0 8px 18px rgba(15,23,42,0.04);
+            letter-spacing: 0.2px;
+        }
+
+        /* subtle sheen for buttons */
+        .reg-btn::after {
+            content: '';
+            position: absolute;
+            top: -60%;
+            left: -30%;
+            width: 40%;
+            height: 220%;
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.65) 50%, rgba(255,255,255,0) 100%);
+            transform: rotate(25deg) translateX(-140%);
+            transition: transform 0.9s cubic-bezier(.2,.9,.3,1);
+            pointer-events: none;
+            filter: blur(8px);
+        }
+
+        .reg-btn:focus {
+            outline: 3px solid rgba(37,99,235,0.12);
+            outline-offset: 3px;
         }
 
         /* 6 reg Button */
         .btn-6 {
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(79, 70, 229, 0.05));
-            color: #818cf8;
-            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06);
+            border-color: rgba(37,99,235,0.12);
+            background: linear-gradient(180deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+            color: var(--primary-color);
         }
 
         .btn-6:hover {
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(79, 70, 229, 0.1));
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2), 0 4px 6px -2px rgba(79, 70, 229, 0.1);
-            border-color: rgba(129, 140, 248, 0.3);
+            background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
             color: #fff;
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 18px 40px rgba(37,99,235,0.12);
         }
+
+        .btn-6:hover::after { transform: rotate(25deg) translateX(250%); }
 
         /* 9 reg Button */
         .btn-9 {
-            background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(236, 72, 153, 0.05));
-            color: #f472b6;
-            box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.1), 0 2px 4px -1px rgba(236, 72, 153, 0.06);
+            color: var(--secondary-color);
+            border-color: rgba(236,72,153,0.12);
+            background: linear-gradient(180deg, rgba(236,72,153,0.06), rgba(236,72,153,0.02));
         }
 
         .btn-9:hover {
-            background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1));
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.2), 0 4px 6px -2px rgba(236, 72, 153, 0.1);
-            border-color: rgba(244, 114, 182, 0.3);
+            background: linear-gradient(90deg, var(--secondary-color), var(--secondary-hover));
             color: #fff;
+            transform: translateY(-6px) scale(1.02);
+            box-shadow: 0 18px 40px rgba(236,72,153,0.12);
         }
 
-        /* Icon styling (simple pure CSS shapes or content) */
+        .btn-9:hover::after { transform: rotate(25deg) translateX(250%); }
+
+        /* Icon styling */
         .btn-icon {
-            margin-right: 12px;
-            font-size: 1.4rem;
+            margin-right: 10px;
+            font-size: 1.25rem;
+            transition: transform 0.34s cubic-bezier(.2,.9,.3,1);
+            display: inline-block;
         }
+
+        .reg-btn:hover .btn-icon { transform: translateX(6px) rotate(-6deg); }
 
         /* Click effect */
-        .reg-btn:active {
-            transform: translateY(0);
-        }
+        .reg-btn:active { transform: translateY(0); }
 
         /* Responsive */
         @media (max-width: 640px) {
-            .dashboard-card {
-                padding: 2rem;
-                width: 95%;
-            }
-
-            h1 {
-                font-size: 1.8rem;
-            }
+            .dashboard-card { padding: 1.5rem; width: 96%; }
+            h1 { font-size: 1.5rem; }
         }
     </style>
 </head>
@@ -175,7 +187,7 @@
                 <span class="btn-icon">📝</span>
                 6 Reg
             </a>
-            <a href="9_reg_list.html" class="reg-btn btn-9">
+            <a href="6_reg_list.html" class="reg-btn btn-9">
                 <span class="btn-icon">🎓</span>
                 9 Reg
             </a>
