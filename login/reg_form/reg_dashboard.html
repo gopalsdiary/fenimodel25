@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Dashboard - Feni Model</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* Modern Reset & Base Styles */
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #ec4899;
+            --secondary-hover: #db2777;
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-color);
+            overflow: hidden;
+        }
+
+        /* Glassmorphism Card */
+        .dashboard-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 3rem 4rem;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #818cf8, #e879f9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+
+        /* Button Grid */
+        .button-group {
+            display: grid;
+            gap: 1.5rem;
+            width: 100%;
+        }
+
+        .reg-btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1.25rem;
+            border-radius: 16px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            letter-spacing: 0.5px;
+        }
+
+        /* 6 reg Button */
+        .btn-6 {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(79, 70, 229, 0.05));
+            color: #818cf8;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06);
+        }
+
+        .btn-6:hover {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.2), rgba(79, 70, 229, 0.1));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2), 0 4px 6px -2px rgba(79, 70, 229, 0.1);
+            border-color: rgba(129, 140, 248, 0.3);
+            color: #fff;
+        }
+
+        /* 9 reg Button */
+        .btn-9 {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(236, 72, 153, 0.05));
+            color: #f472b6;
+            box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.1), 0 2px 4px -1px rgba(236, 72, 153, 0.06);
+        }
+
+        .btn-9:hover {
+            background: linear-gradient(135deg, rgba(236, 72, 153, 0.2), rgba(236, 72, 153, 0.1));
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(236, 72, 153, 0.2), 0 4px 6px -2px rgba(236, 72, 153, 0.1);
+            border-color: rgba(244, 114, 182, 0.3);
+            color: #fff;
+        }
+
+        /* Icon styling (simple pure CSS shapes or content) */
+        .btn-icon {
+            margin-right: 12px;
+            font-size: 1.4rem;
+        }
+
+        /* Click effect */
+        .reg-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .dashboard-card {
+                padding: 2rem;
+                width: 95%;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-card">
+        <h1>Registration</h1>
+        <p class="subtitle">Choose your registration class</p>
+
+        <div class="button-group">
+            <a href="6_reg_list.html" class="reg-btn btn-6">
+                <span class="btn-icon">📝</span>
+                6 Reg
+            </a>
+            <a href="9_reg_list.html" class="reg-btn btn-9">
+                <span class="btn-icon">🎓</span>
+                9 Reg
+            </a>
+        </div>
+    </div>
+
+</body>
+
+</html>
