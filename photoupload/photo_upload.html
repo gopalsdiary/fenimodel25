@@ -755,6 +755,8 @@
         let filteredData = [];
         let currentDocumentType = null;
         let selectedDocumentFile = null;
+        // Instant upload mode: when true, selected image file will be uploaded immediately without cropping
+        let instantUploadMode = false;
 
         // DOM Elements
         const tbody = document.querySelector('#dataTable tbody');
@@ -898,8 +900,12 @@
                     const iid = e.target.getAttribute('data-iid');
                     const studentName = e.target.getAttribute('data-student-name');
                     const docType = e.target.getAttribute('data-doc-type');
+                    const isInstant = e.target.getAttribute('data-instant') === 'true';
                     
-                    if (docType) {
+                    if (isInstant) {
+                        console.log('Instant photo upload button clicked - IID:', iid, 'Name:', studentName);
+                        handleInstantUploadButtonClick(iid, studentName);
+                    } else if (docType) {
                         console.log('Document upload button clicked - IID:', iid, 'Name:', studentName, 'Type:', docType);
                         handleDocumentUploadButtonClick(iid, studentName, docType);
                     } else {
@@ -1090,7 +1096,7 @@
                             <button class="btn upload${hasPhoto ? '' : ' warn'}" 
                                     data-iid="${student.iid || ''}" 
                                     data-student-name="${escapeHtml(student.student_name_en || '')}"
-                                    onclick="uploadPhoto('${student.iid || ''}', '${escapeHtml(student.student_name_en || '')}')">
+                                    data-instant="true">
                                 📷 Photo Upload
                             </button>
                         </td>
@@ -1208,6 +1214,7 @@
         function closeUploadModal() {
             uploadModal.style.display = 'none';
             currentStudent = null;
+            instantUploadMode = false;
             
             // Reset modal state
             cropContainer.style.display = 'none';
@@ -1241,7 +1248,11 @@
         function handleFileSelection(e) {
             const file = e.target.files[0];
             if (file) {
-                processSelectedFile(file);
+                if (instantUploadMode) {
+                    processImmediateFile(file);
+                } else {
+                    processSelectedFile(file);
+                }
             }
         }
 
@@ -1268,6 +1279,105 @@
                 loadImageForCropping(e.target.result);
             };
             reader.readAsDataURL(file);
+        }
+
+        // Instant upload handler: skip cropping and upload selected image immediately
+        function handleInstantUploadButtonClick(iid, studentName) {
+            // Find student by IID
+            currentStudent = allStudentsData.find(s => {
+                const studentIID = String(s.iid || '').trim();
+                const searchIID = String(iid || '').trim();
+                return studentIID === searchIID;
+            });
+
+            if (!currentStudent) {
+                console.error('Student not found with IID:', iid);
+                showStatus(`Student not found (IID: ${iid})`, 'error');
+                return;
+            }
+
+            // Set instant mode and open file selector
+            instantUploadMode = true;
+            fileInput.click();
+        }
+
+        async function processImmediateFile(file) {
+            if (!currentStudent) {
+                showStatus('Please select a student first', 'warning');
+                instantUploadMode = false;
+                fileInput.value = '';
+                return;
+            }
+
+            // Validate file
+            if (!file.type.startsWith('image/')) {
+                showStatus('Please select a valid image file', 'error');
+                instantUploadMode = false;
+                fileInput.value = '';
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                showStatus('File size too large. Please select an image under 5MB', 'error');
+                instantUploadMode = false;
+                fileInput.value = '';
+                return;
+            }
+
+            try {
+                showLoading(true);
+                showStatus('Uploading image...', 'success');
+
+                // Use file name extension if present, otherwise default to .jpg
+                const ext = file.name && file.name.includes('.') ? file.name.substring(file.name.lastIndexOf('.')) : '.jpg';
+                const filename = `avatar-${currentStudent.iid}${ext}`;
+
+                // Upload file directly to ImgBB
+                const imgbbUrl = await uploadFileToImgBB(file, filename, IMGBB_ALBUM);
+
+                // Update database
+                await updateStudentPhoto(currentStudent.iid, imgbbUrl);
+
+                // Update local data and refresh table
+                const studentIndex = allStudentsData.findIndex(s => s.iid === currentStudent.iid);
+                if (studentIndex !== -1) {
+                    allStudentsData[studentIndex].student_photo_url = imgbbUrl;
+                }
+                filterAndRenderData(); // Refresh table display
+
+                showStatus('Photo uploaded and updated successfully! ✅', 'success');
+
+            } catch (error) {
+                console.error('Instant upload error:', error);
+                showStatus('Failed to upload photo: ' + (error.message || error), 'error');
+            } finally {
+                instantUploadMode = false;
+                fileInput.value = '';
+                showLoading(false);
+            }
+        }
+
+        async function uploadFileToImgBB(fileOrBlob, filename, album = IMGBB_ALBUM) {
+            const formData = new FormData();
+            formData.append('key', IMGBB_API_KEY);
+            formData.append('image', fileOrBlob, filename);
+            formData.append('album', album);
+
+            const response = await fetch(IMGBB_UPLOAD_URL, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('ImgBB upload failed: ' + response.statusText);
+            }
+
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error('ImgBB upload failed: ' + (data.error?.message || 'Unknown error'));
+            }
+
+            return data.data.url;
         }
 
         function loadImageForCropping(imageSrc) {
@@ -1927,6 +2037,12 @@
         window.uploadPhoto = function(iid, studentName) {
             console.log('Global uploadPhoto called with:', iid, studentName);
             handleUploadButtonClick(iid, studentName);
+        };
+
+        // Instant upload global helper for compatibility
+        window.uploadPhotoInstant = function(iid, studentName) {
+            console.log('uploadPhotoInstant called with:', iid, studentName);
+            handleInstantUploadButtonClick(iid, studentName);
         };
 
         window.uploadDocument = function(iid, studentName, docType) {
