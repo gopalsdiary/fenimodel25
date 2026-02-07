@@ -604,16 +604,6 @@
       onClassChange();
     });
     sectionFilter.addEventListener('change', () => {
-      if (!sessionFilter || !sessionFilter.value) {
-        sectionFilter.value = '';
-        statusEl.textContent = 'Pick session first';
-        tbody.innerHTML = '<tr><td colspan="13">Select session first</td></tr>';
-        return;
-      }
-      if (classFilter.value) {
-        loadDataForClass(classFilter.value);
-        return;
-      }
       applyFilters();
     });
     clearFilters.addEventListener('click', () => {
@@ -799,14 +789,18 @@
     function onClassChange() {
       const cls = classFilter.value;
       if (!cls) {
-        tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
-        statusEl.textContent = 'Pick class and section';
+        sectionFilter.innerHTML = '<option value="">All</option>';
+        applyFilters();
         return;
       }
-      // reset section and load class-only to populate sections
-      if (sectionFilter) sectionFilter.value = '';
-      dynamicLoadSections();
-      loadDataForClass(cls);
+      // Populate sections from cache if available, otherwise fetch
+      if (allRowsCache.length > 0) {
+        populateFilterOptions(allRowsCache);
+        applyFilters();
+      } else {
+        dynamicLoadSections();
+        loadDataForClass(cls);
+      }
     }
 
     async function loadData() {
@@ -885,7 +879,7 @@
       if (sessionFilter && selSession) sessionFilter.value = selSession;
 
       // ensure section change triggers filtering
-      sectionFilter.onchange = () => { if (classFilter.value) applyFilters(); };
+      sectionFilter.onchange = () => { applyFilters(); };
       // don't override sessionFilter.onchange here; it's defined in loadClassList()
     }
 
