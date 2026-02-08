@@ -748,8 +748,9 @@
                 ['','6','7','8','9','10'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
                 input.value = val || '';
               } else if(lk.includes('section')){
-                input = document.createElement('input');
-                input.type = 'text';
+                input = document.createElement('select');
+                ['','SHAPLA','GOLAP','MORNING BELLY','MORNING JOBA'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+                input.value = val || '';
               } else if(lk.includes('blood')){
                 input = document.createElement('select');
                 ['','A+','A-','B+','B-','AB+','AB-','O+','O-'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
@@ -906,7 +907,7 @@
               input.value = val || '';
             } else if(lk.includes('section')){
               input = document.createElement('select');
-              ['','SHAPLA','GOLAP','MORNING'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              ['','SHAPLA','GOLAP','MORNING BELLY','MORNING JOBA'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
               input.value = val || '';
             } else if(lk.includes('blood')){
               input = document.createElement('select');
@@ -980,7 +981,7 @@
               input.value = val || '';
             } else if(lk.includes('section')){
               input = document.createElement('select');
-              ['','SHAPLA','GOLAP','MORNING'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
+              ['','SHAPLA','GOLAP','MORNING BELLY','MORNING JOBA'].forEach(o=>{ const el=document.createElement('option'); el.value=o; el.textContent=o || 'Select'; input.appendChild(el); });
               input.value = val || '';
             } else if(lk.includes('blood')){
               input = document.createElement('select');
