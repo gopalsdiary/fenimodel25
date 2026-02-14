@@ -20,6 +20,9 @@
     .toolbar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:14px; }
     .toolbar select, .toolbar input[type=text]{ padding:8px 10px; border:1px solid var(--border); border-radius:4px; font-size:14px; background:#fff; }
     .toolbar button{ height:34px; }
+    .filter-label { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:#57606a; display:inline-flex; align-items:center; white-space:nowrap; }
+    .filter-select { padding:8px 10px; border:1px solid var(--border); border-radius:4px; font-size:14px; background:#fff; cursor:pointer; min-width:120px; }
+    .filter-pair { display:flex; gap:8px; align-items:center; }
     .status { font-size:13px; min-height:18px; }
     .status.ok { color:#1a7f37; }
     .status.err { color:var(--danger); }
@@ -101,16 +104,30 @@
   </header>
   <div class="container">
   <div class="toolbar">
-    <div class="filters left" style="align-items:center">
-      <label for="inputUserFilter" class="muted" style="margin-right:8px">Input User:</label>
-      <select id="inputUserFilter" style="padding:8px;border-radius:4px;border:1px solid var(--border);background:#fff">
-        <option value="">All Users</option>
-      </select>
-      <span class="muted" style="margin-left:12px">Showing all students</span>
+    <div class="filters left" style="display:flex; gap:12px; align-items:center">
+      <div class="filter-pair">
+        <label for="inputUserFilter" class="filter-label">Input User</label>
+        <select id="inputUserFilter" class="filter-select">
+          <option value="">All Users</option>
+        </select>
+      </div>
+      <div class="filter-pair">
+        <label for="sessionFilter" class="filter-label">Session</label>
+        <select id="sessionFilter" class="filter-select"></select>
+      </div>
+      <div class="filter-pair">
+        <label for="classFilter" class="filter-label">Class</label>
+        <select id="classFilter" class="filter-select"></select>
+      </div>
+      <div class="filter-pair">
+        <label for="sectionFilter" class="filter-label">Section</label>
+        <select id="sectionFilter" class="filter-select"></select>
+      </div>
     </div>
     <div style="display:flex;gap:12px;align-items:center;margin-left:auto">
       <button id="refreshBtn">Refresh</button>
       <span id="status" class="status"></span>
+      <button id="clearFilters" class="outline">Clear</button>
       <span id="sessionInfo" class="muted" style="margin-left:8px"></span>
     </div>
   </div>
@@ -189,21 +206,34 @@
   const tbody = document.querySelector('#dataTable tbody');
     const statusEl = document.getElementById('status');
     const refreshBtn = document.getElementById('refreshBtn');
-  const classFilter = document.getElementById('classFilter');
-  const sectionFilter = document.getElementById('sectionFilter');
-  const clearFilters = document.getElementById('clearFilters');
-  const inputUserFilter = document.getElementById('inputUserFilter');
+    const sessionFilter = document.getElementById('sessionFilter');
+    const classFilter = document.getElementById('classFilter');
+    const sectionFilter = document.getElementById('sectionFilter');
+    const clearFilters = document.getElementById('clearFilters');
+    const inputUserFilter = document.getElementById('inputUserFilter');
+  
+  // Session filter change → populate classes and sections and auto-load data
+  if(sessionFilter) sessionFilter.addEventListener('change', async () => {
+    classFilter.value = '';
+    sectionFilter.value = '';
+    statusEl.textContent = 'Session changed';
+    tbody.innerHTML = `<tr><td colspan="14">Loading data for session ${escapeHtml(sessionFilter.value || '')}...</td></tr>`;
+    await dynamicLoadClasses();
+    // Automatically load data for the selected session
+    await loadData();
+  });
 
   if(classFilter) classFilter.addEventListener('change', () => { onClassChange(); });
   if(sectionFilter) sectionFilter.addEventListener('change', () => { if(classFilter && classFilter.value){ loadDataForClass(classFilter.value); return; } applyFilters(); });
   if(inputUserFilter) inputUserFilter.addEventListener('change', () => { if(classFilter && classFilter.value){ loadDataForClass(classFilter.value); return; } applyFilters(); });
   if(clearFilters){
     clearFilters.addEventListener('click', ()=>{
+      sessionFilter.value='';
       classFilter.value='';
       sectionFilter.value='';
       allRowsCache = [];
-      tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
-      statusEl.textContent = 'Pick class and section';
+      tbody.innerHTML = '<tr><td colspan="14">Select session to view data</td></tr>';
+      statusEl.textContent = 'Pick session';
     });
   }
 
@@ -309,34 +339,36 @@
     return base.join(', ');
   }
 
-  // Active key resolver - prefer 2025 but fall back to any available session year
+  // Active key resolver - use sessionFilter value or default to 2025
   function getActiveKeys(){
-    // Attempt to choose a preferred year (prefer 2025), otherwise pick the latest available year
-    const preferred = '2025';
-    if(existingSessionCols.classes.has(`class_${preferred}`) || existingSessionCols.sections.has(`section_${preferred}`) || existingSessionCols.rolls.has(`roll_${preferred}`)){
-      const ses = preferred;
-      const classKey = `class_${ses}`;
-      const sectionKey = `section_${ses}`;
-      const rollKey = `roll_${ses}`;
-      const available = existingSessionCols.classes.has(classKey) || existingSessionCols.sections.has(sectionKey) || existingSessionCols.rolls.has(rollKey);
-      return { session: ses, classKey, sectionKey, rollKey, available };
-    }
+    // Get session from filter or default to 2025
+    const ses = (sessionFilter && sessionFilter.value) ? String(sessionFilter.value) : '2025';
+    const classKey = `class_${ses}`;
+    const sectionKey = `section_${ses}`;
+    const rollKey = `roll_${ses}`;
+    const available = existingSessionCols.classes.has(classKey) && existingSessionCols.sections.has(sectionKey) && existingSessionCols.rolls.has(rollKey);
+    return { session: ses, classKey, sectionKey, rollKey, available };
+  }
 
-    // pick the latest year found in any of the discovered session columns
-    const years = new Set();
-    existingSessionCols.classes.forEach(k=>{ const m=k.match(/\d{4}$/); if(m) years.add(Number(m[0])); });
-    existingSessionCols.sections.forEach(k=>{ const m=k.match(/\d{4}$/); if(m) years.add(Number(m[0])); });
-    existingSessionCols.rolls.forEach(k=>{ const m=k.match(/\d{4}$/); if(m) years.add(Number(m[0])); });
-    if(years.size === 0){
-      // no session-specific columns discovered — return unavailable but still allow page to function
-      return { session: null, classKey: null, sectionKey: null, rollKey: null, available: false };
+  // Helper: determine whether a row belongs to the selected session
+  function recordBelongsToSession(rec, ses){
+    if(!ses) return true;
+    // Prefer session-specific columns when available
+    const { classKey, sectionKey, rollKey, available: avail } = getActiveKeys();
+    if(avail){
+      if(rec && ((rec[classKey] !== undefined && rec[classKey] !== null && String(rec[classKey]).trim() !== '') ||
+                 (rec[sectionKey] !== undefined && rec[sectionKey] !== null && String(rec[sectionKey]).trim() !== '') ||
+                 (rec[rollKey] !== undefined && rec[rollKey] !== null && String(rec[rollKey]).trim() !== ''))) return true;
+      return false;
     }
-    const latestYear = String(Math.max(...Array.from(years)));
-    const classKey = `class_${latestYear}`;
-    const sectionKey = `section_${latestYear}`;
-    const rollKey = `roll_${latestYear}`;
-    const available = existingSessionCols.classes.has(classKey) || existingSessionCols.sections.has(sectionKey) || existingSessionCols.rolls.has(rollKey);
-    return { session: latestYear, classKey, sectionKey, rollKey, available };
+    // Fallback: check any session-like field values (session, academic_session, session_YYYY)
+    for(const k of Object.keys(rec || {})){
+      if(/session/i.test(k)){
+        const v = rec[k];
+        if(v && String(v).indexOf(ses) !== -1) return true;
+      }
+    }
+    return false;
   }
 
     // modal elems
@@ -348,17 +380,6 @@
 
     refreshBtn.addEventListener('click', () => { loadData(); });
 
-  if(classFilter) classFilter.addEventListener('change', () => { onClassChange(); });
-  if(sectionFilter) sectionFilter.addEventListener('change', () => { if(classFilter && classFilter.value){ loadDataForClass(classFilter.value); return; } applyFilters(); });
-  if(clearFilters){
-    clearFilters.addEventListener('click', ()=>{
-      classFilter.value='';
-      sectionFilter.value='';
-      allRowsCache = [];
-      tbody.innerHTML = '<tr><td colspan="13">Select class and section to view data</td></tr>';
-      statusEl.textContent = 'Pick class and section';
-    });
-  }
     cancelBtn.addEventListener('click', closeModal);
     saveBtn.addEventListener('click', saveEdit);
 
@@ -450,7 +471,6 @@
     }
 
     async function dynamicLoadClasses(){
-      const ses = '2025';
       const { classKey, available } = getActiveKeys();
       if(!available){
         statusEl.textContent = 'No class column for session';
@@ -476,7 +496,6 @@
     }
 
     async function dynamicLoadSections(){
-      const ses = '2025';
       const cls = classFilter.value;
       if(!cls){ return; }
       const { classKey, sectionKey, available } = getActiveKeys();
@@ -532,7 +551,7 @@
         let allData = [];
         let lastId = 0;
         let round = 0;
-  const { rollKey, classKey: activeClassKey, available } = getActiveKeys();
+  const { classKey, sectionKey, rollKey, available } = getActiveKeys();
   // If no session roll column is available, fall back to ordering by IID so we can still stream all rows
   const orderField = (available && rollKey) ? rollKey : 'iid';
   // Show which field we will use for ordering (helpful when session columns are missing)
@@ -551,6 +570,15 @@
           let q = supabaseClient.from(tableName)
             .select(buildSelectCols())
             .gt('iid', lastId);
+          // If a session is selected and session-specific columns exist, prefer server-side filtering
+          const selSession = (sessionFilter && sessionFilter.value) ? String(sessionFilter.value) : null;
+          if(selSession && available){
+            const orParts = [];
+            if(classKey) orParts.push(`${classKey}.not.is.null`);
+            if(sectionKey) orParts.push(`${sectionKey}.not.is.null`);
+            if(rollKey) orParts.push(`${rollKey}.not.is.null`);
+            if(orParts.length) q = q.or(orParts.join(','));
+          }
           // server-side ordering by resolved field
           q = q.order(orderField, { ascending: true }).limit(batchSize);
           const { data, error } = await q;
@@ -569,10 +597,15 @@
     const withClassCount = (allData||[]).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== '')).length;
     // Apply class-based filtering only when a meaningful portion of data contains class values (>=5% and at least 1)
     if(withClassCount >= Math.max(1, Math.floor(allData.length * 0.05))){
-      // Keep rows that have the class value OR at least an IID (so IID-only rows are still shown)
-      allData = (allData || []).filter(r => r && ((r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== '') || (r.iid !== undefined && r.iid !== null && String(r.iid).trim() !== '')));
+      allData = (allData || []).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== ''));
       try{ const si = document.getElementById('sessionInfo'); if(si) si.textContent = (si.textContent||'') + ` · filtered by ${ck} (${withClassCount} rows)`; }catch(e){}
     }
+  }
+  // Ensure results honor selected session (client-side guard)
+  if(sessionFilter && sessionFilter.value){
+    const sel = String(sessionFilter.value);
+    allData = (allData || []).filter(r => recordBelongsToSession(r, sel));
+    try{ const si = document.getElementById('sessionInfo'); if(si) si.textContent = (si.textContent||'') + ` · session=${sel}`; }catch(e){}
   }
   // Sort by roll if available, otherwise by iid
   if(rk){
@@ -999,9 +1032,45 @@
     // close view modal when clicking outside panel
     viewModal.addEventListener('click', (e)=>{ if(e.target===viewModal) { viewModal.style.display = 'none'; viewFields.innerHTML = ''; } });
 
-  // initial load: show all data for 2025 by default
-  tbody.innerHTML = '<tr><td colspan="14">Loading all records for 2025... (this may take a moment)</td></tr>';
-  (async ()=>{ const si = document.getElementById('sessionInfo'); try{ await discoverSessionColumns(); const active = getActiveKeys(); if(si){ if(active && active.session){ si.textContent = `Using session: ${active.session}`; } else { si.textContent = 'No session-specific columns found — using fallback (ordering by IID)'; } } }catch(e){ console.error('Discovery/init error', e); if(si) si.textContent = 'Discovery failed — loading all data (see console)'; } finally { await loadData(); } })();
+  // initial load: discover session columns and populate filters
+  tbody.innerHTML = '<tr><td colspan="14">Loading... please select session</td></tr>';
+  (async ()=>{
+    const si = document.getElementById('sessionInfo');
+    try{
+      await discoverSessionColumns();
+
+      // Populate session filter dropdown
+      const years = new Set();
+      existingSessionCols.classes.forEach(k=>{ const m=k.match(/\d{4}$/); if(m) years.add(m[0]); });
+      existingSessionCols.sections.forEach(k=>{ const m=k.match(/\d{4}$/); if(m) years.add(m[0]); });
+      existingSessionCols.rolls.forEach(k=>{ const m=k.match(/\d{4}$/); if(m) years.add(m[0]); });
+      const sortedYears = Array.from(years).sort();
+
+      if(sessionFilter){
+        sessionFilter.innerHTML = '<option value="">Select</option>' + sortedYears.map(y=>`<option value="${y}">${y}</option>`).join('');
+        // Default to 2025 if available, else first available year
+        if(years.has('2025')) sessionFilter.value = '2025';
+        else if(sortedYears.length > 0) sessionFilter.value = sortedYears[0];
+      }
+
+      if(si){
+        if(sortedYears.length){
+          si.textContent = `Available sessions: ${sortedYears.join(', ')}`;
+        } else {
+          si.textContent = 'No session-specific columns found';
+        }
+      }
+
+      // Populate classes for default session and auto-load data
+      if(sessionFilter && sessionFilter.value) {
+        await dynamicLoadClasses();
+        await loadData();
+      }
+    }catch(e){
+      console.error('Discovery/init error', e);
+      if(si) si.textContent = 'Discovery failed — see console';
+    }
+  })();
   </script>
   
 </body>

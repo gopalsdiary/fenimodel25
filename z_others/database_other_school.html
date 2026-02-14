@@ -320,6 +320,27 @@
     return { session: ses, classKey, sectionKey, rollKey, available };
   }
 
+  // Helper: determine whether a row belongs to the selected session
+  function recordBelongsToSession(rec, ses){
+    if(!ses) return true;
+    // Prefer session-specific columns when available
+    const { classKey, sectionKey, rollKey, available: avail } = getActiveKeys();
+    if(avail){
+      if(rec && ((rec[classKey] !== undefined && rec[classKey] !== null && String(rec[classKey]).trim() !== '') ||
+                 (rec[sectionKey] !== undefined && rec[sectionKey] !== null && String(rec[sectionKey]).trim() !== '') ||
+                 (rec[rollKey] !== undefined && rec[rollKey] !== null && String(rec[rollKey]).trim() !== ''))) return true;
+      return false;
+    }
+    // Fallback: check any session-like field values (session, academic_session, session_YYYY)
+    for(const k of Object.keys(rec || {})){
+      if(/session/i.test(k)){
+        const v = rec[k];
+        if(v && String(v).indexOf(ses) !== -1) return true;
+      }
+    }
+    return false;
+  }
+
     // modal elems
     const editModal = document.getElementById('editModal');
     const editFields = document.getElementById('editFields');
@@ -541,7 +562,7 @@
         let allData = [];
         let lastId = 0;
         let round = 0;
-  const { rollKey, classKey: activeClassKey, available } = getActiveKeys();
+  const { classKey, sectionKey, rollKey, available } = getActiveKeys();
   // If no session roll column is available, fall back to ordering by IID so we can still stream all rows
   const orderField = (available && rollKey) ? rollKey : 'iid';
   // Show which field we will use for ordering (helpful when session columns are missing)
@@ -563,9 +584,18 @@
           // restrict to rows owned by current user
           if(!currentUser){ tbody.innerHTML = '<tr><td colspan="13">No logged-in user. Please login from the dashboard.</td></tr>'; statusEl.textContent = 'No user logged in'; return; }
           q = q.eq('input_user_name', currentUser);
+          // If a session is selected and session-specific columns exist, prefer server-side filtering
+          const selSession = (sessionFilter && sessionFilter.value) ? String(sessionFilter.value) : null;
+          if(selSession && available){
+            const orParts = [];
+            if(classKey) orParts.push(`${classKey}.not.is.null`);
+            if(sectionKey) orParts.push(`${sectionKey}.not.is.null`);
+            if(rollKey) orParts.push(`${rollKey}.not.is.null`);
+            if(orParts.length) q = q.or(orParts.join(','));
+          }
           // server-side ordering by resolved field
           q = q.order(orderField, { ascending: true }).limit(batchSize);
-          const { data, error } = await q;
+          const { data, error } = await q; 
           if(error){
             const details = JSON.stringify(error, Object.getOwnPropertyNames(error));
             throw new Error(`${error.message} | details: ${details}`);
@@ -584,6 +614,12 @@
       allData = (allData || []).filter(r => r && (r[ck] !== undefined && r[ck] !== null && String(r[ck]).trim() !== ''));
       try{ const si = document.getElementById('sessionInfo'); if(si) si.textContent = (si.textContent||'') + ` · filtered by ${ck} (${withClassCount} rows)`; }catch(e){}
     }
+  }
+  // Ensure results honor selected session (client-side guard)
+  if(sessionFilter && sessionFilter.value){
+    const sel = String(sessionFilter.value);
+    allData = (allData || []).filter(r => recordBelongsToSession(r, sel));
+    try{ const si = document.getElementById('sessionInfo'); if(si) si.textContent = (si.textContent||'') + ` · session=${sel}`; }catch(e){}
   }
   // Sort by roll if available, otherwise by iid
   if(rk){
