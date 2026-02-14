@@ -1170,7 +1170,7 @@
 
     <footer>© <span id="year"></span> Feni Model High School · Admission</footer>
   </div>
-  <script src="district.text"></script>
+  <!-- address data will be loaded from address_info.csv (z_others/address_info.csv) -->
   <script>
 
     // ImageBB Configuration
@@ -1560,59 +1560,76 @@
       }
     }
 
-    // unions.text is in PHP array(...) format. We don't include it directly because
-    // that would break the page as it's not valid JS. Instead we fetch and parse it
-    // into a JS array `window.unions` before initializing the dropdown population.
+    // Address data (division/district/upazila/union) now comes from `address_info.csv` (CSV parser below) —
+    // old PHP-style `unions.text` parsing removed.
 
-    function parsePhpArrayText(txt) {
-      const unions = [];
-      try {
-        // Match each array(...) block
-        const re = /array\s*\(([^\)]*)\)\s*,?/g;
-        let m;
-        while ((m = re.exec(txt)) !== null) {
-          const inside = m[1];
-          const obj = {};
-          // match key => 'value' pairs
-          const pairRe = /'([^']+)'\s*=>\s*'((?:\\'|[^'])*)'/g;
-          let p;
-          while ((p = pairRe.exec(inside)) !== null) {
-            obj[p[1]] = p[2];
-          }
-          if (Object.keys(obj).length) {
-            unions.push({
-              id: obj.id || '',
-              upazila_id: obj.upazila_id || obj.upazila || obj.upazilaId || '',
-              name: obj.name || '',
-              bn_name: obj.bn_name || obj.bn || '',
-              url: obj.url || ''
-            });
-          }
-        }
-      } catch (e) { console.warn('parsePhpArrayText error', e); }
-      return unions;
-    }
+    /* parsePhpArrayText removed — address data comes from address_info.csv */
 
-    // load unions.text if needed and then run population init (defined later)
-    (async function ensureUnionsAndInit() {
-      if (typeof unions === 'undefined') {
-        try {
-          const txt = await fetch('unions.text').then(r => r.text());
-          window.unions = parsePhpArrayText(txt);
-        } catch (e) { console.warn('Failed to fetch/parse unions.text', e); window.unions = []; }
-      }
-      // signal ready by leaving window.unions defined, the population code below
-      // will be invoked after its function definition.
-    })();
-    // expose a promise so other scripts can await unions readiness
+    // Load address_info.csv now (division/district/upazila/union) and expose
+    // globals used by the rest of the page: `divisions`, `districts`,
+    // `upazilas`, `unions` and `window.__unionsReady` (a Promise).
     window.__unionsReady = (async function () {
-      // wait until window.unions is set (or timeout after 5s)
-      const start = Date.now();
-      while (typeof window.unions === 'undefined') {
-        if (Date.now() - start > 5000) { window.unions = []; break; }
-        await new Promise(r => setTimeout(r, 50));
+      function csvLineToArray(line) {
+        const res = [];
+        let cur = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') {
+            if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; } else { inQuotes = !inQuotes; }
+            continue;
+          }
+          if (ch === ',' && !inQuotes) { res.push(cur); cur = ''; continue; }
+          cur += ch;
+        }
+        res.push(cur);
+        return res.map(s => s.trim());
       }
-      return window.unions;
+
+      try {
+        const txt = await fetch('address_info.csv').then(r => { if (!r.ok) throw new Error('CSV fetch failed'); return r.text(); });
+        const lines = txt.split(/\r?\n/).filter(l => l.trim() !== '');
+        if (!lines.length) { window.divisions = window.districts = window.upazilas = window.unions = []; return window.unions; }
+
+        const header = csvLineToArray(lines.shift());
+        const divMap = {}, distMap = {}, upMap = {}, unionsArr = [];
+
+        for (const line of lines) {
+          const cols = csvLineToArray(line);
+          if (!cols.length) continue;
+          const row = {};
+          header.forEach((h, i) => { row[h] = (cols[i] || '').replace(/^\"|\"$/g, '').trim(); });
+
+          const division_id = row.division_id || '';
+          const district_id = row.district_id || '';
+          const upazila_id = row.upazila_id || '';
+          const union_id = row.union_id || '';
+
+          if (division_id && !divMap[division_id]) divMap[division_id] = { id: division_id, name: row.division_en || '', bn: row.division_bn || '' };
+          if (district_id && !distMap[district_id]) distMap[district_id] = { id: district_id, division_id: division_id, name: row.district_en || '', bn: row.district_bn || '' };
+          if (upazila_id && !upMap[upazila_id]) upMap[upazila_id] = { id: upazila_id, district_id: district_id, name: row.upazila_en || '', bn_name: row.upazila_bn || '' };
+          if (union_id) unionsArr.push({ id: union_id, upazila_id: upazila_id, name: row.union_en || '', bn_name: row.union_bn || '' });
+        }
+
+        window.divisions = Object.values(divMap);
+        window.districts = Object.values(distMap);
+        window.upazilas = Object.values(upMap);
+        const seen = new Set();
+        window.unions = unionsArr.filter(u => { if (seen.has(u.id)) return false; seen.add(u.id); return true; });
+
+        // expose plain identifiers used elsewhere
+        divisions = window.divisions;
+        districts = window.districts;
+        upazilas = window.upazilas;
+        unions = window.unions;
+
+        return window.unions;
+      } catch (e) {
+        console.warn('Failed to load/parse address_info.csv', e);
+        window.divisions = window.districts = window.upazilas = window.unions = [];
+        divisions = districts = upazilas = unions = [];
+        return [];
+      }
     })();
 
 
@@ -2108,7 +2125,7 @@
       // ensure unions have been loaded/parsed before building unionsByUpazila
       if (window.__unionsReady) await window.__unionsReady;
 
-      //districts & Upazillas take from district.text ** (code mover here)
+      // districts & upazilas are populated from `address_info.csv` (z_others/address_info.csv)
 
       // build lookup: districtId => upazila list
       const upazilasByDistrict = {};
