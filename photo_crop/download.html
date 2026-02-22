@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bulk Image Downloader</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --secondary: #7c3aed;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; padding: 22px 30px; text-align: center; box-shadow: 0 4px 15px rgba(37,99,235,0.3); }
+    header h1 { font-size: 26px; margin-bottom: 4px; }
+    header p  { opacity: 0.85; font-size: 14px; }
+
+    .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+
+    .card { background: var(--card); border-radius: 14px; padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,0.07); border: 1px solid var(--border); margin-bottom: 24px; }
+    .card-title { font-size: 13px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid var(--border); }
+
+    textarea { width: 100%; height: 160px; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 13.5px; font-family: 'Courier New', monospace; background: #f8fafc; color: var(--text); resize: vertical; outline: none; line-height: 1.7; transition: border-color 0.2s; }
+    textarea:focus { border-color: var(--primary); background: #fff; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 7px; }
+
+    .btn-row { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+    .btn { padding: 11px 26px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.18s; display: flex; align-items: center; gap: 7px; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-primary { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; box-shadow: 0 3px 10px rgba(37,99,235,0.3); }
+    .btn-success { background: linear-gradient(135deg, var(--success), #15803d); color: white; box-shadow: 0 3px 10px rgba(22,163,74,0.3); }
+    .btn-success:disabled { background: #94a3b8; box-shadow: none; cursor: not-allowed; transform: none; }
+    .btn-clear { background: #f1f5f9; color: var(--muted); border: 1.5px solid var(--border); }
+
+    #statsBar { display: none; align-items: center; gap: 16px; margin-bottom: 18px; font-size: 14px; color: var(--muted); flex-wrap: wrap; }
+    .stat-chip { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 4px 14px; font-weight: 600; font-size: 13px; }
+    .stat-chip span { color: var(--primary); }
+
+    #imageGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+
+    .img-card { background: var(--card); border-radius: 11px; overflow: hidden; border: 1.5px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,0.06); transition: transform 0.18s, box-shadow 0.18s; position: relative; }
+    .img-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,0.12); }
+
+    .img-thumb-wrap { width: 100%; aspect-ratio: 1/1; background: repeating-conic-gradient(#e2e8f0 0% 25%, white 0% 50%) 0 0/16px 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .img-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .img-info { padding: 8px 10px; border-top: 1px solid var(--border); }
+    .img-name { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .status-overlay { position: absolute; top: 7px; right: 7px; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; opacity: 0; transition: opacity 0.2s; }
+    .status-overlay.pending { background: #fef9c3; color: #ca8a04; opacity: 1; }
+    .status-overlay.done    { background: #dcfce7; color: #16a34a; opacity: 1; }
+    .status-overlay.error   { background: #fee2e2; color: #dc2626; opacity: 1; }
+
+    .img-error-thumb { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--danger); font-size: 12px; padding: 10px; text-align: center; }
+    .img-error-thumb .err-icon { font-size: 30px; }
+
+    #progressWrap { display: none; margin-bottom: 20px; }
+    .progress-label { font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 600; }
+    .progress-bar-bg { width: 100%; height: 10px; background: var(--border); border-radius: 10px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--secondary)); border-radius: 10px; width: 0%; transition: width 0.3s; }
+
+    #toast { position: fixed; bottom: 28px; right: 28px; background: #1e293b; color: white; padding: 13px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; box-shadow: 0 6px 24px rgba(0,0,0,0.25); opacity: 0; transform: translateY(12px); transition: opacity 0.25s, transform 0.25s; pointer-events: none; max-width: 340px; z-index: 9999; }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    #emptyState { text-align: center; padding: 50px 20px; color: var(--muted); }
+    #emptyState .big-icon { font-size: 56px; margin-bottom: 12px; }
+    #emptyState p { font-size: 15px; }
+
+    /* ── Compression Settings ── */
+    .settings-row { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .toggle-wrap { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+    .toggle-wrap input[type=checkbox] { display: none; }
+    .toggle-track { width: 44px; height: 24px; background: #cbd5e1; border-radius: 12px; position: relative; transition: background 0.2s; flex-shrink: 0; }
+    .toggle-track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.2); transition: left 0.2s; }
+    input[type=checkbox]:checked + .toggle-track { background: var(--primary); }
+    input[type=checkbox]:checked + .toggle-track::after { left: 23px; }
+    .toggle-label { font-size: 14px; font-weight: 600; color: var(--text); }
+    .kb-input-wrap { display: flex; align-items: center; gap: 8px; }
+    .kb-input-wrap input[type=number] { width: 100px; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-weight: 700; color: var(--primary); background: #f8fafc; outline: none; transition: border-color 0.2s; }
+    .kb-input-wrap input[type=number]:focus { border-color: var(--primary); background: #fff; }
+    .kb-input-wrap span { font-size: 14px; font-weight: 600; color: var(--muted); }
+    .compress-note { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+    .compress-note b { color: var(--primary); }
+    #compressOptions { margin-top: 14px; padding-top: 14px; border-top: 1.5px dashed var(--border); display: none; }
+
+    /* ── Size badge on card ── */
+    .img-size { font-size: 11px; margin-top: 3px; font-weight: 600; }
+    .img-size.original { color: var(--muted); }
+    .img-size.compressed { color: var(--success); }
+    .img-size.over { color: #f59e0b; }
+
+    /* ── Cancel button ── */
+    .btn-cancel { background: #fee2e2; color: var(--danger); border: 1.5px solid #fca5a5; }
+    .btn-cancel:hover { background: var(--danger); color: white; }
+
+    /* ── Batch info ── */
+    .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    #batchInfo { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .bg-badge { display: inline-flex; align-items: center; gap: 5px; background: #dbeafe; color: var(--primary); font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 12px; }
+    .bg-badge .dot { width: 7px; height: 7px; background: var(--primary); border-radius: 50%; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🖼️ Bulk Image Downloader</h1>
+  <p>Paste image URLs · Preview · Download all to a folder</p>
+</header>
+
+<div class="container">
+
+  <!-- Compression Settings -->
+  <div class="card">
+    <div class="card-title">⚙️ Compression Settings</div>
+    <div class="settings-row">
+      <label class="toggle-wrap">
+        <input type="checkbox" id="compressToggle" onchange="toggleCompress(this)">
+        <div class="toggle-track"></div>
+        <span class="toggle-label">Compress before download</span>
+      </label>
+    </div>
+    <div id="compressOptions">
+      <div class="settings-row">
+        <div class="kb-input-wrap">
+          <span>Max size:</span>
+          <input type="number" id="maxKB" value="200" min="10" max="10000" step="10">
+          <span>KB</span>
+        </div>
+        <div class="kb-input-wrap" style="margin-left:8px">
+          <span>Format:</span>
+          <select id="compressFormat" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;color:var(--primary);background:#f8fafc;outline:none;">
+            <option value="image/jpeg">JPEG</option>
+            <option value="image/webp">WebP</option>
+          </select>
+        </div>
+      </div>
+      <div class="compress-note">
+        ছবিগুলো <b id="noteKB">200 KB</b>-এর মধ্যে কমপ্রেস হয়ে সেভ হবে।
+        Canvas API দিয়ে quality binary-search করে সাইজ নামানো হবে — কোনো রিসাইজ হবে না।
+      </div>
+    </div>
+  </div>
+
+  <!-- URL Input -->
+  <div class="card">
+    <div class="card-title">📋 Image URLs</div>
+    <textarea id="urlInput" placeholder="Paste image URLs here — one per line:&#10;https://example.com/photo1.jpg&#10;https://example.com/photo2.png&#10;..."></textarea>
+    <div class="hint">One URL per line. Supports jpg, png, webp, gif, svg, etc.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="loadImages()">🔍 Load Images</button>
+      <button class="btn btn-clear" onclick="clearAll()">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- Stats Bar + Download All -->
+  <div id="statsBar">
+    <div class="stat-chip">Total: <span id="statTotal">0</span></div>
+    <div class="stat-chip">Loaded: <span id="statLoaded">0</span></div>
+    <div class="stat-chip">Failed: <span id="statFailed">0</span></div>
+    <div style="flex:1"></div>
+    <button class="btn btn-success" id="downloadBtn" onclick="downloadAll()" disabled>
+      ⬇️ Download All
+    </button>
+    <button class="btn btn-cancel" id="cancelBtn" onclick="cancelDownload()" style="display:none">
+      ✕ Cancel
+    </button>
+  </div>
+
+  <!-- Progress bar -->
+  <div id="progressWrap">
+    <div class="progress-meta">
+      <div class="progress-label" id="progressLabel">Downloading… 0 / 0</div>
+      <div id="batchInfo"></div>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <!-- Image Grid -->
+  <div id="imageGrid">
+    <div id="emptyState">
+      <div class="big-icon">🗂️</div>
+      <p>Paste URLs above and click <strong>Load Images</strong></p>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+  /* ══════════════════════════════════════════
+     Web Worker Code (runs in background thread)
+     Handles: fetch → OffscreenCanvas → compress
+  ══════════════════════════════════════════ */
+  const WORKER_CODE = `
+    self.onmessage = async function(e) {
+      if (e.data.type !== 'PROCESS_BATCH') return;
+      const { items, maxKB, format, useCompress } = e.data;
+      await Promise.all(items.map(async (item) => {
+        try {
+          const resp = await fetch(item.url);
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const blob = await resp.blob();
+          let outBuffer, outSize;
+          if (useCompress) {
+            const bitmap = await createImageBitmap(blob);
+            const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+            canvas.getContext('2d').drawImage(bitmap, 0, 0);
+            bitmap.close();
+            const out = await compressCanvas(canvas, maxKB * 1024, format);
+            outBuffer = await out.arrayBuffer();
+            outSize = out.size;
+          } else {
+            outBuffer = await blob.arrayBuffer();
+            outSize = blob.size;
+          }
+          self.postMessage(
+            { type: 'ITEM_DONE', url: item.url, filename: item.filename, buffer: outBuffer, size: outSize },
+            [outBuffer]
+          );
+        } catch(err) {
+          self.postMessage({ type: 'ITEM_ERROR', url: item.url, filename: item.filename, error: err.message });
+        }
+      }));
+    };
+    async function compressCanvas(canvas, targetBytes, mimeType) {
+      const full = await canvas.convertToBlob({ type: mimeType, quality: 1.0 });
+      if (full.size <= targetBytes) return full;
+      let lo = 0.01, hi = 1.0, best = full;
+      for (let i = 0; i < 12 && (hi - lo) > 0.01; i++) {
+        const mid = (lo + hi) / 2;
+        const b = await canvas.convertToBlob({ type: mimeType, quality: mid });
+        if (b.size <= targetBytes) { best = b; lo = mid; } else { hi = mid; }
+      }
+      return best;
+    }
+  `;
+
+  let workerBlobUrl  = null;
+  let activeWorker   = null;
+  let cancelRequested = false;
+
+  let loadedImages = [];
+
+  /* ── Load & preview images ── */
+  function loadImages() {
+    const raw = document.getElementById('urlInput').value.trim();
+    if (!raw) { showToast('⚠️ Please paste at least one URL.'); return; }
+
+    const urls = raw.split('\n').map(u => u.trim()).filter(u => u.startsWith('http'));
+    if (!urls.length) { showToast('⚠️ No valid URLs found.'); return; }
+
+    loadedImages = [];
+    const grid = document.getElementById('imageGrid');
+    grid.innerHTML = '';
+
+    document.getElementById('statsBar').style.display = 'flex';
+    document.getElementById('statTotal').textContent = urls.length;
+    document.getElementById('statLoaded').textContent = '0';
+    document.getElementById('statFailed').textContent = '0';
+    document.getElementById('downloadBtn').disabled = true;
+    document.getElementById('progressWrap').style.display = 'none';
+
+    let loadedCount = 0, failedCount = 0;
+
+    urls.forEach((url, i) => {
+      const filename = extractFilename(url, i);
+      const entry = { url, filename, ok: false, imgEl: null };
+      loadedImages.push(entry);
+
+      const card = document.createElement('div');
+      card.className = 'img-card';
+
+      const thumbWrap = document.createElement('div');
+      thumbWrap.className = 'img-thumb-wrap';
+
+      const img = document.createElement('img');
+      img.alt = filename;
+      img.loading = 'lazy';
+      img.src = url;
+      img.crossOrigin = 'anonymous';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'status-overlay pending';
+      overlay.textContent = '…';
+      overlay.id = `ov-${i}`;
+
+      img.onload = () => {
+        entry.ok = true;
+        entry.imgEl = img;
+        loadedCount++;
+        document.getElementById('statLoaded').textContent = loadedCount;
+        overlay.className = 'status-overlay done';
+        overlay.textContent = '✓';
+        if (loadedCount + failedCount === urls.length) finalise();
+      };
+
+      img.onerror = () => {
+        failedCount++;
+        document.getElementById('statFailed').textContent = failedCount;
+        overlay.className = 'status-overlay error';
+        overlay.textContent = '✗';
+        thumbWrap.innerHTML = '';
+        const errDiv = document.createElement('div');
+        errDiv.className = 'img-error-thumb';
+        errDiv.innerHTML = '<div class="err-icon">⚠️</div><div>Failed to load</div>';
+        thumbWrap.appendChild(errDiv);
+        if (loadedCount + failedCount === urls.length) finalise();
+      };
+
+      thumbWrap.appendChild(img);
+      card.appendChild(thumbWrap);
+      card.appendChild(overlay);
+
+      const info = document.createElement('div');
+      info.className = 'img-info';
+      const name = document.createElement('div');
+      name.className = 'img-name';
+      name.title = filename;
+      name.textContent = filename;
+      info.appendChild(name);
+      const sizeLabel = document.createElement('div');
+      sizeLabel.className = 'img-size original';
+      sizeLabel.id = `sz-${i}`;
+      info.appendChild(sizeLabel);
+      card.appendChild(info);
+
+      grid.appendChild(card);
+    });
+  }
+
+  function finalise() {
+    const ok = loadedImages.filter(e => e.ok).length;
+    if (ok > 0) {
+      document.getElementById('downloadBtn').disabled = false;
+      showToast(`✅ ${ok} image(s) ready. Click "Download All" to save.`);
+    } else {
+      showToast('❌ All URLs failed to load.');
+    }
+  }
+
+  /* ── Download All (batch Worker) ── */
+  async function downloadAll() {
+    const valid = loadedImages.filter(e => e.ok);
+    if (!valid.length) { showToast('No images loaded yet.'); return; }
+
+    const useCompress = document.getElementById('compressToggle').checked;
+    const maxKB       = parseInt(document.getElementById('maxKB').value) || 200;
+    const format      = document.getElementById('compressFormat').value;
+
+    if (!('showDirectoryPicker' in window)) {
+      showToast('⚠️ Folder picker not supported. Downloading individually…');
+      fallbackDownload(valid);
+      return;
+    }
+
+    let dirHandle;
+    try {
+      dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    } catch (e) { return; }
+
+    cancelRequested = false;
+    const BATCH_SIZE = 30;
+    const total = valid.length;
+    let done = 0;
+
+    // Build batches
+    const batches = [];
+    for (let i = 0; i < valid.length; i += BATCH_SIZE)
+      batches.push(valid.slice(i, i + BATCH_SIZE));
+
+    document.getElementById('progressWrap').style.display = 'block';
+    document.getElementById('downloadBtn').style.display = 'none';
+    document.getElementById('cancelBtn').style.display = 'flex';
+    updateProgress(0, total);
+
+    // Wake Lock — prevent screen/CPU sleep
+    let wakeLock = null;
+    try {
+      if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    } catch(_) {}
+
+    // Ensure worker blob URL created once
+    if (!workerBlobUrl) {
+      const b = new Blob([WORKER_CODE], { type: 'application/javascript' });
+      workerBlobUrl = URL.createObjectURL(b);
+    }
+
+    const ext = useCompress ? (format === 'image/webp' ? '.webp' : '.jpg') : null;
+
+    // Core download logic
+    const doWork = async () => {
+      for (let bi = 0; bi < batches.length; bi++) {
+        if (cancelRequested) break;
+        const batch = batches[bi];
+
+        document.getElementById('batchInfo').innerHTML =
+          `<span class="bg-badge"><span class="dot"></span>Background</span>
+           &nbsp; Batch ${bi + 1} / ${batches.length} &nbsp;·&nbsp; ${batch.length} images`;
+
+        // One worker per batch — all 30 run concurrently inside the worker
+        await new Promise((resolve) => {
+          const worker = new Worker(workerBlobUrl);
+          activeWorker = worker;
+          let pending = batch.length;
+
+          const finish = () => {
+            pending--;
+            done++;
+            updateProgress(done, total);
+            if (pending <= 0) { worker.terminate(); activeWorker = null; resolve(); }
+          };
+
+          worker.onmessage = async (e) => {
+            const msg = e.data;
+            if (msg.type === 'ITEM_DONE') {
+              try {
+                let fname = msg.filename;
+                if (ext) fname = fname.replace(/\.[^.]+$/, '') + ext;
+                fname = await uniqueName(dirHandle, fname);
+                const fh = await dirHandle.getFileHandle(fname, { create: true });
+                const wr = await fh.createWritable();
+                await wr.write(msg.buffer);
+                await wr.close();
+                markCard(msg.url, 'saved');
+                updateSizeLabel(msg.url, msg.size, useCompress, maxKB);
+              } catch(_) { markCard(msg.url, 'error'); }
+            } else if (msg.type === 'ITEM_ERROR') {
+              markCard(msg.url, 'error');
+            }
+            finish();
+          };
+
+          worker.onerror = () => { worker.terminate(); activeWorker = null; resolve(); };
+
+          worker.postMessage({
+            type: 'PROCESS_BATCH',
+            items: batch.map(e => ({ url: e.url, filename: e.filename })),
+            maxKB, format, useCompress
+          });
+        });
+      }
+    };
+
+    // Web Locks API — keeps background tab from being throttled
+    if ('locks' in navigator) {
+      await navigator.locks.request('img-bulk-download', { mode: 'exclusive' }, doWork);
+    } else {
+      await doWork();
+    }
+
+    // Clean up
+    if (wakeLock) try { wakeLock.release(); } catch(_) {}
+    document.getElementById('downloadBtn').style.display = 'flex';
+    document.getElementById('cancelBtn').style.display = 'none';
+    document.getElementById('batchInfo').innerHTML = '';
+
+    showToast(cancelRequested
+      ? `⛔ Cancelled. ${done} image(s) already saved.`
+      : `🎉 ${done} / ${total} image(s) saved to selected folder!`);
+  }
+
+  function cancelDownload() {
+    cancelRequested = true;
+    if (activeWorker) { activeWorker.terminate(); activeWorker = null; }
+    showToast('⛔ Cancelling after current batch…');
+  }
+
+  function updateSizeLabel(url, sizeBytes, useCompress, maxKB) {
+    const idx = loadedImages.findIndex(e => e.url === url);
+    if (idx === -1) return;
+    const szEl = document.getElementById(`sz-${idx}`);
+    if (!szEl) return;
+    const kb = (sizeBytes / 1024).toFixed(1);
+    szEl.textContent = useCompress ? `Saved: ${kb} KB` : `${kb} KB`;
+    szEl.className   = useCompress
+      ? (sizeBytes <= maxKB * 1024 ? 'img-size compressed' : 'img-size over')
+      : 'img-size original';
+  }
+
+  function fallbackDownload(entries) {
+    entries.forEach((entry, i) => {
+      setTimeout(() => {
+        const a = document.createElement('a');
+        a.href = entry.url;
+        a.download = entry.filename;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, i * 300);
+    });
+  }
+
+  /* ── Helpers ── */
+  function extractFilename(url, index) {
+    try {
+      const path = new URL(url).pathname;
+      const last = path.split('/').pop();
+      if (last && last.includes('.')) return last;
+    } catch (_) {}
+    return `image_${index + 1}.jpg`;
+  }
+
+  async function uniqueName(dirHandle, name) {
+    let finalName = name, counter = 1;
+    while (true) {
+      try {
+        await dirHandle.getFileHandle(finalName, { create: false });
+        const ext  = name.includes('.') ? '.' + name.split('.').pop() : '';
+        const base = name.includes('.') ? name.slice(0, name.lastIndexOf('.')) : name;
+        finalName = `${base}_${counter++}${ext}`;
+      } catch (_) { break; }
+    }
+    return finalName;
+  }
+
+  function updateProgress(done, total) {
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `Downloading… ${done} / ${total}  (${pct}%)`;
+  }
+
+  function markCard(url, state) {
+    const idx = loadedImages.findIndex(e => e.url === url);
+    if (idx === -1) return;
+    const ov = document.getElementById(`ov-${idx}`);
+    if (!ov) return;
+    ov.className = state === 'saved' ? 'status-overlay done' : 'status-overlay error';
+    ov.textContent  = state === 'saved' ? '✓' : '✗';
+  }
+
+  function clearAll() {
+    document.getElementById('urlInput').value = '';
+    document.getElementById('imageGrid').innerHTML =
+      `<div id="emptyState"><div class="big-icon">🗂️</div><p>Paste URLs above and click <strong>Load Images</strong></p></div>`;
+    document.getElementById('statsBar').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'none';
+    loadedImages = [];
+  }
+
+  /* ── Toggle compress options panel ── */
+  function toggleCompress(cb) {
+    document.getElementById('compressOptions').style.display = cb.checked ? 'block' : 'none';
+  }
+
+  /* ── Update note text when KB changes ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('maxKB').addEventListener('input', function() {
+      document.getElementById('noteKB').textContent = (this.value || 200) + ' KB';
+    });
+  });
+
+  let toastTimer;
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+  }
+</script>
+</body>
+</html>

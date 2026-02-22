@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Photo Tools</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --secondary: #7c3aed;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 28px 30px;
+      text-align: center;
+      box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+    }
+    header h1 { font-size: 30px; margin-bottom: 6px; }
+    header p  { opacity: 0.85; font-size: 15px; }
+
+    .container {
+      max-width: 700px;
+      margin: 60px auto;
+      padding: 0 24px;
+      width: 100%;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 520px) {
+      .tools-grid { grid-template-columns: 1fr; }
+    }
+
+    .tool-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 36px 28px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .tool-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(37,99,235,0.15);
+      border-color: var(--primary);
+    }
+
+    .tool-icon {
+      font-size: 52px;
+      line-height: 1;
+    }
+
+    .tool-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .tool-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .tool-btn {
+      margin-top: 6px;
+      padding: 10px 28px;
+      border-radius: 9px;
+      border: none;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow: 0 3px 10px rgba(37,99,235,0.25);
+      transition: opacity 0.18s, transform 0.18s;
+      pointer-events: none; /* card itself is the link */
+    }
+    .tool-card:hover .tool-btn {
+      opacity: 0.88;
+      transform: scale(1.04);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🛠️ Photo Tools</h1>
+  <p>ছবি এডিট, রিসাইজ এবং বাল্ক ডাউনলোড করুন</p>
+</header>
+
+<div class="container">
+  <div class="tools-grid">
+
+    <a class="tool-card" href="photo_resize.html">
+      <div class="tool-icon">✂️</div>
+      <div class="tool-title">Photo Resize</div>
+      <div class="tool-desc">ছবি ক্রপ, রিসাইজ, ইফেক্ট ও অপ্টিমাইজ করুন সহজেই।</div>
+      <button class="tool-btn">Open Tool →</button>
+    </a>
+
+    <a class="tool-card" href="download.html">
+      <div class="tool-icon">⬇️</div>
+      <div class="tool-title">Bulk Downloader</div>
+      <div class="tool-desc">URL পেস্ট করুন, প্রিভিউ দেখুন এবং একসাথে সব ছবি ডাউনলোড করুন।</div>
+      <button class="tool-btn">Open Tool →</button>
+    </a>
+
+  </div>
+</div>
+
+</body>
+</html>
