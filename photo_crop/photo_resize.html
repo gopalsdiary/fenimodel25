@@ -1,526 +1,1014 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Editor & Optimizer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Pacifico&family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Pacifico&family=Source+Code+Pro:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        :root { --primary:#2563eb; --primary-dark:#1d4ed8; --secondary:#7c3aed; --success:#16a34a; --danger:#dc2626; --bg:#f1f5f9; --card:#ffffff; --border:#e2e8f0; --text:#1e293b; --muted:#64748b; }
-        *{box-sizing:border-box;margin:0;padding:0;}
-        body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-        header{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;padding:20px 30px;text-align:center;box-shadow:0 4px 15px rgba(37,99,235,0.3);} 
-        header h1{font-size:28px;margin-bottom:5px;} 
-        header p{opacity:0.85;font-size:14px;} 
-        .main-layout{display:grid;grid-template-columns:360px 1fr;gap:20px;max-width:1400px;margin:25px auto;padding:0 20px;} 
-        @media(max-width:900px){.main-layout{grid-template-columns:1fr;}} 
-        .settings-panel{display:flex;flex-direction:column;gap:16px;} 
-        .card{background:var(--card);border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid var(--border);} 
-        .card-title{font-size:13px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:8px;} 
-        .field{margin-bottom:12px;} 
-        label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:5px;} 
-        input[type=text],input[type=number],input[type=range],select{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;background:#f8fafc;color:var(--text);transition:border-color 0.2s;outline:none;} 
-        input:focus{border-color:var(--primary);background:white;} 
-        input[type=range]{padding:4px 0;cursor:pointer;accent-color:var(--primary);} 
-        input[type=color]{width:100%;height:38px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;padding:2px 4px;} 
-        .range-row{display:flex;align-items:center;gap:10px;} 
-        .range-val{font-weight:700;color:var(--primary);width:38px;text-align:right;font-size:14px;} 
-        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;} 
-        .upload-area{border:2.5px dashed var(--primary);border-radius:10px;padding:22px 14px;text-align:center;cursor:pointer;transition:background 0.2s;background:#eff6ff;position:relative;} 
-        .upload-area:hover{background:#dbeafe;} 
-        .upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;} 
-        .upload-icon{font-size:32px;margin-bottom:6px;} 
-        .upload-area p{font-size:13px;color:var(--primary);font-weight:600;} 
-        .upload-area small{color:var(--muted);font-size:12px;} 
-        .btn{display:block;width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:all 0.2s;text-align:center;} 
-        .btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;} 
-        .btn-primary:hover{opacity:0.9;transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.35);} 
-        .btn-success{background:linear-gradient(135deg,var(--success),#15803d);color:white;} 
-        .btn-success:hover{opacity:0.9;transform:translateY(-1px);} 
-        .btn-danger{background:var(--danger);color:white;font-size:13px;padding:8px;} 
-        .right-panel{display:flex;flex-direction:column;gap:16px;} 
-        .preview-box{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid var(--border);overflow:hidden;} 
-        .preview-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;} 
-        .preview-header h3{font-size:15px;color:var(--text);} 
-        .badge{background:#dbeafe;color:var(--primary);font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;} 
-        .live-preview-wrapper{padding:16px;display:flex;justify-content:center;align-items:center;min-height:280px;background:repeating-conic-gradient(#e2e8f0 0% 25%,white 0% 50%)0 0/20px 20px;} 
-        #livePreviewCanvas{max-width:100%;max-height:400px;border-radius:6px;box-shadow:0 4px 20px rgba(0,0,0,0.15);display:none;} 
-        .placeholder-msg{text-align:center;color:var(--muted);} 
-        .placeholder-msg .icon{font-size:48px;margin-bottom:10px;} 
-        .placeholder-msg p{font-size:14px;} 
-        .file-list-wrap{background:var(--card);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid var(--border);} 
-        .file-list-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;} 
-        .file-list-header h3{font-size:15px;} 
-        #fileListContainer{padding:12px 18px;max-height:200px;overflow-y:auto;} 
-        .file-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px;} 
-        .file-item:last-child{border-bottom:none;} 
-        .file-thumb{width:40px;height:40px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer;} 
-        .file-name{flex:1;color:var(--text);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} 
-        .file-size{color:var(--muted);font-size:12px;white-space:nowrap;} 
-        .file-status{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;} 
-        .status-pending{background:#fef3c7;color:#92400e;} 
-        .status-done{background:#dcfce7;color:var(--success);} 
-        .status-error{background:#fee2e2;color:var(--danger);} 
-        .results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:16px;} 
-        .result-card{position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:white;box-shadow:0 2px 6px rgba(0,0,0,0.06);transition:transform 0.2s;} 
-        .result-card:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(0,0,0,0.1);} 
-        .result-card img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;} 
-        .result-card-info{padding:8px 10px;font-size:12px;} 
-        .result-card-name{font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;} 
-        .result-card-size{color:var(--muted);} 
-        .result-card-dl{display:block;text-align:center;background:var(--primary);color:white;padding:6px;font-size:12px;font-weight:700;text-decoration:none;transition:background 0.2s;} 
-        .result-card-dl:hover{background:var(--primary-dark);} 
-        .result-card-remove{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(220,38,38,0.88);color:white;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background 0.15s;z-index:5;}
-        .result-card-remove:hover{background:var(--danger);transform:scale(1.15);} 
-        .progress-wrap{display:none;margin-top:8px;} 
-        .progress-label{font-size:13px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between;} 
-        .progress-bar-bg{background:var(--border);border-radius:10px;height:8px;overflow:hidden;} 
-        .progress-bar{height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));border-radius:10px;width:0%;transition:width 0.3s;} 
-        .tab-nav{display:flex;gap:4px;padding:10px 18px;border-bottom:1px solid var(--border);} 
-        .tab-btn{padding:6px 16px;border-radius:20px;border:none;background:#f1f5f9;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;} 
-        .tab-btn.active{background:var(--primary);color:white;} 
-        .tab-content{display:none;} 
-        .tab-content.active{display:block;} 
-        ::-webkit-scrollbar{width:6px;height:6px;} 
-        ::-webkit-scrollbar-track{background:#f1f5f9;} 
-        ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;} 
-        .font-style-row{display:flex;gap:8px;} 
-        .style-btn{flex:1;padding:7px 5px;border:1.5px solid var(--border);background:white;border-radius:6px;cursor:pointer;font-size:13px;text-align:center;transition:all 0.15s;font-weight:500;} 
-        .style-btn.active{border-color:var(--primary);background:#eff6ff;color:var(--primary);} 
-        .nav-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);} 
-        .nav-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:white;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all 0.15s;} 
-        .nav-btn:hover{background:var(--primary);color:white;border-color:var(--primary);} 
-        .nav-btn:disabled{opacity:0.35;cursor:not-allowed;} 
-        .nav-btn:disabled:hover{background:white;color:var(--text);} 
-        .preset-row{display:flex;flex-wrap:wrap;gap:6px;} 
-        .preset-chip{padding:4px 10px;background:#f1f5f9;border:1px solid var(--border);border-radius:20px;font-size:12px;cursor:pointer;transition:all 0.15s;white-space:nowrap;} 
-        .preset-chip:hover{background:#dbeafe;border-color:var(--primary);color:var(--primary);} 
-        .empty-results{text-align:center;padding:40px 20px;color:var(--muted);} 
-        .empty-results .icon{font-size:40px;margin-bottom:10px;} 
-        canvas{display:none;} 
-        .sticker-upload-sm{border:2px dashed var(--secondary);border-radius:8px;padding:14px;text-align:center;cursor:pointer;background:#f5f3ff;position:relative;transition:background 0.2s;} 
-        .sticker-upload-sm:hover{background:#ede9fe;} 
-        .sticker-upload-sm input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;} 
-        .sticker-upload-sm p{font-size:12px;color:var(--secondary);font-weight:600;margin-top:4px;} 
-        .sticker-thumb-row{display:flex;align-items:center;gap:10px;padding:8px;background:#f5f3ff;border-radius:8px;border:1px solid #ddd6fe;} 
-        .sticker-thumb-row img{width:56px;height:56px;object-fit:contain;border-radius:6px;background:repeating-conic-gradient(#ddd6fe 0% 25%,white 0% 50%)0 0/14px 14px;flex-shrink:0;} 
-        .sticker-info{flex:1;font-size:12px;color:var(--text);overflow:hidden;} 
-        .sticker-info b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;} 
-        .sticker-remove{background:var(--danger);color:white;border:none;border-radius:5px;padding:5px 10px;font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;} 
-        .drag-badge{color:var(--secondary);font-size:12px;margin-right:2px;cursor:default;vertical-align:middle;}
-        .result-card img{cursor:zoom-in;}
-        #livePreviewCanvas{cursor:grab;}
-        #livePreviewCanvas.dragging{cursor:grabbing;}
-        .drag-hint{text-align:center;font-size:11px;color:var(--muted);padding:4px 0 8px;display:none;}
-        .lightbox-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;}
-        .lightbox-overlay img{max-width:92vw;max-height:88vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,0.6);cursor:default;object-fit:contain;}
-        .lightbox-close{position:absolute;top:16px;right:20px;background:rgba(255,255,255,0.15);border:none;color:white;font-size:22px;cursor:pointer;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
-        .lightbox-close:hover{background:rgba(255,255,255,0.3);}
-        .lightbox-caption{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.85);font-size:13px;background:rgba(0,0,0,0.55);padding:5px 16px;border-radius:20px;white-space:nowrap;max-width:90vw;overflow:hidden;text-overflow:ellipsis;}
+        :root {
+            --primary: #f97316;
+            --primary-dark: #ea580c;
+            --secondary: #fb923c;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --bg: #fdf6f0;
+            --card: #ffffff;
+            --border: #fde8d3;
+            --text: #1e293b;
+            --muted: #6b6b6b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 24px 30px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(249, 115, 22, 0.28);
+            position: relative;
+        }
+
+        header h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            font-family: 'Pacifico', cursive;
+        }
+
+        header p {
+            opacity: 0.85;
+            font-size: 14px;
+        }
+
+        /* light gradient body background */
+        body {
+            background: linear-gradient(145deg, #fdf6f0 0%, #fff9f3 100%);
+        }
+
+        /* refine card styles for slightly deeper shadow */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        /* make upload area text bolder */
+        .upload-area small {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 24px;
+            max-width: 1400px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        @media(max-width:900px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .settings-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* ensure primary button stretches in sidebar */
+        .settings-panel .btn {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        @media(max-width:900px) {
+            .settings-panel .btn {
+                width: auto;
+            }
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            margin-bottom: 5px;
+        }
+
+        input[type=text],
+        input[type=number],
+        input[type=range],
+        select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 7px;
+            font-size: 14px;
+            background: #f8fafc;
+            color: var(--text);
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            background: white;
+        }
+
+        input[type=range] {
+            padding: 4px 0;
+            cursor: pointer;
+            accent-color: var(--primary);
+        }
+
+        input[type=color] {
+            width: 100%;
+            height: 38px;
+            border: 1.5px solid var(--border);
+            border-radius: 7px;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+
+        .range-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-val {
+            font-weight: 700;
+            color: var(--primary);
+            width: 38px;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .upload-area {
+            border: 2.5px dashed var(--primary);
+            border-radius: 10px;
+            padding: 22px 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: #fff7ed;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            background: #fff1e0;
+        }
+
+        .upload-area input[type=file] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        /* make inner label clickable and ignore pointer events on children */
+        .upload-area .upload-label,
+        .upload-area .upload-label * {
+            pointer-events: none;
+        }
+
+        .upload-area label.upload-label {
+            position: relative;
+            z-index: 1; /* ensure input sits on top */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 6px;
+        }
+
+        .upload-area p {
+            font-size: 13px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .upload-area small {
+            color: var(--muted);
+            font-size: 12px;
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #fff7ed;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        /* base button style for consistency */
+        .btn {
+            display: inline-block;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            text-align: center;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #15803d);
+            color: white;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+            font-size: 13px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .preview-box {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .preview-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-header h3 {
+            font-size: 15px;
+            color: var(--text);
+        }
+
+        .badge {
+            background: #fff7ed;
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .live-preview-wrapper {
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 280px;
+            background: repeating-conic-gradient(#e2e8f0 0% 25%, white 0% 50%)0 0/20px 20px;
+        }
+
+        #livePreviewCanvas {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .placeholder-msg {
+            text-align: center;
+            color: var(--muted);
+        }
+
+        .placeholder-msg .icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .placeholder-msg p {
+            font-size: 14px;
+        }
+
+        .file-list-wrap {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        .file-list-header {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-list-header h3 {
+            font-size: 15px;
+        }
+
+        #fileListContainer {
+            padding: 12px 18px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 13px;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-thumb {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .file-name {
+            flex: 1;
+            color: var(--text);
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-size {
+            color: var(--muted);
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .file-status {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-done {
+            background: #dcfce7;
+            color: var(--success);
+        }
+
+        .status-error {
+            background: #fee2e2;
+            color: var(--danger);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 14px;
+            padding: 16px;
+        }
+
+        .result-card {
+            position: relative;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s;
+        }
+
+        .result-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .result-card img {
+            width: 100%;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            display: block;
+        }
+
+        .result-card-info {
+            padding: 8px 10px;
+            font-size: 12px;
+        }
+
+        .result-card-name {
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 3px;
+        }
+
+        .result-card-size {
+            color: var(--muted);
+        }
+
+        .result-card-dl {
+            display: block;
+            text-align: center;
+            background: var(--primary);
+            color: white;
+            padding: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+        .result-card-dl:hover {
+            background: var(--primary-dark);
+        }
+
+        .result-card-remove {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(220, 38, 38, 0.88);
+            color: white;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            padding: 0;
+            transition: background 0.15s;
+            z-index: 5;
+        }
+
+        .result-card-remove:hover {
+            background: var(--danger);
+            transform: scale(1.15);
+        }
+
+        .progress-wrap {
+            display: none;
+            margin-top: 8px;
+        }
+
+        .progress-label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .progress-bar-bg {
+            background: var(--border);
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 4px;
+            padding: 10px 18px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-btn {
+            padding: 6px 16px;
+            border-radius: 20px;
+            border: none;
+            background: #f1f5f9;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .font-style-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .style-btn {
+            flex: 1;
+            padding: 7px 5px;
+            border: 1.5px solid var(--border);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.15s;
+            font-weight: 500;
+        }
+
+        .style-btn.active {
+            border-color: var(--primary);
+            background: #fff7ed;
+            color: var(--primary);
+        }
+
+        .nav-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .nav-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            transition: all 0.15s;
+        }
+
+        .nav-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        .nav-btn:disabled:hover {
+            background: white;
+            color: var(--text);
+        }
+
+        .preset-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .preset-chip {
+            padding: 4px 10px;
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .preset-chip:hover {
+            background: #fff1e0;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .empty-results {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--muted);
+        }
+
+        .empty-results .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        .drag-badge {
+            color: var(--secondary);
+            font-size: 12px;
+            margin-right: 2px;
+            cursor: default;
+            vertical-align: middle;
+        }
+
+        .result-card img {
+            cursor: zoom-in;
+        }
+
+        #livePreviewCanvas {
+            cursor: grab;
+        }
+
+        #livePreviewCanvas.dragging {
+            cursor: grabbing;
+        }
+
+        .drag-hint {
+            text-align: center;
+            font-size: 11px;
+            color: var(--muted);
+            padding: 4px 0 8px;
+            display: none;
+        }
+
+        .lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.92);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-out;
+        }
+
+        .lightbox-overlay img {
+            max-width: 92vw;
+            max-height: 88vh;
+            border-radius: 8px;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+            cursor: default;
+            object-fit: contain;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .lightbox-caption {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            background: rgba(0, 0, 0, 0.55);
+            padding: 5px 16px;
+            border-radius: 20px;
+            white-space: nowrap;
+            max-width: 90vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
+
 <body>
-<header>
-    <h1>📸 Image Editor & Optimizer</h1>
-    <p>Add stickers, live preview, keep quality, batch process</p>
-</header>
-<div class="main-layout">
-    <div class="settings-panel">
-        <div class="card">
-            <div class="card-title">📁 Select Images</div>
-            <div class="upload-area" id="uploadArea">
-                <input type="file" id="fileInput" multiple accept="image/*" onchange="onFilesSelected(this.files)">
-                <div class="upload-icon">🖼️</div>
-                <p>Click or drop files here</p>
-                <small>JPG, PNG, WEBP supported</small>
-            </div>
-            <div style="margin-top:10px;display:none;" id="fileCountBadge">
-                <div style="background:#eff6ff;border-radius:7px;padding:8px 12px;font-size:13px;color:var(--primary);font-weight:600;">✅ <span id="fileCountText">0</span> files selected</div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-title">🏷️ Sticker / Text</div>
-            <div class="field">
-                <label>Text</label>
-                <input type="text" id="watermarkText" placeholder="e.g. © My Brand" oninput="updatePreview()">
-            </div>
-            <div class="field">
-                <label>Presets</label>
-                <div class="preset-row">
-                    <span class="preset-chip" onclick="setPreset('Confidential')">Confidential</span>
-                    <span class="preset-chip" onclick="setPreset('Chobir Deyal')">Don't Copy</span>
+    <header>
+        <h1>📸 Image Editor & Optimizer for registration</h1>
+    </header>
+    <div class="main-layout">
+        <div class="settings-panel">
+            <div class="card">
+                <div class="card-title">📁 Select Images</div>
+                <div class="upload-area" id="uploadArea">
+                    <input type="file" id="fileInput" multiple accept="image/*" onchange="onFilesSelected(this.files)">
+                    <label for="fileInput" class="upload-label">
+                        <div class="upload-icon">🖼️</div>
+                        <small>JPG, PNG, WEBP supported</small>
+                    </label>
+                </div>
+                <div style="margin-top:10px;display:none;" id="fileCountBadge">
+                    <div
+                        style="background:#fff7ed;border-radius:7px;padding:8px 12px;font-size:13px;color:var(--primary);font-weight:600;">
+                        ✅ <span id="fileCountText">0</span> files selected</div>
                 </div>
             </div>
+            <div class="card-title">📏 Resize Image</div>
             <div class="grid-2">
                 <div class="field">
-                    <label>Font</label>
-                    <select id="fontFamily" onchange="updatePreview()">
-                        <option value="Arial">Arial</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Courier New">Courier New</option>
-                        <option value="Impact">Impact</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Verdana">Verdana</option>
-                        <option value="Montserrat" selected>Montserrat</option>
-                        <option value="Brush Script MT">Script (Brush Script)</option>
-                        <option value="Pacifico">Script (Pacifico)</option>
-                        <option value="Berlin Sans FB">Berlin Sans</option>
-                        <option value="Source Code Pro">Code Pro</option>
-                        <option value="Comic Sans MS">Comic Sans</option>
+                    <label>Width (px)</label>
+                    <input type="number" id="resizeW" placeholder="Auto" value="0" min="0" oninput="updatePreview()">
+                </div>
+                <div class="field">
+                    <label>Height (px)</label>
+                    <input type="number" id="resizeH" placeholder="Auto" value="0" min="0" oninput="updatePreview()">
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-title">⚙️ Output Settings</div>
+                <div class="field">
+                    <label>Format</label>
+                    <select id="outputFormat" onchange="updatePreview()">
+                        <option value="image/jpeg">JPEG (small)</option>
+                        <option value="image/png">PNG (transparent)</option>
+                        <option value="image/webp">WebP (best)</option>
                     </select>
                 </div>
                 <div class="field">
-                    <label>Position</label>
-                    <select id="position" onchange="updatePreview()">
-                        <option value="bottom-right">Bottom Right</option>
-                        <option value="bottom-left">Bottom Left</option>
-                        <option value="top-right">Top Right</option>
-                        <option value="top-left">Top Left</option>
-                        <option value="center">Center</option>
-                        <option value="tiled">Tiled (full)</option>
-                    </select>
-                </div>
-            </div>
-            <div class="field">
-                <label>Style</label>
-                <div class="font-style-row">
-                    <button class="style-btn" id="boldBtn" onclick="toggleStyle('bold')"><b>B</b></button>
-                    <button class="style-btn" id="italicBtn" onclick="toggleStyle('italic')"><i>I</i></button>
-                </div>
-            </div>
-            <div class="field">
-                <label>Size (%)</label>
-                <div class="range-row">
-                    <input type="range" id="fontSize" min="1" max="20" value="4" oninput="updateRangeVal('fontSize','fontSizeVal'); updatePreview()">
-                    <span class="range-val" id="fontSizeVal">4%</span>
-                </div>
-            </div>
-            <div class="field">
-                <label>Opacity</label>
-                <div class="range-row">
-                    <input type="range" id="opacity" min="10" max="100" value="70" oninput="updateRangeVal('opacity','opacityVal'); updatePreview()">
-                    <span class="range-val" id="opacityVal">70%</span>
-                </div>
-            </div>
-            <div class="field">
-                <label>Rotation</label>
-                <div class="range-row">
-                    <input type="range" id="rotation" min="-45" max="45" value="0" oninput="updateRangeVal('rotation','rotationVal','°'); updatePreview()">
-                    <span class="range-val" id="rotationVal">0°</span>
-                </div>
-            </div>
-            <div class="grid-2">
-                <div class="field">
-                    <label>Text Color</label>
-                    <input type="color" id="textColor" value="#ffffff" oninput="updatePreview()">
-                </div>
-                <div class="field">
-                    <label>Shadow Color</label>
-                    <input type="color" id="shadowColor" value="#ffffff" oninput="updatePreview()">
-                </div>
-            </div>            <div class="field" style="margin-top:4px;">
-                <label><input type="checkbox" id="shadowToggle" checked onchange="updatePreview()"> Enable Shadow</label>
-            </div>        </div>
-        <div class="card">
-            <div class="card-title">🎨 PNG Sticker Image</div>
-            <div class="field">
-                <label>Upload PNG Sticker</label>
-                <!-- preset dropdown -->
-                <div class="field">
-                    <label>Use sample sticker</label>
-                    <select id="stickerPreset" onchange="onPresetChange()">
-                        <option value="">-- none --</option>
-                        <option value="FMHS.png">logo 1</option>
-                        <option value="FMHS2.png">logo 2</option>
-                    </select>
-                </div>
-                <div class="sticker-upload-sm" id="stickerUploadArea">
-                    <input type="file" id="stickerInput" accept="image/png" onchange="onStickerSelected(this.files[0])">
-                    <div style="font-size:28px;">🖼️</div>
-                    <p>Click to upload PNG sticker</p>
-                    <small style="color:var(--muted);font-size:11px;">PNG only — transparency supported</small>
-                </div>
-                <div class="sticker-thumb-row" id="stickerThumbRow" style="display:none">
-                    <img id="stickerThumbImg" src="" alt="sticker preview">
-                    <div class="sticker-info"><b id="stickerThumbName"></b><span style="color:var(--muted);">PNG Sticker loaded ✅</span></div>
-                    <button class="sticker-remove" onclick="removeStickerImage()">✕ Remove</button>
-                </div>
-            </div>
-            <div id="stickerControls" style="display:none">
-                <div class="field">
-                    <label>Sticker Position</label>
-                    <select id="stickerPosition" onchange="updatePreview()">
-                        <option value="bottom-right">Bottom Right</option>
-                        <option value="bottom-left">Bottom Left</option>
-                        <option value="top-right">Top Right</option>
-                        <option value="top-left">Top Left</option>
-                        <option value="center">Center</option>
-                        <option value="tiled">Tiled (full)</option>
-                    </select>
-                </div>
-                <div class="field">
-                    <label>Sticker Size (% of image width)</label>
+                    <label>Quality (%)</label>
                     <div class="range-row">
-                        <input type="range" id="stickerSize" min="5" max="80" value="20" oninput="updateRangeVal('stickerSize','stickerSizeVal'); updatePreview()">
-                        <span class="range-val" id="stickerSizeVal">20%</span>
+                        <input type="range" id="quality" min="50" max="100" value="95"
+                            oninput="updateRangeVal('quality','qualityVal'); updatePreview()">
+                        <span class="range-val" id="qualityVal">95%</span>
                     </div>
                 </div>
                 <div class="field">
-                    <label>Sticker Opacity</label>
-                    <div class="range-row">
-                        <input type="range" id="stickerOpacity" min="10" max="100" value="100" oninput="updateRangeVal('stickerOpacity','stickerOpacityVal'); updatePreview()">
-                        <span class="range-val" id="stickerOpacityVal">100%</span>
+                    <label>Max size KB (0=none)</label>
+                    <input type="number" id="maxSize" value="100" min="0" oninput="saveSettings()">
+                </div>
+
+            </div>
+            <div class="progress-wrap" id="progressWrap">
+                <div class="progress-label">
+                    <span id="progressText">Ready...</span>
+                    <span id="progressPct">0%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="processAll()">✨ Process & Download All</button>
+        </div>
+        <div class="right-panel">
+            <div class="preview-box">
+                <div class="preview-header">
+                    <h3>🔍 Live Preview</h3>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <div class="nav-row">
+                            <button class="nav-btn" id="prevBtn" onclick="navigatePreview(-1)" disabled>◀</button>
+                            <span id="navInfo">-</span>
+                            <button class="nav-btn" id="nextBtn" onclick="navigatePreview(1)" disabled>▶</button>
+                        </div>
+                        <span class="badge" id="previewBadge">Preview</span>
                     </div>
                 </div>
-                <div class="field">
-                    <label>Sticker Rotation</label>
-                    <div class="range-row">
-                        <input type="range" id="stickerRotation" min="-180" max="180" value="0" oninput="updateRangeVal('stickerRotation','stickerRotationVal','°'); updatePreview()">
-                        <span class="range-val" id="stickerRotationVal">0°</span>
+                <div class="live-preview-wrapper">
+                    <canvas id="livePreviewCanvas"></canvas>
+                    <div class="placeholder-msg" id="placeholderMsg">
+                        <div class="icon">🖼️</div>
+                        <p>Upload images to see preview</p>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="card">
-            <div class="card-title">⚙️ Output Settings</div>
-            <div class="field">
-                <label>Format</label>
-                <select id="outputFormat" onchange="updatePreview()">
-                    <option value="image/jpeg">JPEG (small)</option>
-                    <option value="image/png">PNG (transparent)</option>
-                    <option value="image/webp">WebP (best)</option>
-                </select>
-            </div>
-            <div class="field">
-                <label>Quality (%)</label>
-                <div class="range-row">
-                    <input type="range" id="quality" min="50" max="100" value="95" oninput="updateRangeVal('quality','qualityVal'); updatePreview()">
-                    <span class="range-val" id="qualityVal">95%</span>
+            <div class="file-list-wrap">
+                <div class="file-list-header">
+                    <h3>📋 File List</h3>
+                    <button class="btn btn-danger" style="width:auto;padding:5px 12px;" onclick="clearFiles()">🗑️
+                        Clear</button>
                 </div>
-            </div>
-            <div class="field">
-                <label>Max size KB (0=none)</label>
-                <input type="number" id="maxSize" value="100" min="0" oninput="saveSettings()">
-            </div>
-            <div class="field">
-                <label>Resize px (width,height)</label>
-                <div class="grid-2">
-                    <input type="number" id="resizeW" placeholder="w" value="0" min="0" oninput="saveSettings()">
-                    <input type="number" id="resizeH" placeholder="h" value="0" min="0" oninput="saveSettings()">
-                </div>
-            </div>
-        </div>
-        <div class="progress-wrap" id="progressWrap">
-            <div class="progress-label">
-                <span id="progressText">Ready...</span>
-                <span id="progressPct">0%</span>
-            </div>
-            <div class="progress-bar-bg">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-        </div>
-        <button class="btn btn-primary" onclick="processAll()">✨ Process & Download All</button>
-    </div>
-    <div class="right-panel">
-        <div class="preview-box">
-            <div class="preview-header">
-                <h3>🔍 Live Preview</h3>
-                <div style="display:flex;gap:10px;align-items:center;">
-                    <div class="nav-row">
-                        <button class="nav-btn" id="prevBtn" onclick="navigatePreview(-1)" disabled>◀</button>
-                        <span id="navInfo">-</span>
-                        <button class="nav-btn" id="nextBtn" onclick="navigatePreview(1)" disabled>▶</button>
+                <div id="fileListContainer">
+                    <div class="empty-results">
+                        <div class="icon">📂</div>
+                        <p>No files uploaded</p>
                     </div>
-                    <span class="badge" id="previewBadge">Preview</span>
                 </div>
             </div>
-            <div class="live-preview-wrapper">
-                <canvas id="livePreviewCanvas"></canvas>
-                <div class="placeholder-msg" id="placeholderMsg">
-                    <div class="icon">🖼️</div>
-                    <p>Upload images to see preview</p>
+            <div class="file-list-wrap">
+                <div class="tab-nav">
+                    <button class="tab-btn active" onclick="switchTab('results')">✅ Results</button>
+                    <button class="tab-btn" onclick="switchTab('info')">ℹ️ Help</button>
                 </div>
-            </div>
-            <div class="drag-hint" id="dragHint">🖱️ Drag text or sticker on the preview to reposition</div>
-        </div>
-        <div class="file-list-wrap">
-            <div class="file-list-header">
-                <h3>📋 File List</h3>
-                <button class="btn btn-danger" style="width:auto;padding:5px 12px;" onclick="clearFiles()">🗑️ Clear</button>
-            </div>
-            <div id="fileListContainer">
-                <div class="empty-results">
-                    <div class="icon">📂</div>
-                    <p>No files uploaded</p>
+                <div id="tabResults" class="tab-content active">
+                    <div id="resultsGrid" class="results-grid">
+                        <div class="empty-results" style="grid-column:1/-1;">
+                            <div class="icon">⏳</div>
+                            <p>Processed images appear here</p>
+                        </div>
+                    </div>
+                    <div style="padding:0 16px 16px;display:none;" id="downloadAllWrap"><button class="btn btn-success"
+                            onclick="downloadAll()">📦 Download All</button></div>
                 </div>
-            </div>
-        </div>
-        <div class="file-list-wrap">
-            <div class="tab-nav">
-                <button class="tab-btn active" onclick="switchTab('results')">✅ Results</button>
-                <button class="tab-btn" onclick="switchTab('info')">ℹ️ Help</button>
-            </div>
-            <div id="tabResults" class="tab-content active">
-                <div id="resultsGrid" class="results-grid">
-                    <div class="empty-results" style="grid-column:1/-1;"><div class="icon">⏳</div><p>Processed images appear here</p></div>
-                </div>
-                <div style="padding:0 16px 16px;display:none;" id="downloadAllWrap"><button class="btn btn-success" onclick="downloadAll()">📦 Download All</button></div>
-            </div>
-            <div id="tabInfo" class="tab-content" style="padding:18px;">
-                <h4 style="margin-bottom:10px;color:var(--primary);">📖 Instructions</h4>
-                <ol style="padding-left:18px;font-size:14px;line-height:2;">
-                    <li>Select images (multiple).</li>
-                    <li>Enter sticker text or choose a preset.</li>
-                    <li>Adjust position, font, color, size etc.</li>
-                    <li>See changes live on the right preview.</li>
-                    <li>Choose output format and quality.</li>
-                    <li>Click "Process & Download All".</li>
-                    <li>Save individual files or download all.</li>
-                </ol>
-                <div style="margin-top:14px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
-                    <b style="color:var(--success);">💡 Tips:</b>
-                    <ul style="padding-left:16px;font-size:13px;line-height:1.9;margin-top:5px;">
-                        <li>WebP gives best quality vs size.</li>
-                        <li>PNG supports transparency.</li>
-                        <li>"Tiled" repeats watermark over the whole image.</li>
-                        <li>Keep quality ≥90% to avoid loss.</li>
-                    </ul>
+                <div id="tabInfo" class="tab-content" style="padding:18px;">
+                    <h4 style="margin-bottom:10px;color:var(--primary);">📖 Instructions</h4>
+                    <ol style="padding-left:18px;font-size:14px;line-height:2;">
+                        <li>Select images (multiple).</li>
+                        <li>Set resize dimensions if needed.</li>
+                        <li>See changes live on the right preview.</li>
+                        <li>Choose output format and quality.</li>
+                        <li>Click "Process & Download All".</li>
+                        <li>Save individual files or download all.</li>
+                    </ol>
+                    <div
+                        style="margin-top:14px;padding:12px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
+                        <b style="color:var(--success);">💡 Tips:</b>
+                        <ul style="padding-left:16px;font-size:13px;line-height:1.9;margin-top:5px;">
+                            <li>WebP gives best quality vs size.</li>
+                            <li>PNG supports transparency.</li>
+                            <li>Keep quality ≥90% to avoid loss.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-<canvas id="hiddenCanvas"></canvas>
-<!-- Lightbox -->
-<div class="lightbox-overlay" id="lightboxOverlay" style="display:none" onclick="closeLightbox()">
-    <img id="lightboxImg" src="" alt="large preview" onclick="event.stopPropagation()">
-    <button class="lightbox-close" onclick="closeLightbox()" title="Close">✕</button>
-    <div class="lightbox-caption" id="lightboxCaption"></div>
-</div>
-<script>
-    let loadedFiles=[];
-    let processedDataUrls=[];
-    let currentPreviewIndex=0;
-    let boldActive=false;
-    let italicActive=false;
-    let stickerImg=null;
-    let perImageDrag={};
-    let dragging=null;
-    function onFilesSelected(files){if(!files||files.length===0)return;loadedFiles=Array.from(files);currentPreviewIndex=0;processedDataUrls=[];renderFileList();updateNavButtons();updatePreview();document.getElementById('fileCountBadge').style.display='block';document.getElementById('fileCountText').textContent=loadedFiles.length;document.getElementById('dragHint').style.display='block';}
-    function renderFileList(){const container=document.getElementById('fileListContainer');if(loadedFiles.length===0){container.innerHTML='<div class="empty-results"><div class="icon">📂</div><p>No files uploaded</p></div>';return;}container.innerHTML='';loadedFiles.forEach((file,i)=>{const item=document.createElement('div');item.className='file-item';item.id='fileItem_'+i;const sizeKB=(file.size/1024).toFixed(1);item.innerHTML=`<span class="file-name">${file.name}</span><span class="file-size">${sizeKB} KB</span><span class="drag-badge" id="dragBadge_${i}" title="Custom drag position set" style="display:none">📍</span><span class="file-status status-pending" id="status_${i}">⏳</span>`;const reader=new FileReader();reader.onload=e=>{const thumb=document.createElement('img');thumb.src=e.target.result;thumb.className='file-thumb';thumb.title='Preview';thumb.onclick=()=>{currentPreviewIndex=i;updatePreview();};item.prepend(thumb);};reader.readAsDataURL(file);container.appendChild(item);});}
-    function clearFiles(){loadedFiles=[];processedDataUrls=[];perImageDrag={};document.getElementById('fileInput').value='';document.getElementById('fileCountBadge').style.display='none';document.getElementById('dragHint').style.display='none';renderFileList();clearPreview();document.getElementById('resultsGrid').innerHTML='<div class="empty-results" style="grid-column:1/-1;"><div class="icon">⏳</div><p>Processed images appear here</p></div>';document.getElementById('downloadAllWrap').style.display='none';updateNavButtons();}
-    function setPreset(text){document.getElementById('watermarkText').value=text;updatePreview();}
-    function onStickerSelected(file){
-        // clear preset selection when manual upload
-        document.getElementById('stickerPreset').value = '';
-        if(!file) return;
-        const reader=new FileReader();
-        reader.onload=e=>{
-            const img=new Image();
-            img.onload=()=>{
-                stickerImg=img;
-                document.getElementById('stickerUploadArea').style.display='none';
-                document.getElementById('stickerThumbRow').style.display='flex';
-                document.getElementById('stickerThumbImg').src=e.target.result;
-                document.getElementById('stickerThumbName').textContent=file.name;
-                document.getElementById('stickerControls').style.display='block';
-                updatePreview();
-            };
-            img.src=e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-    function removeStickerImage(){
-        stickerImg=null;
-        document.getElementById('stickerInput').value='';
-        document.getElementById('stickerUploadArea').style.display='block';
-        document.getElementById('stickerThumbRow').style.display='none';
-        document.getElementById('stickerControls').style.display='none';
-        document.getElementById('stickerPreset').value = '';
-        updatePreview();
-    }
-    function onPresetChange(){
-        const val=document.getElementById('stickerPreset').value;
-        if(val){ loadPresetSticker(val); }
-    }
-    function loadPresetSticker(filename){
-        const img=new Image();
-        img.onload=()=>{
-            stickerImg=img;
-            document.getElementById('stickerUploadArea').style.display='none';
-            document.getElementById('stickerThumbRow').style.display='flex';
-            document.getElementById('stickerThumbImg').src=filename;
-            document.getElementById('stickerThumbName').textContent=filename;
-            document.getElementById('stickerControls').style.display='block';
-            updatePreview();
-        };
-        img.src=filename;
-    }
-    function drawStickerImage(ctx,w,h,idx){if(!stickerImg)return;const sizePct=parseInt(document.getElementById('stickerSize').value)/100;const opacityPct=parseInt(document.getElementById('stickerOpacity').value)/100;const rotation=parseInt(document.getElementById('stickerRotation').value)*(Math.PI/180);const position=document.getElementById('stickerPosition').value;const sw=Math.floor(w*sizePct);const sh=Math.floor(sw*(stickerImg.height/stickerImg.width));const margin=Math.floor(sw*0.08);if(position==='tiled'){ctx.save();ctx.globalAlpha=opacityPct;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';const stepX=sw*1.6,stepY=sh*1.6;for(let ty=0;ty<h+sh;ty+=stepY){for(let tx=0;tx<w+sw;tx+=stepX){ctx.save();ctx.translate(tx+sw/2,ty+sh/2);ctx.rotate(rotation);ctx.drawImage(stickerImg,-sw/2,-sh/2,sw,sh);ctx.restore();}}ctx.restore();return;}let cx,cy;const sdrag=perImageDrag[idx];if(sdrag&&sdrag.stickerX!==undefined){cx=sdrag.stickerX*w;cy=sdrag.stickerY*h;}else if(position==='bottom-right'){cx=w-sw/2-margin;cy=h-sh/2-margin;}else if(position==='bottom-left'){cx=sw/2+margin;cy=h-sh/2-margin;}else if(position==='top-right'){cx=w-sw/2-margin;cy=sh/2+margin;}else if(position==='top-left'){cx=sw/2+margin;cy=sh/2+margin;}else{cx=w/2;cy=h/2;}ctx.save();ctx.globalAlpha=opacityPct;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.translate(cx,cy);ctx.rotate(rotation);ctx.drawImage(stickerImg,-sw/2,-sh/2,sw,sh);ctx.restore();}
-    function toggleStyle(type){if(type==='bold'){boldActive=!boldActive;document.getElementById('boldBtn').classList.toggle('active',boldActive);}else{italicActive=!italicActive;document.getElementById('italicBtn').classList.toggle('active',italicActive);}updatePreview();}
-    function updateRangeVal(inputId,spanId,suffix='%'){document.getElementById(spanId).textContent=document.getElementById(inputId).value+suffix;}
-    function switchTab(tab){document.querySelectorAll('.tab-btn').forEach((b,i)=>{b.classList.toggle('active',(tab==='results'&&i===0)||(tab==='info'&&i===1));});document.getElementById('tabResults').classList.toggle('active',tab==='results');document.getElementById('tabInfo').classList.toggle('active',tab==='info');}
-    function navigatePreview(dir){currentPreviewIndex=Math.max(0,Math.min(loadedFiles.length-1,currentPreviewIndex+dir));updatePreview();}
-    function updateNavButtons(){document.getElementById('prevBtn').disabled=currentPreviewIndex<=0||loadedFiles.length===0;document.getElementById('nextBtn').disabled=currentPreviewIndex>=loadedFiles.length-1||loadedFiles.length===0;document.getElementById('navInfo').textContent=loadedFiles.length>0?`${currentPreviewIndex+1} / ${loadedFiles.length}`:'-';}
-    let previewDebounce=null;
-    function updatePreview(){clearTimeout(previewDebounce);previewDebounce=setTimeout(_doUpdatePreview,100);saveSettings();}        
-    async function _doUpdatePreview(){if(loadedFiles.length===0){clearPreview();return;}updateNavButtons();const file=loadedFiles[currentPreviewIndex];const img=await loadImage(file);const previewCanvas=document.getElementById('livePreviewCanvas');
-        const ctx=previewCanvas.getContext('2d');
-        previewCanvas.width=img.width;previewCanvas.height=img.height;ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0);drawWatermark(ctx,previewCanvas.width,previewCanvas.height,currentPreviewIndex);drawStickerImage(ctx,previewCanvas.width,previewCanvas.height,currentPreviewIndex);previewCanvas.style.display='block';document.getElementById('placeholderMsg').style.display='none';const fmt=document.getElementById('outputFormat').value;const q=parseInt(document.getElementById('quality').value)/100;const dataUrl=previewCanvas.toDataURL(fmt,q);const sizeKB=(dataUrl.length*(3/4)/1024).toFixed(1);document.getElementById('previewBadge').textContent=`${img.width}×${img.height} • ${sizeKB} KB`;}        
-    function clearPreview(){const c=document.getElementById('livePreviewCanvas');c.style.display='none';document.getElementById('placeholderMsg').style.display='block';document.getElementById('previewBadge').textContent='Preview';document.getElementById('navInfo').textContent='-';}
-    function drawWatermark(ctx,w,h,idx){const text=document.getElementById('watermarkText').value.trim();if(!text)return;const fontSizePct=parseInt(document.getElementById('fontSize').value)/100;const opacityPct=parseInt(document.getElementById('opacity').value)/100;const rotation=parseInt(document.getElementById('rotation').value)*(Math.PI/180);const position=document.getElementById('position').value;const fontFamily=document.getElementById('fontFamily').value;const textColor=document.getElementById('textColor').value;const shadowCol=document.getElementById('shadowColor').value;const shadowEnabled=document.getElementById('shadowToggle').checked;const fontSize=Math.floor(w*fontSizePct);let fontStr='';if(italicActive)fontStr+='italic ';if(boldActive)fontStr+='bold ';fontStr+=`${fontSize}px "${fontFamily}"`;if(position==='tiled'){ctx.save();ctx.globalAlpha=opacityPct;ctx.font=fontStr;ctx.fillStyle=textColor;if(shadowEnabled){ctx.shadowColor=shadowCol;ctx.shadowBlur=Math.max(3,fontSize*0.15);}else{ctx.shadowColor='transparent';ctx.shadowBlur=0;}const step=fontSize*3.5;for(let y=-step;y<h+step;y+=step){for(let x=-step;x<w+step;x+=step){ctx.save();ctx.translate(x,y);ctx.rotate(-Math.PI/6);ctx.fillText(text,0,0);ctx.restore();}}ctx.restore();return;}ctx.save();ctx.font=fontStr;ctx.globalAlpha=opacityPct;ctx.fillStyle=textColor;if(shadowEnabled){ctx.shadowColor=shadowCol;ctx.shadowBlur=Math.max(3,fontSize*0.15);}else{ctx.shadowColor='transparent';ctx.shadowBlur=0;}const metrics=ctx.measureText(text);const tw=metrics.width;const margin=fontSize*0.5;let cx,cy;const tdrag=perImageDrag[idx];if(tdrag&&tdrag.textX!==undefined){cx=tdrag.textX*w;cy=tdrag.textY*h;}else if(position==='bottom-right'){cx=w-tw/2-margin;cy=h-fontSize/2-margin;}else if(position==='bottom-left'){cx=tw/2+margin;cy=h-fontSize/2-margin;}else if(position==='top-right'){cx=w-tw/2-margin;cy=fontSize/2+margin;}else if(position==='top-left'){cx=tw/2+margin;cy=fontSize/2+margin;}else{cx=w/2;cy=h/2;}ctx.translate(cx,cy);ctx.rotate(rotation);ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,0,0);ctx.restore();}
-    async function processAll(){if(loadedFiles.length===0){alert('Please select files first!');return;}processedDataUrls=[];const resultsGrid=document.getElementById('resultsGrid');resultsGrid.innerHTML='';document.getElementById('downloadAllWrap').style.display='none';const progressWrap=document.getElementById('progressWrap');const progressBar=document.getElementById('progressBar');const progressText=document.getElementById('progressText');const progressPct=document.getElementById('progressPct');progressWrap.style.display='block';const fmt=document.getElementById('outputFormat').value;const quality=parseInt(document.getElementById('quality').value)/100;const maxSizeKB=parseInt(document.getElementById('maxSize').value);const resizeW=parseInt(document.getElementById('resizeW').value);const resizeH=parseInt(document.getElementById('resizeH').value);const canvas=document.getElementById('hiddenCanvas');const ctx=canvas.getContext('2d');for(let i=0;i<loadedFiles.length;i++){const file=loadedFiles[i];progressText.textContent=`Processing: ${file.name}`;progressPct.textContent=`${Math.round((i/loadedFiles.length)*100)}%`;progressBar.style.width=`${(i/loadedFiles.length)*100}%`;try{const img=await loadImage(file);let targetW=img.width,targetH=img.height;if(resizeW>0&&resizeH>0){targetW=resizeW;targetH=resizeH;}else if(resizeW>0){targetH=Math.round(img.height*(resizeW/img.width));targetW=resizeW;}else if(resizeH>0){targetW=Math.round(img.width*(resizeH/img.height));targetH=resizeH;}canvas.width=targetW;canvas.height=targetH;ctx.clearRect(0,0,targetW,targetH);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0,targetW,targetH);drawWatermark(ctx,targetW,targetH,i);drawStickerImage(ctx,targetW,targetH,i);let q=quality;let dataUrl=canvas.toDataURL(fmt,q);if(maxSizeKB>0&&fmt!=='image/png'){while((dataUrl.length*(3/4)/1024)>maxSizeKB&&q>0.1){q-=0.05;dataUrl=canvas.toDataURL(fmt,q);} }const pItem={name:file.name,dataUrl,fmt};processedDataUrls.push(pItem);const statusEl=document.getElementById(`status_${i}`);if(statusEl){statusEl.textContent='✅';statusEl.className='file-status status-done';}const finalSizeKB=(dataUrl.length*(3/4)/1024).toFixed(1);const ext=fmt.split('/')[1];const card=document.createElement('div');card.className='result-card';card.innerHTML=`<img src="${dataUrl}" alt="${file.name}"><div class="result-card-info"><div class="result-card-name">${file.name}</div><div class="result-card-size">${finalSizeKB} KB • ${targetW}×${targetH}</div></div><button class="result-card-dl">⬇️ Save File</button>`;const dlFn=`Chobir Deyal_${file.name.replace(/\.[^.]+$/,'')}.${ext}`;card.querySelector('.result-card-dl').addEventListener('click',()=>saveFile(dataUrl,dlFn,fmt));card.querySelector('img').addEventListener('click',()=>openLightbox(dataUrl,file.name));resultsGrid.appendChild(card);const rmBtn=document.createElement('button');rmBtn.className='result-card-remove';rmBtn.title='Remove image';rmBtn.innerHTML='✕';rmBtn.onclick=()=>{const idx=processedDataUrls.indexOf(pItem);if(idx>-1)processedDataUrls.splice(idx,1);card.remove();if(processedDataUrls.length===0)document.getElementById('downloadAllWrap').style.display='none';};card.appendChild(rmBtn);}catch(err){const statusEl=document.getElementById(`status_${i}`);if(statusEl){statusEl.textContent='❌';statusEl.className='file-status status-error';}}}progressBar.style.width='100%';progressPct.textContent='100%';progressText.textContent=`✅ ${loadedFiles.length} images processed!`;if(processedDataUrls.length>1){document.getElementById('downloadAllWrap').style.display='block';}}async function saveFile(dataUrl,filename,fmt){const ext=fmt.split('/')[1];try{const handle=await window.showSaveFilePicker({suggestedName:filename,types:[{description:'Image',accept:{[fmt]:['.'+ext]}}]});const blob=await(await fetch(dataUrl)).blob();const writable=await handle.createWritable();await writable.write(blob);await writable.close();}catch(e){if(e.name!=='AbortError'){const a=document.createElement('a');a.href=dataUrl;a.download=filename;a.click();}}}async function downloadAll(){if(processedDataUrls.length===0)return;try{const dirHandle=await window.showDirectoryPicker({mode:'readwrite'});let saved=0;for(const item of processedDataUrls){const ext=item.fmt.split('/')[1];const filename=`Chobir Deyal_${item.name.replace(/\.[^.]+$/,'')}.${ext}`;const fileHandle=await dirHandle.getFileHandle(filename,{create:true});const blob=await(await fetch(item.dataUrl)).blob();const writable=await fileHandle.createWritable();await writable.write(blob);await writable.close();saved++;}alert(`✅ ${saved} files saved successfully!`);}catch(e){if(e.name!=='AbortError'){processedDataUrls.forEach((item,i)=>{setTimeout(()=>{const ext=item.fmt.split('/')[1];const a=document.createElement('a');a.href=item.dataUrl;a.download=`Chobir Deyal_${item.name.replace(/\.[^.]+$/,'')}.${ext}`;a.click();},i*300);});}}}function loadImage(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onerror=reject;reader.onload=e=>{const img=new Image();img.onerror=reject;img.onload=()=>resolve(img);img.src=e.target.result;};reader.readAsDataURL(file);});}
-    const SETTINGS_KEYS=['watermarkText','fontFamily','position','fontSize','opacity','rotation','textColor','shadowColor','shadowToggle','stickerPreset','stickerPosition','stickerSize','stickerOpacity','stickerRotation','outputFormat','quality','maxSize','resizeW','resizeH'];
-    function saveSettings(){try{const s={};SETTINGS_KEYS.forEach(id=>{const el=document.getElementById(id);if(!el)return;s[id]=el.type==='checkbox'?el.checked:el.value;});s.boldActive=boldActive;s.italicActive=italicActive;localStorage.setItem('imgEditorSettings',JSON.stringify(s));}catch(e){}}
-    function loadSettings(){try{const raw=localStorage.getItem('imgEditorSettings');if(!raw)return;const s=JSON.parse(raw);SETTINGS_KEYS.forEach(id=>{const el=document.getElementById(id);if(!el||s[id]===undefined)return;if(el.type==='checkbox')el.checked=s[id];else el.value=s[id];});updateRangeVal('fontSize','fontSizeVal');updateRangeVal('opacity','opacityVal');updateRangeVal('rotation','rotationVal','°');updateRangeVal('stickerSize','stickerSizeVal');updateRangeVal('stickerOpacity','stickerOpacityVal');updateRangeVal('stickerRotation','stickerRotationVal','°');updateRangeVal('quality','qualityVal');if(s.boldActive!==undefined){boldActive=s.boldActive;document.getElementById('boldBtn').classList.toggle('active',boldActive);}if(s.italicActive!==undefined){italicActive=s.italicActive;document.getElementById('italicBtn').classList.toggle('active',italicActive);}if(s.stickerPreset){document.getElementById('stickerPreset').value=s.stickerPreset;loadPresetSticker(s.stickerPreset);}}catch(e){}}
-    loadSettings();
-    const uploadArea=document.getElementById('uploadArea');uploadArea.addEventListener('dragover',e=>{e.preventDefault();uploadArea.style.background='#dbeafe';});uploadArea.addEventListener('dragleave',()=>{uploadArea.style.background='#eff6ff';});uploadArea.addEventListener('drop',e=>{e.preventDefault();uploadArea.style.background='#eff6ff';onFilesSelected(e.dataTransfer.files);});
-    // ── Canvas drag-to-reposition ─────────────────────────────────
-    function getPosFraction(pos,imgIdx,type){const drag=perImageDrag[imgIdx];if(drag&&type==='text'&&drag.textX!==undefined)return{x:drag.textX,y:drag.textY};if(drag&&type==='sticker'&&drag.stickerX!==undefined)return{x:drag.stickerX,y:drag.stickerY};if(pos==='bottom-right')return{x:0.87,y:0.87};if(pos==='bottom-left')return{x:0.13,y:0.87};if(pos==='top-right')return{x:0.87,y:0.13};if(pos==='top-left')return{x:0.13,y:0.13};return{x:0.5,y:0.5};}
-    function updateDragBadge(i){const el=document.getElementById('dragBadge_'+i);if(el)el.style.display=perImageDrag[i]?'inline':'none';}
-    const liveCanvas=document.getElementById('livePreviewCanvas');
-    liveCanvas.addEventListener('mousedown',e=>{
-        if(loadedFiles.length===0)return;
-        const rect=liveCanvas.getBoundingClientRect();
-        const fx=(e.clientX-rect.left)/rect.width;
-        const fy=(e.clientY-rect.top)/rect.height;
-        const hasText=document.getElementById('watermarkText').value.trim()!=='';
-        const hasSticker=stickerImg!==null;
-        if(!hasText&&!hasSticker)return;
-        const textPos=document.getElementById('position').value;
-        const stickerPos=document.getElementById('stickerPosition').value;
-        const candidates=[];
-        if(hasText&&textPos!=='tiled'){const c=getPosFraction(textPos,currentPreviewIndex,'text');candidates.push({type:'text',d:Math.hypot(fx-c.x,fy-c.y)});}
-        if(hasSticker&&stickerPos!=='tiled'){const c=getPosFraction(stickerPos,currentPreviewIndex,'sticker');candidates.push({type:'sticker',d:Math.hypot(fx-c.x,fy-c.y)});}
-        if(candidates.length===0)return;
-        candidates.sort((a,b)=>a.d-b.d);
-        dragging=candidates[0].type;
-        if(!perImageDrag[currentPreviewIndex])perImageDrag[currentPreviewIndex]={};
-        if(dragging==='text'){perImageDrag[currentPreviewIndex].textX=fx;perImageDrag[currentPreviewIndex].textY=fy;}
-        else{perImageDrag[currentPreviewIndex].stickerX=fx;perImageDrag[currentPreviewIndex].stickerY=fy;}
-        liveCanvas.classList.add('dragging');
-        updatePreview();e.preventDefault();
-    });
-    liveCanvas.addEventListener('mousemove',e=>{
-        if(!dragging)return;
-        const rect=liveCanvas.getBoundingClientRect();
-        const fx=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
-        const fy=Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height));
-        if(!perImageDrag[currentPreviewIndex])perImageDrag[currentPreviewIndex]={};
-        if(dragging==='text'){perImageDrag[currentPreviewIndex].textX=fx;perImageDrag[currentPreviewIndex].textY=fy;}
-        else{perImageDrag[currentPreviewIndex].stickerX=fx;perImageDrag[currentPreviewIndex].stickerY=fy;}
-        updatePreview();e.preventDefault();
-    });
-    liveCanvas.addEventListener('mouseup',()=>{if(dragging){dragging=null;liveCanvas.classList.remove('dragging');updateDragBadge(currentPreviewIndex);}});
-    liveCanvas.addEventListener('mouseleave',()=>{if(dragging){dragging=null;liveCanvas.classList.remove('dragging');}});
-    liveCanvas.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;const t=e.touches[0];liveCanvas.dispatchEvent(new MouseEvent('mousedown',{clientX:t.clientX,clientY:t.clientY,bubbles:true}));e.preventDefault();},{passive:false});
-    liveCanvas.addEventListener('touchmove',e=>{if(e.touches.length!==1)return;const t=e.touches[0];liveCanvas.dispatchEvent(new MouseEvent('mousemove',{clientX:t.clientX,clientY:t.clientY,bubbles:true}));e.preventDefault();},{passive:false});
-    liveCanvas.addEventListener('touchend',()=>liveCanvas.dispatchEvent(new MouseEvent('mouseup')));
-    // ── Lightbox ──────────────────────────────────────────────────
-    function openLightbox(src,name){document.getElementById('lightboxImg').src=src;document.getElementById('lightboxCaption').textContent=name;document.getElementById('lightboxOverlay').style.display='flex';document.body.style.overflow='hidden';}
-    function closeLightbox(){document.getElementById('lightboxOverlay').style.display='none';document.getElementById('lightboxImg').src='';document.body.style.overflow='';}
-    document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLightbox();});
-</script>
+    <canvas id="hiddenCanvas"></canvas>
+    <!-- Lightbox -->
+    <div class="lightbox-overlay" id="lightboxOverlay" style="display:none" onclick="closeLightbox()">
+        <img id="lightboxImg" src="" alt="large preview" onclick="event.stopPropagation()">
+        <button class="lightbox-close" onclick="closeLightbox()" title="Close">✕</button>
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+    <script>
+        let loadedFiles = [];
+        let processedDataUrls = [];
+        let currentPreviewIndex = 0;
+        function onFilesSelected(files) { if (!files || files.length === 0) return; loadedFiles = Array.from(files); currentPreviewIndex = 0; processedDataUrls = []; renderFileList(); updateNavButtons(); updatePreview(); document.getElementById('fileCountBadge').style.display = 'block'; document.getElementById('fileCountText').textContent = loadedFiles.length; }
+        function renderFileList() { const container = document.getElementById('fileListContainer'); if (loadedFiles.length === 0) { container.innerHTML = '<div class="empty-results"><div class="icon">📂</div><p>No files uploaded</p></div>'; return; } container.innerHTML = ''; loadedFiles.forEach((file, i) => { const item = document.createElement('div'); item.className = 'file-item'; item.id = 'fileItem_' + i; const sizeKB = (file.size / 1024).toFixed(1); item.innerHTML = `<span class="file-name">${file.name}</span><span class="file-size">${sizeKB} KB</span><span class="file-status status-pending" id="status_${i}">⏳</span>`; const reader = new FileReader(); reader.onload = e => { const thumb = document.createElement('img'); thumb.src = e.target.result; thumb.className = 'file-thumb'; thumb.title = 'Preview'; thumb.onclick = () => { currentPreviewIndex = i; updatePreview(); }; item.prepend(thumb); }; reader.readAsDataURL(file); container.appendChild(item); }); }
+        function clearFiles() { loadedFiles = []; processedDataUrls = []; document.getElementById('fileInput').value = ''; document.getElementById('fileCountBadge').style.display = 'none'; renderFileList(); clearPreview(); document.getElementById('resultsGrid').innerHTML = '<div class="empty-results" style="grid-column:1/-1;"><div class="icon">⏳</div><p>Processed images appear here</p></div>'; document.getElementById('downloadAllWrap').style.display = 'none'; updateNavButtons(); }
+        function updateRangeVal(inputId, spanId, suffix = '%') { document.getElementById(spanId).textContent = document.getElementById(inputId).value + suffix; }
+        function switchTab(tab) { document.querySelectorAll('.tab-btn').forEach((b, i) => { b.classList.toggle('active', (tab === 'results' && i === 0) || (tab === 'info' && i === 1)); }); document.getElementById('tabResults').classList.toggle('active', tab === 'results'); document.getElementById('tabInfo').classList.toggle('active', tab === 'info'); }
+        function navigatePreview(dir) { currentPreviewIndex = Math.max(0, Math.min(loadedFiles.length - 1, currentPreviewIndex + dir)); updatePreview(); }
+        function updateNavButtons() { document.getElementById('prevBtn').disabled = currentPreviewIndex <= 0 || loadedFiles.length === 0; document.getElementById('nextBtn').disabled = currentPreviewIndex >= loadedFiles.length - 1 || loadedFiles.length === 0; document.getElementById('navInfo').textContent = loadedFiles.length > 0 ? `${currentPreviewIndex + 1} / ${loadedFiles.length}` : '-'; }
+        let previewDebounce = null;
+        function updatePreview() { clearTimeout(previewDebounce); previewDebounce = setTimeout(_doUpdatePreview, 100); saveSettings(); }
+        async function _doUpdatePreview() {
+            if (loadedFiles.length === 0) { clearPreview(); return; } updateNavButtons(); const file = loadedFiles[currentPreviewIndex]; const img = await loadImage(file); const previewCanvas = document.getElementById('livePreviewCanvas');
+            const resizeW = parseInt(document.getElementById('resizeW').value) || 0; const resizeH = parseInt(document.getElementById('resizeH').value) || 0; let targetW = img.width, targetH = img.height; if (resizeW > 0 && resizeH > 0) { targetW = resizeW; targetH = resizeH; } else if (resizeW > 0) { targetH = Math.round(img.height * (resizeW / img.width)); targetW = resizeW; } else if (resizeH > 0) { targetW = Math.round(img.width * (resizeH / img.height)); targetH = resizeH; }
+            const ctx = previewCanvas.getContext('2d');
+            previewCanvas.width = targetW; previewCanvas.height = targetH; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, 0, 0, targetW, targetH); previewCanvas.style.display = 'block'; document.getElementById('placeholderMsg').style.display = 'none'; const fmt = document.getElementById('outputFormat').value; const q = parseInt(document.getElementById('quality').value) / 100; const dataUrl = previewCanvas.toDataURL(fmt, q); const sizeKB = (dataUrl.length * (3 / 4) / 1024).toFixed(1); document.getElementById('previewBadge').textContent = `${targetW}×${targetH} • ${sizeKB} KB`;
+        }
+        function clearPreview() { const c = document.getElementById('livePreviewCanvas'); c.style.display = 'none'; document.getElementById('placeholderMsg').style.display = 'block'; document.getElementById('previewBadge').textContent = 'Preview'; document.getElementById('navInfo').textContent = '-'; }
+        async function processAll() { if (loadedFiles.length === 0) { alert('Please select files first!'); return; } processedDataUrls = []; const resultsGrid = document.getElementById('resultsGrid'); resultsGrid.innerHTML = ''; document.getElementById('downloadAllWrap').style.display = 'none'; const progressWrap = document.getElementById('progressWrap'); const progressBar = document.getElementById('progressBar'); const progressText = document.getElementById('progressText'); const progressPct = document.getElementById('progressPct'); progressWrap.style.display = 'block'; const fmt = document.getElementById('outputFormat').value; const quality = parseInt(document.getElementById('quality').value) / 100; const maxSizeKB = parseInt(document.getElementById('maxSize').value); const resizeW = parseInt(document.getElementById('resizeW').value); const resizeH = parseInt(document.getElementById('resizeH').value); const canvas = document.getElementById('hiddenCanvas'); const ctx = canvas.getContext('2d'); for (let i = 0; i < loadedFiles.length; i++) { const file = loadedFiles[i]; progressText.textContent = `Processing: ${file.name}`; progressPct.textContent = `${Math.round((i / loadedFiles.length) * 100)}%`; progressBar.style.width = `${(i / loadedFiles.length) * 100}%`; try { const img = await loadImage(file); let targetW = img.width, targetH = img.height; if (resizeW > 0 && resizeH > 0) { targetW = resizeW; targetH = resizeH; } else if (resizeW > 0) { targetH = Math.round(img.height * (resizeW / img.width)); targetW = resizeW; } else if (resizeH > 0) { targetW = Math.round(img.width * (resizeH / img.height)); targetH = resizeH; } canvas.width = targetW; canvas.height = targetH; ctx.clearRect(0, 0, targetW, targetH); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(img, 0, 0, targetW, targetH); let q = quality; let dataUrl = canvas.toDataURL(fmt, q); if (maxSizeKB > 0 && fmt !== 'image/png') { while ((dataUrl.length * (3 / 4) / 1024) > maxSizeKB && q > 0.1) { q -= 0.05; dataUrl = canvas.toDataURL(fmt, q); } } const pItem = { name: file.name, dataUrl, fmt }; processedDataUrls.push(pItem); const statusEl = document.getElementById(`status_${i}`); if (statusEl) { statusEl.textContent = '✅'; statusEl.className = 'file-status status-done'; } const finalSizeKB = (dataUrl.length * (3 / 4) / 1024).toFixed(1); const ext = fmt.split('/')[1]; const card = document.createElement('div'); card.className = 'result-card'; card.innerHTML = `<img src="${dataUrl}" alt="${file.name}"><div class="result-card-info"><div class="result-card-name">${file.name}</div><div class="result-card-size">${finalSizeKB} KB • ${targetW}×${targetH}</div></div><button class="result-card-dl">⬇️ Save File</button>`; const dlFn = `${file.name.replace(/\.[^.]+$/, '')}.${ext}`; card.querySelector('.result-card-dl').addEventListener('click', () => saveFile(dataUrl, dlFn, fmt)); card.querySelector('img').addEventListener('click', () => openLightbox(dataUrl, file.name)); resultsGrid.appendChild(card); const rmBtn = document.createElement('button'); rmBtn.className = 'result-card-remove'; rmBtn.title = 'Remove image'; rmBtn.innerHTML = '✕'; rmBtn.onclick = () => { const idx = processedDataUrls.indexOf(pItem); if (idx > -1) processedDataUrls.splice(idx, 1); card.remove(); if (processedDataUrls.length === 0) document.getElementById('downloadAllWrap').style.display = 'none'; }; card.appendChild(rmBtn); } catch (err) { const statusEl = document.getElementById(`status_${i}`); if (statusEl) { statusEl.textContent = '❌'; statusEl.className = 'file-status status-error'; } } } progressBar.style.width = '100%'; progressPct.textContent = '100%'; progressText.textContent = `✅ ${loadedFiles.length} images processed!`; if (processedDataUrls.length > 1) { document.getElementById('downloadAllWrap').style.display = 'block'; } } async function saveFile(dataUrl, filename, fmt) { const ext = fmt.split('/')[1]; try { const handle = await window.showSaveFilePicker({ suggestedName: filename, types: [{ description: 'Image', accept: { [fmt]: ['.' + ext] } }] }); const blob = await (await fetch(dataUrl)).blob(); const writable = await handle.createWritable(); await writable.write(blob); await writable.close(); } catch (e) { if (e.name !== 'AbortError') { const a = document.createElement('a'); a.href = dataUrl; a.download = filename; a.click(); } } } async function downloadAll() { if (processedDataUrls.length === 0) return; try { const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' }); let saved = 0; for (const item of processedDataUrls) { const ext = item.fmt.split('/')[1]; const filename = `${item.name.replace(/\.[^.]+$/, '')}.${ext}`; const fileHandle = await dirHandle.getFileHandle(filename, { create: true }); const blob = await (await fetch(item.dataUrl)).blob(); const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close(); saved++; } alert(`✅ ${saved} files saved successfully!`); } catch (e) { if (e.name !== 'AbortError') { processedDataUrls.forEach((item, i) => { setTimeout(() => { const ext = item.fmt.split('/')[1]; const a = document.createElement('a'); a.href = item.dataUrl; a.download = `${item.name.replace(/\.[^.]+$/, '')}.${ext}`; a.click(); }, i * 300); }); } } } function loadImage(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = e => { const img = new Image(); img.onerror = reject; img.onload = () => resolve(img); img.src = e.target.result; }; reader.readAsDataURL(file); }); }
+        const SETTINGS_KEYS = ['outputFormat', 'quality', 'maxSize', 'resizeW', 'resizeH'];
+        function saveSettings() { try { const s = {}; SETTINGS_KEYS.forEach(id => { const el = document.getElementById(id); if (!el) return; s[id] = el.type === 'checkbox' ? el.checked : el.value; }); localStorage.setItem('imgEditorSettings', JSON.stringify(s)); } catch (e) { } }
+        function loadSettings() { try { const raw = localStorage.getItem('imgEditorSettings'); if (!raw) return; const s = JSON.parse(raw); SETTINGS_KEYS.forEach(id => { const el = document.getElementById(id); if (!el || s[id] === undefined) return; if (el.type === 'checkbox') el.checked = s[id]; else el.value = s[id]; }); updateRangeVal('quality', 'qualityVal'); } catch (e) { } }
+        loadSettings();
+        const uploadArea = document.getElementById('uploadArea'); uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.background = '#fff1e0'; }); uploadArea.addEventListener('dragleave', () => { uploadArea.style.background = '#fff7ed'; }); uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.style.background = '#fff7ed'; onFilesSelected(e.dataTransfer.files); });
+        // ── Lightbox ──────────────────────────────────────────────────
+        function openLightbox(src, name) { document.getElementById('lightboxImg').src = src; document.getElementById('lightboxCaption').textContent = name; document.getElementById('lightboxOverlay').style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+        function closeLightbox() { document.getElementById('lightboxOverlay').style.display = 'none'; document.getElementById('lightboxImg').src = ''; document.body.style.overflow = ''; }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+    </script>
 </body>
+
 </html>
