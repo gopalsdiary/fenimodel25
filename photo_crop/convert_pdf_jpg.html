@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>PDF ⇔ Image Converter</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<script>
+tailwind.config={
+  theme:{extend:{fontFamily:{sans:['Inter','"Segoe UI"','system-ui','sans-serif']},
+  colors:{brand:{50:'#fff7ed',100:'#ffedd5',200:'#fed7aa',300:'#fdba74',400:'#fb923c',500:'#f97316',600:'#ea580c',700:'#c2410c',800:'#9a3412',900:'#7c2d12'}}}}
+}
+</script>
+<style>
+  body{background:linear-gradient(145deg,#fdf6f0,#fff1e6);min-height:100vh;}
+  .tab-btn{transition:all .25s;}
+  .tab-btn.active{background:linear-gradient(135deg,#f97316,#fb923c);color:#fff;box-shadow:0 4px 14px rgba(249,115,22,.35);}
+  .tab-btn:not(.active){background:#fff;color:#64748b;border:1.5px solid #fde8d3;}
+  .tab-btn:not(.active):hover{color:#f97316;border-color:#f97316;background:#fff7ed;}
+  .drop-zone{transition:all .2s;}
+  .drop-zone.drag-over{border-color:#f97316!important;background:#fff7ed!important;transform:scale(1.01);}
+  .file-card{animation:fadeUp .3s ease;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .spinner{animation:spin .7s linear infinite;}
+  .thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;}
+  .thumb-item{position:relative;border-radius:8px;overflow:hidden;border:1px solid #fde8d3;background:#fff;cursor:grab;}
+  .thumb-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block;}
+  .thumb-remove{position:absolute;top:2px;right:2px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+  .thumb-remove:hover{background:#dc2626;}
+  .thumb-badge{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:#fff;font-size:9px;padding:2px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pdf-page-card{border:1px solid #fde8d3;border-radius:10px;overflow:hidden;background:#fff;}
+  ::-webkit-scrollbar{width:5px;height:5px;}
+  ::-webkit-scrollbar-track{background:#f8fafc;}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;}
+  .order-num{position:absolute;top:2px;left:2px;background:rgba(249,115,22,.9);color:#fff;font-size:9px;font-weight:800;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
+  .pdf-file-badge{background:#fee2e2;color:#dc2626;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;}
+  .img-file-badge{background:#dbeafe;color:#2563eb;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body class="font-sans text-slate-800">
+
+<header class="bg-gradient-to-r from-brand-500 to-brand-400 text-white py-5 px-6 text-center shadow-lg shadow-orange-200/40">
+  <h1 class="text-2xl font-extrabold tracking-tight flex items-center justify-center gap-2">
+    <span class="text-3xl">&#x1F504;</span> PDF &#x21D4; Image Converter
+  </h1>
+  <p class="text-sm opacity-90 mt-1">Image&#x2192;PDF &bull; PDF&#x2192;Image &bull;  Sikhanobish Software farm</p>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-8">
+
+  <div class="flex gap-3 mb-6 justify-center">
+    <button class="tab-btn active rounded-xl px-6 py-2.5 font-bold text-sm" onclick="switchTab('img2pdf')">
+      &#x1F5BC;&#xFE0F; Image &rarr; PDF
+    </button>
+    <button class="tab-btn rounded-xl px-6 py-2.5 font-bold text-sm" onclick="switchTab('pdf2img')">
+      &#x1F4C4; PDF &rarr; Image
+    </button>
+  </div>
+
+  <!-- TAB 1: Image/PDF to single PDF -->
+  <div id="tab-img2pdf">
+    <div class="bg-white rounded-2xl shadow-xl shadow-orange-100/50 border border-orange-100 overflow-hidden">
+      <div class="p-5">
+        <div class="drop-zone border-2 border-dashed border-orange-200 rounded-xl p-8 text-center cursor-pointer relative bg-orange-50/40 hover:bg-orange-50 select-none"
+             id="imgDropZone" onclick="document.getElementById('imgFileInput').click()">
+          <input type="file" id="imgFileInput" accept="image/*,.pdf" multiple
+                 class="hidden"/>
+          <div class="text-4xl mb-2">&#x1F4E4;</div>
+          <p class="font-bold text-orange-600 text-sm">Click or drag files here</p>
+          <p class="text-xs text-slate-400 mt-1">Images (JPG, PNG, WEBP, BMP) &amp; PDFs &bull; Multiple files OK</p>
+        </div>
+      </div>
+
+      <div id="imgFileList" class="px-5 pb-2 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-orange-500">
+            &#x1F4CB; Files (<span id="imgFileCount">0</span>)
+            <span class="text-slate-400 font-normal normal-case ml-1">drag thumbnails to reorder</span>
+          </h3>
+          <button onclick="clearImgFiles()" class="text-xs font-bold text-red-500 hover:text-red-700 transition">&#x1F5D1; Clear All</button>
+        </div>
+        <div id="imgThumbGrid" class="thumb-grid mb-4"></div>
+      </div>
+
+      <div id="imgOptions" class="px-5 pb-4 hidden">
+        <div class="bg-orange-50 rounded-xl p-4 border border-orange-100">
+          <h4 class="text-xs font-extrabold uppercase tracking-wider text-orange-600 mb-3">&#x2699;&#xFE0F; PDF Settings</h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">Page Size</label>
+              <select id="pageSize" class="w-full text-xs border border-orange-200 rounded-lg px-2 py-1.5 bg-white">
+                <option value="a4" selected>A4</option>
+                <option value="letter">Letter</option>
+                <option value="legal">Legal</option>
+                <option value="fit">Fit to Image</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">Orientation</label>
+              <select id="pageOrientation" class="w-full text-xs border border-orange-200 rounded-lg px-2 py-1.5 bg-white">
+                <option value="auto" selected>Auto (per image)</option>
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">Margin (mm)</label>
+              <input type="number" id="pageMargin" value="5" min="0" max="50"
+                     class="w-full text-xs border border-orange-200 rounded-lg px-2 py-1.5 bg-white"/>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">Quality</label>
+              <select id="imgQuality" class="w-full text-xs border border-orange-200 rounded-lg px-2 py-1.5 bg-white">
+                <option value="0.6">Low (smaller)</option>
+                <option value="0.8" selected>Medium</option>
+                <option value="0.95">High</option>
+                <option value="1">Max</option>
+              </select>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="block text-[10px] font-bold text-slate-500 mb-1">PDF Filename</label>
+            <input type="text" id="pdfFilename" value="converted" placeholder="output filename"
+                   class="w-full text-xs border border-orange-200 rounded-lg px-3 py-1.5 bg-white"/>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 pb-5">
+        <button id="convertImgBtn" onclick="convertImagesToPdf()" disabled
+                class="w-full py-3 rounded-xl font-bold text-sm text-white bg-gradient-to-r from-orange-500 to-orange-400 shadow-lg hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          <svg id="convertImgSpinner" class="spinner w-4 h-4 hidden" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-dasharray="50 20"/>
+          </svg>
+          <span id="convertImgLabel">&#x26A1; Convert to PDF</span>
+        </button>
+        <div id="imgStatus" class="text-center text-xs font-bold mt-2 hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: PDF to Images -->
+  <div id="tab-pdf2img" class="hidden">
+    <div class="bg-white rounded-2xl shadow-xl shadow-orange-100/50 border border-orange-100 overflow-hidden">
+      <div class="p-5">
+        <div class="drop-zone border-2 border-dashed border-orange-200 rounded-xl p-8 text-center cursor-pointer relative bg-orange-50/40 hover:bg-orange-50 select-none"
+             id="pdfDropZone" onclick="document.getElementById('pdfFileInput').click()">
+          <input type="file" id="pdfFileInput" accept=".pdf,application/pdf" class="hidden"/>
+          <div class="text-4xl mb-2">&#x1F4C4;</div>
+          <p class="font-bold text-orange-600 text-sm">Click or drag a PDF here</p>
+          <p class="text-xs text-slate-400 mt-1">Single PDF file &bull; All pages will be converted</p>
+        </div>
+      </div>
+
+      <div id="pdfInfo" class="px-5 pb-2 hidden">
+        <div class="bg-orange-50 rounded-xl p-4 border border-orange-100 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p class="text-sm font-bold text-slate-800" id="pdfFileName">&#x2014;</p>
+            <p class="text-xs text-slate-500"><span id="pdfPageCount">0</span> pages &bull; <span id="pdfFileSize">0</span></p>
+          </div>
+          <div class="flex gap-2 items-center flex-wrap">
+            <div>
+              <label class="text-[10px] font-bold text-slate-500">Scale</label>
+              <select id="pdfScale" class="text-xs border border-orange-200 rounded-lg px-2 py-1 bg-white ml-1">
+                <option value="1">1x (fast)</option>
+                <option value="1.5">1.5x</option>
+                <option value="2" selected>2x (good)</option>
+                <option value="3">3x (HD)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] font-bold text-slate-500 ml-2">Format</label>
+              <select id="pdfImgFormat" class="text-xs border border-orange-200 rounded-lg px-2 py-1 bg-white ml-1">
+                <option value="png" selected>PNG</option>
+                <option value="jpeg">JPEG</option>
+                <option value="webp">WebP</option>
+              </select>
+            </div>
+            <button onclick="convertPdfToImages()" id="convertPdfBtn"
+                    class="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-orange-500 to-orange-400 hover:shadow-lg transition-all flex items-center gap-1.5">
+              <svg id="convertPdfSpinner" class="spinner w-3 h-3 hidden" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="white" stroke-width="3" stroke-linecap="round" stroke-dasharray="50 20"/>
+              </svg>
+              &#x26A1; Convert All Pages
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="pdfPagesWrap" class="px-5 pb-5 hidden">
+        <div class="flex items-center justify-between mb-3 mt-2">
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-orange-500">&#x1F5BC;&#xFE0F; Converted Pages</h3>
+          <button onclick="downloadAllPdfImages()" id="dlAllPdfImgBtn"
+                  class="text-xs font-bold text-orange-600 hover:text-orange-700 transition hidden">
+            &#x1F4E6; Download All
+          </button>
+        </div>
+        <div id="pdfPagesGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+        <div id="pdfConvertStatus" class="text-center text-xs font-bold mt-3 hidden"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="text-center py-4 text-[10px] text-slate-400">
+  Gopals Diary &mdash; Creation
+</footer>
+
+<script>
+// ── Setup pdf.js worker ─────────────────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── State ───────────────────────────────────────────────────────────────────
+var imgFiles    = [];   // [{file, type:'image'|'pdf', thumbUrl, name, pdfDoc, pages}]
+var activePdfDoc= null;
+var pdfPageBlobs= [];   // [{blob, url, ext, page}]
+
+// ── Tab switching ───────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('tab-img2pdf').classList.toggle('hidden', tab !== 'img2pdf');
+  document.getElementById('tab-pdf2img').classList.toggle('hidden', tab !== 'pdf2img');
+  var btns = document.querySelectorAll('.tab-btn');
+  btns[0].classList.toggle('active', tab === 'img2pdf');
+  btns[1].classList.toggle('active', tab === 'pdf2img');
+}
+
+// ── TAB 1: file input & drag-drop ───────────────────────────────────────────
+var imgFileInput = document.getElementById('imgFileInput');
+var imgDropZone  = document.getElementById('imgDropZone');
+
+imgFileInput.addEventListener('change', function(e) {
+  addImgFiles(Array.from(e.target.files));
+  e.target.value = '';
+});
+
+imgDropZone.addEventListener('dragover', function(e) {
+  e.preventDefault(); e.stopPropagation();
+  imgDropZone.classList.add('drag-over');
+});
+imgDropZone.addEventListener('dragleave', function() {
+  imgDropZone.classList.remove('drag-over');
+});
+imgDropZone.addEventListener('drop', function(e) {
+  e.preventDefault(); e.stopPropagation();
+  imgDropZone.classList.remove('drag-over');
+  addImgFiles(Array.from(e.dataTransfer.files));
+});
+
+async function addImgFiles(files) {
+  for (var i = 0; i < files.length; i++) {
+    var f = files[i];
+    if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
+      try {
+        var buf = await f.arrayBuffer();
+        var doc = await pdfjsLib.getDocument({ data: buf }).promise;
+        var thumbUrl = await renderPdfPageThumb(doc, 1);
+        imgFiles.push({ file: f, type: 'pdf', thumbUrl: thumbUrl, name: f.name, pdfDoc: doc, pages: doc.numPages });
+      } catch(err) {
+        console.error('PDF load error:', err);
+        showImgStatus('Could not load PDF: ' + f.name, 'error');
+      }
+    } else if (f.type.startsWith('image/')) {
+      imgFiles.push({ file: f, type: 'image', thumbUrl: URL.createObjectURL(f), name: f.name });
+    }
+  }
+  renderImgList();
+}
+
+async function renderPdfPageThumb(doc, pageNum) {
+  var page = await doc.getPage(pageNum);
+  var vp = page.getViewport({ scale: 0.3 });
+  var c = document.createElement('canvas');
+  c.width = vp.width; c.height = vp.height;
+  await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+  return c.toDataURL('image/jpeg', 0.6);
+}
+
+function renderImgList() {
+  var grid = document.getElementById('imgThumbGrid');
+  var wrap = document.getElementById('imgFileList');
+  var opts = document.getElementById('imgOptions');
+  var btn  = document.getElementById('convertImgBtn');
+  grid.innerHTML = '';
+  if (imgFiles.length === 0) {
+    wrap.classList.add('hidden');
+    opts.classList.add('hidden');
+    btn.disabled = true;
+    return;
+  }
+  wrap.classList.remove('hidden');
+  opts.classList.remove('hidden');
+  btn.disabled = false;
+  document.getElementById('imgFileCount').textContent = imgFiles.length;
+
+  imgFiles.forEach(function(item, idx) {
+    var div = document.createElement('div');
+    div.className = 'thumb-item file-card';
+    div.draggable = true;
+    div.dataset.idx = idx;
+
+    div.addEventListener('dragstart', function(e) {
+      e.dataTransfer.setData('text/plain', idx);
+      div.style.opacity = '.4';
+    });
+    div.addEventListener('dragend', function() { div.style.opacity = ''; });
+    div.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      div.style.outline = '2px solid #f97316';
+    });
+    div.addEventListener('dragleave', function() { div.style.outline = ''; });
+    div.addEventListener('drop', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      div.style.outline = '';
+      var from = parseInt(e.dataTransfer.getData('text/plain'));
+      var to = idx;
+      if (from !== to) {
+        var moved = imgFiles.splice(from, 1)[0];
+        imgFiles.splice(to, 0, moved);
+        renderImgList();
+      }
+    });
+
+    var img = document.createElement('img');
+    img.src = item.thumbUrl;
+    img.alt = item.name;
+
+    var order = document.createElement('span');
+    order.className = 'order-num';
+    order.textContent = idx + 1;
+
+    var badge = document.createElement('span');
+    badge.style.cssText = 'position:absolute;top:2px;left:22px;';
+    badge.className = item.type === 'pdf' ? 'pdf-file-badge' : 'img-file-badge';
+    badge.textContent = item.type === 'pdf' ? 'PDF(' + item.pages + 'p)' : 'IMG';
+
+    var name = document.createElement('div');
+    name.className = 'thumb-badge';
+    name.title = item.name;
+    name.textContent = item.name;
+
+    var rm = document.createElement('button');
+    rm.className = 'thumb-remove';
+    rm.innerHTML = '&times;';
+    rm.addEventListener('click', function(e) {
+      e.stopPropagation();
+      imgFiles.splice(idx, 1);
+      renderImgList();
+    });
+
+    div.appendChild(img);
+    div.appendChild(order);
+    div.appendChild(badge);
+    div.appendChild(name);
+    div.appendChild(rm);
+    grid.appendChild(div);
+  });
+}
+
+function clearImgFiles() {
+  imgFiles.forEach(function(it) {
+    if (it.type === 'image' && it.thumbUrl) URL.revokeObjectURL(it.thumbUrl);
+  });
+  imgFiles = [];
+  renderImgList();
+  document.getElementById('imgStatus').classList.add('hidden');
+}
+
+function showImgStatus(msg, type) {
+  var el = document.getElementById('imgStatus');
+  el.textContent = msg;
+  el.className = 'text-center text-xs font-bold mt-2 ' + (type === 'error' ? 'text-red-600' : 'text-green-600');
+  el.classList.remove('hidden');
+}
+
+// ── Convert images + PDFs → single PDF ─────────────────────────────────────
+async function convertImagesToPdf() {
+  if (imgFiles.length === 0) return;
+  var btn     = document.getElementById('convertImgBtn');
+  var spinner = document.getElementById('convertImgSpinner');
+  var label   = document.getElementById('convertImgLabel');
+  var status  = document.getElementById('imgStatus');
+
+  btn.disabled = true;
+  spinner.classList.remove('hidden');
+  label.textContent = 'Processing...';
+  status.classList.add('hidden');
+
+  try {
+    var pageSz   = document.getElementById('pageSize').value;
+    var orient   = document.getElementById('pageOrientation').value;
+    var margin   = parseFloat(document.getElementById('pageMargin').value) || 0;
+    var quality  = parseFloat(document.getElementById('imgQuality').value);
+    var filename = (document.getElementById('pdfFilename').value.trim() || 'converted');
+
+    // Build flat page list
+    var pages = [];
+    for (var fi = 0; fi < imgFiles.length; fi++) {
+      var item = imgFiles[fi];
+      if (item.type === 'image') {
+        var img = await loadImgFromFile(item.file);
+        pages.push({ el: img, w: img.naturalWidth, h: img.naturalHeight });
+      } else {
+        for (var p = 1; p <= item.pdfDoc.numPages; p++) {
+          var page = await item.pdfDoc.getPage(p);
+          var vp = page.getViewport({ scale: 2 });
+          var c = document.createElement('canvas');
+          c.width = vp.width; c.height = vp.height;
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+          await page.render({ canvasContext: ctx, viewport: vp }).promise;
+          pages.push({ el: c, w: vp.width, h: vp.height, isCanvas: true });
+        }
+      }
+    }
+
+    if (pages.length === 0) throw new Error('No valid pages');
+
+    var sizes = { a4: [210, 297], letter: [215.9, 279.4], legal: [215.9, 355.6] };
+    var pdf = null;
+
+    for (var i = 0; i < pages.length; i++) {
+      label.textContent = 'Page ' + (i + 1) + ' / ' + pages.length + '...';
+      var pg = pages[i];
+      var imgW = pg.w, imgH = pg.h;
+
+      var pageW, pageH;
+      if (pageSz === 'fit') {
+        pageW = imgW * 25.4 / 96;
+        pageH = imgH * 25.4 / 96;
+      } else {
+        var sz = sizes[pageSz] || sizes['a4'];
+        var useL = orient === 'landscape' || (orient === 'auto' && imgW > imgH);
+        pageW = useL ? sz[1] : sz[0];
+        pageH = useL ? sz[0] : sz[1];
+      }
+      var o = pageW > pageH ? 'landscape' : 'portrait';
+
+      if (i === 0) {
+        pdf = new window.jspdf.jsPDF({ orientation: o, unit: 'mm', format: [pageW, pageH] });
+      } else {
+        pdf.addPage([pageW, pageH], o);
+      }
+
+      var aw = pageW - margin * 2;
+      var ah = pageH - margin * 2;
+      var ratio = Math.min(aw / imgW, ah / imgH);
+      var dw = imgW * ratio, dh = imgH * ratio;
+      var dx = margin + (aw - dw) / 2;
+      var dy = margin + (ah - dh) / 2;
+
+      var dataUrl;
+      if (pg.isCanvas) {
+        dataUrl = pg.el.toDataURL('image/jpeg', quality);
+      } else {
+        var tmpC = document.createElement('canvas');
+        tmpC.width = imgW; tmpC.height = imgH;
+        tmpC.getContext('2d').drawImage(pg.el, 0, 0);
+        dataUrl = tmpC.toDataURL('image/jpeg', quality);
+      }
+      pdf.addImage(dataUrl, 'JPEG', dx, dy, dw, dh);
+    }
+
+    pdf.save(filename + '.pdf');
+    showImgStatus('\u2705 PDF saved! ' + pages.length + ' page(s)', 'success');
+  } catch (e) {
+    console.error(e);
+    showImgStatus('\u274C Error: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  spinner.classList.add('hidden');
+  label.textContent = '\u26A1 Convert to PDF';
+}
+
+function loadImgFromFile(file) {
+  return new Promise(function(res, rej) {
+    var img = new Image();
+    img.onload = function() { res(img); };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// ── TAB 2: PDF → Images ─────────────────────────────────────────────────────
+var pdfFileInput = document.getElementById('pdfFileInput');
+var pdfDropZone  = document.getElementById('pdfDropZone');
+
+pdfFileInput.addEventListener('change', function(e) {
+  loadPdfFile(e.target.files[0]);
+  e.target.value = '';
+});
+pdfDropZone.addEventListener('dragover', function(e) {
+  e.preventDefault(); e.stopPropagation();
+  pdfDropZone.classList.add('drag-over');
+});
+pdfDropZone.addEventListener('dragleave', function() {
+  pdfDropZone.classList.remove('drag-over');
+});
+pdfDropZone.addEventListener('drop', function(e) {
+  e.preventDefault(); e.stopPropagation();
+  pdfDropZone.classList.remove('drag-over');
+  var f = Array.from(e.dataTransfer.files).find(function(f) {
+    return f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+  });
+  if (f) loadPdfFile(f);
+});
+
+async function loadPdfFile(file) {
+  if (!file) return;
+  try {
+    var buf = await file.arrayBuffer();
+    activePdfDoc = await pdfjsLib.getDocument({ data: buf }).promise;
+    document.getElementById('pdfFileName').textContent = file.name;
+    document.getElementById('pdfPageCount').textContent = activePdfDoc.numPages;
+    document.getElementById('pdfFileSize').textContent = formatSize(file.size);
+    document.getElementById('pdfInfo').classList.remove('hidden');
+    document.getElementById('pdfPagesWrap').classList.add('hidden');
+    document.getElementById('dlAllPdfImgBtn').classList.add('hidden');
+    document.getElementById('pdfPagesGrid').innerHTML = '';
+    pdfPageBlobs = [];
+  } catch (e) {
+    alert('Could not read PDF: ' + e.message);
+    console.error(e);
+  }
+}
+
+async function convertPdfToImages() {
+  if (!activePdfDoc) return;
+  var scale  = parseFloat(document.getElementById('pdfScale').value) || 2;
+  var format = document.getElementById('pdfImgFormat').value;
+  var mime   = format === 'jpeg' ? 'image/jpeg' : format === 'webp' ? 'image/webp' : 'image/png';
+  var ext    = format === 'jpeg' ? 'jpg' : format;
+
+  var spinner  = document.getElementById('convertPdfSpinner');
+  var btn      = document.getElementById('convertPdfBtn');
+  var grid     = document.getElementById('pdfPagesGrid');
+  var wrap     = document.getElementById('pdfPagesWrap');
+  var statusEl = document.getElementById('pdfConvertStatus');
+
+  btn.disabled = true;
+  spinner.classList.remove('hidden');
+  grid.innerHTML = '';
+  wrap.classList.remove('hidden');
+  statusEl.classList.remove('hidden');
+  statusEl.className = 'text-center text-xs font-bold mt-3 text-orange-600';
+  pdfPageBlobs = [];
+
+  try {
+    for (var p = 1; p <= activePdfDoc.numPages; p++) {
+      statusEl.textContent = 'Rendering page ' + p + ' / ' + activePdfDoc.numPages + '...';
+
+      var page = await activePdfDoc.getPage(p);
+      var vp = page.getViewport({ scale: scale });
+      var c = document.createElement('canvas');
+      c.width = vp.width; c.height = vp.height;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+      var blob = await canvasToBlob(c, mime, 0.93);
+      var url  = URL.createObjectURL(blob);
+      var pageIdx = pdfPageBlobs.length;
+      pdfPageBlobs.push({ blob: blob, url: url, ext: ext, page: p });
+
+      // Build card
+      var card = document.createElement('div');
+      card.className = 'pdf-page-card file-card';
+
+      var img = document.createElement('img');
+      img.src = url;
+      img.style.cssText = 'width:100%;display:block;max-height:260px;object-fit:contain;background:repeating-conic-gradient(#e2e8f0 0% 25%,#fff 0% 50%) 0 0/12px 12px;';
+
+      var bar = document.createElement('div');
+      bar.className = 'flex items-center justify-between px-3 py-2 border-t border-orange-100';
+
+      var pageLabel = document.createElement('span');
+      pageLabel.className = 'text-[10px] font-bold text-slate-500';
+      pageLabel.textContent = 'Page ' + p;
+
+      var dlBtn = document.createElement('button');
+      dlBtn.className = 'text-[10px] font-bold text-orange-600 hover:text-orange-700';
+      dlBtn.textContent = '\u2B07\uFE0F Download';
+      (function(idx) {
+        dlBtn.onclick = function() { downloadPdfPage(idx); };
+      })(pageIdx);
+
+      bar.appendChild(pageLabel);
+      bar.appendChild(dlBtn);
+      card.appendChild(img);
+      card.appendChild(bar);
+      grid.appendChild(card);
+    }
+
+    statusEl.textContent = '\u2705 ' + activePdfDoc.numPages + ' pages converted!';
+    statusEl.className = 'text-center text-xs font-bold mt-3 text-green-600';
+    document.getElementById('dlAllPdfImgBtn').classList.remove('hidden');
+
+  } catch (e) {
+    console.error(e);
+    statusEl.textContent = '\u274C Error: ' + e.message;
+    statusEl.className = 'text-center text-xs font-bold mt-3 text-red-600';
+  }
+  btn.disabled = false;
+  spinner.classList.add('hidden');
+}
+
+function canvasToBlob(canvas, mime, quality) {
+  return new Promise(function(res) {
+    canvas.toBlob(res, mime, quality);
+  });
+}
+
+function downloadPdfPage(idx) {
+  var item = pdfPageBlobs[idx];
+  if (!item) return;
+  var a = document.createElement('a');
+  a.href = item.url;
+  a.download = 'page_' + item.page + '.' + item.ext;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function downloadAllPdfImages() {
+  if (pdfPageBlobs.length === 0) return;
+  if ('showDirectoryPicker' in window) {
+    try {
+      var dir = await window.showDirectoryPicker({ mode: 'readwrite' });
+      for (var i = 0; i < pdfPageBlobs.length; i++) {
+        var item = pdfPageBlobs[i];
+        var fh = await dir.getFileHandle('page_' + item.page + '.' + item.ext, { create: true });
+        var w = await fh.createWritable();
+        await w.write(item.blob); await w.close();
+      }
+      alert('Saved ' + pdfPageBlobs.length + ' images to folder!');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  // Fallback
+  pdfPageBlobs.forEach(function(item, i) {
+    setTimeout(function() {
+      var a = document.createElement('a');
+      a.href = item.url;
+      a.download = 'page_' + item.page + '.' + item.ext;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }, i * 300);
+  });
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+</script>
+</body>
+</html>
