@@ -1,4 +1,10 @@
 {
     "liveServer.settings.port": 5504,
-    "chat.agent.maxRequests": 2500
+    "chat.agent.maxRequests": 2500,
+    "chat.tools.terminal.autoApprove": {
+        "/^python -c \"c=open\\(r'c:\\\\xampp\\\\htdocs\\\\fenimodel25\\\\photo_crop\\\\background_remove\\.html',encoding='utf-8-sig'\\)\\.read\\(\\); print\\('lines:', c\\.count\\(chr\\(10\\)\\)\\); print\\('has processFast:', 'processFast' in c\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
 }
