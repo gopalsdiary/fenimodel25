@@ -68,12 +68,12 @@
     <div class="size-bar">
         <label>Image Size:</label>
         <label>W (px):</label>
-        <input type="number" id="outWidth" value="300" min="50" max="3000">
+        <input type="number" id="outWidth" placeholder="auto" min="50" max="3000">
         <label>H (px):</label>
-        <input type="number" id="outHeight" value="400" min="50" max="3000">
+        <input type="number" id="outHeight" placeholder="auto" min="50" max="3000">
         <label>Max KB:</label>
-        <input type="number" id="maxKB" value="100" min="10" max="5000">
-        <small>↑ Size applied on every download. Leave Max KB=0 for best quality.</small>
+        <input type="number" id="maxKB" placeholder="none" min="10" max="5000">
+        <small>↗ leave width/height blank to keep original dimensions. Max KB empty or 0 = best quality.</small>
     </div>
 
     <!-- ── Action Controls ── -->
@@ -83,6 +83,11 @@
             <button class="ctrl-btn" id="downloadJpgBtn" disabled>Download Selected (JPG)</button>
             <button class="ctrl-btn" id="downloadZipBtn" disabled>Download Selected (ZIP)</button>
             <input type="search" id="searchBox" placeholder="Search IID / Name…">
+            <label for="nameMode" style="font-size:13px;">Filename:</label>
+            <select id="nameMode" title="Use roll or iid for downloaded filenames" style="padding:4px 6px;border:1px solid #2196f3;border-radius:4px;font-size:13px;">
+                <option value="iid" selected>IID</option>
+                <option value="roll">Roll</option>
+            </select>
         </div>
         <div class="page-bar">
             <button id="prevPageBtn">Prev</button>
@@ -301,10 +306,22 @@ async function processImage(srcUrl, outW, outH, maxKB){
 }
 
 function getSizeSettings(){
-    const w  = parseInt(document.getElementById('outWidth').value)  || 0;
-    const h  = parseInt(document.getElementById('outHeight').value) || 0;
-    const kb = parseFloat(document.getElementById('maxKB').value)   || 0;
+    const wval = document.getElementById('outWidth').value;
+    const hval = document.getElementById('outHeight').value;
+    const kbval= document.getElementById('maxKB').value;
+    const w  = wval ? parseInt(wval) : 0;
+    const h  = hval ? parseInt(hval) : 0;
+    const kb = kbval ? parseFloat(kbval) : 0;
     return { w, h, kb };
+}
+
+function getFilename(item){
+    const mode = document.getElementById('nameMode').value || 'iid';
+    let name = '';
+    if(mode === 'roll' && item.roll) name = item.roll;
+    if(!name) name = item.iid || '';
+    // sanitize – remove unsafe chars
+    return name.replace(/[^a-zA-Z0-9_\-\.]/g,'_') || 'photo';
 }
 
 // ── Single file download with save-picker ────────────────────────────────
@@ -343,7 +360,7 @@ async function bulkJpgToDirectory(items){
     let success=0, fail=0;
     setStatus('Downloading…');
     for(const item of items){
-        const fname = item.url.split('/').pop();
+        const fname = getFilename(item) + '.' + item.url.split('/').pop().split('.').pop();
         try{
             const blob = await processImage(item.url, w, h, kb);
             if(!blob){ fail++; continue; }
@@ -401,7 +418,7 @@ function renderPage(){
             const item = filtered[idx]; if(!item) return;
             btn.disabled=true; btn.textContent='…';
             const { w, h, kb } = getSizeSettings();
-            const fname = item.url.split('/').pop();
+            const fname = getFilename(item) + '.' + item.url.split('/').pop().split('.').pop();
             try{
                 const blob = await processImage(item.url, w, h, kb);
                 if(blob) await downloadBlob(blob, fname);
@@ -443,7 +460,8 @@ document.getElementById('downloadZipBtn').onclick = async()=>{
         const fname= item.url.split('/').pop();
         try{
             const blob = await processImage(item.url, w, h, kb);
-            if(blob){ zip.file(fname, blob); success++; } else fail++;
+            const realName = getFilename(item) + '.' + fname.split('.').pop();
+            if(blob){ zip.file(realName, blob); success++; } else fail++;
         }catch(e){ console.warn(e); fail++; }
         await new Promise(r=>setTimeout(r,60));
     }
