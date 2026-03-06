@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Generate ID Cards</title>
+  <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
+  <style>
+    /* ── page ──────────────────────────────────────────── */
+    body {
+      margin: 0;
+      padding: 0.7cm;
+      background: #b0b0b0;
+      font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif;
+    }
+    .toolbar {
+      display: flex; align-items: center; gap: 0.4cm;
+      flex-wrap: wrap; justify-content: center;
+      margin-bottom: 0.6cm;
+    }
+    .toolbar .title { font-size: 1rem; font-weight: 700; }
+    .toolbar button {
+      background: #2563eb; color: #fff;
+      border: none; border-radius: 6px;
+      padding: .42rem .9rem; font-size: .85rem;
+      cursor: pointer;
+    }
+    .toolbar button:hover { background: #1d4ed8; }
+    .toolbar button.green { background: #16a34a; }
+    .toolbar button.green:hover { background: #15803d; }
+    #exportStatus { font-size: .82rem; color: #1e293b; }
+
+    #cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5cm;
+      justify-content: flex-start;
+    }
+
+    /* ══════════════════════════════════════════════════
+       CARD  ─  625 × 1003 px @300 DPI = 5.29 × 8.49 cm
+    ══════════════════════════════════════════════════ */
+    .id-card {
+      position: relative;
+      width:  5.29cm;
+      height: 8.49cm;
+      /* background.png stretched to exactly fill the card */
+      background: url('background.png') no-repeat top left / 100% 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    /* ── Photo ─────────────────────────────────────── */
+    /* Background.png has a photo placeholder box;
+       measure from 0,0 of the card.
+       These values are calibrated to the actual template.
+       In pixels on the 625×1003 image the photo box is
+       roughly x=185–440 , y=295–595  → percentages used
+       so they scale exactly with the card cm size.         */
+    .id-card .photo {
+      position: absolute;
+      /* top  : 295/1003 = 29.4 %     */
+      top:   29.4%;
+      /* left : 185/625  = 29.6 %     */
+      left:  29.6%;
+      /* w    : (440-185)/625 = 40.8 % */
+      width: 40.8%;
+      /* h    : (595-295)/1003= 29.9 % */
+      height: 29.9%;
+      overflow: hidden;
+      background: #e8e8e8;
+    }
+    .id-card .photo img {
+      width: 100%; height: 100%;
+      object-fit: cover; object-position: top center;
+      display: block;
+    }
+
+    /* ── Student Name ────────────────────────────────── */
+    .id-card .stu-name {
+      position: absolute;
+      /* top: ~615/1003 = 61.3% */
+      top: 61.3%;
+      left: 0.15cm;
+      right: 0.15cm;
+      text-align: center;
+      font-weight: 700;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03rem;
+      color: #0a1520;
+      line-height: 1.2;
+    }
+
+    /* ── Detail rows ─────────────────────────────────── */
+    .id-card .details {
+      position: absolute;
+      /* top: ~665/1003 = 66.3% */
+      top: 66.3%;
+      left: 0.18cm;
+      right: 0.1cm;
+      font-size: 0.52rem;
+      line-height: 1.4;
+      color: #0a1520;
+    }
+    .id-card .details .row { display: flex; }
+    .id-card .details .lbl {
+      flex: 0 0 1.1cm;
+      font-weight: 700;
+    }
+    .id-card .details .val { flex: 1; }
+
+    /* ── Footer: Issue / Valid ───────────────────────── */
+    .id-card .foot {
+      position: absolute;
+      bottom: 0.1cm;
+      left: 0.18cm;
+      right: 0.18cm;
+      font-size: 0.4rem;
+      color: #333;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Print ───────────────────────────────────────── */
+    @media print {
+      body    { padding: 0; background: white; }
+      .toolbar { display: none; }
+      #cards  { gap: 0.3cm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="title">🎴 ID Cards</span>
+    <button onclick="window.print()">🖨️ Print / PDF</button>
+    <button class="green" id="exportBtn" onclick="exportCards()">💾 Export PNG to Folder</button>
+    <button onclick="history.back()">← Back</button>
+    <span id="exportStatus"></span>
+  </div>
+  <div id="cards"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+          integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script>
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    /* Issue / Valid dates – update as needed */
+    const ISSUE_DATE = 'August 22, 2025';
+    const VALID_TILL = 'December 31, 2029';
+
+    function esc(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /* ── Build cards from Supabase ──────────────────── */
+    async function loadCards() {
+      const params     = new URLSearchParams(location.search);
+      const iidsParam  = params.get('iids') || '';
+      const iids       = iidsParam.split(',').map(s => s.trim()).filter(Boolean);
+      const container  = document.getElementById('cards');
+
+      if (!iids.length) { container.innerHTML = '<p>No students selected.</p>'; return; }
+      const numericIds = iids.map(Number).filter(n => n > 0);
+      if (!numericIds.length) { container.innerHTML = '<p>No valid IID values.</p>'; return; }
+
+      try {
+        const { data, error } = await sbClient
+          .from('student_database')
+          .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, active_class, active_section, active_roll')
+          .in('iid', numericIds);
+        if (error) throw error;
+        if (!data?.length) { container.innerHTML = '<p>No matching records found.</p>'; return; }
+
+        data.sort((a, b) => iids.indexOf(String(a.iid)) - iids.indexOf(String(b.iid)));
+
+        data.forEach(rec => buildCard(rec, container));
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p>Error: ${esc(err.message)}</p>`;
+      }
+    }
+
+    function buildCard(rec, container) {
+      const card = document.createElement('div');
+      card.className = 'id-card';
+      card.dataset.iid  = rec.iid;
+      card.dataset.name = (rec.student_name_en || 'student').replace(/\s+/g, '_');
+
+      /* Photo */
+      const photoDiv = document.createElement('div');
+      photoDiv.className = 'photo';
+      const img = document.createElement('img');
+      img.crossOrigin = 'anonymous';
+      img.alt = 'Photo';
+      img.onerror = () => { img.onerror = null; img.src = 'referance_photo.jpg'; };
+      img.src = rec.student_photo_url || 'referance_photo.jpg';
+      photoDiv.appendChild(img);
+      card.appendChild(photoDiv);
+
+      /* Name */
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'stu-name';
+      nameDiv.textContent = rec.student_name_en || '';
+      card.appendChild(nameDiv);
+
+      /* Details */
+      const det = document.createElement('div');
+      det.className = 'details';
+      det.innerHTML = `
+        <div class="row"><span class="lbl">Father:</span><span class="val">${esc(rec.father_name_en)}</span></div>
+        <div class="row"><span class="lbl">Mobile:</span><span class="val">${esc(rec.father_mobile)}</span></div>
+        <div class="row"><span class="lbl">IID:</span><span class="val">${esc(rec.iid)}</span></div>
+        <div class="row"><span class="lbl">Class:</span><span class="val">${esc(rec.active_class)}&nbsp;&nbsp;Sec: ${esc(rec.active_section)}&nbsp;&nbsp;Roll: ${esc(rec.active_roll)}</span></div>
+      `;
+      card.appendChild(det);
+
+      /* Footer */
+      const foot = document.createElement('div');
+      foot.className = 'foot';
+      foot.innerHTML = `<span>Issue Date: ${ISSUE_DATE}</span><span>Valid Till: ${VALID_TILL}</span>`;
+      card.appendChild(foot);
+
+      container.appendChild(card);
+    }
+
+    /* ── Export PNG to folder ───────────────────────── */
+    /*  scale: 300 DPI / 96 CSS DPI = 3.125
+        → renders each card at exactly 625×1003 px       */
+    const EXPORT_SCALE = 3.125;
+
+    async function renderCard(card) {
+      return html2canvas(card, {
+        scale: EXPORT_SCALE,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: null,
+        logging: false,
+        onclone: (clonedDoc) => {
+          /* make sure the background image loads in the clone */
+          const clonedCard = clonedDoc.querySelector('.id-card');
+          if (clonedCard) clonedCard.style.backgroundImage = "url('background.png')";
+        }
+      });
+    }
+
+    async function exportCards() {
+      const cards = [...document.querySelectorAll('.id-card')];
+      if (!cards.length) { alert('No cards to export.'); return; }
+
+      const btn    = document.getElementById('exportBtn');
+      const status = document.getElementById('exportStatus');
+      btn.disabled = true;
+
+      /* ── Chrome/Edge: File System Access API ─────── */
+      if (window.showDirectoryPicker) {
+        let dirHandle;
+        try {
+          dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        } catch (e) {
+          btn.disabled = false;
+          return; /* user cancelled */
+        }
+        status.textContent = 'Exporting…';
+        let done = 0;
+        for (const card of cards) {
+          const iid  = card.dataset.iid  || done;
+          const name = card.dataset.name || 'student';
+          const filename = `idcard_${iid}_${name}.png`;
+          try {
+            const canvas = await renderCard(card);
+            const blob   = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            const fh     = await dirHandle.getFileHandle(filename, { create: true });
+            const wr     = await fh.createWritable();
+            await wr.write(blob);
+            await wr.close();
+          } catch (e) { console.error('Export error:', filename, e); }
+          done++;
+          status.textContent = `Exporting… ${done} / ${cards.length}`;
+        }
+        status.textContent = `✅ ${done} cards saved to folder.`;
+
+      } else {
+        /* ── Fallback: individual download links ───── */
+        status.textContent = 'Downloading (no folder picker in this browser)…';
+        let done = 0;
+        for (const card of cards) {
+          const iid  = card.dataset.iid  || done;
+          const name = card.dataset.name || 'student';
+          const filename = `idcard_${iid}_${name}.png`;
+          try {
+            const canvas = await renderCard(card);
+            const a = document.createElement('a');
+            a.download = filename;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+            await new Promise(r => setTimeout(r, 500));
+          } catch (e) { console.error(e); }
+          done++;
+          status.textContent = `Downloaded ${done} / ${cards.length}`;
+        }
+        status.textContent = `✅ ${done} cards downloaded.`;
+      }
+
+      btn.disabled = false;
+    }
+
+    window.addEventListener('DOMContentLoaded', loadCards);
+  </script>
+</body>
+</html>
+      margin: 0;
+      padding: 0.8cm;
+      background: #d0d0d0;
+      font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif;
+    }
+
+    .toolbar {
+      text-align: center;
+      margin-bottom: 0.6cm;
+    }
+    .toolbar button {
+      background: #2563eb; color: #fff;
+      border: none; border-radius: 6px;
+      padding: .45rem 1rem; font-size: .9rem;
+      cursor: pointer; margin: 0 .3rem;
+    }
+    .toolbar button:hover { background: #1d4ed8; }
+
+    #cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5cm;
+      justify-content: flex-start;
+    }
+
+    /* ── card — portrait 5.3 cm × 8.5 cm (625×1003 @300dpi) ── */
+    .id-card {
+      position: relative;
+      width:  5.3cm;
+      height: 8.5cm;
+      background: url('background.png') no-repeat center / cover;
+      box-sizing: border-box;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      overflow: hidden;
+      /* content sits in a flex column so we can stack photo + fields */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* photo area – positioned in the lower half of the card */
+    .id-card .photo {
+      position: absolute;
+      /* adjust top to match where the photo box lives on background.png */
+      top: 2.55cm;
+      left: 50%;
+      transform: translateX(-50%);
+      width:  2.4cm;
+      height: 3.0cm;
+      border: 2px solid rgba(255,255,255,0.8);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+      background: #f0f0f0;
+      overflow: hidden;
+    }
+    .id-card .photo img {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
+    }
+
+    /* text details below the photo */
+    .id-card .details {
+      position: absolute;
+      bottom: 0.35cm;
+      left: 0.25cm;
+      right: 0.25cm;
+      display: flex;
+      flex-direction: column;
+      gap: 0.04cm;
+      font-size: 0.6rem;
+      line-height: 1.25;
+      color: #0a1520;
+    }
+    .id-card .details .stu-name {
+      font-weight: 700;
+      font-size: 0.68rem;
+      text-align: center;
+      margin-bottom: 0.05cm;
+    }
+    .id-card .details .field {
+      display: flex;
+      gap: 0.1cm;
+    }
+    .id-card .details .field .lbl {
+      flex: 0 0 1.3cm;
+      font-weight: 600;
+      color: #334155;
+    }
+    .id-card .details .field .val {
+      flex: 1;
+    }
+
+    /* ── print overrides ───────────────────────────── */
+    @media print {
+      body { padding: 0; background: white; }
+      .toolbar { display: none; }
+      #cards { gap: 0.3cm; }
+      .id-card { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span style="font-size:1rem;font-weight:600;">ID Cards</span>
+    &nbsp;&nbsp;
+    <button onclick="window.print()">🖨️ Print / PDF</button>
+    <button onclick="history.back()">← Back</button>
+  </div>
+  <div id="cards"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    /* rename to sbClient — avoids clash with supabase-js global 'supabase' */
+    const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA1MDg3OTcsImV4cCI6MjA1NjA4NDc5N30.fb7_myCmFzbV7WPNjFN_NEl4z0sOmRCefnkQbk6c10w';
+    const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function loadCards() {
+      const params    = new URLSearchParams(location.search);
+      const iidsParam = params.get('iids') || '';
+      const iids      = iidsParam.split(',').map(s => s.trim()).filter(Boolean);
+      const container = document.getElementById('cards');
+      if (iids.length === 0) {
+        container.innerHTML = '<p>No students selected.</p>';
+        return;
+      }
+
+      const numericIds = iids.map(v => Number(v)).filter(n => !isNaN(n) && n > 0);
+      if (numericIds.length === 0) {
+        container.innerHTML = '<p>No valid IID values.</p>';
+        return;
+      }
+
+      try {
+        const { data, error } = await sbClient
+          .from('student_database')
+          .select('iid, student_name_en, father_name_en, father_mobile, student_photo_url, active_class, active_section, active_roll')
+          .in('iid', numericIds);
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          container.innerHTML = '<p>No matching student records found.</p>';
+          return;
+        }
+
+        /* preserve selection order */
+        data.sort((a, b) => iids.indexOf(String(a.iid)) - iids.indexOf(String(b.iid)));
+
+        data.forEach(rec => {
+          const card = document.createElement('div');
+          card.className = 'id-card';
+
+          /* photo */
+          const photoDiv = document.createElement('div');
+          photoDiv.className = 'photo';
+          const img = document.createElement('img');
+          img.alt = 'Photo';
+          img.onerror = () => { img.src = 'referance_photo.jpg'; };
+          img.src = rec.student_photo_url || 'referance_photo.jpg';
+          photoDiv.appendChild(img);
+          card.appendChild(photoDiv);
+
+          /* details */
+          const det = document.createElement('div');
+          det.className = 'details';
+          det.innerHTML = `
+            <div class="stu-name">${esc(rec.student_name_en)}</div>
+            <div class="field"><span class="lbl">Father:</span><span class="val">${esc(rec.father_name_en)}</span></div>
+            <div class="field"><span class="lbl">Mobile:</span><span class="val">${esc(rec.father_mobile)}</span></div>
+            <div class="field"><span class="lbl">IID:</span><span class="val">${esc(rec.iid)}</span></div>
+            <div class="field"><span class="lbl">Class:</span><span class="val">${esc(rec.active_class)} &nbsp; Sec: ${esc(rec.active_section)} &nbsp; Roll: ${esc(rec.active_roll)}</span></div>
+          `;
+          card.appendChild(det);
+
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.error('Error loading cards', err);
+        container.innerHTML = '<p>Error loading data.</p>';
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', loadCards);
+  </script>
+</body>
+</html>

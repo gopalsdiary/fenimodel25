@@ -34,6 +34,8 @@
     .nav-btn.secondary:hover { background:#475569; }
     input[type="search"]{ padding: .5rem .75rem; border: 1px solid #d1d5db; border-radius: 8px; min-width: 240px; }
     .table-wrap { overflow: auto; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.06); }
+    /* checkbox column styling */
+    thead th:first-child, tbody td:first-child { width: 1.2rem; text-align:center; }
     table { border-collapse: collapse; width: 100%; min-width: 100%; }
     thead th { position: sticky; top: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; text-align: left; padding: .75rem; font-size: .9rem; }
     tbody td { border-top: 1px solid #f1f5f9; padding: .65rem .75rem; font-size: .92rem; vertical-align: middle; }
@@ -199,8 +201,61 @@
   </script>
   <script>
     
+    // state for row selection
+    let selectedIids = new Set();
+
+    function updateGenerateBtn() {
+      const btn = document.getElementById('genCardBtn');
+      if (!btn) return;
+      if (selectedIids.size > 0) {
+        btn.disabled = false;
+        btn.classList.remove('secondary');
+      } else {
+        btn.disabled = true;
+        btn.classList.add('secondary');
+      }
+    }
+
+    function gatherSelectedIids() {
+      return Array.from(selectedIids);
+    }
+
+    function toggleSelectAll(checked) {
+      document.querySelectorAll('#tbody .selectRow').forEach(cb => {
+        cb.checked = checked;
+        const iid = cb.dataset.iid;
+        if (checked) selectedIids.add(iid);
+        else selectedIids.delete(iid);
+      });
+      updateGenerateBtn();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const selectAll = document.getElementById('selectAllCheckbox');
+      if (selectAll) {
+        selectAll.addEventListener('change', () => {
+          toggleSelectAll(selectAll.checked);
+        });
+      }
+      const genBtn = document.getElementById('genCardBtn');
+      if (genBtn) {
+        genBtn.addEventListener('click', () => {
+          const iids = gatherSelectedIids().map(encodeURIComponent).join(',');
+          if (iids) {
+            window.open('create_card.html?iids=' + iids, '_blank');
+          }
+        });
+      }
+    });
+
     // New function to load ID card data from Supabase
     async function loadIdCardData() {
+      // reset selection whenever we load fresh data
+      selectedIids.clear();
+      updateGenerateBtn();
+      const selAll = document.getElementById('selectAllCheckbox');
+      if (selAll) selAll.checked = false;
+
       const status = document.querySelector('#status');
       status.textContent = 'Loading ID card data...';
       status.classList.remove('error');
@@ -244,6 +299,28 @@
           
           const tr = document.createElement('tr');
           
+          // checkbox cell
+          const selCell = document.createElement('td');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = '';
+          cb.className = 'selectRow';
+          cb.dataset.iid = String(idCard.iid || '');
+          cb.checked = selectedIids.has(cb.dataset.iid);
+          cb.addEventListener('change', () => {
+            if (cb.checked) selectedIids.add(cb.dataset.iid);
+            else selectedIids.delete(cb.dataset.iid);
+            updateGenerateBtn();
+            // update master checkbox state
+            const all = document.querySelectorAll('#tbody .selectRow');
+            const selAll = document.getElementById('selectAllCheckbox');
+            if (selAll) {
+              selAll.checked = all.length > 0 && Array.from(all).every(x=>x.checked);
+            }
+          });
+          selCell.appendChild(cb);
+          tr.appendChild(selCell);
+
           // ID Card SL
           const slCell = document.createElement('td');
           slCell.textContent = idCard.idcard_sl || '';
@@ -657,8 +734,11 @@
       const rows = Array.from(table.querySelectorAll('tbody tr'));
       const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
 
-      // Remove Action column from headers if it exists
-      const filteredHeaders = headers.filter(h => h !== 'Action');
+      // Remove Action or empty/select column from headers if they exist
+      const filteredHeaders = headers.filter(h => {
+        const t = (h||'').trim();
+        return t && t !== 'Action';
+      });
 
       // Set up PDF styling
       doc.setFontSize(8);
@@ -748,7 +828,13 @@
       // Add data rows
       for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
-        const cells = Array.from(row.querySelectorAll('td'));
+        // collect all cells then filter out those corresponding to empty/select or Action headers
+        const allCells = Array.from(row.querySelectorAll('td'));
+        const cells = allCells.filter((td, idx) => {
+          const h = headers[idx] || '';
+          const t = h.trim();
+          return t && t !== 'Action';
+        });
 
         // Check if we need a new page
         if (yPosition + cellHeight > pageHeight - margin) {
@@ -929,6 +1015,7 @@
       <div class="toolbar">
         <input id="search" type="search" placeholder="Filter by any text…" aria-label="Filter" />
         <span class="muted">Rows: <span id="count">0</span></span>
+        <button id="genCardBtn" class="nav-btn secondary" disabled title="Make ID cards for selected entries">🎴 Generate ID Card</button>
         <button class="nav-btn" onclick="openEntryModal()" style="background:#059669;">➕ Add New Entry</button>
         <button class="nav-btn" onclick="downloadPDF()" style="background:#dc2626;">📄 Download PDF</button>
         <a class="nav-btn" href="test_list2025.html">ID card 2025 (868 pics)</a>
@@ -941,6 +1028,7 @@
         <table role="table" aria-label="Testimonials">
           <thead>
             <tr>
+              <th><input type="checkbox" id="selectAllCheckbox" title="Select all" /></th>
               <th>ID Card SL</th>
               <th>IID</th>
               <th>Student Name (EN)</th>
