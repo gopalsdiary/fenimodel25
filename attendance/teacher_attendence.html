@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Today's Attendance</title>
+  <!-- Prevent favicon 404 error -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+  <style>
+    body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;margin:0;padding:20px;background:linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%);color:#1f2937;min-height:100vh}
+    .container{max-width:1200px;margin:0 auto;background:#fff;padding:30px;border-radius:16px;box-shadow:0 20px 40px rgba(249, 115, 22, 0.1), 0 8px 16px rgba(0, 0, 0, 0.05);border:1px solid #fed7aa}
+    h1{margin:0 0 20px;font-size:28px;color:#ea580c;text-align:center;font-weight:700;text-shadow:0 2px 4px rgba(0,0,0,0.1)}
+    .controls{display:flex;gap:12px;align-items:center;margin-bottom:20px;justify-content:center;flex-wrap:wrap}
+    .filter-group{display:flex;gap:8px;align-items:center}
+    .filter-group label{font-weight:600;color:#374151}
+    .filter-group select,.filter-group input[type="date"]{padding:8px 16px;border:2px solid #fed7aa;border-radius:8px;font-size:14px;background:#fff;color:#374151;cursor:pointer;transition:all 0.3s ease}
+    .filter-group select:hover,.filter-group input[type="date"]:hover{border-color:#f97316}
+    .filter-group select:focus,.filter-group input[type="date"]:focus{outline:none;border-color:#ea580c;box-shadow:0 0 0 3px rgba(234, 88, 12, 0.1)}
+    .filter-group select:disabled{background:#f3f4f6;cursor:not-allowed;opacity:0.6}
+    .btn{background:linear-gradient(135deg, #ea580c 0%, #dc2626 100%);color:#fff;border:none;padding:12px 24px;border-radius:12px;cursor:pointer;font-weight:600;font-size:16px;transition:all 0.3s ease;box-shadow:0 4px 12px rgba(249, 115, 22, 0.3)}
+    .btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(249, 115, 22, 0.4)}
+    .btn:active{transform:translateY(0)}
+    table{width:100%;border-collapse:collapse;margin-top:20px;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.08);border:2px solid #fed7aa}
+  th,td{padding:16px;text-align:left;border:1px solid #fed7aa;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
+  /* Utility classes for alignment */
+  .col-center { text-align: center; }
+    th{background:linear-gradient(135deg, #ea580c 0%, #f97316 100%);color:#fff;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    tbody tr{background:#fff;transition:background 0.2s ease}
+    tbody tr:nth-child(even){background:#fef7f0}
+    tbody tr:hover{background:#fed7aa}
+    .muted{color:#9ca3af;font-size:14px;text-align:center;padding:40px}
+    .error{color:#dc2626;background:#fef2f2;padding:12px;border-radius:8px;border-left:4px solid #dc2626;margin-bottom:20px;display:none}
+    .status-badge{display:inline-block;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .status-present{background:#10b981;color:#fff}
+    .status-absent{background:#ef4444;color:#fff}
+    .date-highlight{font-weight:700;color:#ea580c}
+    .rfid-code{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;background:#f3f4f6;padding:4px 8px;border-radius:6px;font-size:14px}
+    .student-name{font-weight:600;color:#374151;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px}
+    .teacher-link{color:#2563eb;cursor:pointer;text-decoration:underline;font-weight:700}
+    .teacher-link:hover{color:#1d4ed8}
+    .time-display{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;font-size:14px;color:#6b7280}
+    .btn-print{background: linear-gradient(135deg, #059669 0%, #047857 100%);}
+    .btn-assign{background:#f59e0b;color:#111827;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px}
+    .btn-assign:hover{background:#f59e0bcc}
+    .stats-container{display:flex;gap:20px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+    .stat-box{background:linear-gradient(135deg, #fff 0%, #fef7f0 100%);padding:20px 30px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);border:2px solid #fed7aa;min-width:150px;text-align:center}
+    .stat-label{font-size:14px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px}
+    .stat-value{font-size:32px;font-weight:700;color:#ea580c}
+    .stat-box.present .stat-value{color:#10b981}
+    .stat-box.absent .stat-value{color:#ef4444}
+    .no-rfid-marker{color:#ef4444;font-weight:700;margin-left:4px}
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:9999;padding:16px}
+    .modal-overlay.show{display:flex}
+    .modal-card{width:min(960px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:14px;border:1px solid #fed7aa;box-shadow:0 20px 50px rgba(0,0,0,.2);padding:18px}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
+    .modal-title{margin:0;color:#ea580c;font-size:20px}
+    .modal-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-small{padding:8px 14px;border:none;border-radius:8px;font-weight:600;cursor:pointer}
+    .btn-close{background:#ef4444;color:#fff}
+    .btn-print-small{background:#059669;color:#fff}
+    .modal-sub{margin:0 0 10px;color:#374151;font-size:14px}
+    .day-report-table{width:100%;border-collapse:collapse}
+    .day-report-table th,.day-report-table td{border:1px solid #fed7aa;padding:10px 12px;font-size:13px}
+    .day-report-table th{background:#fff7ed;color:#9a3412;text-transform:uppercase;letter-spacing:.4px}
+    .modal-empty{padding:16px;border:1px dashed #d1d5db;border-radius:10px;text-align:center;color:#6b7280}
+    /* Hide print-only elements on screen */
+    @media screen {
+      .print-header{display:none !important;}
+      .print-info{display:none !important;}
+    }
+    @media print {
+      /* Hide interactive elements */
+      .btn, .btn-print, .controls, .print-section, #status { display: none !important; }
+      #error { display: none !important; }
+      
+      /* Reset body and container */
+      body { 
+        background: white !important; 
+        margin: 0;
+        padding: 8mm;
+        font-size: 10pt;
+      }
+      
+      .container { 
+        box-shadow: none; 
+        border: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      
+      /* Header styling */
+      h1 { 
+        color: #000 !important; 
+        font-size: 16pt !important; 
+        text-align: center;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #000;
+        padding-bottom: 6px;
+        text-shadow: none !important;
+      }
+      
+      /* Statistics box styling */
+      .stats-container { 
+        display: flex !important; 
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+      }
+      
+      .stat-box { 
+        box-shadow: none !important;
+        border: 1.5px solid #333 !important;
+        background: white !important;
+        padding: 6px 15px !important;
+        min-width: 100px;
+      }
+      
+      .stat-label {
+        color: #000 !important;
+        font-size: 8pt;
+        margin-bottom: 3px;
+      }
+      
+      .stat-value {
+        color: #000 !important;
+        font-size: 18pt;
+      }
+      
+      /* Table styling */
+      table { 
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 5px;
+        box-shadow: none !important;
+        border: 1.5px solid #000 !important;
+        page-break-inside: auto;
+      }
+      
+      thead {
+        display: table-header-group;
+      }
+      
+      tbody {
+        orphans: 5;
+        widows: 5;
+      }
+      
+      tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+      
+      th, td { 
+        padding: 4px 6px !important;
+        border: 0.5px solid #666 !important;
+        font-size: 9pt;
+        text-align: left;
+        line-height: 1.3;
+      }
+      /* Ensure centered columns remain centered in print/screen */
+      .col-center { text-align: center !important; }
+      
+      th { 
+        background: #e8e8e8 !important;
+        color: #000 !important;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 8pt;
+        letter-spacing: 0.3px;
+        padding: 5px 6px !important;
+      }
+      
+      tbody tr {
+        background: white !important;
+      }
+      
+      tbody tr:nth-child(even) {
+        background: #f9f9f9 !important;
+      }
+      
+      tbody tr:hover {
+        background: inherit !important;
+      }
+      
+      /* Maintain present student highlighting */
+      tbody tr[style*="background-color: rgb(209, 250, 229)"],
+      tbody tr[style*="background-color:#d1fae5"] {
+        background: #e8e8e8 !important;
+      }
+      
+      /* Bold present students in print */
+      tbody tr[style*="background-color"] .student-name {
+        font-weight: bold !important;
+      }
+      
+      /* Student name styling */
+      .student-name {
+        font-weight: normal !important;
+        color: #000 !important;
+        font-size: 9pt;
+      }
+      
+      .time-display {
+        color: #000 !important;
+        font-family: 'Courier New', monospace;
+        font-size: 8.5pt;
+      }
+      
+      /* RFID marker */
+      .no-rfid-marker {
+        color: #000 !important;
+        font-weight: bold;
+        font-size: 10pt;
+      }
+      
+      /* Error messages */
+      .error {
+        display: none !important;
+      }
+      
+      .muted {
+        color: #666 !important;
+      }
+      
+      /* Page break settings */
+      @page {
+        margin: 10mm 12mm;
+        size: A4 portrait;
+      }
+      
+      /* First page with more header space */
+      @page :first {
+        margin-top: 10mm;
+      }
+      
+      /* Footer with page numbers */
+      @page {
+        @bottom-right {
+          content: "Page " counter(page);
+          font-size: 8pt;
+          color: #666;
+        }
+      }
+      
+      /* Show print-only elements - FORCE VISIBILITY */
+      body .print-header {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        text-align: center;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #333;
+        padding-bottom: 6px;
+        page-break-after: avoid;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      
+      body .print-header h2 {
+        display: block !important;
+        visibility: visible !important;
+        margin: 0 !important;
+        font-size: 14pt !important;
+        line-height: 1.2;
+        color: #000 !important;
+      }
+      
+      body .print-header p {
+        display: block !important;
+        visibility: visible !important;
+        margin: 3px 0 !important;
+        font-size: 9pt !important;
+        color: #333 !important;
+      }
+      
+      body .print-info {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        justify-content: space-between;
+        margin-top: 5px;
+        margin-bottom: 8px;
+        font-size: 9pt;
+        padding: 8px 10px;
+        border: 1.5px solid #333;
+        background: #f5f5f5 !important;
+        page-break-after: avoid;
+        page-break-inside: avoid;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      
+      body .print-info-item {
+        display: flex !important;
+        visibility: visible !important;
+        gap: 5px;
+        align-items: center;
+      }
+      
+      body .print-info-label {
+        display: inline !important;
+        visibility: visible !important;
+        font-weight: bold;
+        color: #000 !important;
+      }
+      
+      body .print-info span {
+        display: inline !important;
+        visibility: visible !important;
+        color: #000 !important;
+      }
+      
+      body #printClass, body #printSection, body #printDate, body #printTime {
+        display: inline !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        color: #000 !important;
+        font-weight: bold !important;
+      }
+      
+      /* Show print footer */
+      .print-footer {
+        display: block !important;
+        page-break-inside: avoid;
+        margin-top: 15px !important;
+        padding-top: 10px !important;
+        font-size: 8pt !important;
+      }
+      
+      .print-footer p {
+        margin: 3px 0 !important;
+        font-size: 8pt !important;
+      }
+      
+      .print-footer strong {
+        font-size: 8.5pt;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Print-only header -->
+    <div class="print-header">
+      <h2 style="margin:0;font-size:18pt;">FENI MODEL HIGH SCHOOL</h2>
+      <p style="margin:5px 0;font-size:11pt;">Daily Attendance Report</p>
+    </div>
+    
+    <h1 id="pageTitle">📅 Today's Attendance</h1>
+    
+    <!-- Print-only info section -->
+    <div class="print-info" id="printInfo">
+      <div class="print-info-item">
+        <span class="print-info-label">Class:</span>
+        <span id="printClass">-</span>
+      </div>
+      <div class="print-info-item">
+        <span class="print-info-label">Section:</span>
+        <span id="printSection">-</span>
+      </div>
+      <div class="print-info-item">
+        <span class="print-info-label">Date:</span>
+        <span id="printDate">-</span>
+      </div>
+      <div class="print-info-item">
+        <span class="print-info-label">Printed:</span>
+        <span id="printTime">-</span>
+      </div>
+    </div>
+    
+    <div class="controls">
+      <div class="filter-group">
+        <label for="dateFilter">📅 Date:</label>
+        <input type="date" id="dateFilter" />
+      </div>
+      <button id="refresh" class="btn">🔄 Refresh</button>
+      <div id="status" class="muted">Ready</div>
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div class="stats-container">
+      <div class="stat-box">
+        <div class="stat-label">মোট শিক্ষক</div>
+        <div class="stat-value" id="totalCount">0</div>
+      </div>
+      <div class="stat-box present">
+        <div class="stat-label">উপস্থিত শিক্ষক</div>
+        <div class="stat-value" id="presentCount">0</div>
+      </div>
+      <div class="stat-box absent">
+        <div class="stat-label">অনুপস্থিত শিক্ষক</div>
+        <div class="stat-value" id="absentCount">0</div>
+      </div>
+    </div>
+
+    <table id="reportTable">
+      <thead>
+        <tr><th class="col-center">Roll</th><th class="col-center">🆔 IID</th><th>👤 Teacher Name</th><th>⏰ In Time</th><th>⏰ Out Time</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="print-footer" style="display:none;margin-top:20px;padding-top:15px;border-top:1px solid #ccc;font-size:10pt;color:#666;">
+      <p style="margin:5px 0;"><strong>Note:</strong> * indicates teacher without RFID card | Highlighted rows indicate present teachers</p>
+      <div style="display:flex;justify-content:space-between;margin-top:15px;">
+        <div>
+          <p style="margin:5px 0;">__________________________</p>
+          <p style="margin:0;font-size:9pt;">Teacher's Signature</p>
+        </div>
+        <div>
+          <p style="margin:5px 0;">__________________________</p>
+          <p style="margin:0;font-size:9pt;">Head Teacher's Signature</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="print-section">
+      <button id="printBtn" class="btn btn-print">🖨️ Print Report</button>
+    </div>
+  </div>
+
+  <div id="teacherDayModal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="teacherDayTitle" class="modal-title">Teacher Day-wise Report</h2>
+        <div class="modal-actions">
+          <button id="printTeacherDayBtn" class="btn-small btn-print-small" type="button">🖨️ Print Teacher Report</button>
+          <button id="closeTeacherDayBtn" class="btn-small btn-close" type="button">Close</button>
+        </div>
+      </div>
+      <p id="teacherDayMeta" class="modal-sub"></p>
+      <div id="teacherDayBody" class="modal-empty">Click a teacher name to load report.</div>
+    </div>
+  </div>
+
+  <!-- Load Supabase UMD (creates window.supabase). If not present, the module import will be used. -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="./teacher_attendence.js"></script>
+</body>
+</html>
