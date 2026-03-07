@@ -1,0 +1,3759 @@
+<!DOCTYPE html>
+<html lang="en">
+<script>
+    // early override to block live-server websocket connections
+    // run before anything else, inserted right after <html> tag
+    (function () {
+        console.log('ws-stub initialized');
+        try {
+            const orig = window.WebSocket;
+            Object.defineProperty(window, 'WebSocket', {
+                configurable: true,
+                enumerable: true,
+                writable: true,
+                value: function (url, protocols) {
+                    if (typeof url === 'string' && url.indexOf('5501') !== -1) {
+                        console.log('blocking live-server websocket', url);
+                        return { addEventListener() { }, removeEventListener() { }, send() { }, close() { }, readyState: 3 };
+                    }
+                    return new orig(url, protocols);
+                }
+            });
+            window.WebSocket.prototype = orig.prototype;
+        } catch (e) { }
+    })();
+</script>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script>
+        // early override to block live-server websocket connections
+        (function () {
+            try {
+                const orig = window.WebSocket;
+                window.WebSocket = function (url, protocols) {
+                    if (typeof url === 'string' && url.indexOf('5501') !== -1) {
+                        return { addEventListener() { }, removeEventListener() { }, send() { }, close() { }, readyState: 3 };
+                    }
+                    return new orig(url, protocols);
+                };
+                window.WebSocket.prototype = orig.prototype;
+            } catch (e) { }
+        })();
+    </script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #e6ebf1;
+            --bg-alt: #eef3f8;
+            --shadow-light: rgba(255, 255, 255, 0.92);
+            --shadow-dark: rgba(163, 177, 198, 0.58);
+            --accent: #667eea;
+            --accent-alt: #764ba2;
+            --accent-grad: linear-gradient(135deg, #667eea, #764ba2);
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --info: #2980b9;
+            --text-main: #334155;
+            --text-muted: #7a8a9a;
+            --sidebar-w: 260px;
+            --header-h: 64px;
+            --radius: 18px;
+            --transition: 0.22s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        *,
+        *::before,
+        *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* ───── SIDEBAR ───── */
+        #sidebar {
+            width: var(--sidebar-w);
+            min-height: 100vh;
+            background: var(--bg);
+            box-shadow: 6px 0 20px var(--shadow-dark), -2px 0 6px var(--shadow-light);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            transition: transform var(--transition);
+        }
+
+        .sidebar-logo {
+            padding: 24px 28px 18px;
+            background: var(--accent-grad);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #fff;
+        }
+
+        .sidebar-logo i {
+            font-size: 1.6rem;
+        }
+
+        .sidebar-logo span {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: .4px;
+        }
+
+        .sidebar-user {
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(163, 177, 198, 0.3);
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-grad);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+            flex-shrink: 0;
+        }
+
+        .sidebar-user-info {
+            overflow: hidden;
+        }
+
+        .sidebar-user-info .name {
+            font-weight: 600;
+            font-size: .88rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .sidebar-user-info .role {
+            font-size: .75rem;
+            color: var(--text-muted);
+        }
+
+        nav {
+            flex: 1;
+            padding: 18px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            padding: 8px 24px 4px;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 26px;
+            cursor: pointer;
+            font-size: .9rem;
+            font-weight: 500;
+            color: var(--text-main);
+            transition: background var(--transition), color var(--transition);
+            user-select: none;
+            position: relative;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .nav-item:hover {
+            background: rgba(102, 126, 234, 0.08);
+            color: var(--accent);
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.13);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--accent-grad);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .sidebar-footer {
+            padding: 18px 24px;
+            border-top: 1px solid rgba(163, 177, 198, 0.3);
+        }
+
+        .btn-logout {
+            width: 100%;
+            padding: 11px;
+            border: 0;
+            border-radius: var(--radius);
+            background: var(--bg);
+            color: var(--danger);
+            font-weight: 600;
+            font-size: .9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+            transition: box-shadow var(--transition);
+        }
+
+        .btn-logout:hover {
+            box-shadow: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+        }
+
+        /* ───── MAIN ───── */
+        #main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            height: var(--header-h);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 36px;
+            background: var(--bg);
+            box-shadow: 0 4px 14px var(--shadow-dark);
+            position: sticky;
+            top: 0;
+            z-index: 90;
+        }
+
+        .header-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 50%;
+            background: var(--bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: var(--text-main);
+            box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light);
+            transition: box-shadow var(--transition);
+        }
+
+        .icon-btn:hover {
+            box-shadow: 1px 1px 4px var(--shadow-dark), -1px -1px 4px var(--shadow-light);
+            color: var(--accent);
+        }
+
+        /* ───── CONTENT ───── */
+        #content {
+            padding: 32px 36px;
+            flex: 1;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ───── CARDS ───── */
+        .nm-card {
+            background: var(--bg);
+            border-radius: var(--radius);
+            box-shadow: 8px 8px 18px var(--shadow-dark), -8px -8px 18px var(--shadow-light);
+            padding: 28px 30px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+            gap: 22px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            border-radius: var(--radius);
+            background: var(--bg);
+            box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+            padding: 24px 22px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.blue {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .stat-icon.green {
+            background: linear-gradient(135deg, #27ae60, #1abc9c);
+        }
+
+        .stat-icon.red {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .stat-icon.gold {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .stat-num {
+            font-size: 1.8rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: .8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* ───── SECTION HEADER ───── */
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header h2 i {
+            color: var(--accent);
+        }
+
+        /* ───── BUTTONS ───── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 10px 20px;
+            border: 0;
+            border-radius: var(--radius);
+            font-size: .88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: box-shadow var(--transition), opacity var(--transition);
+            box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+        }
+
+        .btn:hover {
+            box-shadow: 2px 2px 6px var(--shadow-dark), -2px -2px 6px var(--shadow-light);
+        }
+
+        .btn-primary {
+            background: var(--accent-grad);
+            color: #fff;
+            box-shadow: none;
+        }
+
+        .btn-primary:hover {
+            opacity: .9;
+            box-shadow: none;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #fff;
+            box-shadow: none;
+        }
+
+        .btn-danger:hover {
+            opacity: .9;
+            box-shadow: none;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: #fff;
+            box-shadow: none;
+        }
+
+        .btn-warning:hover {
+            opacity: .9;
+            box-shadow: none;
+        }
+
+        .btn-sm {
+            padding: 7px 14px;
+            font-size: .8rem;
+        }
+
+        /* ───── TABLE ───── */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead tr {
+            background: rgba(102, 126, 234, 0.08);
+        }
+
+        th,
+        td {
+            padding: 13px 16px;
+            text-align: left;
+            font-size: .87rem;
+            white-space: nowrap;
+        }
+
+        th {
+            font-weight: 700;
+            color: var(--text-muted);
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid rgba(163, 177, 198, 0.25);
+            transition: background var(--transition);
+        }
+
+        tbody tr:last-child {
+            border-bottom: 0;
+        }
+
+        tbody tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: .75rem;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background: rgba(102, 126, 234, 0.15);
+            color: #667eea;
+        }
+
+        .badge-editor {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+
+        .badge-viewer {
+            background: rgba(243, 156, 18, 0.15);
+            color: #e08e0b;
+        }
+
+        .badge-active {
+            background: rgba(39, 174, 96, 0.15);
+            color: #27ae60;
+        }
+
+        .badge-inactive {
+            background: rgba(231, 76, 60, 0.15);
+            color: #e74c3c;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* ───── FORMS ───── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 22px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .form-control {
+            padding: 12px 16px;
+            border: 0;
+            border-radius: 14px;
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: .9rem;
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            outline: none;
+            transition: box-shadow var(--transition);
+        }
+
+        .form-control:focus {
+            box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light), 0 0 0 3px rgba(102, 126, 234, 0.18);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        /* ───── FILE UPLOAD ───── */
+        .upload-zone {
+            border: 2px dashed rgba(102, 126, 234, 0.35);
+            border-radius: var(--radius);
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color var(--transition), background var(--transition);
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(102, 126, 234, 0.06);
+        }
+
+        .upload-icon {
+            font-size: 2.4rem;
+            color: var(--accent);
+            margin-bottom: 12px;
+        }
+
+        .upload-zone p {
+            color: var(--text-muted);
+            font-size: .9rem;
+        }
+
+        .upload-zone strong {
+            color: var(--accent);
+        }
+
+        .file-list {
+            margin-top: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            background: var(--bg);
+            box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+            font-size: .84rem;
+        }
+
+        .file-item i {
+            color: var(--accent);
+        }
+
+        .file-item .file-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-item .file-size {
+            color: var(--text-muted);
+            font-size: .78rem;
+        }
+
+        /* ───── MODAL ───── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition);
+        }
+
+        .modal-overlay.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            background: var(--bg);
+            border-radius: var(--radius);
+            box-shadow: 14px 14px 28px var(--shadow-dark), -14px -14px 28px var(--shadow-light);
+            width: 94%;
+            max-width: 480px;
+            padding: 32px 34px;
+            transform: translateY(20px);
+            transition: transform var(--transition);
+        }
+
+        .modal-overlay.show .modal {
+            transform: translateY(0);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 26px;
+        }
+
+        .modal-header h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: 0;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 26px;
+        }
+
+        /* ───── TOAST ───── */
+        #toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 13px 20px;
+            border-radius: 14px;
+            color: #fff;
+            font-size: .88rem;
+            font-weight: 500;
+            box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.2);
+            animation: slideIn .3s ease;
+            min-width: 260px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        .toast.success {
+            background: var(--success);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        .toast.info {
+            background: var(--info);
+        }
+
+        /* ───── SEARCH ───── */
+        .search-box {
+            position: relative;
+            flex: 1;
+            max-width: 320px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: .9rem;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            border: 0;
+            border-radius: 14px;
+            background: var(--bg);
+            color: var(--text-main);
+            font-size: .88rem;
+            box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
+            outline: none;
+        }
+
+        /* ───── ACCESS CONTROL ───── */
+        .perm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .perm-card {
+            border-radius: var(--radius);
+            background: var(--bg);
+            box-shadow: 5px 5px 12px var(--shadow-dark), -5px -5px 12px var(--shadow-light);
+            padding: 20px 22px;
+        }
+
+        .perm-card h4 {
+            font-size: .9rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .perm-card h4 i {
+            color: var(--accent);
+        }
+
+        .perm-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(163, 177, 198, 0.2);
+        }
+
+        .perm-item:last-child {
+            border-bottom: 0;
+        }
+
+        .perm-item label {
+            font-size: .84rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .toggle {
+            position: relative;
+            width: 40px;
+            height: 22px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(163, 177, 198, 0.5);
+            border-radius: 22px;
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+
+        .slider:before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform var(--transition);
+            box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle input:checked+.slider {
+            background: var(--accent);
+        }
+
+        .toggle input:checked+.slider:before {
+            transform: translateX(18px);
+        }
+
+        /* ───── RESPONSIVE ───── */
+        @media(max-width:768px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+
+            #sidebar.open {
+                transform: translateX(0);
+            }
+
+            #main {
+                margin-left: 0;
+            }
+
+            #content {
+                padding: 20px 18px;
+            }
+
+            .grid-4 {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(102, 126, 234, 0.15);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 14px;
+            opacity: .4;
+            display: block;
+        }
+
+        /* ───── TABS ───── */
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            background: rgba(163, 177, 198, 0.18);
+            border-radius: 14px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 9px 10px;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: background var(--transition), color var(--transition), box-shadow var(--transition);
+            white-space: nowrap;
+        }
+
+        .tab-btn.active {
+            background: var(--bg);
+            color: var(--accent);
+            box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light);
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* ───── SQL BOX ───── */
+        .sql-box {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: .79rem;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 160px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+
+        /* ───── COLUMN ACCESS GRID ───── */
+        .col-access-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .83rem;
+        }
+
+        .col-access-table th {
+            padding: 8px 12px;
+            background: rgba(102, 126, 234, 0.09);
+            font-weight: 700;
+            color: var(--text-muted);
+            font-size: .75rem;
+            text-transform: uppercase;
+            text-align: left;
+        }
+
+        .col-access-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(163, 177, 198, 0.2);
+            vertical-align: middle;
+        }
+
+        .col-access-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .col-access-table input[type=checkbox] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* ───── RLS POLICY CARD ───── */
+        .policy-card {
+            border-radius: 12px;
+            background: var(--bg);
+            box-shadow: 3px 3px 8px var(--shadow-dark), -3px -3px 8px var(--shadow-light);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .policy-card .policy-info {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .policy-card .policy-name {
+            font-weight: 700;
+            font-size: .9rem;
+            margin-bottom: 4px;
+        }
+
+        .policy-card .policy-meta {
+            font-size: .78rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* ───── UPDATED TABLE SETTINGS STYLES ───── */
+        .glass-card {
+            background: var(--bg-alt);
+            border: 1px solid rgba(163, 177, 198, 0.28);
+            border-radius: var(--radius);
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.08);
+        }
+
+        .table-action-btn {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 0;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg);
+            box-shadow: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+            color: var(--text-main);
+            font-size: 0.8rem;
+        }
+
+        .table-action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 4px 4px 10px var(--shadow-dark), -4px -4px 10px var(--shadow-light);
+        }
+
+        .table-action-btn.edit {
+            color: var(--accent);
+        }
+
+        .table-action-btn.delete {
+            color: var(--danger);
+        }
+
+        .table-action-btn.save {
+            color: var(--success);
+        }
+
+        .form-control-inline {
+            padding: 6px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: rgba(163, 177, 198, 0.1);
+            font-size: 0.85rem;
+            width: 100%;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .form-control-inline:focus {
+            background: #fff;
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        /* Premium Stat Bar */
+        .premium-stat {
+            background: var(--bg);
+            border-radius: 16px;
+            padding: 16px;
+            border-left: 4px solid var(--accent);
+            box-shadow: 5px 5px 15px var(--shadow-dark), -5px -5px 15px var(--shadow-light);
+            flex: 1;
+            min-width: 140px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .premium-stat:hover {
+            transform: scale(1.03);
+        }
+
+        .premium-stat .label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .premium-stat .value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .premium-stat .icon {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            font-size: 1.2rem;
+            opacity: 0.15;
+            color: var(--accent);
+        }
+
+        /* Floating Save Bar */
+        #floatingSaveBar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent-grad);
+            color: #fff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            z-index: 1000;
+            transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        #floatingSaveBar.show {
+            transform: translateX(-50%) translateY(0);
+        }
+    </style>
+
+</head>
+
+<body>
+    <script>
+        // suppress live-server websocket connection errors when developing locally
+        (function () {
+            try {
+                const originalWS = window.WebSocket;
+                window.WebSocket = function (url, protocols) {
+                    // only stub for live-server default port
+                    if (typeof url === 'string' && url.indexOf('5501') !== -1) {
+                        return {
+                            addEventListener() { },
+                            removeEventListener() { },
+                            send() { },
+                            close() { },
+                            readyState: 3
+                        };
+                    }
+                    return new originalWS(url, protocols);
+                };
+                window.WebSocket.prototype = originalWS.prototype;
+            } catch (e) {
+                /* ignore */
+            }
+        })();
+    </script>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- User Modal -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle"><i class="fa fa-user-plus"></i> নতুন ইউজার তৈরি</h3>
+                <button class="modal-close" onclick="closeModal()"><i class="fa fa-times"></i></button>
+            </div>
+            <div style="display:grid;gap:18px;">
+                <div class="form-group">
+                    <label><i class="fa fa-user fa-xs"></i> পূর্ণ নাম</label>
+                    <input type="text" class="form-control" id="uName" placeholder="Full Name">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa fa-envelope fa-xs"></i> ইমেইল</label>
+                    <input type="email" class="form-control" id="uEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa fa-lock fa-xs"></i> পাসওয়ার্ড</label>
+                    <input type="password" class="form-control" id="uPassword" placeholder="Min 6 characters">
+                </div>
+                <div class="form-group">
+                    <label><i class="fa fa-shield-halved fa-xs"></i> রোল</label>
+                    <select class="form-control" id="uRole">
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="viewer" selected>Viewer</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()"><i class="fa fa-times"></i> বাতিল</button>
+                <button class="btn btn-primary" id="modalSaveBtn" onclick="saveUser()"><i class="fa fa-save"></i> সেভ
+                    করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Detail Modal -->
+    <div class="modal-overlay" id="tableModal">
+        <div class="modal" style="max-width:780px;max-height:90vh;overflow-y:auto;">
+            <div class="modal-header"
+                style="position:sticky;top:0;background:var(--bg);z-index:10;padding-bottom:14px;">
+                <h3 id="tableModalTitle"><i class="fa fa-table" style="color:var(--accent)"></i> টেবিল সেটিংস</h3>
+                <button class="modal-close" onclick="closeTableModal()"><i class="fa fa-times"></i></button>
+            </div>
+
+            <!-- Stat bar -->
+            <!-- Premium Stat bar -->
+            <div style="display:flex;gap:15px;margin-bottom:24px;flex-wrap:wrap;position:relative;">
+                <div class="premium-stat" style="border-left-color: #667eea;">
+                    <i class="fa fa-columns icon"></i>
+                    <div class="label">কলামসমূহ</div>
+                    <div id="tmColCount" class="value">—</div>
+                </div>
+                <div class="premium-stat" style="border-left-color: #27ae60;">
+                    <i class="fa fa-arrow-up-9-1 icon"></i>
+                    <div class="label">মোট রো (Rows)</div>
+                    <div id="tmRowCount" class="value">—</div>
+                </div>
+                <div class="premium-stat" style="border-left-color: #f39c12;">
+                    <i class="fa fa-shield-halved icon"></i>
+                    <div class="label">সেকিউরিটি</div>
+                    <div id="tmRLSBadge" style="margin-top:6px;">—</div>
+                </div>
+                <div class="premium-stat" style="border-left-color: #e74c3c;">
+                    <i class="fa fa-file-invoice icon"></i>
+                    <div class="label">পলিসি</div>
+                    <div id="tmPolicyCount" class="value">—</div>
+                </div>
+            </div>
+
+
+            <!-- Tabs -->
+            <div class="tab-bar">
+                <button class="tab-btn active" onclick="tmTab('overview',this)"><i class="fa fa-circle-info"></i>
+                    Overview</button>
+                <button class="tab-btn" onclick="tmTab('rls',this)"><i class="fa fa-shield-halved"></i> RLS
+                    Policies</button>
+                <button class="tab-btn" onclick="tmTab('colaccess',this)"><i class="fa fa-eye-slash"></i> Column
+                    Access</button>
+                <button class="tab-btn" onclick="tmTab('data',this)"><i class="fa fa-database"></i> Data
+                    Browser</button>
+            </div>
+
+            <!-- TAB: Overview -->
+            <div class="tab-pane active" id="tmTab-overview">
+                <div
+                    style="font-size:.78rem;font-weight:700;color:var(--text-muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:10px;">
+                    কলামসমূহ</div>
+                <div style="max-height:260px;overflow-y:auto;border-radius:12px;">
+                    <table style="width:100%;border-collapse:collapse;">
+                        <thead>
+                            <tr style="background:rgba(102,126,234,0.09);position:sticky;top:0;">
+                                <th
+                                    style="padding:9px 14px;text-align:left;font-size:.74rem;color:var(--text-muted);text-transform:uppercase;">
+                                    কলাম নাম</th>
+                                <th
+                                    style="padding:9px 14px;text-align:left;font-size:.74rem;color:var(--text-muted);text-transform:uppercase;">
+                                    টাইপ</th>
+                                <th
+                                    style="padding:9px 14px;text-align:left;font-size:.74rem;color:var(--text-muted);text-transform:uppercase;">
+                                    Format</th>
+                                <th
+                                    style="padding:9px 14px;text-align:left;font-size:.74rem;color:var(--text-muted);text-transform:uppercase;">
+                                    একসেস</th>
+                                <th
+                                    style="padding:9px 14px;text-align:center;font-size:.74rem;color:var(--text-muted);text-transform:uppercase;">
+                                    একশন</th>
+
+                            </tr>
+                        </thead>
+                        <tbody id="tmColBody"></tbody>
+                    </table>
+                </div>
+                <!-- Quick SQL Snippets -->
+                <div style="margin-top:16px;">
+                    <div
+                        style="font-size:.78rem;font-weight:700;color:var(--text-muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:8px;">
+                        Quick SQL Snippets</div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+                        <button class="btn btn-sm" style="font-size:.78rem;" onclick="quickSQL('select')"><i
+                                class="fa fa-list"></i> SELECT *</button>
+                        <button class="btn btn-sm" style="font-size:.78rem;" onclick="quickSQL('count')"><i
+                                class="fa fa-hashtag"></i> COUNT</button>
+                        <button class="btn btn-sm" style="font-size:.78rem;" onclick="quickSQL('insert')"><i
+                                class="fa fa-plus"></i> INSERT</button>
+                        <button class="btn btn-sm" style="font-size:.78rem;" onclick="quickSQL('schema')"><i
+                                class="fa fa-code"></i> Schema SQL</button>
+                        <button class="btn btn-sm" style="font-size:.78rem;" onclick="quickSQL('rls_check')"><i
+                                class="fa fa-shield-halved"></i> RLS চেক</button>
+                    </div>
+                    <div id="tmQuickSQLWrap" style="display:none;">
+                        <div class="sql-box" id="tmQuickSQL" style="font-size:.82rem;"></div>
+                        <button class="btn btn-sm" style="margin-top:6px;" onclick="copySQL('tmQuickSQL')"><i
+                                class="fa fa-copy"></i> কপি করুন</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: RLS Policies -->
+            <div class="tab-pane" id="tmTab-rls">
+                <!-- RLS Enable/Disable -->
+                <div
+                    style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:14px;background:var(--bg);box-shadow:4px 4px 10px var(--shadow-dark),-4px -4px 10px var(--shadow-light);margin-bottom:18px;gap:12px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:700;font-size:.92rem;">Row Level Security (RLS)</div>
+                        <div style="font-size:.8rem;color:var(--text-muted);margin-top:3px;">চালু থাকলে সব রো ডিফল্টে
+                            ব্লক। পলিসি দিয়ে একসেস দিন।</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn btn-primary btn-sm" onclick="genRLSToggle(true,this)"><i class="fa fa-lock"></i>
+                            Enable RLS</button>
+                        <button class="btn btn-sm" onclick="genRLSToggle(false,this)"><i class="fa fa-lock-open"></i> Disable
+                            RLS</button>
+                    </div>
+                </div>
+
+                <!-- Policy List -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div
+                        style="font-size:.78rem;font-weight:700;color:var(--text-muted);letter-spacing:.7px;text-transform:uppercase;">
+                        বিদ্যমান পলিসি</div>
+                    <button class="btn btn-primary btn-sm" onclick="tmTab('rls-add',null)"><i class="fa fa-plus"></i>
+                        নতুন পলিসি যোগ করুন</button>
+                </div>
+                <div id="tmPolicyList">
+                    <div style="color:var(--text-muted);font-size:.87rem;padding:18px 0;">পলিসি লোড হচ্ছে…</div>
+                </div>
+            </div>
+
+            <!-- TAB: RLS Add (sub-tab, shown via JS) -->
+            <div class="tab-pane" id="tmTab-rls-add">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+                    <button class="btn btn-sm" onclick="tmTab('rls',null)"><i class="fa fa-arrow-left"></i> ফিরে
+                        যান</button>
+                    <span style="font-weight:700;">নতুন RLS পলিসি তৈরি করুন</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div class="form-group">
+                        <label>পলিসির নাম *</label>
+                        <input class="form-control" id="rlsName" placeholder="e.g. users_select_own"
+                            oninput="updateRLSSQL()">
+                    </div>
+                    <div class="form-group">
+                        <label>অপারেশন</label>
+                        <select class="form-control" id="rlsCmd" onchange="updateRLSSQL()">
+                            <option value="SELECT">SELECT (পড়া)</option>
+                            <option value="INSERT">INSERT (যোগ করা)</option>
+                            <option value="UPDATE">UPDATE (আপডেট)</option>
+                            <option value="DELETE">DELETE (মুছানো)</option>
+                            <option value="ALL">ALL (সবকিছু)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ধরন</label>
+                        <select class="form-control" id="rlsPermissive" onchange="updateRLSSQL()">
+                            <option value="PERMISSIVE">Permissive (অনুমতিমূলক)</option>
+                            <option value="RESTRICTIVE">Restrictive (সীমাবদ্ধ)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>টার্গেট Roles</label>
+                        <div
+                            style="display:flex;flex-direction:column;gap:6px;padding:10px 14px;border-radius:14px;box-shadow:inset 4px 4px 8px var(--shadow-dark),inset -4px -4px 8px var(--shadow-light);">
+                            <label
+                                style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer;"><input
+                                    type="checkbox" id="rlsRole_anon" onchange="updateRLSSQL()"> anon (Guest)</label>
+                            <label
+                                style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer;"><input
+                                    type="checkbox" id="rlsRole_authenticated" checked onchange="updateRLSSQL()">
+                                authenticated</label>
+                            <label
+                                style="display:flex;align-items:center;gap:8px;font-size:.85rem;cursor:pointer;"><input
+                                    type="checkbox" id="rlsRole_service_role" onchange="updateRLSSQL()">
+                                service_role</label>
+                        </div>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1;">
+                        <label>
+                            USING expression
+                            <span style="font-size:.76rem;color:var(--text-muted);margin-left:6px;">(SELECT / UPDATE /
+                                DELETE — রো ফিল্টার)</span>
+                        </label>
+                        <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+                            <button type="button" class="btn btn-sm" style="font-size:.76rem;"
+                                onclick="insertExpr('rlsUsing','auth.uid() = user_id')">auth.uid() = user_id</button>
+                            <button type="button" class="btn btn-sm" style="font-size:.76rem;"
+                                onclick="insertExpr('rlsUsing','auth.role() = \'admin\'')">role = admin</button>
+                            <button type="button" class="btn btn-sm" style="font-size:.76rem;"
+                                onclick="insertExpr('rlsUsing','true')">true (সবাই)</button>
+                            <button type="button" class="btn btn-sm" style="font-size:.76rem;"
+                                onclick="insertExpr('rlsUsing','false')">false (কেউ না)</button>
+                        </div>
+                        <textarea class="form-control" id="rlsUsing" rows="2" placeholder="auth.uid() = user_id"
+                            oninput="updateRLSSQL()" style="font-family:monospace;font-size:.85rem;"></textarea>
+                    </div>
+                    <div class="form-group" id="rlsCheckWrap" style="grid-column:1/-1;">
+                        <label>
+                            WITH CHECK expression
+                            <span style="font-size:.76rem;color:var(--text-muted);margin-left:6px;">(INSERT / UPDATE —
+                                নতুন রো যাচাই)</span>
+                        </label>
+                        <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+                            <button type="button" class="btn btn-sm" style="font-size:.76rem;"
+                                onclick="insertExpr('rlsCheck','auth.uid() = user_id')">auth.uid() = user_id</button>
+                            <button type="button" class="btn btn-sm" style="font-size:.76rem;"
+                                onclick="insertExpr('rlsCheck','true')">true</button>
+                        </div>
+                        <textarea class="form-control" id="rlsCheck" rows="2" placeholder="auth.uid() = user_id"
+                            oninput="updateRLSSQL()" style="font-family:monospace;font-size:.85rem;"></textarea>
+                    </div>
+                </div>
+                <div style="margin-top:4px;">
+                    <div
+                        style="font-size:.78rem;font-weight:700;color:var(--text-muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">
+                        Generated SQL</div>
+                    <div class="sql-box" id="rlsSQLPreview">-- পলিসির বিবরণ দিন</div>
+                    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
+                        <button class="btn btn-sm" onclick="copySQL('rlsSQLPreview')"><i class="fa fa-copy"></i> SQL কপি
+                            করুন</button>
+                        <button class="btn btn-primary btn-sm" id="rlsExecBtn" onclick="executeRLSPolicy()"><i
+                                class="fa fa-floppy-disk"></i> পলিসি সেভ করুন</button>
+                        <a href="https://supabase.com/dashboard/project/rtfefxghfbtirfnlbucb/editor" target="_blank"
+                            style="font-size:.78rem;color:var(--accent);display:flex;align-items:center;gap:5px;text-decoration:none;margin-left:4px;">
+                            <i class="fa fa-arrow-up-right-from-square fa-xs"></i> Supabase SQL Editor খুলুন
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Column Access -->
+            <div class="tab-pane" id="tmTab-colaccess">
+                <p style="font-size:.84rem;color:var(--text-muted);margin-bottom:16px;">প্রতিটি রোলের জন্য কোন কলামে
+                    একসেস থাকবে তা সিলেক্ট করুন। SQL পলিসি তৈরি হবে।</p>
+                <div style="overflow-x:auto;border-radius:12px;margin-bottom:16px;">
+                    <table class="col-access-table">
+                        <thead>
+                            <tr>
+                                <th>কলাম নাম</th>
+                                <th>টাইপ</th>
+                                <th style="text-align:center;"><span style="color:#667eea">anon</span></th>
+                                <th style="text-align:center;"><span style="color:#27ae60">authenticated</span></th>
+                                <th style="text-align:center;"><span style="color:#e67e22">admin</span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tmColAccessBody"></tbody>
+                    </table>
+                </div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+                    <button class="btn btn-sm" onclick="colAccessSelectAll('anon')"><i class="fa fa-check-double"></i>
+                        anon সব select</button>
+                    <button class="btn btn-sm" onclick="colAccessSelectAll('authenticated')"><i
+                            class="fa fa-check-double"></i> auth সব select</button>
+                    <button class="btn btn-primary btn-sm" onclick="genColAccessSQL()"><i class="fa fa-code"></i> SQL
+                        তৈরি করুন</button>
+                    <button class="btn btn-danger btn-sm" onclick="dropColAccessView('anon',this)"><i class="fa fa-trash"></i>
+                        anon_view ডিলিট</button>
+                    <button class="btn btn-danger btn-sm" onclick="dropColAccessView('auth',this)"><i class="fa fa-trash"></i>
+                        auth_view ডিলিট</button>
+                </div>
+                <div id="colAccessSQLWrap" style="display:none;">
+                    <div
+                        style="font-size:.78rem;font-weight:700;color:var(--text-muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">
+                        Generated SQL</div>
+                    <div class="sql-box" id="colAccessSQL"></div>
+                    <div style="display:flex;gap:8px;margin-top:8px;">
+                        <button class="btn btn-sm" onclick="copySQL('colAccessSQL')"><i class="fa fa-copy"></i> SQL কপি
+                            করুন</button>
+                        <button class="btn btn-primary btn-sm" onclick="execColAccessSQL(this)"><i class="fa fa-bolt"></i>
+                            Execute করুন</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Data Browser -->
+            <div class="tab-pane" id="tmTab-data">
+                <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end;">
+                    <div class="form-group" style="flex:1;min-width:180px;">
+                        <label>ফিল্টার কলাম</label>
+                        <select class="form-control" id="dbFilterCol" style="padding:9px 12px;"></select>
+                    </div>
+                    <div class="form-group" style="flex:2;min-width:180px;">
+                        <label>সার্চ মান</label>
+                        <input class="form-control" id="dbFilterVal" placeholder="মান লিখুন…" style="padding:9px 12px;">
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <select class="form-control" id="dbLimit" style="padding:9px 12px;width:80px;">
+                            <option>10</option>
+                            <option>25</option>
+                            <option>50</option>
+                            <option>100</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="browseTableData()"><i
+                                class="fa fa-magnifying-glass"></i> খুঁজুন</button>
+                        <button class="btn btn-warning btn-sm" onclick="openAddRowModal()"><i class="fa fa-plus"></i>
+                            নতুন রো</button>
+
+                    </div>
+                </div>
+                <div id="tmDataWrap" style="overflow-x:auto;">
+                    <div style="color:var(--text-muted);font-size:.87rem;padding:30px 0;text-align:center;"><i
+                            class="fa fa-database"
+                            style="font-size:2rem;opacity:.3;display:block;margin-bottom:10px;"></i>"খুঁজুন" বাটন চাপুন
+                    </div>
+                </div>
+                <div
+                    style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;flex-wrap:wrap;gap:8px;">
+                    <span id="dbRowInfo" style="font-size:.82rem;color:var(--text-muted);"></span>
+                    <div style="display:flex;gap:6px;">
+                        <button class="btn btn-sm" id="dbPrevBtn" onclick="dbPage(-1)" disabled><i
+                                class="fa fa-chevron-left"></i></button>
+                        <span id="dbPageNum" style="font-size:.85rem;padding:6px 12px;">1</span>
+                        <button class="btn btn-sm" id="dbNextBtn" onclick="dbPage(1)" disabled><i
+                                class="fa fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="position:sticky;bottom:0;background:var(--bg);padding-top:12px;">
+                <button class="btn" onclick="closeTableModal()"><i class="fa fa-times"></i> বন্ধ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Edit Modal -->
+<div class="modal-overlay" id="dataEditModal">
+    <div class="modal" style="max-width:550px; max-height:85vh; overflow-y:auto;">
+        <div class="modal-header">
+            <h3 id="dataEditTitle"><i class="fa fa-pen-to-square"></i> ডেটা এডিট</h3>
+            <button class="modal-close" onclick="closeModal('dataEditModal')"><i class="fa fa-times"></i></button>
+        </div>
+        <div id="dataEditFields" style="display:grid;gap:15px;">
+            <!-- Fields dynamically generated -->
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeModal('dataEditModal')">বাতিল</button>
+            <button class="btn btn-primary" id="dataEditSaveBtn"><i class="fa fa-save"></i> আপডেট করুন</button>
+        </div>
+    </div>
+</div>
+
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width:380px;">
+            <div class="modal-header">
+                <h3><i class="fa fa-triangle-exclamation" style="color:var(--danger)"></i> নিশ্চিত করুন</h3>
+                <button class="modal-close" onclick="closeDeleteModal()"><i class="fa fa-times"></i></button>
+            </div>
+            <p id="deleteMsg" style="font-size:.92rem;line-height:1.6;"></p>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeDeleteModal()">বাতিল</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn"><i class="fa fa-trash"></i> ডিলিট করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ───── SIDEBAR ───── -->
+    <aside id="sidebar">
+        <div class="sidebar-logo">
+            <i class="fa fa-gauge-high"></i>
+            <span>Admin Panel</span>
+        </div>
+        <div class="sidebar-user">
+            <div class="avatar" id="avatarText">A</div>
+            <div class="sidebar-user-info">
+                <div class="name" id="sidebarUserName">Loading…</div>
+                <div class="role">Super Admin</div>
+            </div>
+        </div>
+        <nav>
+            <div class="nav-section">মেনু</div>
+            <div class="nav-item active" onclick="showPage('dashboard')">
+                <i class="fa fa-house"></i> ড্যাশবোর্ড
+            </div>
+            <div class="nav-item" onclick="showPage('users')">
+                <i class="fa fa-users"></i> ইউজার ম্যানেজমেন্ট
+            </div>
+            <div class="nav-item" onclick="showPage('access')">
+                <i class="fa fa-shield-halved"></i> একসেস কন্ট্রোল
+            </div>
+            <div class="nav-section">ফাইল ম্যানেজার</div>
+            <div class="nav-item" onclick="showPage('upload')">
+                <i class="fa fa-upload"></i> ফাইল আপলোড
+            </div>
+            <div class="nav-item" onclick="showPage('tables')">
+                <i class="fa fa-table-cells"></i> টেবিল সেটিংস
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="btn-logout" onclick="handleLogout()">
+                <i class="fa fa-right-from-bracket"></i> লগআউট
+            </button>
+        </div>
+    </aside>
+
+    <!-- ───── MAIN ───── -->
+    <main id="main">
+        <header>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <button class="icon-btn" onclick="toggleSidebar()"><i class="fa fa-bars"></i></button>
+                <span class="header-title" id="headerTitle">ড্যাশবোর্ড</span>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" title="Refresh" onclick="loadUsers();loadTables();"><i
+                        class="fa fa-rotate-right"></i></button>
+                <button class="icon-btn" title="Logout" onclick="handleLogout()"><i
+                        class="fa fa-right-from-bracket"></i></button>
+            </div>
+        </header>
+
+        <div id="content">
+
+            <!-- ═══ DASHBOARD ═══ -->
+            <div class="page active" id="page-dashboard">
+                <div class="grid-4">
+                    <div class="stat-card">
+                        <div class="stat-icon blue"><i class="fa fa-users"></i></div>
+                        <div>
+                            <div class="stat-num" id="statUsers">—</div>
+                            <div class="stat-label">মোট ইউজার</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green"><i class="fa fa-user-check"></i></div>
+                        <div>
+                            <div class="stat-num" id="statActive">—</div>
+                            <div class="stat-label">সক্রিয় ইউজার</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon red"><i class="fa fa-user-lock"></i></div>
+                        <div>
+                            <div class="stat-num" id="statAdmin">—</div>
+                            <div class="stat-label">অ্যাডমিন</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon gold"><i class="fa fa-file-arrow-up"></i></div>
+                        <div>
+                            <div class="stat-num" id="statFiles">0</div>
+                            <div class="stat-label">আপলোড করা ফাইল</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="nm-card">
+                    <div class="section-header">
+                        <h2><i class="fa fa-clock-rotate-left"></i> সাম্প্রতিক ইউজার</h2>
+                        <button class="btn btn-primary btn-sm" onclick="showPage('users')"><i
+                                class="fa fa-arrow-right"></i> সব দেখুন</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>নাম / ইমেইল</th>
+                                    <th>রোল</th>
+                                    <th>তৈরির তারিখ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentUsersBody">
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ USERS ═══ -->
+            <div class="page" id="page-users">
+                <div class="nm-card">
+                    <div class="section-header">
+                        <h2><i class="fa fa-users"></i> ইউজার লিস্ট</h2>
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                            <div class="search-box">
+                                <i class="fa fa-magnifying-glass"></i>
+                                <input type="text" id="userSearch" placeholder="ইউজার খুঁজুন…"
+                                    oninput="filterUsers(this.value)">
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="createUserBtn" onclick="openCreateModal()">
+                                <i class="fa fa-user-plus"></i> নতুন ইউজার
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>নাম</th>
+                                    <th>ইমেইল</th>
+                                    <th>রোল</th>
+                                    <th>স্ট্যাটাস</th>
+                                    <th>তৈরির তারিখ</th>
+                                    <th>একশন</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersBody">
+                                <tr>
+                                    <td colspan="7">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ ACCESS CONTROL ═══ -->
+            <div class="page" id="page-access">
+                <div class="nm-card" style="margin-bottom:26px;">
+                    <div class="section-header">
+                        <h2><i class="fa fa-shield-halved"></i> একসেস কন্ট্রোল</h2>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button class="btn btn-primary btn-sm" onclick="savePermissions()"><i class="fa fa-save"></i>
+                                সেভ করুন</button>
+                            <button class="btn btn-sm" onclick="previewAccessRlsSQL()"><i class="fa fa-code"></i> RLS SQL
+                                Preview</button>
+                            <button class="btn btn-primary btn-sm" id="applyAccessRlsBtn" onclick="applyAccessRlsPolicies(this)"><i class="fa fa-bolt"></i>
+                                RLS Apply করুন</button>
+                        </div>
+                    </div>
+                    <p style="font-size:.87rem;color:var(--text-muted);margin-bottom:22px;">প্রতিটি রোলের জন্য অনুমতি
+                        কাস্টমাইজ করুন।</p>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:-8px 0 16px;">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text-muted);cursor:pointer;">
+                            <input type="checkbox" id="strictAccessMode" checked onchange="saveAccessSettings();applyAccessUIGuards();">
+                            Strict Mode (UI guard enforce)
+                        </label>
+                        <span id="currentRoleBadge" class="badge badge-editor" style="font-size:.72rem;">role: viewer</span>
+                    </div>
+                    <div class="perm-grid" id="permGrid"></div>
+                    <div id="accessRlsSqlWrap" style="display:none;margin-top:14px;">
+                        <div
+                            style="font-size:.78rem;font-weight:700;color:var(--text-muted);letter-spacing:.7px;text-transform:uppercase;margin-bottom:6px;">
+                            Generated RLS SQL (All Tables)</div>
+                        <div class="sql-box" id="accessRlsSqlBox"></div>
+                        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                            <button class="btn btn-sm" onclick="copySQL('accessRlsSqlBox')"><i class="fa fa-copy"></i> SQL কপি
+                                করুন</button>
+                            <button class="btn btn-primary btn-sm" onclick="applyAccessRlsPolicies(this)"><i class="fa fa-play"></i>
+                                Execute RLS</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="nm-card">
+                    <div class="section-header">
+                        <h2><i class="fa fa-user-shield"></i> ইউজার রোল পরিবর্তন</h2>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>নাম</th>
+                                    <th>ইমেইল</th>
+                                    <th>বর্তমান রোল</th>
+                                    <th>নতুন রোল</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="roleBody">
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ FILE UPLOAD ═══ -->
+            <div class="page" id="page-upload">
+                <div class="nm-card" style="margin-bottom:26px;">
+                    <div class="section-header">
+                        <h2><i class="fa fa-upload"></i> ফাইল আপলোড</h2>
+                    </div>
+                    <p style="font-size:.87rem;color:var(--text-muted);margin-bottom:20px;">টেবিলের সেটিং, কন্ট্রোলার,
+                        মডেল, ভিউ ফাইল একসাথে আপলোড করুন।</p>
+                    <div style="margin-bottom:22px;">
+                        <div class="form-group" style="max-width:300px;">
+                            <label>ফাইলের ধরন</label>
+                            <select class="form-control" id="fileCategory">
+                                <option value="settings">Table Settings</option>
+                                <option value="controller">Controller</option>
+                                <option value="model">Model</option>
+                                <option value="view">View</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="upload-zone" id="uploadZone" onclick="openFilePicker()"
+                        ondragover="handleDragOver(event)" ondragleave="handleDragLeave()" ondrop="handleDrop(event)">
+                        <div class="upload-icon"><i class="fa fa-cloud-arrow-up"></i></div>
+                        <p><strong>ক্লিক করুন</strong> অথবা ফাইল এখানে টেনে আনুন</p>
+                        <p style="margin-top:6px;font-size:.8rem;">HTML, JS, PHP, JSON, SQL, CSS — সব ধরনের ফাইল সমর্থিত
+                        </p>
+                    </div>
+                    <input type="file" id="fileInput" multiple hidden onchange="handleFileSelect(this.files)">
+                    <div class="file-list" id="fileList"></div>
+                    <div style="margin-top:20px;display:none;gap:10px;" id="uploadActions">
+                        <button class="btn btn-primary" id="uploadBtn" onclick="uploadFiles()"><i class="fa fa-cloud-arrow-up"></i>
+                            আপলোড করুন</button>
+                        <button class="btn" onclick="clearFiles()"><i class="fa fa-trash"></i> মুছুন</button>
+                    </div>
+                </div>
+                <div class="nm-card">
+                    <div class="section-header">
+                        <h2><i class="fa fa-folder-open"></i> আপলোড করা ফাইলসমূহ</h2>
+                        <button class="btn btn-sm" onclick="renderUploadedFiles()"><i class="fa fa-rotate-right"></i>
+                            রিফ্রেশ</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ফাইলের নাম</th>
+                                    <th>ধরন</th>
+                                    <th>সাইজ</th>
+                                    <th>আপলোডের তারিখ</th>
+                                    <th>একশন</th>
+                                </tr>
+                            </thead>
+                            <tbody id="uploadedFilesBody">
+                                <tr>
+                                    <td colspan="5" class="empty-state"><i class="fa fa-folder-open"></i> কোনো ফাইল নেই
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ TABLE SETTINGS ═══ -->
+            <div class="page" id="page-tables">
+                <div class="nm-card">
+                    <div class="section-header">
+                        <h2><i class="fa fa-table-cells"></i> টেবিল সেটিংস</h2>
+                        <button class="btn btn-primary btn-sm" onclick="loadTables()"><i class="fa fa-rotate-right"></i>
+                            রিফ্রেশ</button>
+                        <button class="btn btn-warning btn-sm" id="createTableBtn" onclick="createTable()"><i class="fa fa-plus"></i> নতুন টেবিল</button>
+                        <button class="btn btn-primary btn-sm" id="backupAllBtn" onclick="backupAllTables(this)"><i class="fa fa-download"></i> সব টেবিল ব্যাকআপ</button>
+                    </div>
+                    <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;">
+                        <div style="flex:1;position:relative;">
+                            <i class="fa fa-magnifying-glass"
+                                style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:.85rem;"></i>
+                            <input type="text" id="tableSearch" class="form-control" placeholder="টেবিল খুঁজুন…"
+                                oninput="filterTables()" style="padding-left:38px;">
+                        </div>
+                        <a class="btn btn-sm" href="https://supabase.com/dashboard/project/vbfckjroisrhplrpqzkd/editor"
+                            target="_blank" style="white-space:nowrap;"><i class="fa fa-arrow-up-right-from-square"></i>
+                            SQL Editor</a>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>টেবিলের নাম</th>
+                                    <th>কলাম সংখ্যা</th>
+                                    <th>Row Count</th>
+                                    <th>পলিসি / RLS</th>
+                                    <th>একশন</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablesBody">
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="spinner"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /content -->
+    </main>
+
+    <!-- Auth Check -->
+    <script src="./auth-check2.js"></script>
+
+    <script>
+        // ══════════════════════════════════════════
+        //  CONFIG
+        // ══════════════════════════════════════════
+        const SUPABASE_URL = 'https://rtfefxghfbtirfnlbucb.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0ZmVmeGdoZmJ0aXJmbmxidWNiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MDUwODc5NywiZXhwIjoyMDU2MDg0Nzk3fQ.f7jeCJfVhP3-VAw6_cw6ddiMgZE89bTTilB4LFQ4x3I';
+
+        let sbClient = null;
+        let allUsers = [];
+        let editingId = null;
+        let pendingDelete = null;
+        let selectedFiles = [];
+        let uploadedFiles = [];
+        let fileCount = 0;
+        let _currentUserRole = 'viewer';
+        let _currentUserEmail = '';
+        const FALLBACK_ADMIN_EMAILS = new Set([
+            'gopalsdiary@gmail.com',
+            'fenimodelhighschool@gmail.com',
+            'roy.gopal159@gmail.com'
+        ]);
+
+        function normalizeRole(role) {
+            const value = String(role || '').toLowerCase().trim();
+            return ROLES.some(r => r.key === value) ? value : 'viewer';
+        }
+
+        function getUserRole(user) {
+            if (!user) return 'viewer';
+            const explicitRole = normalizeRole(
+                user.user_metadata?.role
+                || user.app_metadata?.role
+                || user.raw_user_meta_data?.role
+                || user.raw_app_meta_data?.role
+            );
+            if (explicitRole !== 'viewer') return explicitRole;
+
+            const email = String(user.email || '').toLowerCase();
+            if (FALLBACK_ADMIN_EMAILS.has(email)) return 'admin';
+
+            return 'viewer';
+        }
+
+        function getUserName(user) {
+            return user?.user_metadata?.full_name
+                || user?.raw_user_meta_data?.full_name
+                || user?.email?.split('@')[0]
+                || '—';
+        }
+
+        function syncCurrentUserRoleFromList(users = allUsers) {
+            if (!_currentUserEmail) return false;
+            const currentUser = (users || []).find(u => String(u.email || '').toLowerCase() === String(_currentUserEmail).toLowerCase());
+            if (!currentUser) return false;
+
+            const nextRole = getUserRole(currentUser);
+            const nextName = getUserName(currentUser);
+            let changed = false;
+
+            if (_currentUserRole !== nextRole) {
+                _currentUserRole = nextRole;
+                changed = true;
+            }
+
+            const sidebarName = document.getElementById('sidebarUserName');
+            if (sidebarName && sidebarName.textContent !== nextName) {
+                sidebarName.textContent = nextName;
+            }
+
+            const sidebarRole = document.querySelector('.sidebar-user-info .role');
+            if (sidebarRole) {
+                sidebarRole.textContent = nextRole.charAt(0).toUpperCase() + nextRole.slice(1);
+            }
+
+            return changed;
+        }
+
+        // ══════════════════════════════════════════
+        //  INIT
+        // ══════════════════════════════════════════
+        window.addEventListener('DOMContentLoaded', () => {
+            window.__supabaseClients = window.__supabaseClients || {};
+            if (!window.__supabaseClients[SUPABASE_URL]) {
+                window.__supabaseClients[SUPABASE_URL] = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+                    auth: { persistSession: true, autoRefreshToken: true }
+                });
+            }
+            sbClient = window.__supabaseClients[SUPABASE_URL];
+            buildPermGrid();
+            loadAccessSettings();
+            setTimeout(async () => {
+                try {
+                    const { data: { session } } = await sbClient.auth.getSession();
+                    if (session) {
+                        const name = getUserName(session.user);
+                        _currentUserRole = getUserRole(session.user);
+                        _currentUserEmail = session.user.email || '';
+                        document.getElementById('sidebarUserName').textContent = name;
+                        document.getElementById('avatarText').textContent = name.charAt(0).toUpperCase();
+                    }
+                } catch (e) { }
+                applyAccessUIGuards();
+                loadUsers();
+                loadTables();
+            }, 900);
+        });
+
+        // ══════════════════════════════════════════
+        //  NAVIGATION
+        // ══════════════════════════════════════════
+        const pageTitles = {
+            dashboard: 'ড্যাশবোর্ড', users: 'ইউজার ম্যানেজমেন্ট',
+            access: 'একসেস কন্ট্রোল', upload: 'ফাইল আপলোড', tables: 'টেবিল সেটিংস'
+        };
+        function showPage(page) {
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            document.querySelector(`.nav-item[onclick="showPage('${page}')"]`).classList.add('active');
+            document.getElementById('headerTitle').textContent = pageTitles[page] || page;
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+        }
+        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+
+        // ══════════════════════════════════════════
+        //  USERS — Load
+        // ══════════════════════════════════════════
+        async function loadUsers() {
+            try {
+                const { data, error } = await sbClient.auth.admin.listUsers({ perPage: 200 });
+                if (error) throw error;
+                allUsers = data.users || [];
+                const roleChanged = syncCurrentUserRoleFromList(allUsers);
+                renderUsers(allUsers);
+                renderRecentUsers(allUsers.slice(0, 5));
+                renderRoleTable(allUsers);
+                document.getElementById('statUsers').textContent = allUsers.length;
+                document.getElementById('statActive').textContent = allUsers.filter(u => !u.banned_until).length;
+                document.getElementById('statAdmin').textContent = allUsers.filter(u => getUserRole(u) === 'admin').length;
+                if (roleChanged) applyAccessUIGuards();
+            } catch (err) {
+                showToast('ইউজার লোড ব্যর্থ: ' + err.message, 'error');
+                ['usersBody', 'recentUsersBody', 'roleBody'].forEach(id => {
+                    document.getElementById(id).innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px;">লোড ব্যর্থ হয়েছে।</td></tr>`;
+                });
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('usersBody');
+            const canManageUsers = !isStrictMode() || getCurrentRole() === 'admin';
+            if (!users.length) { tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><i class="fa fa-users"></i>কোনো ইউজার নেই</div></td></tr>`; return; }
+            tbody.innerHTML = users.map((u, i) => {
+                const role = getUserRole(u);
+                const name = getUserName(u);
+                const active = !u.banned_until;
+                const date = new Date(u.created_at).toLocaleDateString('bn-BD');
+                return `<tr>
+            <td>${i + 1}</td>
+            <td><strong>${esc(name)}</strong></td>
+            <td>${esc(u.email)}</td>
+            <td><span class="badge badge-${role}">${role}</span></td>
+            <td><span class="badge ${active ? 'badge-active' : 'badge-inactive'}">${active ? 'সক্রিয়' : 'নিষ্ক্রিয়'}</span></td>
+            <td>${date}</td>
+            <td>${canManageUsers ? `<div class="action-btns">
+                <button class="btn btn-warning btn-sm" onclick="openEditModal('${u.id}')"><i class="fa fa-pen"></i></button>
+                <button class="btn btn-danger btn-sm" onclick="confirmDelete('${u.id}','${esc(u.email)}')"><i class="fa fa-trash"></i></button>
+            </div>` : `<span style="font-size:.75rem;color:var(--text-muted);">No Access</span>`}</td>
+        </tr>`;
+            }).join('');
+        }
+
+        function renderRecentUsers(users) {
+            document.getElementById('recentUsersBody').innerHTML = users.map((u, i) => {
+                const role = getUserRole(u);
+                const name = getUserName(u);
+                return `<tr>
+            <td>${i + 1}</td>
+            <td><strong>${esc(name)}</strong><br><small style="color:var(--text-muted)">${esc(u.email)}</small></td>
+            <td><span class="badge badge-${role}">${role}</span></td>
+            <td>${new Date(u.created_at).toLocaleDateString('bn-BD')}</td>
+        </tr>`;
+            }).join('');
+        }
+
+        function filterUsers(q) {
+            const filtered = allUsers.filter(u => {
+                return (u.user_metadata?.full_name || '').toLowerCase().includes(q.toLowerCase())
+                    || u.email.toLowerCase().includes(q.toLowerCase());
+            });
+            renderUsers(filtered);
+        }
+
+        // ══════════════════════════════════════════
+        //  USERS — Create / Edit
+        // ══════════════════════════════════════════
+        function openCreateModal() {
+            if (!requireRole('admin', 'নতুন ইউজার তৈরি করতে admin role দরকার')) return;
+            editingId = null;
+            document.getElementById('modalTitle').innerHTML = '<i class="fa fa-user-plus"></i> নতুন ইউজার তৈরি';
+            ['uName', 'uEmail', 'uPassword'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('uRole').value = 'viewer';
+            document.getElementById('uPassword').placeholder = 'Min 6 characters';
+            document.getElementById('uEmail').disabled = false;
+            openModal('userModal');
+        }
+
+        function openEditModal(id) {
+            if (!requireRole('admin', 'ইউজার এডিট করতে admin role দরকার')) return;
+            const user = allUsers.find(u => u.id === id);
+            if (!user) return;
+            editingId = id;
+            document.getElementById('modalTitle').innerHTML = '<i class="fa fa-user-pen"></i> ইউজার আপডেট';
+            document.getElementById('uName').value = getUserName(user) === '—' ? '' : getUserName(user);
+            document.getElementById('uEmail').value = user.email;
+            document.getElementById('uPassword').value = '';
+            document.getElementById('uRole').value = getUserRole(user);
+            document.getElementById('uPassword').placeholder = 'খালি রাখলে পরিবর্তন হবে না';
+            document.getElementById('uEmail').disabled = true;
+            openModal('userModal');
+        }
+
+        async function saveUser() {
+            if (!requireRole('admin', 'ইউজার সেভ করতে admin role দরকার')) return;
+            const name = document.getElementById('uName').value.trim();
+            const email = document.getElementById('uEmail').value.trim();
+            const pass = document.getElementById('uPassword').value;
+            const role = document.getElementById('uRole').value;
+            if (!email) { showToast('ইমেইল দিন', 'error'); return; }
+            const btn = document.getElementById('modalSaveBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> অপেক্ষা করুন';
+            try {
+                if (editingId) {
+                    const upd = {
+                        data: { full_name: name, role },
+                        app_metadata: { role }
+                    };
+                    if (pass) upd.password = pass;
+                    const { error } = await sbClient.auth.admin.updateUserById(editingId, upd);
+                    if (error) throw error;
+                    showToast('ইউজার আপডেট সফল!', 'success');
+                } else {
+                    if (!pass || pass.length < 6) { showToast('কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড দিন', 'error'); return; }
+                    const { error } = await sbClient.auth.admin.createUser({
+                        email,
+                        password: pass,
+                        email_confirm: true,
+                        user_metadata: { full_name: name, role },
+                        app_metadata: { role }
+                    });
+                    if (error) throw error;
+                    showToast('নতুন ইউজার তৈরি সফল!', 'success');
+                }
+                closeModal(); loadUsers();
+            } catch (err) { showToast('ব্যর্থ: ' + err.message, 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> সেভ করুন'; }
+        }
+
+        // ══════════════════════════════════════════
+        //  USERS — Delete
+        // ══════════════════════════════════════════
+        function confirmDelete(id, email) {
+            if (!requireRole('admin', 'ইউজার ডিলিট করতে admin role দরকার')) return;
+            pendingDelete = id;
+            document.getElementById('deleteMsg').textContent = `"${email}" ইউজারটি স্থায়ীভাবে মুছে ফেলতে চান?`;
+            document.getElementById('confirmDeleteBtn').onclick = deleteUser;
+            openModal('deleteModal');
+        }
+
+        async function deleteUser() {
+            if (!requireRole('admin', 'ইউজার ডিলিট করতে admin role দরকার')) return;
+            if (!pendingDelete) return;
+            const btn = document.getElementById('confirmDeleteBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> মুছছে…';
+            try {
+                const { error } = await sbClient.auth.admin.deleteUser(pendingDelete);
+                if (error) throw error;
+                showToast('ইউজার মুছে ফেলা হয়েছে।', 'success');
+                closeDeleteModal(); loadUsers();
+            } catch (err) { showToast('ডিলিট ব্যর্থ: ' + err.message, 'error'); }
+            finally { btn.disabled = false; btn.innerHTML = '<i class="fa fa-trash"></i> ডিলিট করুন'; }
+        }
+
+        // ══════════════════════════════════════════
+        //  ACCESS CONTROL
+        // ══════════════════════════════════════════
+        const ROLES = [
+            { key: 'admin', label: 'Admin', icon: 'fa-user-tie', color: '#667eea' },
+            { key: 'editor', label: 'Editor', icon: 'fa-pen-to-square', color: '#27ae60' },
+            { key: 'viewer', label: 'Viewer', icon: 'fa-eye', color: '#f39c12' },
+        ];
+        const PERMS = [
+            { key: 'read', label: 'পড়া (Read)' },
+            { key: 'write', label: 'লেখা (Write)' },
+            { key: 'delete', label: 'মুছানো (Delete)' },
+            { key: 'export', label: 'এক্সপোর্ট (Export)' },
+            { key: 'upload', label: 'আপলোড (Upload)' },
+        ];
+        const DEF_PERMS = {
+            admin: { read: true, write: true, delete: true, export: true, upload: true },
+            editor: { read: true, write: true, delete: false, export: true, upload: true },
+            viewer: { read: true, write: false, delete: false, export: false, upload: false },
+        };
+        const ACCESS_SETTINGS_KEY = 'adminAccessSettingsV1';
+
+        function loadAccessSettings() {
+            let strictMode = true;
+            try {
+                const raw = JSON.parse(localStorage.getItem(ACCESS_SETTINGS_KEY) || '{}');
+                strictMode = raw.strictMode !== false;
+            } catch (e) { }
+            const strictEl = document.getElementById('strictAccessMode');
+            if (strictEl) strictEl.checked = strictMode;
+            return { strictMode };
+        }
+
+        function saveAccessSettings() {
+            const strictMode = !!document.getElementById('strictAccessMode')?.checked;
+            localStorage.setItem(ACCESS_SETTINGS_KEY, JSON.stringify({ strictMode }));
+            showToast('Access settings আপডেট হয়েছে', 'success');
+        }
+
+        function isStrictMode() {
+            return !!document.getElementById('strictAccessMode')?.checked;
+        }
+
+        function getCurrentRole() {
+            return _currentUserRole || 'viewer';
+        }
+
+        function hasPerm(permKey, role = getCurrentRole()) {
+            if (!permKey) return true;
+            if (!isStrictMode()) return true;
+            const perms = loadPerms();
+            return !!perms?.[role]?.[permKey];
+        }
+
+        function requirePerm(permKey, failMsg = 'এই কাজের অনুমতি নেই') {
+            if (hasPerm(permKey)) return true;
+            showToast(failMsg, 'error');
+            return false;
+        }
+
+        function requireRole(role, failMsg = 'এই কাজের জন্য role অনুমতি নেই') {
+            if (!isStrictMode()) return true;
+            if (getCurrentRole() === role) return true;
+            showToast(failMsg, 'error');
+            return false;
+        }
+
+        function applyAccessUIGuards() {
+            const role = getCurrentRole();
+            const badge = document.getElementById('currentRoleBadge');
+            if (badge) {
+                badge.textContent = `role: ${role}`;
+                badge.className = `badge badge-${role === 'admin' ? 'admin' : role === 'editor' ? 'editor' : 'viewer'}`;
+                badge.style.fontSize = '.72rem';
+            }
+
+            const guard = (selector, allowed, title) => {
+                const el = document.querySelector(selector);
+                if (!el) return;
+                el.disabled = !allowed;
+                el.style.opacity = allowed ? '' : '0.55';
+                // disabled buttons often look similar to enabled ones depending on
+                // CSS; change the cursor to make the state obvious and prevent
+                // pointer events so clicks are ignored even if the attribute is
+                // somehow bypassed.
+                el.style.cursor = allowed ? 'pointer' : 'not-allowed';
+                el.style.pointerEvents = allowed ? '' : 'none';
+                if (!allowed) el.title = title || 'Permission denied';
+            };
+
+            guard('#applyAccessRlsBtn', role === 'admin', 'শুধু admin apply করতে পারবে');
+            guard('#backupAllBtn', hasPerm('export'), 'export permission নেই');
+            guard('#createTableBtn', hasPerm('write'), 'write permission নেই');
+            guard('#uploadBtn', hasPerm('upload'), 'upload permission নেই');
+            guard('#createUserBtn', role === 'admin', 'শুধু admin user manage করতে পারবে');
+        }
+
+        function openFilePicker() {
+            if (!requirePerm('upload', 'ফাইল বাছাইয়ের permission নেই')) return;
+            document.getElementById('fileInput').click();
+        }
+
+        function roleRlsExpr(roleKey) {
+            return `COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', auth.jwt() -> 'user_metadata' ->> 'role') = '${roleKey}'`;
+        }
+
+        function buildAccessRlsSQLForAllTables() {
+            const perms = loadPerms();
+            const tableNames = Object.keys(_tableSpec || {}).sort();
+            const out = [
+                '-- Access Control থেকে অটো-জেনারেটেড RLS',
+                `-- Generated at ${new Date().toISOString()}`,
+                ''
+            ];
+
+            tableNames.forEach(tableName => {
+                out.push(`-- ===== ${tableName} =====`);
+                out.push(`ALTER TABLE public.${sqlIdent(tableName)} ENABLE ROW LEVEL SECURITY;`);
+
+                ['admin', 'editor', 'viewer'].forEach(role => {
+                    const expr = roleRlsExpr(role);
+                    const rp = perms?.[role] || {};
+                    const mkName = (cmd) => `${tableName}_${role}_${cmd.toLowerCase()}_rbac`;
+
+                    if (rp.read) {
+                        const pn = mkName('select');
+                        out.push(`DROP POLICY IF EXISTS ${sqlIdent(pn)} ON public.${sqlIdent(tableName)};`);
+                        out.push(`CREATE POLICY ${sqlIdent(pn)} ON public.${sqlIdent(tableName)} FOR SELECT TO authenticated USING (${expr});`);
+                    }
+                    if (rp.write) {
+                        const pnI = mkName('insert');
+                        out.push(`DROP POLICY IF EXISTS ${sqlIdent(pnI)} ON public.${sqlIdent(tableName)};`);
+                        out.push(`CREATE POLICY ${sqlIdent(pnI)} ON public.${sqlIdent(tableName)} FOR INSERT TO authenticated WITH CHECK (${expr});`);
+
+                        const pnU = mkName('update');
+                        out.push(`DROP POLICY IF EXISTS ${sqlIdent(pnU)} ON public.${sqlIdent(tableName)};`);
+                        out.push(`CREATE POLICY ${sqlIdent(pnU)} ON public.${sqlIdent(tableName)} FOR UPDATE TO authenticated USING (${expr}) WITH CHECK (${expr});`);
+                    }
+                    if (rp.delete) {
+                        const pnD = mkName('delete');
+                        out.push(`DROP POLICY IF EXISTS ${sqlIdent(pnD)} ON public.${sqlIdent(tableName)};`);
+                        out.push(`CREATE POLICY ${sqlIdent(pnD)} ON public.${sqlIdent(tableName)} FOR DELETE TO authenticated USING (${expr});`);
+                    }
+                });
+
+                out.push('');
+            });
+
+            return out.join('\n');
+        }
+
+        async function previewAccessRlsSQL() {
+            if (!requireRole('admin', 'RLS Preview শুধু admin করতে পারবে')) return;
+            await ensureTableSpecLoaded();
+            const sql = buildAccessRlsSQLForAllTables();
+            const box = document.getElementById('accessRlsSqlBox');
+            if (box) box.textContent = sql;
+            const wrap = document.getElementById('accessRlsSqlWrap');
+            if (wrap) wrap.style.display = 'block';
+        }
+
+        async function applyAccessRlsPolicies(btnEl = null) {
+            if (!requireRole('admin', 'RLS apply শুধু admin করতে পারবে')) return;
+            await ensureTableSpecLoaded();
+            const sql = buildAccessRlsSQLForAllTables();
+            const box = document.getElementById('accessRlsSqlBox');
+            if (box) box.textContent = sql;
+            const wrap = document.getElementById('accessRlsSqlWrap');
+            if (wrap) wrap.style.display = 'block';
+
+            const ok = await runAdminSQL(sql, {
+                buttonEl: btnEl,
+                busyText: '<i class="fa fa-spinner fa-spin"></i> RLS apply হচ্ছে…',
+                successMessage: 'Access Control permissions RLS-এ apply হয়েছে!'
+            });
+            if (!ok) return;
+            if (_currentTable) {
+                await renderPolicyList(_currentTable);
+                await fetchPolicyCountBg(_currentTable);
+            }
+        }
+
+        function loadPerms() {
+            try { return JSON.parse(localStorage.getItem('adminPerms')) || DEF_PERMS; }
+            catch (e) { return DEF_PERMS; }
+        }
+
+        function buildPermGrid() {
+            const perms = loadPerms();
+            document.getElementById('permGrid').innerHTML = ROLES.map(r => `
+        <div class="perm-card">
+            <h4><i class="fa ${r.icon}" style="color:${r.color}"></i> ${r.label}</h4>
+            ${PERMS.map(p => `
+                <div class="perm-item">
+                    <label><i class="fa fa-check-circle fa-xs" style="color:${r.color}"></i> ${p.label}</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="perm_${r.key}_${p.key}" ${perms[r.key]?.[p.key] ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                </div>`).join('')}
+        </div>`).join('');
+        }
+
+        function savePermissions() {
+            const saved = {};
+            ROLES.forEach(r => {
+                saved[r.key] = {};
+                PERMS.forEach(p => { saved[r.key][p.key] = document.getElementById(`perm_${r.key}_${p.key}`)?.checked || false; });
+            });
+            localStorage.setItem('adminPerms', JSON.stringify(saved));
+            applyAccessUIGuards();
+            showToast('অনুমতি সেভ করা হয়েছে!', 'success');
+        }
+
+        function renderRoleTable(users) {
+            const tbody = document.getElementById('roleBody');
+            const canManageUsers = !isStrictMode() || getCurrentRole() === 'admin';
+            if (!users.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><i class="fa fa-users"></i>কোনো ইউজার নেই</td></tr>'; return; }
+            tbody.innerHTML = users.map(u => {
+                const name = getUserName(u);
+                const cur = getUserRole(u);
+                return `<tr>
+            <td><strong>${esc(name)}</strong></td>
+            <td>${esc(u.email)}</td>
+            <td><span class="badge badge-${cur}">${cur}</span></td>
+            <td>
+                <select class="form-control" style="padding:7px 12px;border-radius:10px;" id="rs_${u.id}" ${canManageUsers ? '' : 'disabled'}>
+                    ${ROLES.map(r => `<option value="${r.key}"${cur === r.key ? ' selected' : ''}>${r.label}</option>`).join('')}
+                </select>
+            </td>
+            <td>${canManageUsers ? `<button class="btn btn-primary btn-sm" onclick="updateRole('${u.id}')"><i class="fa fa-save"></i> সেভ</button>` : `<span style="font-size:.75rem;color:var(--text-muted);">No Access</span>`}</td>
+        </tr>`;
+            }).join('');
+        }
+
+        async function updateRole(id) {
+            if (!requireRole('admin', 'রোল আপডেট করতে admin role দরকার')) return;
+            const sel = document.getElementById('rs_' + id);
+            if (!sel) return;
+            try {
+                const { error } = await sbClient.auth.admin.updateUserById(id, {
+                    data: { role: sel.value },
+                    app_metadata: { role: sel.value }
+                });
+                if (error) throw error;
+                showToast('রোল আপডেট সফল!', 'success'); loadUsers();
+            } catch (err) { showToast('ব্যর্থ: ' + err.message, 'error'); }
+        }
+
+        // ══════════════════════════════════════════
+        //  FILE UPLOAD
+        // ══════════════════════════════════════════
+        function handleDragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('drag-over'); }
+        function handleDragLeave() { document.getElementById('uploadZone').classList.remove('drag-over'); }
+        function handleDrop(e) {
+            if (!hasPerm('upload')) return;
+            e.preventDefault();
+            document.getElementById('uploadZone').classList.remove('drag-over');
+            handleFileSelect(e.dataTransfer.files);
+        }
+
+        function handleFileSelect(files) {
+            if (!requirePerm('upload', 'ফাইল যোগ করার permission নেই')) return;
+            if (!files?.length) return;
+            Array.from(files).forEach(f => {
+                if (!selectedFiles.find(sf => sf.name === f.name && sf.size === f.size)) selectedFiles.push(f);
+            });
+            renderFileList();
+            document.getElementById('uploadActions').style.display = 'flex';
+        }
+
+        function renderFileList() {
+            document.getElementById('fileList').innerHTML = selectedFiles.map((f, i) => `
+        <div class="file-item">
+            <i class="fa ${fileIcon(f.name)}"></i>
+            <span class="file-name">${esc(f.name)}</span>
+            <span class="file-size">${fmtSize(f.size)}</span>
+            <button style="background:none;border:0;color:var(--danger);cursor:pointer;" onclick="removeFile(${i})"><i class="fa fa-xmark"></i></button>
+        </div>`).join('');
+        }
+
+        function removeFile(i) {
+            selectedFiles.splice(i, 1); renderFileList();
+            if (!selectedFiles.length) document.getElementById('uploadActions').style.display = 'none';
+        }
+
+        function clearFiles() {
+            selectedFiles = []; renderFileList();
+            document.getElementById('uploadActions').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+        }
+
+        async function uploadFiles() {
+            if (!requirePerm('upload', 'আপলোড permission নেই')) return;
+            if (!selectedFiles.length) { showToast('কোনো ফাইল নির্বাচন হয়নি', 'error'); return; }
+            const cat = document.getElementById('fileCategory').value;
+            for (const file of selectedFiles) {
+                const path = `${cat}/${Date.now()}_${file.name}`;
+                try {
+                    const { error } = await sbClient.storage.from('admin-files').upload(path, file, { upsert: true });
+                    if (error) console.warn('Storage:', error.message);
+                } catch (e) { }
+                uploadedFiles.push({ name: file.name, category: cat, size: file.size, date: new Date().toISOString() });
+                fileCount++;
+            }
+            showToast(`${selectedFiles.length}টি ফাইল আপলোড সফল!`, 'success');
+            clearFiles(); renderUploadedFiles();
+            document.getElementById('statFiles').textContent = fileCount;
+        }
+
+        function renderUploadedFiles() {
+            const tbody = document.getElementById('uploadedFilesBody');
+            if (!uploadedFiles.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fa fa-folder-open"></i>কোনো ফাইল নেই</td></tr>`; return;
+            }
+            tbody.innerHTML = uploadedFiles.map((f, i) => `
+        <tr>
+            <td><i class="fa ${fileIcon(f.name)}" style="color:var(--accent);margin-right:8px;"></i>${esc(f.name)}</td>
+            <td><span class="badge badge-editor">${f.category}</span></td>
+            <td>${fmtSize(f.size)}</td>
+            <td>${new Date(f.date).toLocaleDateString('bn-BD')}</td>
+            <td><button class="btn btn-danger btn-sm" onclick="deleteUploaded(${i})"><i class="fa fa-trash"></i></button></td>
+        </tr>`).join('');
+        }
+
+        function deleteUploaded(i) {
+            uploadedFiles.splice(i, 1); fileCount = Math.max(0, fileCount - 1);
+            document.getElementById('statFiles').textContent = fileCount;
+            renderUploadedFiles(); showToast('ফাইল মুছে ফেলা হয়েছে', 'info');
+        }
+
+        // ══════════════════════════════════════════
+        //  TABLE SETTINGS
+        // ══════════════════════════════════════════
+        let _tableSpec = {};
+        let _currentTable = null;
+        let _localPolicies = {};   // { tableName: [ {name,cmd,permissive,roles,using,check} ] }
+        let _realPolicies = {};   // { tableName: [ {policyname,cmd,permissive,roles,qual,with_check} ] } — from Supabase
+        let _rpcAvailable = null; // null=unknown, false=function missing, true=available
+        let _sqlExecRpcAvailable = null; // null=unknown, false=missing, true=available
+        let _sqlExecSetupHintShown = false;
+        const SQL_EXEC_RPC = 'exec_admin_sql';
+        const COL_ACCESS_STORE_KEY = 'adminColAccessPrefsV1';
+        let _dbPage = 0;
+
+        function getAdminRPCSetupSQL() {
+            return `CREATE OR REPLACE FUNCTION get_table_rls_policies(p_tablename text)\nRETURNS TABLE(policyname text, cmd text, permissive text, roles text[], qual text, with_check text)\nLANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, public AS $$\n  SELECT policyname, cmd, permissive, roles, qual, with_check\n  FROM pg_catalog.pg_policies WHERE tablename = p_tablename;\n$$;\n\nCREATE OR REPLACE FUNCTION public.exec_admin_sql(p_sql text)\nRETURNS jsonb\nLANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_catalog AS $$\nBEGIN\n  IF auth.role() <> 'service_role' THEN\n    RAISE EXCEPTION 'Not allowed';\n  END IF;\n  EXECUTE p_sql;\n  RETURN jsonb_build_object('ok', true);\nEND;\n$$;\n\nREVOKE ALL ON FUNCTION public.exec_admin_sql(text) FROM PUBLIC, anon, authenticated;\nGRANT EXECUTE ON FUNCTION public.exec_admin_sql(text) TO service_role;\n\nNOTIFY pgrst, 'reload schema';`;
+        }
+
+        async function showRPCSetupGuideOnce() {
+            const setupSQL = getAdminRPCSetupSQL();
+            try { await navigator.clipboard.writeText(setupSQL); } catch (e) { }
+            if (_sqlExecSetupHintShown) return;
+            _sqlExecSetupHintShown = true;
+            showToast('`exec_admin_sql` RPC নেই। Setup SQL ক্লিপবোর্ডে কপি হয়েছে।', 'info');
+            setTimeout(() => {
+                prompt('One-time setup: নিচের SQL Supabase SQL Editor-এ চালান (ক্লিপবোর্ডে কপি করা আছে):', setupSQL);
+            }, 120);
+        }
+
+        function loadAllColAccessPrefs() {
+            try { return JSON.parse(localStorage.getItem(COL_ACCESS_STORE_KEY) || '{}'); }
+            catch (e) { return {}; }
+        }
+
+        function loadColAccessPrefs(tableName, cols = []) {
+            const all = loadAllColAccessPrefs();
+            const saved = all[tableName] || {};
+            const mk = (role, defVal) => {
+                const roleSaved = saved[role] || {};
+                const obj = {};
+                cols.forEach(col => { obj[col] = roleSaved[col] ?? defVal; });
+                return obj;
+            };
+            return {
+                anon: mk('anon', false),
+                auth: mk('auth', true),
+                admin: mk('admin', true)
+            };
+        }
+
+        function saveColAccessPrefs(tableName = _currentTable) {
+            if (!tableName) return;
+            const cols = Object.keys((_tableSpec[tableName] || {}).properties || {});
+            const all = loadAllColAccessPrefs();
+            const data = { anon: {}, auth: {}, admin: {} };
+            cols.forEach(col => {
+                data.anon[col] = !!document.getElementById(`ca_anon_${col}`)?.checked;
+                data.auth[col] = !!document.getElementById(`ca_auth_${col}`)?.checked;
+                data.admin[col] = !!document.getElementById(`ca_admin_${col}`)?.checked;
+            });
+            all[tableName] = data;
+            localStorage.setItem(COL_ACCESS_STORE_KEY, JSON.stringify(all));
+        }
+
+        // ── Load table list ─────────────────────────────────────
+        async function loadTables() {
+            const tbody = document.getElementById('tablesBody');
+            tbody.innerHTML = `<tr><td colspan="5"><div class="spinner"></div></td></tr>`;
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const spec = await res.json();
+                _tableSpec = spec.definitions || {};
+                const names = Object.keys(_tableSpec).sort();
+                if (!names.length) {
+                    tbody.innerHTML = `<tr><td colspan="5" class="empty-state"><i class="fa fa-table-cells"></i>কোনো টেবিল পাওয়া যায়নি</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = names.map(name => {
+                    const cols = Object.keys(_tableSpec[name]?.properties || {}).length;
+                    return `<tr id="trow_${name}">
+                <td>
+                    <i class="fa fa-table fa-xs" style="color:var(--accent);margin-right:8px;"></i>
+                    <strong>${esc(name)}</strong>
+                    <button class="btn btn-sm" style="margin-left:6px;padding:2px 7px;font-size:.7rem;" title="নাম কপি করুন"
+                        onclick="navigator.clipboard.writeText('${esc(name)}').then(()=>showToast('টেবিল নাম কপি হয়েছে','success'))">
+                        <i class="fa fa-copy"></i>
+                    </button>
+                </td>
+                <td><strong>${cols}</strong></td>
+                <td id="rc_${name}"><i class="fa fa-spinner fa-spin" style="color:var(--text-muted);font-size:.8rem;"></i></td>
+                <td><span class="badge badge-editor" id="pcnt_${name}"><i class="fa fa-spinner fa-spin" style="font-size:.7rem;"></i></span></td>
+                <td>
+                    <div class="action-btns">
+                        <button class="btn btn-primary btn-sm" onclick="openTableDetail('${esc(name)}')"><i class="fa fa-gear"></i> সেটিং</button>
+                        <button class="btn btn-warning btn-sm" onclick="openTableDetail('${esc(name)}');setTimeout(()=>tmTab('rls',null),60)" title="RLS পলিসি"><i class="fa fa-shield-halved"></i></button>
+                        <a class="btn btn-sm" href="https://supabase.com/dashboard/project/rtfefxghfbtirfnlbucb/editor" target="_blank" title="Supabase SQL Editor"><i class="fa fa-arrow-up-right-from-square"></i></a>
+                    </div>
+                </td>
+            </tr>`;
+                }).join('');
+                await Promise.allSettled(names.map(n => fetchRowCount(n)));
+                // Background: load policy counts per table
+                names.forEach(n => fetchPolicyCountBg(n));
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:20px;">লোড ব্যর্থ: ${esc(err.message)}</td></tr>`;
+            }
+        }
+
+        async function fetchRowCount(name) {
+            // if the identifier contains anything other than letters, digits or
+            // underscore we skip the request entirely.  PostgREST has trouble with
+            // names like "login-2" and the HEAD call only produces noisy 404/500
+            // entries in DevTools; the dashboard can live without a count for such
+            // tables.
+            if (/[^A-Za-z0-9_]/.test(name)) {
+                const el = document.getElementById('rc_' + name);
+                if (el) el.innerHTML = `<span style="color:var(--text-muted)">—</span>`;
+                return;
+            }
+
+            try {
+                const resource = encodeURIComponent(name);
+                const r = await fetch(`${SUPABASE_URL}/rest/v1/${resource}?select=*`, {
+                    method: 'HEAD',
+                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Prefer': 'count=exact' }
+                });
+                const cr = r.headers.get('content-range') || '';
+                const total = cr.includes('/') ? cr.split('/')[1] : '?';
+                const el = document.getElementById('rc_' + name);
+                if (el) el.innerHTML = `<strong>${total === '*' ? '∞' : Number(total).toLocaleString()}</strong>`;
+            } catch (e) {
+                console.warn('row count failed for', name, e);
+                const el = document.getElementById('rc_' + name);
+                if (el) el.innerHTML = `<span style="color:var(--text-muted)">—</span>`;
+            }
+        }
+
+        async function fetchPolicyCountBg(name) {
+            // skip if we know RPC doesn't exist
+            if (_rpcAvailable === false) return;
+            try {
+                const res = await fetch(
+                    `${SUPABASE_URL}/rest/v1/rpc/get_table_rls_policies`,
+                    {
+                        method: 'POST',
+                        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ p_tablename: name })
+                    }
+                );
+                if (res.status === 404) {
+                    // function missing, mark unavailable and bail
+                    _rpcAvailable = false;
+                    return;
+                }
+                const el = document.getElementById('pcnt_' + name);
+                if (!el) return;
+                if (res.ok) {
+                    const policies = await res.json();
+                    el.textContent = policies.length + ' policy';
+                } else {
+                    el.textContent = '? policy';
+                }
+                // RPC worked - mark available
+                _rpcAvailable = true;
+            } catch (e) {
+                const el = document.getElementById('pcnt_' + name);
+                if (el) el.textContent = '? policy';
+            }
+        }
+
+        // ── Open modal ───────────────────────────────────────────
+        function openTableDetail(name) {
+            if (!requirePerm('read', 'টেবিল দেখার permission নেই')) return;
+            _currentTable = name;
+            const def = _tableSpec[name] || {};
+            const props = def.properties || {};
+            const req = def.required || [];
+            const cols = Object.keys(props);
+
+            document.getElementById('tableModalTitle').innerHTML =
+                `<i class="fa fa-table" style="color:var(--accent)"></i> ${esc(name)}`;
+            document.getElementById('tmColCount').textContent = cols.length;
+            const rcEl = document.getElementById('rc_' + name);
+            document.getElementById('tmRowCount').innerHTML = rcEl ? rcEl.innerHTML : '—';
+            document.getElementById('tmRLSBadge').innerHTML = '<span class="badge badge-active">Enabled</span>';
+            document.getElementById('tmPolicyCount').innerHTML = '<i class="fa fa-spinner fa-spin" style="font-size:.75rem;"></i>';
+
+            // Overview tab – column table
+    document.getElementById('tmColBody').innerHTML = cols.length
+        ? cols.map(col => {
+            const p = props[col];
+            const isPK = col === 'id' || p.description?.includes('pk');
+            const nullable = req.includes(col)
+                ? '<span class="badge badge-inactive">NOT NULL</span>'
+                : '<span class="badge badge-active">Nullable</span>';
+            return `<tr style="border-bottom:1px solid rgba(163,177,198,0.2);">
+                <td style="padding:10px 14px;font-weight:600;font-size:0.85rem;">
+                    ${isPK ? '<i class="fa fa-key fa-xs" style="color:var(--warning);margin-right:5px;"></i>':''}
+                    ${esc(col)}
+                </td>
+                <td style="padding:10px 14px;font-size:0.83rem;color:var(--accent); font-family:monospace;">${esc(p.type||'—')}</td>
+                <td style="padding:10px 14px;font-size:0.8rem;color:var(--text-muted);">${esc(p.format||p.type||'—')}</td>
+                <td style="padding:10px 14px;">${nullable}</td>
+                <td style="padding:10px 14px; text-align:center;">
+                    <button class="table-action-btn edit" onclick="editColumn('${esc(col)}')" title="Rename/Edit Column"><i class="fa fa-pen"></i></button>
+                    <button class="table-action-btn delete" onclick="deleteColumn('${esc(col)}')" title="Drop Column"><i class="fa fa-trash"></i></button>
+                </td>
+            </tr>`;
+          }).join('')
+        : `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">কলাম পাওয়া যায়নি</td></tr>`;
+
+
+            // Column Access tab – grid
+            const colPrefs = loadColAccessPrefs(name, cols);
+            document.getElementById('tmColAccessBody').innerHTML = cols.length
+                ? cols.map(col => `
+            <tr>
+                <td style="font-weight:600;">${esc(col)}</td>
+                <td style="color:var(--accent);font-size:.8rem;">${esc(props[col]?.type || '—')}</td>
+                <td style="text-align:center;"><input type="checkbox" id="ca_anon_${esc(col)}" ${colPrefs.anon[col] ? 'checked' : ''}></td>
+                <td style="text-align:center;"><input type="checkbox" id="ca_auth_${esc(col)}" ${colPrefs.auth[col] ? 'checked' : ''}></td>
+                <td style="text-align:center;"><input type="checkbox" id="ca_admin_${esc(col)}" ${colPrefs.admin[col] ? 'checked' : ''}></td>
+            </tr>`).join('')
+                : `<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);">কলাম নেই</td></tr>`;
+
+            ['anon', 'auth', 'admin'].forEach(role => {
+                cols.forEach(col => {
+                    const el = document.getElementById(`ca_${role}_${col}`);
+                    if (el) el.addEventListener('change', () => saveColAccessPrefs(name));
+                });
+            });
+
+            // Data browser – filter column dropdown
+            document.getElementById('dbFilterCol').innerHTML =
+                `<option value="">— কোনো ফিল্টার নেই —</option>` +
+                cols.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+            document.getElementById('tmDataWrap').innerHTML = '<div style="color:var(--text-muted);font-size:.87rem;padding:30px 0;text-align:center;"><i class="fa fa-database" style="font-size:2rem;opacity:.3;display:block;margin-bottom:10px;"></i>"খুঁজুন" বাটন চাপুন</div>';
+            _dbPage = 0;
+            document.getElementById('dbPageNum').textContent = '1';
+            document.getElementById('dbPrevBtn').disabled = true;
+            document.getElementById('dbNextBtn').disabled = true;
+            document.getElementById('dbRowInfo').textContent = '';
+
+            // RLS tab
+            renderPolicyList(name);
+            // Reset RLS form
+            ['rlsName', 'rlsUsing', 'rlsCheck'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('rlsCmd').value = 'SELECT';
+            document.getElementById('rlsPermissive').value = 'PERMISSIVE';
+            document.getElementById('rlsRole_authenticated').checked = true;
+            document.getElementById('rlsRole_anon').checked = false;
+            document.getElementById('rlsRole_service_role').checked = false;
+            updateRLSSQL();
+
+            // ColAccess SQL hidden
+            document.getElementById('colAccessSQLWrap').style.display = 'none';
+            document.getElementById('tmQuickSQLWrap').style.display = 'none';
+
+            // Show overview tab by default
+            tmTab('overview', null);
+            openModal('tableModal');
+        }
+
+        function closeTableModal() {
+            document.getElementById('tableModal').classList.remove('show');
+            _currentTable = null;
+        }
+
+        // ── Tab switching ─────────────────────────────────────────
+        function tmTab(tab, btn) {
+            document.querySelectorAll('#tableModal .tab-pane').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('#tableModal .tab-btn').forEach(b => b.classList.remove('active'));
+            const pane = document.getElementById('tmTab-' + tab);
+            if (pane) pane.classList.add('active');
+            if (btn) btn.classList.add('active');
+            else {
+                // Activate the matching bar button (rls sub-tabs don't have a bar btn)
+                const barBtns = { overview: 0, rls: 1, colaccess: 2, data: 3 };
+                const idx = barBtns[tab];
+                if (idx !== undefined) {
+                    const btns = document.querySelectorAll('#tableModal .tab-btn');
+                    if (btns[idx]) btns[idx].classList.add('active');
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════
+        // RLS POLICIES
+        // ══════════════════════════════════════════
+        async function renderPolicyList(name) {
+            const el = document.getElementById('tmPolicyList');
+            el.innerHTML = `<div style="text-align:center;padding:18px;color:var(--text-muted);font-size:.85rem;"><i class="fa fa-spinner fa-spin"></i> পলিসি লোড হচ্ছে…</div>`;
+
+            // Fetch real policies from Supabase via RPC (pg_catalog not exposed directly)
+            let realPolicies = [];
+            let fetchFailed = false;
+            let rpcMissing = false;
+
+            // If we previously determined the RPC doesn't exist, skip right away
+            if (_rpcAvailable === false) {
+                rpcMissing = true;
+            } else {
+                try {
+                    const res = await fetch(
+                        `${SUPABASE_URL}/rest/v1/rpc/get_table_rls_policies`,
+                        {
+                            method: 'POST',
+                            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ p_tablename: name })
+                        }
+                    );
+                    if (res.ok) {
+                        realPolicies = await res.json();
+                        _rpcAvailable = true;
+                    } else if (res.status === 404) {
+                        rpcMissing = true;
+                        _rpcAvailable = false;
+                    } else {
+                        fetchFailed = true;
+                    }
+                } catch (e) { fetchFailed = true; }
+            }
+
+            _realPolicies[name] = realPolicies;
+            const localPolicies = _localPolicies[name] || [];
+            const total = realPolicies.length + localPolicies.length;
+
+            // Update stat bar and table list badge
+            document.getElementById('tmPolicyCount').textContent = rpcMissing ? '—' : total;
+            const pcntEl = document.getElementById('pcnt_' + name);
+            if (pcntEl) pcntEl.textContent = rpcMissing ? '' : (total || (fetchFailed ? '?' : 0)) + ' policy';
+
+            let html = '';
+
+            // ── Real (Live) policies from Supabase ──
+            if (realPolicies.length) {
+                html += `<div style="font-size:.74rem;font-weight:700;color:var(--text-muted);letter-spacing:.6px;text-transform:uppercase;margin:4px 0 8px;display:flex;align-items:center;gap:8px;">
+            <i class="fa fa-database fa-xs"></i> Supabase Live পলিসি
+            <span class="badge badge-active" style="font-size:.68rem;padding:1px 7px;">${realPolicies.length}টি</span>
+        </div>`;
+                html += realPolicies.map((p, i) => {
+                    const roles = Array.isArray(p.roles) ? p.roles.join(', ') : String(p.roles || '—');
+                    const qualShort = p.qual && p.qual.length > 45 ? p.qual.slice(0, 45) + '…' : (p.qual || '');
+                    return `<div class="policy-card" style="border-left:3px solid var(--accent);">
+                <div class="policy-info">
+                    <div class="policy-name">
+                        <i class="fa fa-shield-halved" style="color:var(--accent);margin-right:6px;"></i>${esc(p.policyname)}
+                        <span class="badge badge-active" style="font-size:.64rem;padding:1px 6px;margin-left:5px;vertical-align:middle;">Live</span>
+                    </div>
+                    <div class="policy-meta">
+                        <span><i class="fa fa-bolt fa-xs"></i> ${esc(p.cmd || 'ALL')}</span>
+                        <span><i class="fa fa-tag fa-xs"></i> ${esc(p.permissive || 'PERMISSIVE')}</span>
+                        <span><i class="fa fa-users fa-xs"></i> ${esc(roles)}</span>
+                        ${qualShort ? `<span style="font-family:monospace;" title="${esc(p.qual || '')}">USING: ${esc(qualShort)}</span>` : ''}
+                        ${p.with_check ? `<span style="font-family:monospace;" title="${esc(p.with_check)}">CHECK: ${esc(p.with_check.length > 30 ? p.with_check.slice(0, 30) + '…' : p.with_check)}</span>` : ''}
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button class="btn btn-sm" title="CREATE POLICY SQL কপি" onclick="copyRealPolicySQL(${i})"><i class="fa fa-copy"></i></button>
+                    <button class="btn btn-danger btn-sm" title="Drop policy" onclick="copyDropPolicySQL('${esc(p.policyname)}')"><i class="fa fa-trash"></i> Drop</button>
+                </div>
+            </div>`;
+                }).join('');
+            }
+
+            // ── Local draft policies ──
+            if (localPolicies.length) {
+                html += `<div style="font-size:.74rem;font-weight:700;color:var(--text-muted);letter-spacing:.6px;text-transform:uppercase;margin:${realPolicies.length ? '14px' : '4px'} 0 8px;display:flex;align-items:center;gap:8px;">
+            <i class="fa fa-pen-to-square fa-xs"></i> স্থানীয় ড্রাফট পলিসি
+            <span class="badge badge-editor" style="font-size:.68rem;padding:1px 7px;">${localPolicies.length}টি</span>
+        </div>`;
+                html += localPolicies.map((p, i) => `
+            <div class="policy-card" style="border-left:3px solid var(--warning);">
+                <div class="policy-info">
+                    <div class="policy-name">
+                        <i class="fa fa-shield-halved" style="color:var(--warning);margin-right:6px;"></i>${esc(p.name)}
+                        <span class="badge badge-editor" style="font-size:.64rem;padding:1px 6px;margin-left:5px;vertical-align:middle;">Draft</span>
+                    </div>
+                    <div class="policy-meta">
+                        <span><i class="fa fa-bolt fa-xs"></i> ${esc(p.cmd)}</span>
+                        <span><i class="fa fa-users fa-xs"></i> ${esc(p.roles.join(', '))}</span>
+                        <span><i class="fa fa-tag fa-xs"></i> ${esc(p.permissive)}</span>
+                        ${p.using ? `<span style="font-family:monospace">USING: ${esc(p.using)}</span>` : ''}
+                    </div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;">
+                    <button class="btn btn-sm" onclick="copyPolicySQL(${i})"><i class="fa fa-copy"></i> SQL</button>
+                    <button class="btn btn-danger btn-sm" onclick="removePolicy('${esc(name)}',${i})"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>`).join('');
+            }
+
+            // ── Empty state ──
+            if (!total && !fetchFailed && !rpcMissing) {
+                html = `<div style="text-align:center;padding:28px 0;color:var(--text-muted);font-size:.87rem;">
+            <i class="fa fa-shield-halved" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px;"></i>
+            কোনো পলিসি নেই। "নতুন পলিসি যোগ করুন" চাপুন।
+        </div>`;
+            }
+
+            // ── RPC function missing notice ──
+            if (rpcMissing) {
+                const _rpcSQL = getAdminRPCSetupSQL();
+                html = `<div style="border-radius:12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);padding:16px 18px;font-size:.83rem;">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+                <i class="fa fa-circle-info" style="color:var(--accent);font-size:1.1rem;"></i>
+                <strong style="color:var(--accent);">One-time setup required</strong>
+            </div>
+            <p style="color:var(--text-muted);margin:0 0 10px;">One-click RLS execute এবং live policy load চালু করতে Supabase SQL Editor-এ নিচের SQL টি একবার চালান:</p>
+            <pre id="rpcSetupSQL" style="background:rgba(0,0,0,0.25);border-radius:8px;padding:12px;font-size:.75rem;color:#a5f3fc;white-space:pre-wrap;word-break:break-all;margin:0 0 10px;">${_rpcSQL}</pre>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('rpcSetupSQL').textContent).then(()=>this.innerHTML='<i class=\'fa fa-check\'></i> Copied!')"><i class="fa fa-copy"></i> SQL কপি করুন</button>
+                <a href="https://supabase.com/dashboard/project/vbfckjroisrhplrpqzkd/sql/new" target="_blank" class="btn btn-sm" style="text-decoration:none;"><i class="fa fa-arrow-up-right-from-square"></i> SQL Editor খুলুন</a>
+            </div>
+        </div>` + (html ? '<div style="margin-top:14px;">' + html + '</div>' : '');
+            }
+
+            // ── Fetch failure notice ──
+            if (fetchFailed) {
+                html += `<div style="margin-top:${total ? 10 : 0}px;padding:10px 14px;border-radius:10px;background:rgba(243,156,18,0.1);font-size:.8rem;color:var(--text-muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <i class="fa fa-triangle-exclamation" style="color:var(--warning);"></i>
+            Supabase থেকে Live পলিসি লোড হয়নি (pg_catalog এক্সেস বন্ধ)।
+            <a href="https://supabase.com/dashboard/project/vbfckjroisrhplrpqzkd/auth/policies" target="_blank" style="color:var(--accent);">Dashboard-এ দেখুন <i class="fa fa-arrow-up-right-from-square fa-xs"></i></a>
+        </div>`;
+                // Show empty state if also no local
+                if (!total) html = `<div style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:.87rem;">
+            <i class="fa fa-shield-halved" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px;"></i>
+            পলিসি লোড হয়নি।
+        </div>` + html;
+            }
+
+            el.innerHTML = html;
+        }
+
+        function updateRLSSQL() {
+            const name = _currentTable || 'your_table';
+            const pname = document.getElementById('rlsName')?.value.trim() || 'policy_name';
+            const cmd = document.getElementById('rlsCmd')?.value || 'SELECT';
+            const perm = document.getElementById('rlsPermissive')?.value || 'PERMISSIVE';
+            const roles = ['anon', 'authenticated', 'service_role']
+                .filter(r => document.getElementById('rlsRole_' + r)?.checked)
+                .join(', ') || 'authenticated';
+            const using = document.getElementById('rlsUsing')?.value.trim();
+            const check = document.getElementById('rlsCheck')?.value.trim();
+
+            // Show/hide WITH CHECK
+            const showCheck = ['INSERT', 'UPDATE', 'ALL'].includes(cmd);
+            const cw = document.getElementById('rlsCheckWrap');
+            if (cw) cw.style.opacity = showCheck ? '1' : '0.4';
+
+            let sql = `-- Enable RLS first:\nALTER TABLE ${name} ENABLE ROW LEVEL SECURITY;\n\n`;
+            sql += `CREATE POLICY "${pname}"\n  ON public.${name}\n  AS ${perm}\n  FOR ${cmd}\n  TO ${roles}`;
+            if (using) sql += `\n  USING (${using})`;
+            if (showCheck && check) sql += `\n  WITH CHECK (${check})`;
+            sql += ';';
+
+            const preview = document.getElementById('rlsSQLPreview');
+            if (preview) preview.textContent = sql;
+        }
+
+        function insertExpr(fieldId, text) {
+            const el = document.getElementById(fieldId);
+            if (!el) return;
+            el.value = text;
+            updateRLSSQL();
+        }
+
+        async function runAdminSQL(sql, opts = {}) {
+            const btn = opts.buttonEl || null;
+            const busy = opts.busyText || '<i class="fa fa-spinner fa-spin"></i> চলছে…';
+            const done = opts.doneText || null;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.dataset.prevHtml = btn.innerHTML;
+                btn.innerHTML = busy;
+            }
+
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${SQL_EXEC_RPC}`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ p_sql: sql })
+                });
+
+                if (res.status === 404) {
+                    _sqlExecRpcAvailable = false;
+                    throw new Error('RPC_MISSING');
+                }
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(errText || `HTTP ${res.status}`);
+                }
+
+                _sqlExecRpcAvailable = true;
+                if (opts.successMessage) showToast(opts.successMessage, 'success');
+                return true;
+            } catch (err) {
+                try { await navigator.clipboard.writeText(sql); } catch (e) { }
+                if (String(err?.message || '').includes('RPC_MISSING')) {
+                    await showRPCSetupGuideOnce();
+                    showToast('One-click setup বাকি। SQL কপি হয়েছে — RLS Setup SQL আগে একবার রান করুন।', 'info');
+                } else {
+                    showToast('One-click execute ব্যর্থ। SQL কপি হয়েছে — SQL Editor-এ রান করুন।', 'info');
+                }
+                return false;
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = done || btn.dataset.prevHtml || btn.innerHTML;
+                }
+            }
+        }
+
+        async function executeRLSPolicy() {
+            if (!requirePerm('write', 'RLS policy তৈরি permission নেই')) return;
+            const name = _currentTable;
+            const pname = document.getElementById('rlsName').value.trim();
+            if (!name || !pname) { showToast('পলিসির নাম দিন', 'error'); return; }
+
+            const cmd = document.getElementById('rlsCmd').value;
+            const perm = document.getElementById('rlsPermissive').value;
+            const roles = ['anon', 'authenticated', 'service_role'].filter(r => document.getElementById('rlsRole_' + r).checked);
+            const using = document.getElementById('rlsUsing').value.trim();
+            const check = document.getElementById('rlsCheck').value.trim();
+
+            const sql = document.getElementById('rlsSQLPreview').textContent;
+            const btn = document.getElementById('rlsExecBtn');
+            const executed = await runAdminSQL(sql, {
+                buttonEl: btn,
+                busyText: '<i class="fa fa-spinner fa-spin"></i> সেভ হচ্ছে…',
+                successMessage: 'RLS পলিসি সফলভাবে apply হয়েছে!'
+            });
+
+            if (!executed) {
+                if (!_localPolicies[name]) _localPolicies[name] = [];
+                if (!_localPolicies[name].find(p => p.name === pname)) {
+                    _localPolicies[name].push({ name: pname, cmd, permissive: perm, roles, using, check });
+                }
+                renderPolicyList(name);
+                return;
+            }
+
+            await renderPolicyList(name);
+            await fetchPolicyCountBg(name);
+
+            // Reset form
+            document.getElementById('rlsName').value = '';
+            document.getElementById('rlsUsing').value = '';
+            document.getElementById('rlsCheck').value = '';
+            updateRLSSQL();
+            tmTab('rls', null);
+        }
+
+        async function genRLSToggle(enable, btnEl = null) {
+            if (!requirePerm('write', 'RLS toggle করার permission নেই')) return;
+            if (!_currentTable) return;
+            const sql = `ALTER TABLE public.${_currentTable} ${enable ? 'ENABLE' : 'DISABLE'} ROW LEVEL SECURITY;`;
+            const done = await runAdminSQL(sql, {
+                buttonEl: btnEl,
+                busyText: '<i class="fa fa-spinner fa-spin"></i> চলছে…',
+                successMessage: `RLS ${enable ? 'Enable' : 'Disable'} সফল!`
+            });
+            if (done) {
+                const badge = document.getElementById('tmRLSBadge');
+                if (badge) {
+                    badge.innerHTML = enable
+                        ? '<span class="badge badge-active">Enabled</span>'
+                        : '<span class="badge badge-inactive">Disabled</span>';
+                }
+            }
+        }
+
+        function copyPolicySQL(idx) {
+            if (!_currentTable) return;
+            const p = (_localPolicies[_currentTable] || [])[idx];
+            if (!p) return;
+            const sql = `CREATE POLICY "${p.name}" ON public.${_currentTable} AS ${p.permissive} FOR ${p.cmd} TO ${p.roles.join(', ')}${p.using ? ' USING (' + p.using + ')' : ''}${p.check ? ' WITH CHECK (' + p.check + ')' : ''};`;
+            navigator.clipboard.writeText(sql).then(() => showToast('SQL কপি হয়েছে!', 'success'))
+                .catch(() => prompt('SQL:', sql));
+        }
+
+        function removePolicy(name, idx) {
+            if (!_localPolicies[name]) return;
+            _localPolicies[name].splice(idx, 1);
+            renderPolicyList(name);
+            showToast('ড্রাফট পলিসি তালিকা থেকে সরানো হয়েছে।', 'info');
+        }
+
+        // Copy CREATE POLICY SQL for a real (Live) policy
+        function copyRealPolicySQL(idx) {
+            if (!_currentTable) return;
+            const p = (_realPolicies[_currentTable] || [])[idx];
+            if (!p) return;
+            const roles = Array.isArray(p.roles) ? p.roles.join(', ') : String(p.roles || 'authenticated');
+            let sql = `CREATE POLICY "${p.policyname}"\n  ON public.${_currentTable}\n  AS ${p.permissive || 'PERMISSIVE'}\n  FOR ${p.cmd || 'ALL'}\n  TO ${roles}`;
+            if (p.qual) sql += `\n  USING (${p.qual})`;
+            if (p.with_check) sql += `\n  WITH CHECK (${p.with_check})`;
+            sql += ';';
+            navigator.clipboard.writeText(sql)
+                .then(() => showToast('CREATE POLICY SQL কপি হয়েছে!', 'success'))
+                .catch(() => prompt('SQL:', sql));
+        }
+
+        // Drop a real policy (one-click RPC; fallback to copy SQL)
+        async function copyDropPolicySQL(pname) {
+            if (!requirePerm('delete', 'Policy drop permission নেই')) return;
+            if (!_currentTable) return;
+            if (!confirm(`"${pname}" পলিসি ড্রপ করতে চান?`)) return;
+            const sql = `DROP POLICY IF EXISTS "${pname}" ON public.${_currentTable};`;
+            const ok = await runAdminSQL(sql, { successMessage: `"${pname}" পলিসি ড্রপ হয়েছে।` });
+            if (ok) {
+                await renderPolicyList(_currentTable);
+                await fetchPolicyCountBg(_currentTable);
+            }
+        }
+
+        // ══════════════════════════════════════════
+        // COLUMN ACCESS SQL GENERATOR
+        // ══════════════════════════════════════════
+        function colAccessSelectAll(role) {
+            if (!requirePerm('write', 'Column Access edit permission নেই')) return;
+            const def = _tableSpec[_currentTable] || {};
+            Object.keys(def.properties || {}).forEach(col => {
+                const el = document.getElementById(`ca_${role}_${col}`);
+                if (el) el.checked = true;
+            });
+            saveColAccessPrefs(_currentTable);
+        }
+
+        function genColAccessSQL() {
+            if (!requirePerm('write', 'Column Access SQL তৈরি permission নেই')) return;
+            const name = _currentTable;
+            const def = _tableSpec[name] || {};
+            const cols = Object.keys(def.properties || {});
+            saveColAccessPrefs(name);
+            const roleMap = { anon: 'anon', auth: 'authenticated', admin: 'authenticated' };
+            let sql = `-- Column-level security via SELECT policies\nALTER TABLE public.${name} ENABLE ROW LEVEL SECURITY;\n\n`;
+            ['anon', 'auth', 'admin'].forEach(role => {
+                const allowed = cols.filter(c => document.getElementById(`ca_${role}_${c}`)?.checked);
+                if (!allowed.length) return;
+                const pgRole = roleMap[role];
+                const colList = role === 'admin' ? '*' : allowed.join(', ');
+                sql += `-- ${role} can SELECT: ${colList}\n`;
+                sql += `DROP POLICY IF EXISTS "${name}_${role}_select" ON public.${name};\n`;
+                sql += `CREATE POLICY "${name}_${role}_select"\n  ON public.${name} FOR SELECT\n  TO ${pgRole}\n  USING (true);\n\n`;
+                if (role !== 'admin') {
+                    sql += `-- View for ${role}\nDROP VIEW IF EXISTS public.${name}_${role}_view;\n`;
+                    sql += `CREATE VIEW public.${name}_${role}_view AS\n  SELECT ${allowed.map(c => esc(c)).join(', ')}\n  FROM public.${name};\n\n`;
+                }
+            });
+            document.getElementById('colAccessSQL').textContent = sql.trim();
+            document.getElementById('colAccessSQLWrap').style.display = 'block';
+        }
+
+        async function execColAccessSQL(btnEl = null) {
+            if (!requirePerm('write', 'Column Access Execute permission নেই')) return;
+            const sqlEl = document.getElementById('colAccessSQL');
+            if (!sqlEl || !sqlEl.textContent.trim()) genColAccessSQL();
+            const sql = document.getElementById('colAccessSQL')?.textContent?.trim() || '';
+            saveColAccessPrefs(_currentTable);
+            if (!sql) {
+                showToast('SQL তৈরি হয়নি।', 'error');
+                return;
+            }
+
+            const ok = await runAdminSQL(sql, {
+                buttonEl: btnEl,
+                busyText: '<i class="fa fa-spinner fa-spin"></i> Execute হচ্ছে…',
+                successMessage: 'Column Access SQL সফলভাবে apply হয়েছে!'
+            });
+            if (ok && _currentTable) {
+                await renderPolicyList(_currentTable);
+                await fetchPolicyCountBg(_currentTable);
+            }
+        }
+
+        async function dropColAccessView(role, btnEl = null) {
+            if (!requirePerm('delete', 'View delete permission নেই')) return;
+            if (!_currentTable) return;
+            const safeRole = role === 'anon' ? 'anon' : 'auth';
+            const viewName = `${_currentTable}_${safeRole}_view`;
+            if (!confirm(`আপনি কি ${viewName} ডিলিট করতে চান?`)) return;
+
+            const sql = `DROP VIEW IF EXISTS public.${viewName};`;
+            const ok = await runAdminSQL(sql, {
+                buttonEl: btnEl,
+                busyText: '<i class="fa fa-spinner fa-spin"></i> ডিলিট হচ্ছে…',
+                successMessage: `${viewName} ডিলিট হয়েছে।`
+            });
+
+            if (!ok) return;
+            const box = document.getElementById('colAccessSQL');
+            if (box && box.textContent.trim()) genColAccessSQL();
+        }
+
+        // ══════════════════════════════════════════
+        // DATA BROWSER
+        // ══════════════════════════════════════════
+        async function browseTableData() {
+            if (!requirePerm('read', 'ডেটা দেখার permission নেই')) return;
+            if (!_currentTable) return;
+            const limit = parseInt(document.getElementById('dbLimit').value) || 10;
+            const offset = _dbPage * limit;
+            const filterCol = document.getElementById('dbFilterCol').value;
+            const filterVal = document.getElementById('dbFilterVal').value.trim();
+            const wrap = document.getElementById('tmDataWrap');
+            wrap.innerHTML = '<div class="spinner"></div>';
+            try {
+                let q = sbClient.from(_currentTable).select('*', { count: 'exact' }).range(offset, offset + limit - 1);
+                if (filterCol && filterVal) q = q.ilike(filterCol, `%${filterVal}%`);
+                const { data, error, count } = await q;
+                if (error) throw error;
+                if (!data || !data.length) {
+                    wrap.innerHTML = '<p style="color:var(--text-muted);font-size:.87rem;text-align:center;padding:24px 0;">কোনো ডেটা পাওয়া যায়নি।</p>';
+                    document.getElementById('dbRowInfo').textContent = '';
+                    document.getElementById('dbNextBtn').disabled = true;
+                    return;
+                }
+                const keys = Object.keys(data[0]);
+        // Put actions column at the end
+        wrap.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+            <thead><tr style="background:rgba(102,126,234,0.09);position:sticky;top:0;">
+                ${keys.map(k=>`<th style="padding:8px 10px;text-align:left;color:var(--text-muted);white-space:nowrap;font-size:0.74rem;text-transform:uppercase;">${esc(k)}</th>`).join('')}
+                <th style="padding:8px 10px;text-align:center;color:var(--text-muted);text-transform:uppercase;">একশন</th>
+            </tr></thead>
+            <tbody>${data.map((row, ridx)=>`<tr style="border-bottom:1px solid rgba(163,177,198,0.2);">
+                ${keys.map(k=>`<td style="padding:7px 10px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;" title="${esc(String(row[k]??''))}">${esc(String(row[k]??''))}</td>`).join('')}
+                <td style="padding:7px 10px; text-align:center; white-space:nowrap;">
+                    <button class="table-action-btn edit" onclick="editRow(${ridx})" title="এডিট Row"><i class="fa fa-pen"></i></button>
+                    <button class="table-action-btn delete" onclick="deleteRow(${ridx})" title="মুছে ফেলুন"><i class="fa fa-trash"></i></button>
+                </td>
+            </tr>`).join('')}</tbody>
+        </table>`;
+        _currentData = data; // store locally for editing
+
+                const total = count ?? '?';
+                document.getElementById('dbRowInfo').textContent = `${offset + 1}–${Math.min(offset + limit, total)} / ${total} রো`;
+                document.getElementById('dbPrevBtn').disabled = _dbPage === 0;
+                document.getElementById('dbNextBtn').disabled = (offset + limit) >= (count || 0);
+            } catch (err) {
+                wrap.innerHTML = `<p style="color:var(--danger);font-size:.87rem;padding:20px;">ব্যর্থ: ${esc(err.message)}</p>`;
+            }
+        }
+
+        function dbPage(dir) {
+            _dbPage = Math.max(0, _dbPage + dir);
+            document.getElementById('dbPageNum').textContent = _dbPage + 1;
+            browseTableData();
+        }
+
+        // ══════════════════════════════════════════
+        // QUICK SQL SNIPPETS
+        // ══════════════════════════════════════════
+        function quickSQL(type) {
+            const name = _currentTable;
+            if (!name) return;
+            const cols = Object.keys((_tableSpec[name] || {}).properties || {});
+            let sql = '';
+            if (type === 'select') {
+                sql = `SELECT *\nFROM public.${name}\nLIMIT 10;`;
+            } else if (type === 'count') {
+                sql = `SELECT COUNT(*) AS total\nFROM public.${name};`;
+            } else if (type === 'insert') {
+                const insCols = cols.filter(c => c !== 'id' && c !== 'created_at');
+                sql = `INSERT INTO public.${name} (${insCols.join(', ')})\nVALUES (\n${insCols.map(() => "  'value'").join(',\n')}\n)\nRETURNING *;`;
+            } else if (type === 'schema') {
+                sql = `-- ${name} কলামের তালিকা\nSELECT column_name, data_type, is_nullable, column_default\nFROM information_schema.columns\nWHERE table_schema = 'public'\n  AND table_name = '${name}'\nORDER BY ordinal_position;`;
+            } else if (type === 'rls_check') {
+                sql = `-- RLS স্ট্যাটাস চেক\nSELECT tablename, rowsecurity\nFROM pg_tables\nWHERE schemaname = 'public' AND tablename = '${name}';\n\n-- বিদ্যমান পলিসি\nSELECT policyname, cmd, permissive, roles, qual, with_check\nFROM pg_policies\nWHERE tablename = '${name}';`;
+            }
+            const box = document.getElementById('tmQuickSQL');
+            const wrap = document.getElementById('tmQuickSQLWrap');
+            if (box) box.textContent = sql;
+            if (wrap) wrap.style.display = 'block';
+        }
+
+        // TABLE SEARCH FILTER
+        function filterTables() {
+            const q = (document.getElementById('tableSearch')?.value || '').toLowerCase().trim();
+            document.querySelectorAll('#tablesBody tr[id^="trow_"]').forEach(row => {
+                const tname = row.id.replace('trow_', '').toLowerCase();
+                row.style.display = (!q || tname.includes(q)) ? '' : 'none';
+            });
+        }
+
+        // ══════════════════════════════════════════
+        // BACKUP (ALL TABLES)
+        // ══════════════════════════════════════════
+        async function ensureJSZip() {
+            if (window.JSZip) return window.JSZip;
+            await new Promise((resolve, reject) => {
+                const s = document.createElement('script');
+                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                s.onload = resolve;
+                s.onerror = reject;
+                document.head.appendChild(s);
+            });
+            if (!window.JSZip) throw new Error('JSZip লোড হয়নি');
+            return window.JSZip;
+        }
+
+        async function ensureTableSpecLoaded() {
+            if (Object.keys(_tableSpec || {}).length) return _tableSpec;
+            const res = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+            });
+            if (!res.ok) throw new Error(`টেবিল তালিকা লোড ব্যর্থ (HTTP ${res.status})`);
+            const spec = await res.json();
+            _tableSpec = spec.definitions || {};
+            return _tableSpec;
+        }
+
+        async function fetchAllRows(tableName) {
+            // the Supabase client constructs REST paths directly from the name,
+            // which blows up when the name contains characters like hyphens.  the
+            // same quoting we used for fetchRowCount works here as well: wrap the
+            // identifier in double-quotes so PostgREST treats it literally.
+            let safeName = tableName;
+            if (/[^A-Za-z0-9_]/.test(tableName)) {
+                safeName = `"${tableName}"`;
+            }
+
+            const rows = [];
+            const pageSize = 1000;
+            let from = 0;
+            while (true) {
+                const to = from + pageSize - 1;
+                const { data, error } = await sbClient.from(safeName).select('*').range(from, to);
+                if (error) throw new Error(`${tableName}: ${error.message}`);
+                const batch = data || [];
+                rows.push(...batch);
+                if (batch.length < pageSize) break;
+                from += pageSize;
+            }
+            return rows;
+        }
+
+        function csvEscape(v) {
+            if (v === null || v === undefined) return '';
+            let val = v;
+            if (typeof val === 'object') val = JSON.stringify(val);
+            val = String(val);
+            if (/[",\n\r]/.test(val)) return '"' + val.replace(/"/g, '""') + '"';
+            return val;
+        }
+
+        function rowsToCSV(rows, columns) {
+            const header = columns.join(',');
+            if (!rows.length) return header + '\n';
+            const lines = rows.map(r => columns.map(c => csvEscape(r[c])).join(','));
+            return [header, ...lines].join('\n');
+        }
+
+        function sqlIdent(name) {
+            return '"' + String(name).replace(/"/g, '""') + '"';
+        }
+
+        function sqlValue(v) {
+            if (v === null || v === undefined) return 'NULL';
+            if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
+            if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+            let s = v;
+            if (typeof s === 'object') s = JSON.stringify(s);
+            s = String(s).replace(/'/g, "''");
+            return `'${s}'`;
+        }
+
+        function mapSpecType(prop = {}) {
+            const t = String(prop.type || '').toLowerCase();
+            const f = String(prop.format || '').toLowerCase();
+            if (f === 'uuid') return 'uuid';
+            if (f === 'date-time' || f === 'timestamp' || f === 'timestamptz') return 'timestamptz';
+            if (f === 'date') return 'date';
+            if (f === 'time') return 'time';
+            if (t === 'integer') return 'integer';
+            if (t === 'number') return 'numeric';
+            if (t === 'boolean') return 'boolean';
+            if (t === 'array' || t === 'object') return 'jsonb';
+            return 'text';
+        }
+
+        function buildTableSchemaSQL(tableName, tableDef = {}, columns = []) {
+            const props = tableDef.properties || {};
+            const required = tableDef.required || [];
+
+            const cols = columns.length ? columns : Object.keys(props || {});
+            const colDefs = cols.map(col => {
+                const prop = props[col] || {};
+                let sqlType = mapSpecType(prop);
+                const isPK = col === 'id' || String(prop.description || '').toLowerCase().includes('pk');
+                const notNull = required.includes(col) || isPK;
+                let line = `${sqlIdent(col)} ${sqlType}`;
+                if (isPK) line += ' PRIMARY KEY';
+                if (notNull && !isPK) line += ' NOT NULL';
+                return line;
+            });
+
+            if (!colDefs.length) colDefs.push('id uuid PRIMARY KEY');
+            return `CREATE TABLE IF NOT EXISTS public.${sqlIdent(tableName)} (\n  ${colDefs.join(',\n  ')}\n);`;
+        }
+
+        function buildTableInsertSQL(tableName, rows, columns) {
+            if (!rows.length) return `-- ${tableName}: no rows`; 
+            const colList = columns.map(sqlIdent).join(', ');
+            const lines = rows.map(r => {
+                const values = columns.map(c => sqlValue(r[c])).join(', ');
+                return `INSERT INTO public.${sqlIdent(tableName)} (${colList}) VALUES (${values});`;
+            });
+            return lines.join('\n');
+        }
+
+        function triggerDownload(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function backupAllTables(btnEl = null) {
+            if (!requirePerm('export', 'Export permission নেই')) return;
+            const btn = btnEl || document.getElementById('backupAllBtn');
+            const prev = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> ব্যাকআপ তৈরি হচ্ছে…';
+            }
+
+            try {
+                await ensureJSZip();
+                await ensureTableSpecLoaded();
+                const tableNames = Object.keys(_tableSpec || {}).sort();
+                if (!tableNames.length) throw new Error('কোনো টেবিল পাওয়া যায়নি');
+
+                const zip = new window.JSZip();
+                const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const sqlWithDataParts = [
+                    '-- Admin dashboard backup',
+                    `-- Generated at: ${new Date().toISOString()}`,
+                    ''
+                ];
+                const sqlSchemaOnlyParts = [
+                    '-- Admin dashboard backup (schema only)',
+                    `-- Generated at: ${new Date().toISOString()}`,
+                    ''
+                ];
+                const jsonDump = { generated_at: new Date().toISOString(), tables: {} };
+
+                for (const tableName of tableNames) {
+                    if (btn) btn.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${tableName}…`;
+                    const tableDef = _tableSpec[tableName] || {};
+                    const columns = Object.keys((tableDef || {}).properties || {});
+                    const rows = await fetchAllRows(tableName);
+                    const cols = columns.length ? columns : Array.from(new Set(rows.flatMap(r => Object.keys(r))));
+
+                    jsonDump.tables[tableName] = rows;
+                    zip.file(`csv/${tableName}.csv`, rowsToCSV(rows, cols));
+
+                    const schemaSQL = [
+                        `-- Table: ${tableName}`,
+                        buildTableSchemaSQL(tableName, tableDef, cols),
+                        ''
+                    ].join('\n');
+
+                    const dataOnlySQL = [
+                        `-- Data: ${tableName}`,
+                        buildTableInsertSQL(tableName, rows, cols),
+                        ''
+                    ].join('\n');
+
+                    const withDataSQL = [
+                        `-- Table: ${tableName}`,
+                        buildTableSchemaSQL(tableName, tableDef, cols),
+                        '',
+                        buildTableInsertSQL(tableName, rows, cols),
+                        ''
+                    ].join('\n');
+
+                    sqlSchemaOnlyParts.push(schemaSQL);
+                    sqlWithDataParts.push(withDataSQL);
+
+                    zip.file(`sql/with-data/${tableName}.sql`, withDataSQL);
+                    zip.file(`sql/schema-only/${tableName}.sql`, schemaSQL);
+                    zip.file(`sql/data-only/${tableName}.sql`, dataOnlySQL);
+                }
+
+                const allSQL = sqlWithDataParts.join('\n');
+                const allSchemaOnlySQL = sqlSchemaOnlyParts.join('\n');
+                zip.file('backup_all.sql', allSQL);
+                zip.file('backup_all_schema.sql', allSchemaOnlySQL);
+                zip.file('backup_all.json', JSON.stringify(jsonDump, null, 2));
+                zip.file('README.txt', 'This backup includes:\n- csv/*.csv (comma-separated CSV)\n- sql/with-data/*.sql (schema + data)\n- sql/schema-only/*.sql (without data)\n- sql/data-only/*.sql (only INSERT data)\n- backup_all.sql (all tables, schema + data)\n- backup_all_schema.sql (all tables, schema only)\n- backup_all.json\n');
+
+                const blob = await zip.generateAsync({ type: 'blob' });
+                triggerDownload(blob, `supabase-backup-all-${stamp}.zip`);
+                showToast('সব টেবিলের CSV + SQL(with/without data) + JSON ব্যাকআপ ডাউনলোড হয়েছে!', 'success');
+            } catch (err) {
+                showToast('ব্যাকআপ ব্যর্থ: ' + (err?.message || err), 'error');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = prev || '<i class="fa fa-download"></i> সব টেবিল ব্যাকআপ';
+                }
+            }
+        }
+
+        // ══════════════════════════════════════════
+        // SQL UTILS
+        // ══════════════════════════════════════════
+        function copySQL(elId) {
+            const text = document.getElementById(elId)?.textContent || '';
+            navigator.clipboard.writeText(text)
+                .then(() => showToast('SQL ক্লিপবোর্ডে কপি হয়েছে!', 'success'))
+                .catch(() => prompt('SQL কপি করুন:', text));
+        }
+
+        // ══════════════════════════════════════════
+        //  LOGOUT
+        // ══════════════════════════════════════════
+        async function handleLogout() {
+            try { await sbClient.auth.signOut(); } catch (e) { }
+            window.location.href = './index.html';
+        }
+
+        // ══════════════════════════════════════════
+        //  MODAL HELPERS
+        // ══════════════════════════════════════════
+        function openModal(id) { document.getElementById(id).classList.add('show'); }
+        function closeModal(id) { 
+            if (id) document.getElementById(id).classList.remove('show');
+            else document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+        }
+        function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('show'); pendingDelete = null; }
+
+        // ══════════════════════════════════════════
+        // DATA EDITING & COLUMN MGMT (NEW)
+        // ══════════════════════════════════════════
+        let _currentData = [];
+        let _editingRowIndex = null;
+
+        function editColumn(colName) {
+            if (!requirePerm('write', 'কলাম এডিট permission নেই')) return;
+            const newName = prompt(`কলাম "${colName}" এর নতুন নাম লিখুন:`, colName);
+            if (!newName || newName === colName) return;
+            const sql = `ALTER TABLE public.${_currentTable} RENAME COLUMN "${colName}" TO "${newName}";`;
+            navigator.clipboard.writeText(sql).then(() => {
+                showToast('SQL কপি হয়েছে! Supabase SQL Editor-এ রান করুন।', 'info');
+            });
+        }
+
+        function deleteColumn(colName) {
+            if (!requirePerm('delete', 'কলাম ডিলিট permission নেই')) return;
+            if (!confirm(`আপনি কি নিশ্চিত যে কলাম "${colName}" টি মুছে ফেলতে চান? এটি স্থায়ী এবং ডেটা হারাবে।`)) return;
+            const sql = `ALTER TABLE public.${_currentTable} DROP COLUMN "${colName}";`;
+            navigator.clipboard.writeText(sql).then(() => {
+                showToast('SQL কপি হয়েছে! Supabase SQL Editor-এ রান করুন।', 'info');
+            });
+        }
+
+        function createTable() {
+            if (!requirePerm('write', 'টেবিল তৈরি permission নেই')) return;
+            const name = prompt('নতুন টেবিলের নাম লিখুন:');
+            if (!name) return;
+            const sql = `CREATE TABLE public.${name} (\n  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),\n  created_at timestamptz DEFAULT now(),\n  name text\n);\n\nALTER TABLE public.${name} ENABLE ROW LEVEL SECURITY;`;
+            navigator.clipboard.writeText(sql).then(() => {
+                showToast('CREATE TABLE SQL কপি হয়েছে! Supabase SQL Editor-এ রান করুন।', 'info');
+            });
+        }
+
+        function openAddRowModal() {
+            if (!requirePerm('write', 'নতুন রো যোগ করার permission নেই')) return;
+            _editingRowIndex = null;
+            document.getElementById('dataEditTitle').innerHTML = '<i class="fa fa-plus"></i> নতুন রো যোগ করুন';
+            renderEditFields({});
+            document.getElementById('dataEditSaveBtn').onclick = saveRow;
+            openModal('dataEditModal');
+        }
+
+        function editRow(idx) {
+            if (!requirePerm('write', 'রো এডিট permission নেই')) return;
+            _editingRowIndex = idx;
+            const rowData = _currentData[idx];
+            document.getElementById('dataEditTitle').innerHTML = '<i class="fa fa-pen-to-square"></i> রো এডিট';
+            renderEditFields(rowData);
+            document.getElementById('dataEditSaveBtn').onclick = saveRow;
+            openModal('dataEditModal');
+        }
+
+        function renderEditFields(rowData) {
+            const def = _tableSpec[_currentTable] || {};
+            const props = def.properties || {};
+            const container = document.getElementById('dataEditFields');
+            container.innerHTML = Object.keys(props).map(key => {
+                const val = rowData[key] !== undefined ? rowData[key] : '';
+                const isPK = key === 'id' || key === 'created_at';
+                return `
+                    <div class="form-group">
+                        <label style="font-size:0.75rem;">${esc(key)} ${isPK ? '<i class="fa fa-lock fa-xs" style="opacity:0.5"></i>' : ''}</label>
+                        <input type="text" class="form-control-inline" id="de_${esc(key)}" value="${esc(String(val))}" 
+                               ${isPK && _editingRowIndex !== null ? 'disabled' : ''} placeholder="${key} এর মান…">
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function saveRow() {
+            if (!requirePerm('write', 'ডেটা সেভ permission নেই')) return;
+            const def = _tableSpec[_currentTable] || {};
+            const props = def.properties || {};
+            const rowData = {};
+            Object.keys(props).forEach(key => {
+                const el = document.getElementById('de_' + key);
+                if (!el || el.disabled) return;
+                let val = el.value.trim();
+                // Basic type handling
+                if (props[key].type === 'number' || props[key].type === 'integer') {
+                    rowData[key] = val === '' ? null : Number(val);
+                } else if (props[key].type === 'boolean') {
+                    rowData[key] = val.toLowerCase() === 'true';
+                } else {
+                    rowData[key] = val === '' ? null : val;
+                }
+            });
+
+            const btn = document.getElementById('dataEditSaveBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> সেভ হচ্ছে…';
+
+            try {
+                let error;
+                if (_editingRowIndex !== null) {
+                    const id = _currentData[_editingRowIndex].id;
+                    if (!id) throw new Error('এই টেবিলে "id" কলাম নেই, আপডেট করা সম্ভব নয়।');
+                    const { error: err } = await sbClient.from(_currentTable).update(rowData).eq('id', id);
+                    error = err;
+                } else {
+                    const { error: err } = await sbClient.from(_currentTable).insert([rowData]);
+                    error = err;
+                }
+
+                if (error) throw error;
+                showToast('ডেটা সেভ সফল!', 'success');
+                closeModal('dataEditModal');
+                browseTableData();
+            } catch(err) {
+                showToast('ব্যর্থ: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> আপডেট করুন';
+            }
+        }
+
+        async function deleteRow(idx) {
+            if (!requirePerm('delete', 'রো ডিলিট permission নেই')) return;
+            const rowData = _currentData[idx];
+            if (!confirm('আপনি কি এই রোটি মুছে ফেলতে নিশ্চিত?')) return;
+            try {
+                if (!rowData.id) throw new Error('ID ছাড়া রো মোছা সম্ভব নয়।');
+                const { error } = await sbClient.from(_currentTable).delete().eq('id', rowData.id);
+                if (error) throw error;
+                showToast('রো মুছে ফেলা হয়েছে।', 'success');
+                browseTableData();
+            } catch(err) {
+                showToast('ডিলিট ব্যর্থ: ' + err.message, 'error');
+            }
+        }
+
+
+        document.querySelectorAll('.modal-overlay').forEach(o => {
+            o.addEventListener('click', e => {
+                if (e.target === o) {
+                    o.classList.remove('show');
+                    if (o.id === 'deleteModal') pendingDelete = null;
+                    if (o.id === 'tableModal') _currentTable = null;
+                }
+            });
+        });
+
+        // ══════════════════════════════════════════
+        //  TOAST
+        // ══════════════════════════════════════════
+        function showToast(msg, type = 'info') {
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.innerHTML = `<i class="fa ${icons[type] || 'fa-circle-info'}"></i> ${esc(msg)}`;
+            document.getElementById('toast-container').appendChild(t);
+            setTimeout(() => t.remove(), 3500);
+        }
+
+        // ══════════════════════════════════════════
+        //  UTILS
+        // ══════════════════════════════════════════
+        function esc(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function fmtSize(b) {
+            if (b < 1024) return b + ' B';
+            if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+            return (b / 1048576).toFixed(1) + ' MB';
+        }
+        function fileIcon(name) {
+            const ext = name.split('.').pop().toLowerCase();
+            const m = {
+                html: 'fa-file-code', js: 'fa-file-code', php: 'fa-file-code', css: 'fa-file-code',
+                json: 'fa-file-lines', sql: 'fa-database', png: 'fa-file-image', jpg: 'fa-file-image',
+                jpeg: 'fa-file-image', pdf: 'fa-file-pdf', zip: 'fa-file-zipper'
+            };
+            return m[ext] || 'fa-file';
+        }
+    </script>
+</body>
+
+</html>
