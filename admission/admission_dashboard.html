@@ -111,7 +111,7 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
     
     <!-- Student Photo in Form -->
     <div id="formPhotoContainer" style="display:none;text-align:center;margin:0 0 1rem;padding:1rem;background:linear-gradient(135deg,rgba(37,99,235,0.05),rgba(99,102,241,0.05));border-radius:16px;border:2px solid var(--border);">
-      <img id="formStudentPhoto" src="" alt="Student Photo" style="width:120px;height:180px;object-fit:cover;border-radius:12px;border:4px solid var(--brand);box-shadow:0 8px 20px rgba(0,0,0,.15);margin:0 auto;">
+      <img id="formStudentPhoto" src="" alt="Student Photo" style="max-width:180px;max-height:240px;width:auto;height:auto;border-radius:12px;border:4px solid var(--brand);box-shadow:0 8px 20px rgba(0,0,0,.15);margin:0 auto;display:block;">
       <h3 id="formStudentName" style="margin:0.6rem 0 0.2rem;font-size:1rem;font-weight:700;color:var(--text);"></h3>
       <p id="formStudentDetails" style="margin:0;font-size:0.7rem;color:var(--text-soft);"></p>
     </div>
@@ -129,6 +129,10 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 </div>
 
 <footer>© <span id="year"></span> Feni Model High School · Admission Data</footer>
+
+<!-- Hidden file input for photo upload -->
+<input type="file" id="hiddenPhotoInput" style="display:none;" accept="image/*" onchange="handlePhotoUpload(this.files[0])">
+
 
 <!-- Approve modal for class/section/session override -->
 <div class="modal" id="approveModal" role="dialog" aria-label="Approve admission overrides">
@@ -173,10 +177,16 @@ const TABLE = 'admission_data';
 const PAGE_SIZE = 50;
 const CACHE_KEY = 'admission_data_cache_v1';
 const CACHE_TTL = 5 * 60 * 1000; // 5m
+
 // SMS config (reused from sms/sms_api.html)
 const SMS_API_KEY = 'OoeroUS4e09DpgizNxCS';
 const SMS_SENDER_ID = '8809617611082';
 const SMS_API_URL = 'https://bulksmsbd.net/api/smsapi';
+
+// ImageBB Configuration
+const IMGBB_API_KEY = '4d2cdd03bb1da4404f875c22f0bfdf31';
+const IMGBB_UPLOAD_URL = 'https://api.imgbb.com/1/upload';
+
 
 // Field metadata grouped (derived from read admission.md)
 const FIELD_GROUPS = [
@@ -427,7 +437,11 @@ function buildForm(row){
       const w=document.createElement('label'); 
       // Check if this is a URL field that needs a view button
       if(name === 'student_photo_url' || name === 'birth_certificate_url'){
-        w.innerHTML=`${label}<div style="display:flex;gap:0.4rem;align-items:center;"><input name="${name}" style="flex:1;" /><button type="button" class="btn" style="padding:0.4rem 0.6rem;font-size:0.65rem;display:none;" data-view-btn="${name}">👁️ View</button></div>`;
+        let extra = '';
+        if(name === 'student_photo_url'){
+          extra = `<button type="button" class="btn secondary" style="padding:0.4rem 0.6rem;font-size:0.65rem;" onclick="document.getElementById('hiddenPhotoInput').click()">📷 Upload</button>`;
+        }
+        w.innerHTML=`${label}<div style="display:flex;gap:0.4rem;align-items:center;">${extra}<input name="${name}" style="flex:1;" /><button type="button" class="btn" style="padding:0.4rem 0.6rem;font-size:0.65rem;display:none;" data-view-btn="${name}">👁️ View</button></div>`;
       } else {
         w.innerHTML=`${label}<input name="${name}" />`;
       }
@@ -752,6 +766,56 @@ addEventListener('click',e=>{
   if(e.target.id==='themeToggle'){ toggleTheme(); }
   const tr=e.target.closest('#dataTable tbody tr'); if(tr){ const id=Number(tr.dataset.id); const row=allRows.find(r=>r.admission_sl===id); openForm(row); }
 });
+
+// Photo Upload Logic
+async function handlePhotoUpload(file){
+  if(!file) return;
+  const formAlert=document.getElementById('formAlert');
+  formAlert.style.display='block';
+  formAlert.style.background='#eff6ff';
+  formAlert.style.color='#1e40af';
+  formAlert.style.borderColor='#bfdbfe';
+  formAlert.textContent='Uploading photo...';
+  
+  const formData = new FormData();
+  formData.append('key', IMGBB_API_KEY);
+  formData.append('image', file);
+  
+  try {
+    const res = await fetch(IMGBB_UPLOAD_URL, {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if(data.success){
+      const url = data.data.url;
+      const input = document.querySelector('input[name="student_photo_url"]');
+      if(input){
+        input.value = url;
+        const preview = document.getElementById('formStudentPhoto');
+        const previewCont = document.getElementById('formPhotoContainer');
+        if(preview && previewCont){
+          preview.src = url;
+          previewCont.style.display = 'block';
+        }
+        updateViewButtons();
+        formAlert.style.background='#dcfce7'; 
+        formAlert.style.color='#166534'; 
+        formAlert.style.borderColor='#86efac'; 
+        formAlert.textContent='Photo uploaded successfully!';
+        setTimeout(()=> formAlert.style.display='none', 2000);
+      }
+    } else {
+      throw new Error(data.error?.message || 'Upload failed');
+    }
+  } catch(e) {
+    console.error(e);
+    formAlert.style.background='#fef2f2';
+    formAlert.style.color='#991b1b';
+    formAlert.style.borderColor='#fecaca';
+    formAlert.textContent='Upload failed: ' + e.message;
+  }
+}
 ['change','keyup'].forEach(ev=>{ filterStatus.addEventListener(ev,applyFilters); filterSession.addEventListener(ev,applyFilters); filterClass.addEventListener(ev,applyFilters); filterSection.addEventListener(ev,applyFilters); searchBox.addEventListener(ev, debounce(applyFilters,250)); });
 clearFiltersBtn.addEventListener('click',()=>{ filterStatus.value=''; filterSession.value=''; filterClass.value=''; filterSection.value=''; searchBox.value=''; applyFilters(); });
 
