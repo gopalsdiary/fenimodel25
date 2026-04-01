@@ -39,8 +39,26 @@ tbody tr:hover{background:rgba(37,99,235,.06);}
 /* Modal */
 .modal{position:fixed;inset:0;display:none;align-items:flex-start;justify-content:center;padding:4vh 1rem;background:rgba(0,0,0,.55);z-index:1000;overflow:auto;}
 .modal.open{display:flex;}
+/* Specific styling to make #formModal look like a page */
+#formModal.open {
+  background: var(--bg);
+  padding: 0;
+  display: block; /* Use block for natural scrolling */
+}
+#formModal .modal-card {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 100vh;
+  border-radius: 0; 
+  border: none;
+  box-shadow: none;
+  padding: 1.5rem 1.1rem 5rem;
+  background: var(--bg);
+}
 .modal-card{background:var(--bg-alt);width:100%;max-width:980px;border:1px solid var(--border);border-radius:22px;padding:1.3rem 1.4rem 2rem;box-shadow:0 18px 60px -8px rgba(0,0,0,.35);position:relative;}
-.close-btn{position:absolute;top:.7rem;right:.7rem;background:var(--bg);border:1px solid var(--border);border-radius:10px;width:34px;height:34px;cursor:pointer;font-weight:700;}
+.close-btn{position:absolute;top:1rem;right:1rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:12px;width:40px;height:40px;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:10;}
+#approveModal .close-btn { width:34px; height:34px; border-radius:10px; } /* Keep small for approve popup */
 .form-grid{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:.6rem;}
 .form-grid label{display:flex;flex-direction:column;font-size:.62rem;font-weight:600;letter-spacing:.5px;color:var(--text-soft);gap:.25rem;}
 .form-grid input, .form-grid select{padding:.55rem .65rem;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:.7rem;}
@@ -105,9 +123,15 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
 </div>
 
 <!-- Modal for Add/Edit -->
-<div class="modal" id="formModal" role="dialog" aria-label="Admission form dialog">
+<div class="modal" id="formModal" role="dialog" aria-label="Admission form dialog" style="scrollbar-gutter: stable;">
   <div class="modal-card">
-    <button class="close-btn" id="closeModalBtn">✕</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);">
+      <div>
+        <h2 style="margin:0;font-size:1.4rem;font-weight:700;background:linear-gradient(90deg,var(--brand),#6366f1);-webkit-background-clip:text;background-clip:text;color:transparent;">Admission Form</h2>
+        <p style="margin:.2rem 0 0;font-size:.75rem;color:var(--text-soft);">Fill required fields. All data is saved to Supabase.</p>
+      </div>
+      <button class="close-btn" id="closeModalBtn" title="Close Page">✕</button>
+    </div>
     
     <!-- Student Photo in Form -->
     <div id="formPhotoContainer" style="display:none;text-align:center;margin:0 0 1rem;padding:1rem;background:linear-gradient(135deg,rgba(37,99,235,0.05),rgba(99,102,241,0.05));border-radius:16px;border:2px solid var(--border);">
@@ -116,8 +140,6 @@ footer{margin:3rem 0 1.5rem;text-align:center;font-size:.55rem;color:var(--text-
       <p id="formStudentDetails" style="margin:0;font-size:0.7rem;color:var(--text-soft);"></p>
     </div>
     
-    <h2 style="margin:0 0 .2rem;font-size:1.1rem;">Admission Form</h2>
-    <p style="margin:.15rem 0 .9rem;font-size:.65rem;color:var(--text-soft);">Fill required fields. Guardian section can auto-copy Father or Mother info.</p>
     <div id="formSections"></div>
     <div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:1.1rem;">
       <button class="btn" id="saveFormBtn">💾 Save</button>
