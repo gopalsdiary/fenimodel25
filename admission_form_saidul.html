@@ -28,9 +28,10 @@
       max-width: 900px;
       margin: 0 auto;
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.08);
       overflow: hidden;
+      animation: slideInUp 0.7s ease-out;
     }
 
     .form-header {
@@ -43,13 +44,38 @@
     .form-header h1 {
       font-size: 28px;
       margin-bottom: 5px;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      animation: fadeInDown 0.6s ease-out;
     }
 
     .form-header p {
-      font-size: 18px;
+      font-size: 16px;
       opacity: 0.95;
       font-family: 'Kalpurush', sans-serif;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .form-body {
@@ -60,10 +86,28 @@
     .photo-section {
       text-align: center;
       margin-bottom: 40px;
-      padding: 30px;
+      padding: 35px;
       background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      border-radius: 15px;
-      box-shadow: 0 8px 25px rgba(240, 147, 251, 0.3);
+      border-radius: 18px;
+      box-shadow: 0 12px 32px rgba(240, 147, 251, 0.35);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .photo-section::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+      animation: pulse 6s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50% { transform: scale(1.1); opacity: 0.8; }
     }
 
     .photo-section h3 {
@@ -71,6 +115,10 @@
       font-size: 20px;
       margin-bottom: 20px;
       font-family: 'Kalpurush', sans-serif;
+      font-weight: 800;
+      position: relative;
+      z-index: 1;
+      animation: fadeInDown 0.6s ease-out;
     }
 
     .photo-upload-wrapper {
@@ -78,25 +126,40 @@
       flex-direction: column;
       align-items: center;
       gap: 15px;
+      position: relative;
+      z-index: 1;
     }
 
     .photo-preview {
       width: 150px;
       height: 180px;
       border: 4px solid white;
-      border-radius: 10px;
+      border-radius: 14px;
       overflow: hidden;
       background: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
+    }
+
+    .photo-preview:hover {
+      transform: scale(1.05) translateY(-4px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
     }
 
     .photo-preview img {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .photo-preview-placeholder {
@@ -107,21 +170,44 @@
     }
 
     .photo-upload-btn {
-      background: white;
+      background: linear-gradient(135deg, #ffffff, #f3f0ff);
       color: #764ba2;
-      padding: 12px 30px;
+      padding: 12px 32px;
       border: none;
       border-radius: 50px;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255,255,255,0.6);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .photo-upload-btn::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #f3f0ff, #ffffff);
+      transition: left 0.45s ease;
+      z-index: -1;
     }
 
     .photo-upload-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      transform: translateY(-3px) scale(1.05);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.7);
+      color: #667eea;
+    }
+
+    .photo-upload-btn:hover::before {
+      left: 0;
+    }
+
+    .photo-upload-btn:active {
+      transform: translateY(-1px) scale(0.98);
     }
 
     #studentPhoto {
@@ -130,17 +216,44 @@
 
     /* Form Sections */
     .form-section {
-      margin-bottom: 35px;
+      margin-bottom: 40px;
+      padding: 25px;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5ff 100%);
+      border-radius: 16px;
+      border-left: 5px solid;
+      border-image: linear-gradient(180deg, #667eea, #764ba2) 1;
+      transition: all 0.4s ease;
+    }
+
+    .form-section:hover {
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+      transform: translateY(-2px);
     }
 
     .section-title {
       font-size: 20px;
-      font-weight: 700;
-      color: #667eea;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 3px solid #667eea;
+      font-weight: 800;
+      background: linear-gradient(120deg, #667eea, #764ba2);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 3px solid;
+      border-image: linear-gradient(90deg, #667eea, #764ba2) 1;
       font-family: 'Kalpurush', sans-serif;
+      animation: slideInLeft 0.6s ease-out;
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
 
     .form-grid {
@@ -152,6 +265,25 @@
     .form-group {
       display: flex;
       flex-direction: column;
+      animation: slideInUp 0.5s ease-out both;
+    }
+
+    .form-group:nth-child(1) { animation-delay: 0.1s; }
+    .form-group:nth-child(2) { animation-delay: 0.15s; }
+    .form-group:nth-child(3) { animation-delay: 0.2s; }
+    .form-group:nth-child(4) { animation-delay: 0.25s; }
+    .form-group:nth-child(5) { animation-delay: 0.3s; }
+    .form-group:nth-child(6) { animation-delay: 0.35s; }
+
+    @keyframes slideInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .form-group.full-width {
@@ -160,18 +292,19 @@
 
     label {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       color: #334155;
       margin-bottom: 8px;
       display: flex;
       align-items: center;
       gap: 5px;
+      letter-spacing: 0.4px;
     }
 
     label .bangla {
       font-family: 'Kalpurush', sans-serif;
       color: #64748b;
-      font-weight: 500;
+      font-weight: 600;
       font-size: 13px;
     }
 
@@ -181,11 +314,12 @@
       width: 100%;
       padding: 12px 15px;
       border: 2px solid #e2e8f0;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 15px;
       font-family: 'Inter', 'Kalpurush', sans-serif;
-      transition: all 0.3s ease;
-      background: white;
+      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      background: linear-gradient(135deg, #ffffff, rgba(102, 126, 234, 0.02));
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
     input:focus,
@@ -193,13 +327,15 @@
     textarea:focus {
       outline: none;
       border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15), 0 4px 16px rgba(102, 126, 234, 0.2);
+      transform: translateY(-2px);
     }
 
     input:hover,
     select:hover,
     textarea:hover {
       border-color: #cbd5e1;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     }
 
     select {
@@ -256,10 +392,25 @@
       border: none;
       border-radius: 50px;
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: inherit;
+      filter: brightness(1.2);
+      transition: left 0.45s ease;
+      z-index: -1;
     }
 
     .btn-primary {
@@ -267,9 +418,17 @@
       color: white;
     }
 
+    .btn-primary::before {
+      background: linear-gradient(135deg, #764ba2, #667eea);
+    }
+
     .btn-secondary {
       background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
       color: white;
+    }
+
+    .btn-secondary::before {
+      background: linear-gradient(135deg, #38ef7d, #11998e);
     }
 
     .btn-danger {
@@ -277,13 +436,25 @@
       color: white;
     }
 
+    .btn-danger::before {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+    }
+
     .btn:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+      transform: translateY(-4px) scale(1.02);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+
+    .btn:hover::before {
+      left: 0;
     }
 
     .btn:active {
-      transform: translateY(-1px);
+      transform: translateY(-1px) scale(0.99);
+    }
+
+    .btn:focus {
+      outline: none;
     }
 
     /* Required field indicator */
@@ -316,19 +487,21 @@
       display: none;
       background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
       color: white;
-      padding: 20px;
-      border-radius: 10px;
+      padding: 18px 24px;
+      border-radius: 14px;
       margin-bottom: 20px;
       text-align: center;
-      font-size: 18px;
-      font-weight: 600;
-      animation: slideDown 0.3s ease;
+      font-size: 16px;
+      font-weight: 700;
+      animation: slideDown 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 10px 30px rgba(17, 153, 142, 0.4), inset 0 1px 0 rgba(255,255,255,0.3);
+      border-left: 5px solid rgba(255,255,255,0.3);
     }
 
     @keyframes slideDown {
       from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: translateY(-30px);
       }
       to {
         opacity: 1;
@@ -343,43 +516,22 @@
       padding-top: 40px;
     }
 
-    .student-card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      transition: all 0.3s ease;
-      position: relative;
+    #studentListSection {
+      animation: slideInUp 0.5s ease-out;
     }
 
-    .student-card:hover {
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      border-color: #667eea;
+    #loadingMessage {
+      text-align: center;
+      padding: 40px 20px;
+      color: #667eea;
+      font-weight: 700;
+      font-size: 16px;
+      animation: pulse 1.5s ease-in-out infinite;
     }
 
-    .student-card h4 {
-      color: #334155;
-      margin-bottom: 5px;
-    }
-
-    .student-card p {
-      color: #64748b;
-      font-size: 14px;
-      margin-bottom: 3px;
-    }
-
-    .student-card .btn-edit {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      background: #667eea;
-      color: white;
-      border: none;
-      padding: 5px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 12px;
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
     }
 
     /* Improved Mobile Responsiveness */
@@ -755,71 +907,96 @@ async function loadStudentList() {
     loadingMsg.style.display = 'block';
     resultsDiv.innerHTML = '';
     
-    const response = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=*&order=iid.desc&limit=50`, {
+    console.log('📡 ডেটা লোড করছি...');
+    
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=*&order=iid.desc&limit=100`, {
       headers: {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
     
-    if (!response.ok) throw new Error('Failed to load data');
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error:', errorText);
+      throw new Error(`API Error: ${response.status} - ${errorText}`);
+    }
     
     const data = await response.json();
+    console.log('✅ ডেটা পাওয়া গেছে:', data.length, 'রেকর্ড');
+    
     loadingMsg.style.display = 'none';
     
-    if (data.length === 0) {
-      resultsDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: #64748b;">কোনো ডেটা পাওয়া যায়নি</p>';
+    if (!data || data.length === 0) {
+      resultsDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #64748b;"><p style="font-size: 16px; margin: 0;">📭 কোনো ডেটা পাওয়া যায়নি</p><p style="font-size: 13px; margin-top: 10px; opacity: 0.7;">প্রথমে একজন শিক্ষার্থী যোগ করুন</p></div>';
       return;
     }
     
-    // Create table
+    // Create responsive table wrapper
     let html = `
-      <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-        <thead>
-          <tr style="background: #667eea; color: white;">
-            <th style="padding: 10px; border: 1px solid #ddd;">ID</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Photo</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Name</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Class</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Roll</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Father's Name</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Mobile</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Valid Till</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Date</th>
-            <th style="padding: 10px; border: 1px solid #ddd;">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+      <div style="overflow-x: auto; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); margin-top: 20px;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 1000px;">
+          <thead>
+            <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; position: sticky; top: 0;">
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">ID</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">ছবি</th>
+              <th style="padding: 14px; border: none; text-align: left; white-space: nowrap;">নাম</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">ক্লাস</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">রোল</th>
+              <th style="padding: 14px; border: none; text-align: left; white-space: nowrap;">পিতার নাম</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">মোবাইল</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">বৈধতা</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">তারিখ</th>
+              <th style="padding: 14px; border: none; text-align: center; white-space: nowrap;">সম্পাদনা</th>
+            </tr>
+          </thead>
+          <tbody>
     `;
     
-    data.forEach(student => {
+    data.forEach((student, index) => {
+      const bgColor = index % 2 === 0 ? '#ffffff' : '#f8fafc';
+      const displayName = student.student_name_en || '—';
+      const displayFather = student.father_name_en || '—';
+      const displayClass = student.class_2025 || '—';
+      const displayRoll = student.roll_2025 || '—';
+      const displayMobile = student.father_mobile || '—';
+      const displayValid = student.valid_till || '—';
+      const displayDate = student.admission_date || '—';
+      
       html += `
-        <tr style="border-bottom: 1px solid #ddd;">
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.iid || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-            ${student.student_photo_url ? `<img src="${student.student_photo_url}" style="width: 50px; height: 60px; object-fit: cover; border-radius: 5px;">` : '—'}
+        <tr style="border-bottom: 1px solid #e2e8f0; background: ${bgColor}; transition: all 0.3s ease;" onmouseover="this.style.background='#f1f5ff'; this.style.boxShadow='inset 0 2px 8px rgba(102,126,234,0.1)';" onmouseout="this.style.background='${bgColor}'; this.style.boxShadow='none';">
+          <td style="padding: 12px; border: none; text-align: center; font-weight: 700; color: #667eea; font-size: 13px;">${student.iid}</td>
+          <td style="padding: 12px; border: none; text-align: center;">
+            ${student.student_photo_url ? `<img src="${student.student_photo_url}" alt="ছবি" style="width: 45px; height: 55px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;">` : '<span style="color: #cbd5e1; font-size: 18px;">📷</span>'}
           </td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${student.student_name_en || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.class_2025 || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.roll_2025 || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${student.father_name_en || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd;">${student.father_mobile || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.valid_till || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">${student.admission_date || ''}</td>
-          <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-            <button class="btn btn-secondary" onclick="editStudent(${student.iid})" style="padding:6px 10px; border-radius:6px;">Edit</button>
+          <td style="padding: 12px; border: none; color: #334155; font-weight: 600; font-size: 13px;">${displayName}</td>
+          <td style="padding: 12px; border: none; text-align: center; color: #64748b; font-size: 13px;">${displayClass}</td>
+          <td style="padding: 12px; border: none; text-align: center; color: #64748b; font-size: 13px; font-weight: 600;">${displayRoll}</td>
+          <td style="padding: 12px; border: none; color: #64748b; font-size: 13px;">${displayFather}</td>
+          <td style="padding: 12px; border: none; text-align: center; color: #64748b; font-size: 12px; font-family: 'Courier New', monospace;">${displayMobile}</td>
+          <td style="padding: 12px; border: none; text-align: center; color: #64748b; font-size: 12px;">${displayValid}</td>
+          <td style="padding: 12px; border: none; text-align: center; color: #64748b; font-size: 12px;">${displayDate}</td>
+          <td style="padding: 12px; border: none; text-align: center;">
+            <button onclick="editStudent(${student.iid})" style="padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none; color: white; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 2px 8px rgba(17,153,142,0.2);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(17,153,142,0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(17,153,142,0.2)';">✏️</button>
           </td>
         </tr>
       `;
     });
     
-    html += '</tbody></table>';
+    html += '</tbody></table></div>';
     resultsDiv.innerHTML = html;
+    console.log(`✅ সফলভাবে ${data.length} জন শিক্ষার্থীর তথ্য লোড হয়েছে`);
     
   } catch (err) {
-    console.error('Load error:', err);
+    console.error('❌ Load error:', err);
     loadingMsg.style.display = 'none';
-    resultsDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: #ef4444;">❌ Error loading data: ' + err.message + '</p>';
+    resultsDiv.innerHTML = `<div style="text-align: center; padding: 30px; background: #fee; border-radius: 10px; border-left: 5px solid #ef4444; margin-top: 20px;">
+      <p style="color: #ef4444; font-weight: 700; margin: 0; font-size: 14px;">❌ ডেটা লোড করতে সমস্যা হয়েছে</p>
+      <p style="color: #dc2626; font-size: 12px; margin-top: 8px;">Error: ${err.message}</p>
+      <p style="color: #94a3b8; font-size: 11px; margin-top: 10px; opacity: 0.8;">ব্রাউজার কনসোল খুলে (F12) আরও তথ্য জানতে পারবেন</p>
+    </div>`;
   }
 }
 
