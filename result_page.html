@@ -78,22 +78,48 @@
         }
         
         .mode-toggle { 
-            background:var(--bg-alt); 
-            border:1px solid var(--border); 
-            color:var(--text-soft); 
-            padding:.55rem .9rem; 
-            border-radius:10px; 
-            font-size:.75rem; 
-            font-weight:600; 
+            background:linear-gradient(135deg, var(--brand), #7c3aed); 
+            border:none; 
+            color:#fff; 
+            padding:.65rem 1.2rem; 
+            border-radius:50px; 
+            font-size:.85rem; 
+            font-weight:700; 
             cursor:pointer; 
             display:inline-flex; 
             align-items:center; 
-            gap:.45rem; 
-            box-shadow:var(--shadow); 
-            transition:.35s; 
+            gap:.5rem; 
+            box-shadow:0 8px 20px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255,255,255,0.2); 
+            transition: all .4s cubic-bezier(0.34, 1.56, 0.64, 1); 
+            position:relative;
+            overflow:hidden;
         }
         
-        .mode-toggle:hover { color:var(--text); }
+        .mode-toggle:before {
+            content:"";
+            position:absolute;
+            top:0;
+            left:-100%;
+            width:100%;
+            height:100%;
+            background:linear-gradient(135deg, #7c3aed, var(--brand));
+            transition: left .4s ease;
+            z-index:-1;
+        }
+        
+        .mode-toggle:hover { 
+            color:#fff;
+            transform: translateY(-2px);
+            box-shadow:0 12px 28px rgba(37, 99, 235, 0.45), inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+        
+        .mode-toggle:hover:before {
+            left:0;
+        }
+        
+        .mode-toggle:active {
+            transform: translateY(0);
+        }
         
         .container { 
             width:100%; 
@@ -115,66 +141,122 @@
             display:flex; 
             flex-direction:column; 
             gap:.75rem; 
-            padding:1.15rem 1.15rem 1.35rem; 
-            background:var(--bg-alt); 
-            border:1px solid var(--border); 
-            border-radius:20px; 
+            padding:1.4rem 1.25rem 1.6rem; 
+            background:linear-gradient(135deg, var(--bg-alt), rgba(37, 99, 235, 0.02)); 
+            border:1.5px solid var(--border); 
+            border-radius:24px; 
             text-decoration:none; 
             color:var(--text); 
-            box-shadow:var(--shadow); 
+            box-shadow:0 10px 30px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04); 
             overflow:hidden; 
-            min-height:160px;
-            transition: all 0.3s ease;
+            min-height:170px;
+            transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor:pointer;
+        }
+        
+        .card-link::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.3) 0%, transparent 70%);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease-out;
+            border-radius: inherit;
+        }
+        
+        .card-link:active::after {
+            opacity: 1;
         }
         
         .card-link:before { 
             content:""; 
             position:absolute; 
             inset:0; 
-            background:linear-gradient(145deg,rgba(37,99,235,.08),transparent 55%); 
-            opacity:.9; 
+            background:linear-gradient(145deg,rgba(37,99,235,.12),transparent 60%); 
+            opacity:.6; 
             pointer-events:none; 
-            transition:.5s; 
+            transition:.6s; 
         }
         
-        .card-link:hover:before { background:linear-gradient(145deg,rgba(37,99,235,.18),transparent 60%); }
+        .card-link:hover:before { 
+            background:linear-gradient(145deg,rgba(37,99,235,.22),transparent 65%);
+            opacity:1;
+        }
         
-        .card-link:hover { transform:translateY(-4px); }
+        .card-link:hover { 
+            transform:translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 45px rgba(37, 99, 235, 0.25), 0 4px 12px rgba(0,0,0,.1);
+            border-color: rgba(37, 99, 235, 0.4);
+        }
+        
+        .card-link:active {
+            transform:translateY(-4px) scale(0.99);
+        }
         
         .card-icon { 
-            font-size:1.9rem; 
+            font-size:2.2rem; 
             line-height:1; 
+            transition: transform .5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        .card-link:hover .card-icon {
+            transform: scale(1.25) rotate(5deg);
         }
         
         .card-title { 
-            font-size:1.05rem; 
-            font-weight:700; 
-            letter-spacing:.4px; 
+            font-size:1.1rem; 
+            font-weight:800; 
+            letter-spacing:.5px; 
+            background:linear-gradient(120deg, var(--text), var(--brand));
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+            background-clip:text;
+            transition: all .4s ease;
+        }
+        
+        .card-link:hover .card-title {
+            background:linear-gradient(120deg, var(--brand), #7c3aed);
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+            background-clip:text;
         }
         
         .card-desc { 
-            font-size:.72rem; 
+            font-size:.8rem; 
             color:var(--text-soft); 
-            margin-top:-.35rem; 
-            line-height:1.25; 
+            margin-top:-.3rem; 
+            line-height:1.35;
+            transition: color .4s ease;
+        }
+        
+        .card-link:hover .card-desc {
+            color:var(--text);
         }
         
         .tag { 
             position:absolute; 
-            top:.7rem; 
-            right:.7rem; 
-            font-size:.77rem; 
-            background:var(--brand); 
+            top:.85rem; 
+            right:.85rem; 
+            font-size:.8rem; 
+            background:linear-gradient(135deg, var(--brand), #7c3aed); 
             color:#fff; 
-            padding:.45rem .7rem .5rem; 
-            border-radius:999px; 
-            letter-spacing:.65px; 
-            font-weight:600; 
-            box-shadow:0 2px 6px rgba(0,0,0,.25); 
+            padding:.55rem .85rem .6rem; 
+            border-radius:50px; 
+            letter-spacing:.7px; 
+            font-weight:700; 
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35), inset 0 1px 0 rgba(255,255,255,0.3); 
+            text-transform:uppercase;
+            transition: all .4s ease;
         }
         
-        .tag.alt { background:#dc2626; }
-        .tag.green { background:#059669; }
+        .card-link:hover .tag {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+        
+        .tag.alt { background:linear-gradient(135deg, #dc2626, #f43f5e); }
+        .tag.green { background:linear-gradient(135deg, #10b981, #059669); }
         
         footer { 
             margin:3rem 0 1.5rem; 
@@ -184,14 +266,30 @@
         }
         
         /* Year specific card accents */
-        .card-link.year-2025 { border-color:rgba(16,185,129,.55); }
-        .card-link.year-2025:before { background:linear-gradient(145deg,rgba(16,185,129,.22),transparent 55%); }
-        .card-link.year-2025 .tag { background:#059669; }
+        .card-link.year-2025 { 
+            border-color:rgba(16,185,129,.55); 
+            background:linear-gradient(135deg, var(--bg-alt), rgba(16,185,129,0.05));
+        }
+        .card-link.year-2025:before { 
+            background:linear-gradient(145deg,rgba(16,185,129,.25),transparent 55%); 
+        }
+        .card-link.year-2025:hover {
+            border-color:rgba(16,185,129,.75);
+        }
+        .card-link.year-2025 .tag { background:linear-gradient(135deg, #10b981, #059669); }
         .dark .card-link.year-2025 { border-color:rgba(16,185,129,.7); }
         
-        .card-link.year-2024 { border-color:rgba(99,102,241,.55); }
-        .card-link.year-2024:before { background:linear-gradient(145deg,rgba(99,102,241,.25),transparent 55%); }
-        .card-link.year-2024 .tag { background:#6366f1; }
+        .card-link.year-2024 { 
+            border-color:rgba(99,102,241,.55);
+            background:linear-gradient(135deg, var(--bg-alt), rgba(99,102,241,0.05));
+        }
+        .card-link.year-2024:before { 
+            background:linear-gradient(145deg,rgba(99,102,241,.25),transparent 55%); 
+        }
+        .card-link.year-2024:hover {
+            border-color:rgba(99,102,241,.75);
+        }
+        .card-link.year-2024 .tag { background:linear-gradient(135deg, #6366f1, #4f46e5); }
         .dark .card-link.year-2024 { border-color:rgba(99,102,241,.7); }
         
         .year-group { 
@@ -260,6 +358,38 @@
             border-color:rgba(99,102,241,.6); 
         }
         
+        .card-link:focus {
+            outline: none;
+            box-shadow: 0 20px 45px rgba(37, 99, 235, 0.25), 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+        
+        .mode-toggle:focus {
+            outline: none;
+            box-shadow: 0 12px 28px rgba(37, 99, 235, 0.45), 0 0 0 4px rgba(37, 99, 235, 0.2);
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .card-link {
+            animation: slideInUp 0.6s ease-out forwards;
+        }
+        
+        .card-link:nth-child(1) { animation-delay: 0.1s; }
+        .card-link:nth-child(2) { animation-delay: 0.2s; }
+        .card-link:nth-child(3) { animation-delay: 0.3s; }
+        .card-link:nth-child(4) { animation-delay: 0.4s; }
+        .card-link:nth-child(5) { animation-delay: 0.5s; }
+        .card-link:nth-child(6) { animation-delay: 0.6s; }
+        
         @media (max-width:640px){ 
             .grid { --min:220px; } 
         }
@@ -317,20 +447,20 @@
                             <span class="card-title">Half Yearly Examination 2025 (ফেনী মডেল)</span>
                             <span class="card-desc">Mid‑session performance (open module).</span>
                         </a>
-                        <a role="listitem" href="https://modelresult.netlify.app/pre_test_25_suber/resultlist" class="card-link year-2025" aria-label="Half Yearly Examination 2025">
+                        <a role="listitem" href="https://modelresult.livefor.workers.dev/pre_test_25_suber/resultlist" class="card-link year-2025" aria-label="Half Yearly Examination 2025">
                             <span class="tag green">2025</span>
                             <span class="card-icon">🧮</span>
                             <span class="card-title">Pre-Test Examination 2025 (ফেনী মডেল)</span>
                             <span class="card-desc"> performance (open module).</span>
                         </a>
 
-                          <a role="listitem" href="https://modelresult.netlify.app/resultprocessing_test/login.html" class="card-link" aria-label="Result Processing">
+                          <a role="listitem" href="https://modelresult.livefor.workers.dev/resultprocessing_test/login.html" class="card-link" aria-label="Result Processing">
                             <span class="tag">Results Input</span>
                             <span class="card-icon">�</span>
                             <span class="card-title">9 Annual & 10 Test Result 2025</span>
                             <span class="card-desc">For teachers</span>
                         </a>
-                        <a role="listitem" href="https://modelresult.netlify.app/resultprocessing_ann25/login.html" class="card-link" aria-label="Result Processing">
+                        <a role="listitem" href="https://modelresult.livefor.workers.dev/resultprocessing_ann25/login.html" class="card-link" aria-label="Result Processing">
                             <span class="tag">Results Input</span>
                             <span class="card-icon">�</span>
                             <span class="card-title">6-8 Annual Exam 2025</span>
