@@ -177,6 +177,16 @@
       document.getElementById('active_class').value = record.active_class || '';
       document.getElementById('active_section').value = record.active_section || '';
       document.getElementById('active_roll').value = record.active_roll || '';
+      // Format ISO string (2024-01-01T10:00:00.000Z) to date format (2024-01-01)
+      if (record.created_at) {
+        try {
+          document.getElementById('created_at').value = new Date(record.created_at).toISOString().split('T')[0];
+        } catch (e) {
+          document.getElementById('created_at').value = '';
+        }
+      } else {
+        document.getElementById('created_at').value = '';
+      }
       
       // Store the original record for update
       window.editingRecord = record;
@@ -270,6 +280,9 @@
           <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">বর্তমান রোল
             <input name="active_roll" id="active_roll" />
           </label>
+          <label style="display:flex;flex-direction:column;font-size:.65rem;font-weight:600;letter-spacing:.35px;gap:.35rem;">এন্ট্রি তারিখ (Entry Date)
+            <input type="date" name="created_at" id="created_at" style="padding:.55rem .6rem;border:1px solid #d1d5db;border-radius:8px;font-family:inherit;" />
+          </label>
         </div>
         <div style="display:flex;gap:.7rem;margin-top:1rem;flex-wrap:wrap;">
           <button type="submit" class="nav-btn" style="background:#16a34a;">Save</button>
@@ -293,7 +306,7 @@
     
     // Function to toggle field editability
     function setFieldsEditable(editable) {
-      const fields = ['student_name_bn', 'father_name_bn', 'mother_name_bn', 'village_bn', 'postoffice_bn', 'upazilla_bn', 'district_bn', 'active_class', 'active_section', 'active_roll'];
+      const fields = ['student_name_bn', 'father_name_bn', 'mother_name_bn', 'village_bn', 'postoffice_bn', 'upazilla_bn', 'district_bn', 'active_class', 'active_section', 'active_roll', 'created_at'];
       fields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
         if (field) {
@@ -311,6 +324,8 @@
       if (!window.editingRecord) {
         entryStatus.textContent='IID দিন এবং ছাত্রের তথ্য লোড করুন';
         document.getElementById('protoyonModalTitle').textContent = 'নতুন প্রত্যয়ন এন্ট্রি';
+        // Set default created_at to today for new entries
+        document.getElementById('created_at').value = new Date().toISOString().split('T')[0];
         setFieldsEditable(false); // Fields readonly for new entry until data is loaded
       } else {
         setFieldsEditable(true); // All fields editable in edit mode
@@ -405,11 +420,12 @@
         district_bn: form.district_bn.value.trim(),
         active_class: form.active_class.value.trim(),
         active_section: form.active_section.value.trim(),
-        active_roll: form.active_roll.value.trim()
+        active_roll: form.active_roll.value.trim(),
+        created_at: form.created_at.value ? new Date(form.created_at.value).toISOString() : null
       };
       
-      // Add created_at for new records
-      if (!isEditing) {
+      // Add created_at for new records if not manually provided
+      if (!isEditing && !payload.created_at) {
         payload.created_at = new Date().toISOString();
       }
       
