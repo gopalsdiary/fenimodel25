@@ -4,8 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>প্রত্যয়ন তালিকা </title>
-  <script src="../login/auth-check_copy.js"></script>
-
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <!-- Kalpurush Bangla font -->
   <link href="https://fonts.maateen.me/kalpurush/font.css" rel="stylesheet">
@@ -97,10 +95,14 @@
         const pdfLink = document.createElement('a');
         pdfLink.className = 'pdf-badge';
         pdfLink.textContent = 'PDF';
-        pdfLink.href = `./certificate_word.html?iid=${encodeURIComponent(iid)}`;
+        // Pass sl for precision as it is the primary key.
+        pdfLink.href = `./certificate_word.html?sl=${encodeURIComponent(sl)}`;
         pdfLink.target = '_blank';
         pdfLink.rel = 'noopener';
         pdfLink.title = 'Open certificate (use browser Print to save as PDF)';
+        
+        // Format date
+        const dateStr = obj.created_at ? new Date(obj.created_at).toLocaleDateString('bn-BD') : '';
         
         // Create Edit button
         const editLink = document.createElement('a');
@@ -122,7 +124,7 @@
         buttonContainer.appendChild(pdfLink);
         
         const tr=document.createElement('tr');
-        createRow(tr,[sl, name, father, iid, klass, section, roll, {element: buttonContainer}]);
+        createRow(tr,[sl, name, father, iid, klass, section, roll, dateStr, {element: buttonContainer}]);
         rows.push(tr);
       }
       return rows;
@@ -226,6 +228,7 @@
               <th>Class</th>
               <th>Section</th>
               <th>Roll</th>
+              <th>Date</th>
               <th>Certificate</th>
             </tr>
           </thead>
@@ -444,11 +447,7 @@
           entryStatus.textContent='আপডেট হয়েছে ✔'; entryStatus.style.color='#15803d';
         } else {
           // Create new record
-          // Check if already exists
-          const { data: existing, error: existErr } = await client.from(tableName).select('iid').eq('iid', payload.iid).limit(1);
-          if(existErr) throw existErr;
-          if(existing && existing.length){ entryStatus.textContent='ইতিমধ্যে আছে (iid)'; entryStatus.style.color='#b91c1c'; return; }
-          
+          // Note: Duplicate IIDs are allowed as students can take multiple certificates
           const { data: inserted, error } = await client.from(tableName).insert(payload).select('protoyon_sl').single();
           if(error) throw error;
           entryStatus.textContent='সেভ হয়েছে ✔'; entryStatus.style.color='#15803d';

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Transfer Certificate (Image)</title>
+  <title>প্রত্যয়ন পত্র</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://f    function renderRecord(rec){om/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
@@ -384,12 +384,10 @@
     // Remove SL text from under QR (moved to info box)
     const qrIID = document.getElementById('qrIID'); if (qrIID) qrIID.textContent = '';
   
-      // Prepare a stable shareable QR URL with unique key
+      // Prepare a stable shareable QR URL with unique key (sl only)
       try {
-        const base = new URL(location.href.split('#')[0]);
-        if(rec.iid) base.searchParams.set('iid', rec.iid);
+        const base = new URL(location.origin + location.pathname);
         if(rec.sl) base.searchParams.set('sl', rec.sl);
-        if(rec.uk) base.searchParams.set('uk', rec.uk);
         window.__QR_URL = base.toString();
       } catch(_e) { window.__QR_URL = location.href.split('#')[0]; }
       renderQr();
